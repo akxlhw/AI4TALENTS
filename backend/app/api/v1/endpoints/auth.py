@@ -1,0 +1,372 @@
+"""
+Authentication API endpoints.
+"""
+from datetime import datetime
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, EmailStr, Field
+
+from app.core.database import get_async_session
+from app.core.auth import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    create_refresh_token,
+    verify_access_token,
+    verify_refresh_token,
+)
+from app.repositories.user_repository import UserRepository
+from app.models.enums import UserRoleType
+
+
+router = APIRouter(prefix="/auth", tags=["Authentication"])
+security = HTTPBearer(auto_error=False)
+
+
+# Pydantic models
+class LoginRequest(BaseModel):
+    """Login request body."""
+    username: str = Field(..., min_length=1, max_length=100)
+    password: str = Field(..., min_length=1, max_length=100)
+
+
+class LoginResponse(BaseModel):
+    """Login response."""
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int = 8 * 3600  # 8 hours in seconds
+    user: "UserInfo"
+
+
+class RefreshRequest(BaseModel):
+    """Refresh token request."""
+    refresh_token: str
+
+
+class UserInfo(BaseModel):
+    """User information."""
+    user_id: int
+    username: str
+    email: str
+    role: str
+    display_name: Optional[str] = None
+    department: Optional[str] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    """Change password request."""
+    current_password: str
+    new_password: str = Field(..., min_length=8, max_length=100)
+
+
+class CurrentUser(BaseModel):
+    """Current user response."""
+    user_id: int
+    username: str
+    email: str
+    role: str
+    display_name: Optional[str] = None
+    department: Optional[str] = None
+    is_active: bool
+    last_login_at: Optional[datetime] = None
+
+
+async def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    session: AsyncSession = Depends(get_async_session),
+) -> Optional[dict]:
+    """
+    Get current user from JWT token.
+    Returns None if no valid token provided.
+    """
+    if not credentials:
+        return None
+
+    token = credentials.credentials
+    payload = verify_access_token(token)
+
+    if not payload:
+        return None
+
+    user_id = int(payload.get("sub", 0))
+
+    # Verify user exists and is active
+    repo = UserRepository(session)
+    user = await repo.get_by_id(user_id)
+
+    if not user or not user.is_active:
+        return None
+
+    return {
+        "user_id": user.user_id,
+        "username": user.username,
+        "email": user.email,
+        "role": user.role_type,
+        "display_name": user.display_name,
+    }
+
+
+async def require_user(
+    current_user: Optional[dict] = Depends(get_current_user),
+) -> dict:
+    """
+    Require a valid authenticated user.
+    Raises 401 if not authenticated.
+    """
+    if not current_user:
+        raise HTTPException(
+            status_code=401,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return current_user
+
+
+async def require_admin(
+    current_user: dict = Depends(require_user),
+) -> dict:
+    """
+    Require admin or super_admin role.
+    Raises 403 if not authorized.
+    """
+    if current_user["role"] not in [UserRoleType.ADMIN.value, UserRoleType.SUPER_ADMIN.value]:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required",
+        )
+    return current_user
+
+
+async def require_super_admin(
+    current_user: dict = Depends(require_user),
+) -> dict:
+    """
+    Require super_admin role.
+    Raises 403 if not authorized.
+    """
+    if current_user["role"] != UserRoleType.SUPER_ADMIN.value:
+        raise HTTPException(
+            status_code=403,
+            detail="Super admin access required",
+        )
+    return current_user
+
+
+@router.post(
+    "/login",
+    response_model=LoginResponse,
+    summary="用户登录",
+    description="使用用户名和密码登录，返回访问令牌",
+)
+async def login(
+    request: Request,
+    data: LoginRequest,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    Login with username and password.
+
+    Returns access token and refresh token.
+    """
+    repo = UserRepository(session)
+
+    # Find user by username or email
+    user = await repo.get_by_username(data.username)
+    if not user:
+        user = await repo.get_by_email(data.username)
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="用户名或密码错误",
+        )
+
+    # Check if user is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=401,
+            detail="账户已被禁用",
+        )
+
+    # Verify password
+    if not verify_password(data.password, user.password_hash):
+        raise HTTPException(
+            status_code=401,
+            detail="用户名或密码错误",
+        )
+
+    # Update last login
+    client_ip = request.client.host if request.client else None
+    await repo.update_last_login(user.user_id, client_ip)
+    await session.commit()
+
+    # Create tokens
+    access_token = create_access_token(
+        user_id=user.user_id,
+        username=user.username,
+        role=user.role_type,
+    )
+    refresh_token = create_refresh_token(user_id=user.user_id)
+
+    return LoginResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user=UserInfo(
+            user_id=user.user_id,
+            username=user.username,
+            email=user.email,
+            role=user.role_type,
+            display_name=user.display_name,
+            department=user.department,
+        ),
+    )
+
+
+@router.post(
+    "/logout",
+    summary="用户登出",
+    description="登出当前用户（客户端应删除令牌）",
+)
+async def logout(
+    current_user: dict = Depends(require_user),
+):
+    """
+    Logout current user.
+
+    Note: JWT tokens are stateless, so actual logout happens on client side.
+    In production, you may want to implement token blacklisting.
+    """
+    return {"message": "已成功登出"}
+
+
+@router.post(
+    "/refresh",
+    response_model=LoginResponse,
+    summary="刷新令牌",
+    description="使用刷新令牌获取新的访问令牌",
+)
+async def refresh_token(
+    data: RefreshRequest,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    Refresh access token using refresh token.
+
+    Returns new access token and refresh token.
+    """
+    payload = verify_refresh_token(data.refresh_token)
+    if not payload:
+        raise HTTPException(
+            status_code=401,
+            detail="无效或过期的刷新令牌",
+        )
+
+    user_id = int(payload.get("sub", 0))
+
+    # Verify user exists and is active
+    repo = UserRepository(session)
+    user = await repo.get_by_id(user_id)
+
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=401,
+            detail="用户不存在或已被禁用",
+        )
+
+    # Create new tokens
+    access_token = create_access_token(
+        user_id=user.user_id,
+        username=user.username,
+        role=user.role_type,
+    )
+    new_refresh_token = create_refresh_token(user_id=user.user_id)
+
+    return LoginResponse(
+        access_token=access_token,
+        refresh_token=new_refresh_token,
+        user=UserInfo(
+            user_id=user.user_id,
+            username=user.username,
+            email=user.email,
+            role=user.role_type,
+            display_name=user.display_name,
+            department=user.department,
+        ),
+    )
+
+
+@router.get(
+    "/me",
+    response_model=CurrentUser,
+    summary="获取当前用户信息",
+    description="返回当前登录用户的详细信息",
+)
+async def get_current_user_info(
+    current_user: dict = Depends(require_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    Get current user information.
+    """
+    repo = UserRepository(session)
+    user = await repo.get_by_id(current_user["user_id"])
+
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    return CurrentUser(
+        user_id=user.user_id,
+        username=user.username,
+        email=user.email,
+        role=user.role_type,
+        display_name=user.display_name,
+        department=user.department,
+        is_active=user.is_active,
+        last_login_at=user.last_login_at,
+    )
+
+
+@router.post(
+    "/change-password",
+    summary="修改密码",
+    description="修改当前用户密码",
+)
+async def change_password(
+    data: ChangePasswordRequest,
+    current_user: dict = Depends(require_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    Change current user's password.
+    """
+    repo = UserRepository(session)
+    user = await repo.get_by_id(current_user["user_id"])
+
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    # Verify current password
+    if not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=400,
+            detail="当前密码错误",
+        )
+
+    # Update password
+    new_hash = hash_password(data.new_password)
+    await repo.update_password(user.user_id, new_hash)
+    await session.commit()
+
+    return {"message": "密码修改成功"}
+
+
+# Export dependencies for use in other routes
+__all__ = [
+    "get_current_user",
+    "require_user",
+    "require_admin",
+    "require_super_admin",
+]

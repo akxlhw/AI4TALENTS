@@ -1,0 +1,50 @@
+{
+  "description": "Sample institution data for testing",
+  "institutions": [
+    {
+      "id": "https://openalex.org/I124351",
+      "display_name": "Massachusetts Institute of Technology",
+      "country_code": "US",
+      "type": "education",
+      "homepage_url": "https://mit.edu",
+      "works_count": 500000,
+      "cited_by_count": 15000000
+    },
+    {
+      "id": "https://openalex.org/I124957",
+      "display_name": "Stanford University",
+      "country_code": "US",
+      "type": "education",
+      "homepage_url": "https://stanford.edu",
+      "works_count": 450000,
+      "cited_by_count": 14000000
+    },
+    {
+      "id": "https://openalex.org/I124021",
+      "display_name": "Harvard University",
+      "country_code": "US",
+      "type": "education",
+      "homepage_url": "https://harvard.edu",
+      "works_count": 480000,
+      "cited_by_count": 16000000
+    },
+    {
+      "id": "https://openalex.org/I12733",
+      "display_name": "Tsinghua University",
+      "country_code": "CN",
+      "type": "education",
+      "homepage_url": "https://tsinghua.edu.cn",
+      "works_count": 300000,
+      "cited_by_count": 5000000
+    },
+    {
+      "id": "https://openalex.org/I12851",
+      "display_name": "Peking University",
+      "country_code": "CN",
+      "type": "education",
+      "homepage_url": "https://pku.edu.cn",
+      "works_count": 280000,
+      "cited_by_count": 4500000
+    }
+  ]
+}

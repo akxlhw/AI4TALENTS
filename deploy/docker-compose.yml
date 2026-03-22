@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: talent-postgres
+    environment:
+      POSTGRES_DB: talent_db
+      POSTGRES_USER: talent_user
+      POSTGRES_PASSWORD: talent_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U talent_user -d talent_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - talent-network
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: talent-backend
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://talent_user:talent_password@postgres:5432/talent_db
+      - DATABASE_SYNC_URL=postgresql://talent_user:talent_password@postgres:5432/talent_db
+      - ENVIRONMENT=development
+      - DEBUG=true
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - talent-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: talent-frontend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - talent-network
+    command: npm run dev -- --host
+
+volumes:
+  postgres_data:
+
+networks:
+  talent-network:
+    driver: bridge

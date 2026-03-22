@@ -1,0 +1,93 @@
+"""
+User and permission models.
+"""
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Text, UniqueConstraint
+from sqlalchemy.orm import relationship
+
+from app.core.database import Base
+from app.models.base import TimestampMixin
+from app.models.enums import UserRoleType
+
+
+class UserAccount(Base, TimestampMixin):
+    """User account model."""
+
+    __tablename__ = "iam_user_account"
+
+    user_id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+
+    # Role
+    role_type = Column(String(20), default=UserRoleType.USER.value, nullable=False)
+
+    # Status
+    is_active = Column(Boolean, default=True, nullable=False)
+    status = Column(String(20), default="active", nullable=False)
+
+    # Profile
+    display_name = Column(String(100), nullable=True)
+    department = Column(String(255), nullable=True)
+
+    # Last login
+    last_login_at = Column(DateTime, nullable=True)
+    last_login_ip = Column(String(50), nullable=True)
+
+    # Relationships
+    school_scopes = relationship("UserSchoolScope", back_populates="user")
+    favorites = relationship("FavoriteTalent", back_populates="user", lazy="dynamic")
+
+    def __repr__(self):
+        return f"<UserAccount(user_id={self.user_id}, username={self.username}, role={self.role_type})>"
+
+
+class UserSchoolScope(Base, TimestampMixin):
+    """User school permission scope."""
+
+    __tablename__ = "iam_user_school_scope"
+
+    scope_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=False, index=True)
+
+    # Scope definition
+    scope_type = Column(String(20), nullable=False)  # 'school', 'country', 'all'
+    scope_value = Column(String(100), nullable=True)  # school_id, country_code, or '*'
+
+    # Grant info
+    granted_by = Column(Integer, nullable=False)  # user_id who granted
+    granted_at = Column(DateTime, nullable=False)
+    expires_at = Column(DateTime, nullable=True)
+
+    # Status
+    is_active = Column(Boolean, default=True, nullable=False)
+    notes = Column(Text, nullable=True)
+
+    # Relationships
+    user = relationship("UserAccount", back_populates="school_scopes")
+
+    def __repr__(self):
+        return f"<UserSchoolScope(user_id={self.user_id}, scope={self.scope_type}:{self.scope_value})>"
+
+
+class FavoriteTalent(Base, TimestampMixin):
+    """User's favorite talents."""
+
+    __tablename__ = "iam_favorite_talent"
+
+    favorite_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=False, index=True)
+    talent_id = Column(Integer, ForeignKey("core_talent.talent_id"), nullable=False, index=True)
+    notes = Column(Text, nullable=True)  # User's notes about this talent
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    # Relationships
+    user = relationship("UserAccount", back_populates="favorites")
+    talent = relationship("Talent")
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'talent_id', name='uq_user_favorite_talent'),
+    )
+
+    def __repr__(self):
+        return f"<FavoriteTalent(user_id={self.user_id}, talent_id={self.talent_id})>"

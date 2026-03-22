@@ -1,0 +1,122 @@
+"""
+Talent model.
+"""
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, Float, JSON
+from sqlalchemy.orm import relationship
+
+from app.core.database import Base
+from app.models.base import TimestampMixin
+from app.models.enums import RoleType, VisibilityStatus
+
+
+class Talent(Base, TimestampMixin):
+    """Academic talent model."""
+
+    __tablename__ = "core_talent"
+
+    talent_id = Column(Integer, primary_key=True, index=True)
+
+    # Source tracking
+    source_type = Column(String(50), nullable=True)
+    source_record_id = Column(String(100), nullable=True, index=True)
+    last_sync_batch_id = Column(Integer, nullable=True)
+
+    # Basic info
+    name = Column(String(255), nullable=False, index=True)
+    name_en = Column(String(255), nullable=True)
+    orcid = Column(String(50), nullable=True, index=True)
+
+    # Affiliation
+    school_id = Column(Integer, ForeignKey("core_school.school_id"), nullable=True, index=True)
+    current_title = Column(String(255), nullable=True)
+
+    # Role identification (quick filter field)
+    role_type = Column(String(20), default=RoleType.UNKNOWN.value, nullable=False, index=True)
+    role_confidence = Column(Float, default=0.0)
+
+    # Research info (stored as JSON array for compatibility)
+    topic_tags = Column(JSON, default=[])
+    research_interests = Column(Text, nullable=True)
+
+    # Summary for display
+    summary = Column(Text, nullable=True)
+
+    # Statistics
+    works_count = Column(Integer, default=0)
+    cited_by_count = Column(Integer, default=0)
+    h_index = Column(Integer, default=0)
+    latest_active_year = Column(Integer, nullable=True)
+
+    # Status
+    visibility_status = Column(String(20), default=VisibilityStatus.ACTIVE.value, nullable=False)
+    is_visible = Column(Boolean, default=True, nullable=False)
+
+    # Reserved fields
+    unified_person_id = Column(String(100), nullable=True)  # For future unified person profile
+    department_name = Column(String(255), nullable=True)
+    lab_name = Column(String(255), nullable=True)
+    extra_data = Column(JSON, nullable=True)  # Flexible storage for additional info
+
+    # Relationships
+    school = relationship("School", back_populates="talents")
+    role_profile = relationship("RoleProfile", back_populates="talent", uselist=False)
+    selected_works = relationship("SelectedWork", back_populates="talent")
+
+    def __repr__(self):
+        return f"<Talent(talent_id={self.talent_id}, name={self.name}, role={self.role_type})>"
+
+
+class RoleProfile(Base, TimestampMixin):
+    """Detailed role identification for talent."""
+
+    __tablename__ = "core_role_profile"
+
+    profile_id = Column(Integer, primary_key=True, index=True)
+    talent_id = Column(Integer, ForeignKey("core_talent.talent_id"), unique=True, nullable=False)
+
+    # Role details
+    role_type = Column(String(20), default=RoleType.UNKNOWN.value, nullable=False)
+    role_confidence = Column(Float, default=0.0)
+    role_reason = Column(Text, nullable=True)
+
+    # Identification metadata
+    identification_method = Column(String(50), nullable=True)  # e.g., 'heuristic', 'manual', 'ml'
+    identified_at = Column(String(50), nullable=True)  # ISO datetime string
+
+    # Extended role info
+    position_title = Column(String(255), nullable=True)
+    academic_age = Column(Integer, nullable=True)
+
+    # Relationships
+    talent = relationship("Talent", back_populates="role_profile")
+
+    def __repr__(self):
+        return f"<RoleProfile(talent_id={self.talent_id}, role={self.role_type})>"
+
+
+class SelectedWork(Base, TimestampMixin):
+    """Representative works for talent detail page."""
+
+    __tablename__ = "core_selected_work"
+
+    work_id = Column(Integer, primary_key=True, index=True)
+    talent_id = Column(Integer, ForeignKey("core_talent.talent_id"), nullable=False, index=True)
+
+    # Work info
+    title = Column(String(500), nullable=False)
+    publication_year = Column(Integer, nullable=True)
+    venue_name = Column(String(255), nullable=True)
+    citation_count = Column(Integer, default=0)
+
+    # Source reference
+    source_work_id = Column(String(100), nullable=True)
+    doi = Column(String(100), nullable=True)
+
+    # Display order
+    display_order = Column(Integer, default=0)
+
+    # Relationships
+    talent = relationship("Talent", back_populates="selected_works")
+
+    def __repr__(self):
+        return f"<SelectedWork(work_id={self.work_id}, title={self.title[:30]}...)>"

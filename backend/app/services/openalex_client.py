@@ -1,0 +1,371 @@
+"""
+OpenAlex API Client.
+Handles communication with the OpenAlex API.
+"""
+import asyncio
+import time
+from typing import Optional, Dict, Any, List, AsyncGenerator
+from datetime import datetime
+
+import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+from app.core.config import settings
+
+
+class OpenAlexAPIError(Exception):
+    """Custom exception for OpenAlex API errors."""
+    pass
+
+
+class OpenAlexRateLimitError(OpenAlexAPIError):
+    """Exception raised when rate limit is exceeded."""
+    pass
+
+
+class OpenAlexClient:
+    """
+    Client for interacting with OpenAlex API.
+
+    Documentation: https://docs.openalex.org/
+    """
+
+    BASE_URL = "https://api.openalex.org"
+
+    # Endpoints
+    WORKS = "/works"
+    AUTHORS = "/authors"
+    INSTITUTIONS = "/institutions"
+    CONCEPTS = "/concepts"
+
+    def __init__(
+        self,
+        email: Optional[str] = None,
+        rate_limit: int = 10,
+        timeout: int = 30,
+    ):
+        """
+        Initialize OpenAlex client.
+
+        Args:
+            email: Email for polite API access (higher rate limits)
+            rate_limit: Maximum requests per second
+            timeout: Request timeout in seconds
+        """
+        self.email = email or settings.OPENALEX_EMAIL
+        self.rate_limit = rate_limit or settings.OPENALEX_RATE_LIMIT
+        self.timeout = timeout
+        self.base_url = settings.OPENALEX_BASE_URL or self.BASE_URL
+
+        # Rate limiting
+        self._last_request_time = 0.0
+        self._min_interval = 1.0 / self.rate_limit
+
+        # Headers
+        self.headers = {
+            "Accept": "application/json",
+            "User-Agent": f"TalentPlatform/1.0 (mailto:{self.email})" if self.email else "TalentPlatform/1.0",
+        }
+
+    def _wait_for_rate_limit(self):
+        """Wait if necessary to respect rate limits."""
+        elapsed = time.time() - self._last_request_time
+        if elapsed < self._min_interval:
+            time.sleep(self._min_interval - elapsed)
+        self._last_request_time = time.time()
+
+    async def _async_wait_for_rate_limit(self):
+        """Async version of rate limit wait."""
+        elapsed = time.time() - self._last_request_time
+        if elapsed < self._min_interval:
+            await asyncio.sleep(self._min_interval - elapsed)
+        self._last_request_time = time.time()
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+    )
+    async def _make_request(
+        self,
+        client: httpx.AsyncClient,
+        endpoint: str,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Make a rate-limited request to OpenAlex API.
+
+        Args:
+            client: HTTP client instance
+            endpoint: API endpoint (e.g., /authors)
+            params: Query parameters
+
+        Returns:
+            JSON response as dictionary
+
+        Raises:
+            OpenAlexAPIError: On API errors
+            OpenAlexRateLimitError: On rate limit exceeded
+        """
+        await self._async_wait_for_rate_limit()
+
+        url = f"{self.base_url}{endpoint}"
+
+        try:
+            response = await client.get(url, params=params, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                raise OpenAlexRateLimitError("Rate limit exceeded") from e
+            raise OpenAlexAPIError(f"API error: {e.response.status_code} - {e.response.text}") from e
+
+        except httpx.TimeoutException as e:
+            raise OpenAlexAPIError(f"Request timeout: {e}") from e
+
+        except httpx.NetworkError as e:
+            raise OpenAlexAPIError(f"Network error: {e}") from e
+
+    async def get_institutions(
+        self,
+        country_code: Optional[str] = None,
+        institution_type: Optional[str] = None,
+        per_page: int = 200,
+        cursor: Optional[str] = None,
+        mailto: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Fetch institutions from OpenAlex.
+
+        Args:
+            country_code: Filter by country code (e.g., 'US', 'CN')
+            institution_type: Filter by type (e.g., 'education')
+            per_page: Number of results per page (max 200)
+            cursor: Cursor for pagination
+            mailto: Email for polite API
+
+        Returns:
+            API response with institutions list and meta info
+        """
+        params = {
+            "per_page": min(per_page, 200),
+        }
+
+        # Build filter query
+        filters = []
+        if country_code:
+            filters.append(f"country_code:{country_code}")
+        if institution_type:
+            filters.append(f"type:{institution_type}")
+
+        if filters:
+            params["filter"] = ",".join(filters)
+
+        if cursor:
+            params["cursor"] = cursor
+
+        if mailto or self.email:
+            params["mailto"] = mailto or self.email
+
+        async with httpx.AsyncClient(headers=self.headers) as client:
+            return await self._make_request(client, self.INSTITUTIONS, params)
+
+    async def get_authors(
+        self,
+        institution_id: Optional[str] = None,
+        has_orcid: Optional[bool] = None,
+        per_page: int = 200,
+        cursor: Optional[str] = None,
+        mailto: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Fetch authors from OpenAlex.
+
+        Args:
+            institution_id: Filter by institution OpenAlex ID
+            has_orcid: Filter by ORCID availability
+            per_page: Number of results per page (max 200)
+            cursor: Cursor for pagination
+            mailto: Email for polite API
+
+        Returns:
+            API response with authors list and meta info
+        """
+        params = {
+            "per_page": min(per_page, 200),
+        }
+
+        filters = []
+        if institution_id:
+            filters.append(f"last_known_institutions.id:{institution_id}")
+        if has_orcid is not None:
+            filters.append(f"has_orcid:{str(has_orcid).lower()}")
+
+        if filters:
+            params["filter"] = ",".join(filters)
+
+        if cursor:
+            params["cursor"] = cursor
+
+        if mailto or self.email:
+            params["mailto"] = mailto or self.email
+
+        async with httpx.AsyncClient(headers=self.headers) as client:
+            return await self._make_request(client, self.AUTHORS, params)
+
+    async def get_works(
+        self,
+        author_id: Optional[str] = None,
+        per_page: int = 200,
+        cursor: Optional[str] = None,
+        mailto: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Fetch works from OpenAlex.
+
+        Args:
+            author_id: Filter by author OpenAlex ID
+            per_page: Number of results per page (max 200)
+            cursor: Cursor for pagination
+            mailto: Email for polite API
+
+        Returns:
+            API response with works list and meta info
+        """
+        params = {
+            "per_page": min(per_page, 200),
+        }
+
+        filters = []
+        if author_id:
+            filters.append(f"author.id:{author_id}")
+
+        if filters:
+            params["filter"] = ",".join(filters)
+
+        if cursor:
+            params["cursor"] = cursor
+
+        if mailto or self.email:
+            params["mailto"] = mailto or self.email
+
+        async with httpx.AsyncClient(headers=self.headers) as client:
+            return await self._make_request(client, self.WORKS, params)
+
+    async def get_author_by_id(self, author_id: str) -> Dict[str, Any]:
+        """
+        Fetch a single author by OpenAlex ID.
+
+        Args:
+            author_id: OpenAlex author ID (e.g., 'A1234567890')
+
+        Returns:
+            Author data
+        """
+        async with httpx.AsyncClient(headers=self.headers) as client:
+            return await self._make_request(client, f"{self.AUTHORS}/{author_id}")
+
+    async def get_institution_by_id(self, institution_id: str) -> Dict[str, Any]:
+        """
+        Fetch a single institution by OpenAlex ID.
+
+        Args:
+            institution_id: OpenAlex institution ID (e.g., 'I1234567890')
+
+        Returns:
+            Institution data
+        """
+        async with httpx.AsyncClient(headers=self.headers) as client:
+            return await self._make_request(client, f"{self.INSTITUTIONS}/{institution_id}")
+
+    async def iterate_institutions(
+        self,
+        country_code: Optional[str] = None,
+        institution_type: Optional[str] = None,
+        max_records: Optional[int] = None,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Iterate through all institutions with pagination.
+
+        Args:
+            country_code: Filter by country code
+            institution_type: Filter by type
+            max_records: Maximum number of records to fetch
+
+        Yields:
+            Individual institution records
+        """
+        cursor = None
+        count = 0
+
+        while True:
+            response = await self.get_institutions(
+                country_code=country_code,
+                institution_type=institution_type,
+                cursor=cursor,
+            )
+
+            results = response.get("results", [])
+            if not results:
+                break
+
+            for institution in results:
+                yield institution
+                count += 1
+                if max_records and count >= max_records:
+                    return
+
+            # Get next cursor
+            meta = response.get("meta", {})
+            cursor = meta.get("next_cursor")
+            if not cursor:
+                break
+
+    async def iterate_authors(
+        self,
+        institution_id: Optional[str] = None,
+        max_records: Optional[int] = None,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Iterate through all authors with pagination.
+
+        Args:
+            institution_id: Filter by institution
+            max_records: Maximum number of records to fetch
+
+        Yields:
+            Individual author records
+        """
+        cursor = None
+        count = 0
+
+        while True:
+            response = await self.get_authors(
+                institution_id=institution_id,
+                cursor=cursor,
+            )
+
+            results = response.get("results", [])
+            if not results:
+                break
+
+            for author in results:
+                yield author
+                count += 1
+                if max_records and count >= max_records:
+                    return
+
+            meta = response.get("meta", {})
+            cursor = meta.get("next_cursor")
+            if not cursor:
+                break
+
+
+# Convenience function
+def get_openalex_client() -> OpenAlexClient:
+    """Get configured OpenAlex client instance."""
+    return OpenAlexClient(
+        email=settings.OPENALEX_EMAIL,
+        rate_limit=settings.OPENALEX_RATE_LIMIT,
+    )
