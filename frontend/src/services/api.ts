@@ -89,7 +89,7 @@ export const api = {
 
   // Talents
   talents: {
-    list: (params?: { school_id?: number; role_type?: string; page?: number }) =>
+    list: (params?: { school_id?: number; country_id?: number; role_type?: string; keyword?: string; page?: number; page_size?: number }) =>
       apiClient.get('/talents', { params }),
     get: (id: number) => apiClient.get(`/talents/${id}`),
     getWorks: (id: number, limit?: number) =>
