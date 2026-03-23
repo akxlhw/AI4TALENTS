@@ -7,6 +7,8 @@ import {
   UserOutlined,
   LogoutOutlined,
   StarOutlined,
+  AppstoreOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -23,6 +25,16 @@ const MainLayout: React.FC = () => {
       key: '/',
       icon: <HomeOutlined />,
       label: '首页',
+    },
+    {
+      key: '/tech-element',
+      icon: <AppstoreOutlined />,
+      label: '技术要素',
+    },
+    {
+      key: '/country-school',
+      icon: <GlobalOutlined />,
+      label: '国家院校',
     },
     {
       key: '/search',

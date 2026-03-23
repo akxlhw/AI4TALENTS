@@ -9,6 +9,8 @@ import LoginPage from './pages/LoginPage'
 import AdminPage from './pages/AdminPage'
 import FavoritesPage from './pages/FavoritesPage'
 import ProfilePage from './pages/ProfilePage'
+import TechElementPage from './pages/TechElementPage'
+import CountrySchoolPage from './pages/CountrySchoolPage'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FavoritesProvider } from './contexts/FavoritesContext'
 
@@ -93,6 +95,8 @@ function AppRoutes() {
         }
       >
         <Route index element={<HomePage />} />
+        <Route path="tech-element" element={<TechElementPage />} />
+        <Route path="country-school" element={<CountrySchoolPage />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="talents/:id" element={<TalentDetailPage />} />
         <Route path="schools/:id" element={<SchoolDetailPage />} />
