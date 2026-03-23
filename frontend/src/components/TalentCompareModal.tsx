@@ -106,7 +106,7 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
       width: 120,
       fixed: 'left' as const,
     },
-    ...(data?.talents || []).map((t, idx) => ({
+    ...(data?.talents || []).map((t) => ({
       title: t.name,
       dataIndex: `talent_${t.talent_id}`,
       key: `talent_${t.talent_id}`,

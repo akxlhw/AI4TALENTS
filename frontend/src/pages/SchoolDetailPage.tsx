@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Card,
-  Descriptions,
   Typography,
   Tag,
   Space,
@@ -13,7 +12,6 @@ import {
   Spin,
   Button,
   Empty,
-  Tabs,
   Badge,
 } from 'antd'
 import {
@@ -23,7 +21,6 @@ import {
   UserOutlined,
   ArrowLeftOutlined,
   TrophyOutlined,
-  FileTextOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
 

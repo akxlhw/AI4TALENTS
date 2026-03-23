@@ -18,7 +18,7 @@ const { Text } = Typography
 const MainLayout: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout, isAdmin, isSuperAdmin } = useAuth()
+  const { user, logout, isAdmin } = useAuth()
 
   const menuItems = [
     {

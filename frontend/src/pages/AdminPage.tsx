@@ -15,7 +15,6 @@ import {
   Badge,
   Tabs,
   List,
-  Divider,
 } from 'antd'
 import {
   UserOutlined,
@@ -27,7 +26,7 @@ import {
 import { api } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 interface User {
   user_id: number
