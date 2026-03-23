@@ -6,6 +6,7 @@ from app.models.enums import RoleType, VisibilityStatus, UserRoleType, SyncJobSt
 from app.models.country import Country
 from app.models.school import School, SchoolAlias
 from app.models.talent import Talent, RoleProfile, SelectedWork
+from app.models.tech_element import TechElement, TechDirection, TalentTechTag
 from app.models.collaboration import Collaboration, WorkAuthor
 from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
 from app.models.iam import UserAccount, UserSchoolScope, FavoriteTalent
@@ -28,6 +29,9 @@ __all__ = [
     "Talent",
     "RoleProfile",
     "SelectedWork",
+    "TechElement",
+    "TechDirection",
+    "TalentTechTag",
     "Collaboration",
     "WorkAuthor",
     # Statistics

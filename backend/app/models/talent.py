@@ -61,6 +61,7 @@ class Talent(Base, TimestampMixin):
     school = relationship("School", back_populates="talents")
     role_profile = relationship("RoleProfile", back_populates="talent", uselist=False)
     selected_works = relationship("SelectedWork", back_populates="talent")
+    tech_tags = relationship("TalentTechTag", back_populates="talent")
 
     def __repr__(self):
         return f"<Talent(talent_id={self.talent_id}, name={self.name}, role={self.role_type})>"

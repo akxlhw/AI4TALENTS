@@ -152,4 +152,22 @@ export const api = {
     remove: (talentId: number) =>
       apiClient.delete(`/favorites/${talentId}`),
   },
+
+  // Tech Elements
+  techElements: {
+    list: () =>
+      apiClient.get('/tech-elements'),
+    get: (id: number) =>
+      apiClient.get(`/tech-elements/${id}`),
+    getSummary: () =>
+      apiClient.get('/tech-elements/summary'),
+    getStats: (id: number) =>
+      apiClient.get(`/tech-elements/${id}/stats`),
+    getCountries: (id: number, directionId?: number) =>
+      apiClient.get(`/tech-elements/${id}/countries`, { params: { direction_id: directionId } }),
+    getSchools: (id: number, params?: { direction_id?: number; country_id?: number; page?: number; page_size?: number }) =>
+      apiClient.get(`/tech-elements/${id}/schools`, { params }),
+    getTalents: (id: number, params?: { direction_id?: number; country_id?: number; school_id?: number; role_type?: string; keyword?: string; page?: number; page_size?: number }) =>
+      apiClient.get(`/tech-elements/${id}/talents`, { params }),
+  },
 }

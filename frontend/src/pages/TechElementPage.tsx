@@ -2,8 +2,8 @@
  * 技术要素页面 - MVP v1.1
  * 面向业务部门的主分析页面，从技术要素/技术方向看人才供给
  */
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Card,
   Row,
@@ -26,36 +26,52 @@ import {
   TeamOutlined,
   GlobalOutlined,
   BankOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import { api } from '../services/api'
 
 const { Title, Text } = Typography
-const { TabPane } = Tabs
+
+// 技术要素类型
+interface TechElement {
+  tech_element_id: number
+  element_code: string
+  element_name: string
+  element_name_en: string | null
+  directions: TechDirection[]
+}
+
+// 技术方向类型
+interface TechDirection {
+  tech_direction_id: number
+  direction_code: string
+  direction_name: string
+  tech_element_id: number
+}
 
 // 国家分布数据类型
 interface CountryDistribution {
   country_id: number
   country_name: string
+  country_code: string | null
   talent_count: number
-  professor_count: number
-  student_count: number
 }
 
 // 院校分布数据类型
 interface SchoolDistribution {
   school_id: number
   school_name: string
-  country_name: string
+  country_name: string | null
   talent_count: number
-  professor_count: number
-  student_count: number
 }
 
 // 人才明细数据类型
 interface TalentItem {
   talent_id: number
   name: string
-  school_name: string
+  name_en: string | null
+  school_name: string | null
   role_type: string
   h_index: number
   works_count: number
@@ -64,48 +80,233 @@ interface TalentItem {
 
 const TechElementPage: React.FC = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   // 筛选状态
-  const [techElement, setTechElement] = useState<string | undefined>()
-  const [techDirection, setTechDirection] = useState<string | undefined>()
+  const [techElementId, setTechElementId] = useState<number | undefined>(
+    searchParams.get('tech_element_id') ? Number(searchParams.get('tech_element_id')) : undefined
+  )
+  const [techDirectionId, setTechDirectionId] = useState<number | undefined>()
   const [keyword, setKeyword] = useState('')
-  const [country, setCountry] = useState<string | undefined>()
-  const [school, setSchool] = useState<string | undefined>()
+  const [countryId, setCountryId] = useState<number | undefined>()
+  const [schoolId, setSchoolId] = useState<number | undefined>()
   const [roleType, setRoleType] = useState<string | undefined>()
 
   // 页面状态
   const [activeTab, setActiveTab] = useState('country')
-  const [loading] = useState(false)
-  const [summaryLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [summaryLoading, setSummaryLoading] = useState(false)
+  const [elementsLoading, setElementsLoading] = useState(false)
 
   // 数据
-  const [summary] = useState({
+  const [techElements, setTechElements] = useState<TechElement[]>([])
+  const [summary, setSummary] = useState({
     talentCount: 0,
-    professorCount: 0,
-    studentCount: 0,
+    directionCount: 0,
     schoolCount: 0,
     countryCount: 0,
   })
-  const [countryData] = useState<CountryDistribution[]>([])
-  const [schoolData] = useState<SchoolDistribution[]>([])
-  const [talentData] = useState<TalentItem[]>([])
+  const [countryData, setCountryData] = useState<CountryDistribution[]>([])
+  const [schoolData, setSchoolData] = useState<SchoolDistribution[]>([])
+  const [talentData, setTalentData] = useState<TalentItem[]>([])
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
 
-  // 模拟技术要素选项 - 后续从API获取
-  const techElementOptions = [
-    { value: 'ai', label: '人工智能' },
-    { value: 'ml', label: '机器学习' },
-    { value: 'nlp', label: '自然语言处理' },
-    { value: 'cv', label: '计算机视觉' },
-    { value: 'robotics', label: '机器人' },
-  ]
-
+  // 角色类型选项
   const roleTypeOptions = [
     { value: 'professor', label: '教授/科研人员' },
     { value: 'student', label: '在读学生' },
     { value: 'graduated', label: '已毕业' },
     { value: 'unknown', label: '待确认' },
   ]
+
+  // 获取技术要素列表
+  const fetchTechElements = useCallback(async () => {
+    setElementsLoading(true)
+    try {
+      const response = await api.techElements.list()
+      setTechElements(response.data.items || [])
+    } catch (error) {
+      console.error('Failed to fetch tech elements:', error)
+    } finally {
+      setElementsLoading(false)
+    }
+  }, [])
+
+  // 获取统计数据
+  const fetchStats = useCallback(async () => {
+    if (!techElementId) {
+      setSummary({ talentCount: 0, directionCount: 0, schoolCount: 0, countryCount: 0 })
+      return
+    }
+
+    setSummaryLoading(true)
+    try {
+      const response = await api.techElements.getStats(techElementId)
+      setSummary({
+        talentCount: response.data.talent_count,
+        directionCount: response.data.direction_count,
+        schoolCount: response.data.school_count,
+        countryCount: response.data.country_count,
+      })
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
+    } finally {
+      setSummaryLoading(false)
+    }
+  }, [techElementId])
+
+  // 获取国家分布
+  const fetchCountryDistribution = useCallback(async () => {
+    if (!techElementId) {
+      setCountryData([])
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await api.techElements.getCountries(techElementId, techDirectionId)
+      setCountryData(response.data.items || [])
+    } catch (error) {
+      console.error('Failed to fetch country distribution:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [techElementId, techDirectionId])
+
+  // 获取院校分布
+  const fetchSchoolDistribution = useCallback(async (page = 1) => {
+    if (!techElementId) {
+      setSchoolData([])
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await api.techElements.getSchools(techElementId, {
+        direction_id: techDirectionId,
+        country_id: countryId,
+        page,
+        page_size: 10,
+      })
+      setSchoolData(response.data.items || [])
+    } catch (error) {
+      console.error('Failed to fetch school distribution:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [techElementId, techDirectionId, countryId])
+
+  // 获取人才列表
+  const fetchTalents = useCallback(async (page = 1) => {
+    if (!techElementId) {
+      setTalentData([])
+      setPagination({ ...pagination, total: 0 })
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await api.techElements.getTalents(techElementId, {
+        direction_id: techDirectionId,
+        country_id: countryId,
+        school_id: schoolId,
+        role_type: roleType,
+        keyword: keyword || undefined,
+        page,
+        page_size: pagination.pageSize,
+      })
+      setTalentData(response.data.items || [])
+      setPagination({
+        current: response.data.page || page,
+        pageSize: response.data.page_size || pagination.pageSize,
+        total: response.data.total || 0,
+      })
+    } catch (error) {
+      console.error('Failed to fetch talents:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [techElementId, techDirectionId, countryId, schoolId, roleType, keyword, pagination.pageSize])
+
+  // 初始化加载技术要素列表
+  useEffect(() => {
+    fetchTechElements()
+  }, [fetchTechElements])
+
+  // 当技术要素变化时加载数据
+  useEffect(() => {
+    if (techElementId) {
+      fetchStats()
+      fetchCountryDistribution()
+      fetchSchoolDistribution()
+      fetchTalents()
+    }
+  }, [techElementId, techDirectionId, fetchStats, fetchCountryDistribution, fetchSchoolDistribution, fetchTalents])
+
+  // 处理技术要素变化
+  const handleTechElementChange = (value: number | undefined) => {
+    setTechElementId(value)
+    setTechDirectionId(undefined)
+  }
+
+  // 处理国家点击 - 跳转到国家院校页
+  const handleCountryClick = (countryId: number) => {
+    navigate(`/country-school?country_id=${countryId}${techElementId ? `&tech_element_id=${techElementId}` : ''}`)
+  }
+
+  // 处理搜索
+  const handleSearch = () => {
+    setPagination({ ...pagination, current: 1 })
+    if (techElementId) {
+      fetchStats()
+      fetchCountryDistribution()
+      fetchSchoolDistribution()
+      fetchTalents(1)
+    }
+  }
+
+  // 处理重置
+  const handleReset = () => {
+    setTechElementId(undefined)
+    setTechDirectionId(undefined)
+    setKeyword('')
+    setCountryId(undefined)
+    setSchoolId(undefined)
+    setRoleType(undefined)
+    setCountryData([])
+    setSchoolData([])
+    setTalentData([])
+    setSummary({ talentCount: 0, directionCount: 0, schoolCount: 0, countryCount: 0 })
+  }
+
+  // 处理表格分页变化
+  const handleTableChange = (newPagination: any) => {
+    const newPage = newPagination.current
+    setPagination({
+      ...pagination,
+      current: newPage,
+      pageSize: newPagination.pageSize,
+    })
+
+    if (activeTab === 'school') {
+      fetchSchoolDistribution(newPage)
+    } else if (activeTab === 'talent') {
+      fetchTalents(newPage)
+    }
+  }
+
+  // 获取当前选中的技术要素的方向选项
+  const currentElement = techElements.find(e => e.tech_element_id === techElementId)
+  const directionOptions = (currentElement?.directions || []).map(d => ({
+    value: d.tech_direction_id,
+    label: d.direction_name,
+  }))
+
+  // 技术要素选项
+  const elementOptions = techElements.map(e => ({
+    value: e.tech_element_id,
+    label: e.element_name,
+  }))
 
   // 国家分布表格列
   const countryColumns: ColumnsType<CountryDistribution> = [
@@ -122,16 +323,6 @@ const TechElementPage: React.FC = () => {
       dataIndex: 'talent_count',
       key: 'talent_count',
       sorter: true,
-    },
-    {
-      title: '教授/科研人员',
-      dataIndex: 'professor_count',
-      key: 'professor_count',
-    },
-    {
-      title: '学生',
-      dataIndex: 'student_count',
-      key: 'student_count',
     },
   ]
 
@@ -155,11 +346,6 @@ const TechElementPage: React.FC = () => {
       dataIndex: 'talent_count',
       key: 'talent_count',
       sorter: true,
-    },
-    {
-      title: '教授/科研人员',
-      dataIndex: 'professor_count',
-      key: 'professor_count',
     },
   ]
 
@@ -220,41 +406,6 @@ const TechElementPage: React.FC = () => {
     },
   ]
 
-  // 处理国家点击 - 跳转到国家院校页
-  const handleCountryClick = (countryId: number) => {
-    navigate(`/country-school?country_id=${countryId}${techElement ? `&tech_element=${techElement}` : ''}`)
-  }
-
-  // 处理搜索
-  const handleSearch = () => {
-    setPagination({ ...pagination, current: 1 })
-    // TODO: 调用API获取数据
-  }
-
-  // 处理重置
-  const handleReset = () => {
-    setTechElement(undefined)
-    setTechDirection(undefined)
-    setKeyword('')
-    setCountry(undefined)
-    setSchool(undefined)
-    setRoleType(undefined)
-  }
-
-  // 处理表格分页变化
-  const handleTableChange = (newPagination: any) => {
-    setPagination({
-      ...pagination,
-      current: newPagination.current,
-      pageSize: newPagination.pageSize,
-    })
-  }
-
-  // 初始化加载 - 显示空状态提示
-  useEffect(() => {
-    // 页面骨架已就绪，等待API开发完成后接入真实数据
-  }, [])
-
   return (
     <div style={{ padding: 0 }}>
       {/* 页面标题 */}
@@ -271,10 +422,13 @@ const TechElementPage: React.FC = () => {
             <Select
               style={{ width: '100%' }}
               placeholder="选择技术要素"
-              value={techElement}
-              onChange={setTechElement}
-              options={techElementOptions}
+              value={techElementId}
+              onChange={handleTechElementChange}
+              options={elementOptions}
+              loading={elementsLoading}
               allowClear
+              showSearch
+              optionFilterProp="label"
             />
           </Col>
           <Col span={6}>
@@ -282,9 +436,10 @@ const TechElementPage: React.FC = () => {
             <Select
               style={{ width: '100%' }}
               placeholder="选择技术方向"
-              value={techDirection}
-              onChange={setTechDirection}
-              disabled={!techElement}
+              value={techDirectionId}
+              onChange={setTechDirectionId}
+              options={directionOptions}
+              disabled={!techElementId}
               allowClear
             />
           </Col>
@@ -293,8 +448,8 @@ const TechElementPage: React.FC = () => {
             <Select
               style={{ width: '100%' }}
               placeholder="选择国家"
-              value={country}
-              onChange={setCountry}
+              value={countryId}
+              onChange={setCountryId}
               allowClear
               showSearch
               optionFilterProp="label"
@@ -305,8 +460,8 @@ const TechElementPage: React.FC = () => {
             <Select
               style={{ width: '100%' }}
               placeholder="选择学校"
-              value={school}
-              onChange={setSchool}
+              value={schoolId}
+              onChange={setSchoolId}
               allowClear
               showSearch
               optionFilterProp="label"
@@ -359,14 +514,9 @@ const TechElementPage: React.FC = () => {
             </Col>
             <Col span={4}>
               <Statistic
-                title="教授/科研人员"
-                value={summary.professorCount}
-              />
-            </Col>
-            <Col span={4}>
-              <Statistic
-                title="学生"
-                value={summary.studentCount}
+                title="技术方向"
+                value={summary.directionCount}
+                prefix={<AppstoreOutlined />}
               />
             </Col>
             <Col span={4}>
@@ -390,7 +540,7 @@ const TechElementPage: React.FC = () => {
       {/* Tabs 主视图区 */}
       <Card>
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane tab="国家分布" key="country">
+          <Tabs.TabPane tab="国家分布" key="country">
             <Table
               columns={countryColumns}
               dataSource={countryData}
@@ -399,15 +549,15 @@ const TechElementPage: React.FC = () => {
               pagination={{ pageSize: 10 }}
               onChange={handleTableChange}
               locale={{
-                emptyText: techElement ? (
-                  <Empty description="暂无数据，请选择技术要素后查询" />
+                emptyText: techElementId ? (
+                  <Empty description="暂无数据，请调整筛选条件" />
                 ) : (
                   <Empty description="请选择技术要素后查询" />
                 ),
               }}
             />
-          </TabPane>
-          <TabPane tab="院校分布" key="school">
+          </Tabs.TabPane>
+          <Tabs.TabPane tab="院校分布" key="school">
             <Table
               columns={schoolColumns}
               dataSource={schoolData}
@@ -416,15 +566,15 @@ const TechElementPage: React.FC = () => {
               pagination={{ pageSize: 10 }}
               onChange={handleTableChange}
               locale={{
-                emptyText: techElement ? (
-                  <Empty description="暂无数据，请选择技术要素后查询" />
+                emptyText: techElementId ? (
+                  <Empty description="暂无数据，请调整筛选条件" />
                 ) : (
                   <Empty description="请选择技术要素后查询" />
                 ),
               }}
             />
-          </TabPane>
-          <TabPane tab="人才明细" key="talent">
+          </Tabs.TabPane>
+          <Tabs.TabPane tab="人才明细" key="talent">
             <Table
               columns={talentColumns}
               dataSource={talentData}
@@ -433,14 +583,14 @@ const TechElementPage: React.FC = () => {
               pagination={pagination}
               onChange={handleTableChange}
               locale={{
-                emptyText: techElement ? (
-                  <Empty description="暂无数据，请选择技术要素后查询" />
+                emptyText: techElementId ? (
+                  <Empty description="暂无数据，请调整筛选条件" />
                 ) : (
                   <Empty description="请选择技术要素后查询" />
                 ),
               }}
             />
-          </TabPane>
+          </Tabs.TabPane>
         </Tabs>
       </Card>
     </div>
