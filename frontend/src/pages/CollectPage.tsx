@@ -23,7 +23,6 @@ import {
   ThunderboltOutlined,
   ScheduleOutlined,
   PlusOutlined,
-  DeleteOutlined,
   PlayCircleOutlined,
   StopOutlined,
   EyeOutlined,

@@ -13,7 +13,6 @@ import {
   message,
   Badge,
   Tabs,
-  Progress,
   Descriptions,
   Statistic,
   Row,
@@ -23,11 +22,7 @@ import {
 import {
   DatabaseOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
   EditOutlined,
-  ExportOutlined,
-  WarningOutlined,
-  InfoCircleOutlined,
   PlusOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
