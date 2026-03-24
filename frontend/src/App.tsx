@@ -12,6 +12,7 @@ import ProfilePage from './pages/ProfilePage'
 import TechElementPage from './pages/TechElementPage'
 import CountrySchoolPage from './pages/CountrySchoolPage'
 import CollectPage from './pages/CollectPage'
+import DataVersionPage from './pages/DataVersionPage'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FavoritesProvider } from './contexts/FavoritesContext'
 
@@ -116,6 +117,14 @@ function AppRoutes() {
           element={
             <AdminRoute>
               <CollectPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="data-version"
+          element={
+            <AdminRoute>
+              <DataVersionPage />
             </AdminRoute>
           }
         />

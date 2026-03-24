@@ -4,7 +4,7 @@ Aggregates all endpoint routers.
 """
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import health, overview, countries, schools, talents, search, auth, permissions, audit, favorites, tech_element, talent_pool, collect
+from app.api.v1.endpoints import health, overview, countries, schools, talents, search, auth, permissions, audit, favorites, tech_element, talent_pool, collect, data_version
 
 
 api_router = APIRouter()
@@ -47,3 +47,6 @@ api_router.include_router(favorites.router)
 
 # Collect configuration endpoints
 api_router.include_router(collect.router)
+
+# Data version management endpoints
+api_router.include_router(data_version.router)

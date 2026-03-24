@@ -248,4 +248,34 @@ export const api = {
     getDataTypes: () =>
       apiClient.get('/collect/options/data-types'),
   },
+
+  // Data Version Management
+  dataVersion: {
+    // Versions
+    listVersions: (params?: { is_published?: boolean; page?: number; page_size?: number }) =>
+      apiClient.get('/data-version/versions', { params }),
+    getActiveVersion: () =>
+      apiClient.get('/data-version/versions/active'),
+    getVersion: (versionId: number) =>
+      apiClient.get(`/data-version/versions/${versionId}`),
+    createVersion: (data: { version_code: string; version_name: string; version_type?: string; base_version_id?: number; source_task_id?: number; description?: string }) =>
+      apiClient.post('/data-version/versions', data),
+    publishVersion: (versionId: number, notes?: string) =>
+      apiClient.post(`/data-version/versions/${versionId}/publish`, { notes }),
+    // Publish Records
+    listPublishRecords: (versionId?: number) =>
+      apiClient.get('/data-version/publish-records', { params: { version_id: versionId } }),
+    // Corrections
+    listCorrections: (params?: { target_type?: string; status?: string; page?: number; page_size?: number }) =>
+      apiClient.get('/data-version/corrections', { params }),
+    createCorrection: (data: { target_type: string; target_id: number; field_name: string; original_value?: string; corrected_value?: string; correction_type?: string; reason?: string; source?: string }) =>
+      apiClient.post('/data-version/corrections', data),
+    revertCorrection: (correctionId: number) =>
+      apiClient.post(`/data-version/corrections/${correctionId}/revert`),
+    // Quality
+    getQualitySummary: (versionId?: number) =>
+      apiClient.get('/data-version/quality/summary', { params: { version_id: versionId } }),
+    getQualityMetrics: () =>
+      apiClient.get('/data-version/quality/metrics'),
+  },
 }

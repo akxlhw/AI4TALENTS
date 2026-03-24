@@ -185,3 +185,144 @@ class CollectTask(Base, TimestampMixin):
     def __repr__(self):
         return f"<CollectTask(task_id={self.task_id}, status={self.status})>"
 
+
+class DataVersion(Base, TimestampMixin):
+    """数据版本"""
+
+    __tablename__ = "data_version"
+
+    version_id = Column(Integer, primary_key=True, index=True)
+    version_code = Column(String(50), unique=True, nullable=False, index=True)
+    version_name = Column(String(100), nullable=False)
+
+    # Version info
+    version_type = Column(String(20), default="snapshot", nullable=False)  # 'snapshot', 'release'
+    base_version_id = Column(Integer, ForeignKey("data_version.version_id"), nullable=True)
+
+    # Source task
+    source_task_id = Column(Integer, ForeignKey("sync_collect_task.task_id"), nullable=True)
+
+    # Statistics
+    total_talents = Column(Integer, default=0)
+    total_schools = Column(Integer, default=0)
+    total_works = Column(Integer, default=0)
+
+    # Status
+    is_active = Column(Boolean, default=False, nullable=False, index=True)  # Currently active version
+    is_published = Column(Boolean, default=False, nullable=False)
+
+    # Publish info
+    published_at = Column(DateTime, nullable=True)
+    published_by = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=True)
+
+    # Description
+    description = Column(Text, nullable=True)
+
+    def __repr__(self):
+        return f"<DataVersion(version_id={self.version_id}, code={self.version_code})>"
+
+
+class DataPublishRecord(Base, TimestampMixin):
+    """数据发布记录"""
+
+    __tablename__ = "data_publish_record"
+
+    publish_id = Column(Integer, primary_key=True, index=True)
+    version_id = Column(Integer, ForeignKey("data_version.version_id"), nullable=False, index=True)
+
+    # Action type
+    action = Column(String(20), nullable=False)  # 'publish', 'rollback', 'activate', 'deactivate'
+
+    # Previous state
+    previous_version_id = Column(Integer, ForeignKey("data_version.version_id"), nullable=True)
+
+    # Operator
+    operated_by = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=False)
+    operated_at = Column(DateTime, nullable=False)
+
+    # Notes
+    notes = Column(Text, nullable=True)
+
+    def __repr__(self):
+        return f"<DataPublishRecord(publish_id={self.publish_id}, action={self.action})>"
+
+
+class DataCorrectionRecord(Base, TimestampMixin):
+    """数据纠偏记录"""
+
+    __tablename__ = "data_correction_record"
+
+    correction_id = Column(Integer, primary_key=True, index=True)
+
+    # Target info
+    target_type = Column(String(30), nullable=False, index=True)  # 'talent', 'school', 'tech_tag'
+    target_id = Column(Integer, nullable=False, index=True)
+
+    # Field info
+    field_name = Column(String(50), nullable=False)
+    original_value = Column(Text, nullable=True)
+    corrected_value = Column(Text, nullable=True)
+
+    # Correction type
+    correction_type = Column(String(20), nullable=False)  # 'manual', 'system', 'import'
+
+    # Reason
+    reason = Column(Text, nullable=True)
+
+    # Source
+    source = Column(String(100), nullable=True)  # Where correction came from
+
+    # Operator
+    corrected_by = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=False)
+
+    # Status
+    status = Column(String(20), default="applied", nullable=False)  # 'pending', 'applied', 'reverted'
+
+    def __repr__(self):
+        return f"<DataCorrectionRecord(correction_id={self.correction_id}, target={self.target_type}:{self.target_id})>"
+
+
+class DataQualitySummary(Base, TimestampMixin):
+    """数据质量摘要"""
+
+    __tablename__ = "data_quality_summary"
+
+    summary_id = Column(Integer, primary_key=True, index=True)
+    version_id = Column(Integer, ForeignKey("data_version.version_id"), nullable=False, index=True)
+
+    # Summary date
+    summary_date = Column(DateTime, nullable=False, index=True)
+
+    # Talent quality metrics
+    talent_total = Column(Integer, default=0)
+    talent_with_orcid = Column(Integer, default=0)
+    talent_with_affiliation = Column(Integer, default=0)
+    talent_with_works = Column(Integer, default=0)
+    talent_completeness_avg = Column(Integer, default=0)  # Percentage average
+
+    # School quality metrics
+    school_total = Column(Integer, default=0)
+    school_with_ror = Column(Integer, default=0)
+    school_with_country = Column(Integer, default=0)
+
+    # Work quality metrics
+    work_total = Column(Integer, default=0)
+    work_with_doi = Column(Integer, default=0)
+
+    # Tech tag metrics
+    tech_tag_total = Column(Integer, default=0)
+    tech_tag_confirmed = Column(Integer, default=0)
+    tech_tag_auto_identified = Column(Integer, default=0)
+    tech_tag_pending_confirm = Column(Integer, default=0)
+
+    # Issues count
+    issues_critical = Column(Integer, default=0)
+    issues_warning = Column(Integer, default=0)
+    issues_info = Column(Integer, default=0)
+
+    # Additional details
+    details = Column(JSON, nullable=True)
+
+    def __repr__(self):
+        return f"<DataQualitySummary(summary_id={self.summary_id}, version_id={self.version_id})>"
+

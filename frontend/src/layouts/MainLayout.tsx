@@ -10,6 +10,7 @@ import {
   AppstoreOutlined,
   GlobalOutlined,
   ThunderboltOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -56,6 +57,11 @@ const MainLayout: React.FC = () => {
       key: '/collect',
       icon: <ThunderboltOutlined />,
       label: '采集配置',
+    }] : []),
+    ...(isAdmin ? [{
+      key: '/data-version',
+      icon: <DatabaseOutlined />,
+      label: '数据版本',
     }] : []),
   ]
 
