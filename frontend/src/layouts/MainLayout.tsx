@@ -9,6 +9,7 @@ import {
   StarOutlined,
   AppstoreOutlined,
   GlobalOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -50,6 +51,11 @@ const MainLayout: React.FC = () => {
       key: '/admin',
       icon: <SettingOutlined />,
       label: '权限管理',
+    }] : []),
+    ...(isAdmin ? [{
+      key: '/collect',
+      icon: <ThunderboltOutlined />,
+      label: '采集配置',
     }] : []),
   ]
 

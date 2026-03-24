@@ -202,4 +202,50 @@ export const api = {
     getFollowupStatuses: () =>
       apiClient.get('/talent-pools/followup-statuses'),
   },
+
+  // Collect Configuration
+  collect: {
+    // Scopes
+    listScopes: (params?: { scope_type?: string; is_enabled?: boolean }) =>
+      apiClient.get('/collect/scopes', { params }),
+    getScope: (scopeId: number) =>
+      apiClient.get(`/collect/scopes/${scopeId}`),
+    createScope: (data: { scope_code: string; scope_name: string; scope_type: string; scope_value: any[]; description?: string }) =>
+      apiClient.post('/collect/scopes', data),
+    updateScope: (scopeId: number, data: { scope_name?: string; scope_value?: any[]; is_enabled?: boolean; description?: string }) =>
+      apiClient.put(`/collect/scopes/${scopeId}`, data),
+    deleteScope: (scopeId: number) =>
+      apiClient.delete(`/collect/scopes/${scopeId}`),
+    // Strategies
+    listStrategies: (params?: { strategy_type?: string; is_enabled?: boolean }) =>
+      apiClient.get('/collect/strategies', { params }),
+    getStrategy: (strategyId: number) =>
+      apiClient.get(`/collect/strategies/${strategyId}`),
+    createStrategy: (data: { strategy_code: string; strategy_name: string; strategy_type?: string; data_types: string[]; scope_ids?: number[]; schedule_cron?: string; fetch_config?: any; description?: string }) =>
+      apiClient.post('/collect/strategies', data),
+    updateStrategy: (strategyId: number, data: { strategy_name?: string; scope_ids?: number[]; data_types?: string[]; schedule_cron?: string; fetch_config?: any; is_enabled?: boolean; description?: string }) =>
+      apiClient.put(`/collect/strategies/${strategyId}`, data),
+    deleteStrategy: (strategyId: number) =>
+      apiClient.delete(`/collect/strategies/${strategyId}`),
+    // Tasks
+    listTasks: (params?: { status?: string; strategy_id?: number; page?: number; page_size?: number }) =>
+      apiClient.get('/collect/tasks', { params }),
+    getTask: (taskId: number) =>
+      apiClient.get(`/collect/tasks/${taskId}`),
+    triggerTask: (data: { strategy_id?: number; task_type?: string }) =>
+      apiClient.post('/collect/tasks', data),
+    cancelTask: (taskId: number) =>
+      apiClient.post(`/collect/tasks/${taskId}/cancel`),
+    getActiveTasks: () =>
+      apiClient.get('/collect/tasks/active'),
+    // Options
+    getScopeTypes: () =>
+      apiClient.get('/collect/options/scope-types'),
+    getStrategyTypes: () =>
+      apiClient.get('/collect/options/strategy-types'),
+    getTaskStatuses: () =>
+      apiClient.get('/collect/options/task-statuses'),
+    getDataTypes: () =>
+      apiClient.get('/collect/options/data-types'),
+  },
 }

@@ -11,6 +11,7 @@ import FavoritesPage from './pages/FavoritesPage'
 import ProfilePage from './pages/ProfilePage'
 import TechElementPage from './pages/TechElementPage'
 import CountrySchoolPage from './pages/CountrySchoolPage'
+import CollectPage from './pages/CollectPage'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FavoritesProvider } from './contexts/FavoritesContext'
 
@@ -107,6 +108,14 @@ function AppRoutes() {
           element={
             <AdminRoute>
               <AdminPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="collect"
+          element={
+            <AdminRoute>
+              <CollectPage />
             </AdminRoute>
           }
         />
