@@ -229,7 +229,10 @@ class UserRepository:
 
 
 class UserScopeRepository:
-    """Repository for user school scope operations."""
+    """Repository for user scope operations (school/country/tech_element)."""
+
+    # Valid scope types
+    SCOPE_TYPES = ['school', 'country', 'tech_element', 'all']
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -238,13 +241,15 @@ class UserScopeRepository:
         self,
         user_id: int,
         active_only: bool = True,
+        scope_type: Optional[str] = None,
     ) -> List[UserSchoolScope]:
         """
-        Get all school scopes for a user.
+        Get all scopes for a user.
 
         Args:
             user_id: User ID
             active_only: Only return active scopes
+            scope_type: Filter by scope type (optional)
 
         Returns:
             List of UserSchoolScope instances
@@ -253,6 +258,9 @@ class UserScopeRepository:
 
         if active_only:
             query = query.where(UserSchoolScope.is_active == True)
+
+        if scope_type:
+            query = query.where(UserSchoolScope.scope_type == scope_type)
 
         result = await self.session.execute(query)
         return list(result.scalars().all())
@@ -267,12 +275,12 @@ class UserScopeRepository:
         notes: Optional[str] = None,
     ) -> UserSchoolScope:
         """
-        Add a school scope to a user.
+        Add a scope to a user.
 
         Args:
             user_id: User ID
-            scope_type: 'school', 'country', or 'all'
-            scope_value: school_id, country_code, or '*'
+            scope_type: 'school', 'country', 'tech_element', or 'all'
+            scope_value: school_id, country_code, tech_element_id, or '*'
             granted_by: User ID who granted the scope
             expires_at: Optional expiration date
             notes: Optional notes
@@ -280,6 +288,9 @@ class UserScopeRepository:
         Returns:
             Created UserSchoolScope instance
         """
+        if scope_type not in self.SCOPE_TYPES:
+            raise ValueError(f"Invalid scope_type. Must be one of: {self.SCOPE_TYPES}")
+
         scope = UserSchoolScope(
             user_id=user_id,
             scope_type=scope_type,
@@ -447,3 +458,188 @@ class UserScopeRepository:
                     pass
 
         return list(accessible_ids)
+
+    async def check_tech_element_access(
+        self,
+        user_id: int,
+        tech_element_id: int,
+    ) -> bool:
+        """
+        Check if user has access to a specific tech element.
+
+        Args:
+            user_id: User ID
+            tech_element_id: Tech Element ID to check
+
+        Returns:
+            True if user has access, False otherwise
+        """
+        from app.models.tech_element import TechElement
+
+        # Get user to check role
+        user_result = await self.session.execute(
+            select(UserAccount).where(UserAccount.user_id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+
+        if not user:
+            return False
+
+        # Super admin has access to all
+        if user.role_type == UserRoleType.SUPER_ADMIN.value:
+            return True
+
+        # Check scopes
+        scopes_result = await self.session.execute(
+            select(UserSchoolScope).where(
+                and_(
+                    UserSchoolScope.user_id == user_id,
+                    UserSchoolScope.is_active == True,
+                )
+            )
+        )
+        scopes = scopes_result.scalars().all()
+
+        for scope in scopes:
+            # Check expiration
+            if scope.expires_at and scope.expires_at < datetime.now():
+                continue
+
+            if scope.scope_type == "all":
+                return True
+
+            if scope.scope_type == "tech_element":
+                if scope.scope_value == str(tech_element_id):
+                    return True
+
+        return False
+
+    async def get_accessible_tech_element_ids(self, user_id: int) -> List[int]:
+        """
+        Get list of tech element IDs the user can access.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            List of accessible tech element IDs
+        """
+        from app.models.tech_element import TechElement
+
+        # Get user to check role
+        user_result = await self.session.execute(
+            select(UserAccount).where(UserAccount.user_id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+
+        if not user:
+            return []
+
+        # Super admin has access to all
+        if user.role_type == UserRoleType.SUPER_ADMIN.value:
+            result = await self.session.execute(select(TechElement.tech_element_id))
+            return [row[0] for row in result.fetchall()]
+
+        # Get scopes
+        scopes_result = await self.session.execute(
+            select(UserSchoolScope).where(
+                and_(
+                    UserSchoolScope.user_id == user_id,
+                    UserSchoolScope.is_active == True,
+                )
+            )
+        )
+        scopes = list(scopes_result.scalars().all())
+
+        accessible_ids = set()
+
+        for scope in scopes:
+            # Check expiration
+            if scope.expires_at and scope.expires_at < datetime.now():
+                continue
+
+            if scope.scope_type == "all":
+                result = await self.session.execute(select(TechElement.tech_element_id))
+                return [row[0] for row in result.fetchall()]
+
+            if scope.scope_type == "tech_element":
+                try:
+                    accessible_ids.add(int(scope.scope_value))
+                except ValueError:
+                    pass
+
+        return list(accessible_ids)
+
+    async def get_accessible_country_codes(self, user_id: int) -> List[str]:
+        """
+        Get list of country codes the user can access.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            List of accessible country codes
+        """
+        from app.models.country import Country
+
+        # Get user to check role
+        user_result = await self.session.execute(
+            select(UserAccount).where(UserAccount.user_id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+
+        if not user:
+            return []
+
+        # Super admin has access to all
+        if user.role_type == UserRoleType.SUPER_ADMIN.value:
+            result = await self.session.execute(select(Country.country_code))
+            return [row[0] for row in result.fetchall() if row[0]]
+
+        # Get scopes
+        scopes_result = await self.session.execute(
+            select(UserSchoolScope).where(
+                and_(
+                    UserSchoolScope.user_id == user_id,
+                    UserSchoolScope.is_active == True,
+                )
+            )
+        )
+        scopes = list(scopes_result.scalars().all())
+
+        accessible_codes = set()
+
+        for scope in scopes:
+            # Check expiration
+            if scope.expires_at and scope.expires_at < datetime.now():
+                continue
+
+            if scope.scope_type == "all":
+                result = await self.session.execute(select(Country.country_code))
+                return [row[0] for row in result.fetchall() if row[0]]
+
+            if scope.scope_type == "country":
+                if scope.scope_value and scope.scope_value != "*":
+                    accessible_codes.add(scope.scope_value)
+
+        return list(accessible_codes)
+
+    async def get_user_default_view(self, user_id: int) -> str:
+        """
+        Get user's default view preference.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Default view ('tech_element' or 'country_school')
+        """
+        user_result = await self.session.execute(
+            select(UserAccount).where(UserAccount.user_id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+
+        if not user:
+            return "tech_element"
+
+        return user.default_view or "tech_element"

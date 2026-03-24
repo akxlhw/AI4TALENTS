@@ -26,6 +26,7 @@ class UserResponse(BaseModel):
     display_name: Optional[str] = None
     department: Optional[str] = None
     is_active: bool
+    default_view: str = "tech_element"
     last_login_at: Optional[datetime] = None
 
 
@@ -70,10 +71,15 @@ class ScopeResponse(BaseModel):
 class ScopeCreateRequest(BaseModel):
     """Create scope request."""
     user_id: int
-    scope_type: str = Field(..., pattern="^(school|country|all)$")
+    scope_type: str = Field(..., pattern="^(school|country|tech_element|all)$")
     scope_value: str
     expires_at: Optional[datetime] = None
     notes: Optional[str] = None
+
+
+class DefaultViewRequest(BaseModel):
+    """Update default view request."""
+    default_view: str = Field(..., pattern="^(tech_element|country_school)$")
 
 
 class ScopeListResponse(BaseModel):
@@ -114,6 +120,7 @@ async def list_users(
             display_name=u.display_name,
             department=u.department,
             is_active=u.is_active,
+            default_view=u.default_view,
             last_login_at=u.last_login_at,
         )
         for u in users
@@ -184,6 +191,7 @@ async def create_user(
         display_name=user.display_name,
         department=user.department,
         is_active=user.is_active,
+        default_view=user.default_view,
         last_login_at=user.last_login_at,
     )
 
@@ -221,6 +229,7 @@ async def get_user(
         display_name=user.display_name,
         department=user.department,
         is_active=user.is_active,
+        default_view=user.default_view,
         last_login_at=user.last_login_at,
     )
 
@@ -268,6 +277,7 @@ async def update_user(
         display_name=user.display_name,
         department=user.department,
         is_active=user.is_active,
+        default_view=user.default_view,
         last_login_at=user.last_login_at,
     )
 
@@ -436,3 +446,73 @@ async def check_school_access(
         "school_id": school_id,
         "has_access": has_access,
     }
+
+
+@router.get(
+    "/me/scopes/tech-elements",
+    response_model=List[int],
+    summary="获取当前用户可访问的技术要素",
+    description="返回当前用户有权访问的技术要素ID列表",
+)
+async def get_my_accessible_tech_elements(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_user),
+):
+    """Get current user's accessible tech element IDs."""
+    scope_repo = UserScopeRepository(session)
+    tech_element_ids = await scope_repo.get_accessible_tech_element_ids(current_user["user_id"])
+    return tech_element_ids
+
+
+@router.get(
+    "/me/scopes/countries",
+    response_model=List[str],
+    summary="获取当前用户可访问的国家",
+    description="返回当前用户有权访问的国家代码列表",
+)
+async def get_my_accessible_countries(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_user),
+):
+    """Get current user's accessible country codes."""
+    scope_repo = UserScopeRepository(session)
+    country_codes = await scope_repo.get_accessible_country_codes(current_user["user_id"])
+    return country_codes
+
+
+@router.get(
+    "/me/default-view",
+    summary="获取当前用户默认视角",
+    description="返回用户的默认视角配置",
+)
+async def get_my_default_view(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_user),
+):
+    """Get current user's default view preference."""
+    scope_repo = UserScopeRepository(session)
+    default_view = await scope_repo.get_user_default_view(current_user["user_id"])
+    return {"default_view": default_view}
+
+
+@router.put(
+    "/me/default-view",
+    summary="更新当前用户默认视角",
+    description="更新用户的默认视角配置",
+)
+async def update_my_default_view(
+    data: DefaultViewRequest,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_user),
+):
+    """Update current user's default view preference."""
+    user_repo = UserRepository(session)
+    user = await user_repo.get_by_id(current_user["user_id"])
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.default_view = data.default_view
+    await session.commit()
+
+    return {"message": "Default view updated", "default_view": data.default_view}

@@ -30,6 +30,9 @@ class UserAccount(Base, TimestampMixin):
     display_name = Column(String(100), nullable=True)
     department = Column(String(255), nullable=True)
 
+    # User preferences
+    default_view = Column(String(30), default="tech_element", nullable=False)  # tech_element / country_school
+
     # Last login
     last_login_at = Column(DateTime, nullable=True)
     last_login_ip = Column(String(50), nullable=True)
@@ -44,16 +47,20 @@ class UserAccount(Base, TimestampMixin):
 
 
 class UserSchoolScope(Base, TimestampMixin):
-    """User school permission scope."""
+    """User permission scope - supports school/country/tech_element dimensions."""
 
     __tablename__ = "iam_user_school_scope"
 
     scope_id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=False, index=True)
 
-    # Scope definition
-    scope_type = Column(String(20), nullable=False)  # 'school', 'country', 'all'
-    scope_value = Column(String(100), nullable=True)  # school_id, country_code, or '*'
+    # Scope definition - three dimensions:
+    # - 'school': scope_value = school_id
+    # - 'country': scope_value = country_code
+    # - 'tech_element': scope_value = tech_element_id
+    # - 'all': scope_value = '*'
+    scope_type = Column(String(20), nullable=False)
+    scope_value = Column(String(100), nullable=True)
 
     # Grant info
     granted_by = Column(Integer, nullable=False)  # user_id who granted

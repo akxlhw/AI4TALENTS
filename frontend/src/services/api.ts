@@ -135,6 +135,14 @@ export const api = {
       apiClient.get('/users/me/scopes/schools'),
     checkSchoolAccess: (schoolId: number) =>
       apiClient.get(`/users/me/scopes/check/${schoolId}`),
+    getAccessibleTechElements: () =>
+      apiClient.get('/users/me/scopes/tech-elements'),
+    getAccessibleCountries: () =>
+      apiClient.get('/users/me/scopes/countries'),
+    getDefaultView: () =>
+      apiClient.get('/users/me/default-view'),
+    updateDefaultView: (defaultView: 'tech_element' | 'country_school') =>
+      apiClient.put('/users/me/default-view', { default_view: defaultView }),
   },
 
   // Favorites
