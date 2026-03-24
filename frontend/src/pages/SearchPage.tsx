@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Card,
@@ -29,6 +29,7 @@ import {
   BookOutlined,
   DeleteOutlined,
   SettingOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
 import FavoriteButton from '../components/FavoriteButton'
@@ -60,12 +61,24 @@ interface School {
   school_name: string
 }
 
-interface SearchResponse {
-  items: Talent[]
-  total: number
-  query: string
-  page: number
-  page_size: number
+interface Country {
+  country_id: number
+  country_code: string
+  country_name_cn: string
+}
+
+interface TechElement {
+  tech_element_id: number
+  element_code: string
+  element_name: string
+  directions: TechDirection[]
+}
+
+interface TechDirection {
+  tech_direction_id: number
+  direction_code: string
+  direction_name: string
+  tech_element_id: number
 }
 
 const roleTypeMap: Record<string, { color: string; text: string }> = {
@@ -89,11 +102,18 @@ const SearchPage: React.FC = () => {
   const [page, setPage] = useState(1)
   const pageSize = 20
 
-  // Filter state
+  // Filter state - Original
   const [roleFilter, setRoleFilter] = useState<string | undefined>()
   const [schoolFilter, setSchoolFilter] = useState<number | undefined>()
   const [minWorks, setMinWorks] = useState<number | undefined>()
   const [minCitations, setMinCitations] = useState<number | undefined>()
+
+  // Filter state - New for v1.1
+  const [countryFilter, setCountryFilter] = useState<number | undefined>()
+  const [techElementFilter, setTechElementFilter] = useState<number | undefined>()
+  const [techDirectionFilter, setTechDirectionFilter] = useState<number | undefined>()
+  const [isGraduatedFilter, setIsGraduatedFilter] = useState<string | undefined>()
+  const [confirmStatusFilter, setConfirmStatusFilter] = useState<string | undefined>()
 
   // Sort state
   const [sortBy, setSortBy] = useState<string>('cited_by_count')
@@ -136,12 +156,30 @@ const SearchPage: React.FC = () => {
   const { columns: columnConfig, toggleColumn, resetColumns, isColumnVisible } = useColumnConfig()
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false)
 
-  // Schools for filter dropdown
+  // Data for dropdowns
   const [schools, setSchools] = useState<School[]>([])
+  const [countries, setCountries] = useState<Country[]>([])
+  const [techElements, setTechElements] = useState<TechElement[]>([])
+
+  // Load reference data
+  const loadReferenceData = useCallback(async () => {
+    try {
+      const [schoolsRes, countriesRes, techElementsRes] = await Promise.all([
+        api.schools.list({}),
+        api.countries.list(),
+        api.techElements.list(),
+      ])
+      setSchools(schoolsRes.data.items || [])
+      setCountries(countriesRes.data.items || [])
+      setTechElements(techElementsRes.data.items || [])
+    } catch (error) {
+      console.error('Failed to load reference data:', error)
+    }
+  }, [])
 
   useEffect(() => {
-    loadSchools()
-  }, [])
+    loadReferenceData()
+  }, [loadReferenceData])
 
   useEffect(() => {
     if (initialQuery) {
@@ -149,46 +187,33 @@ const SearchPage: React.FC = () => {
     }
   }, [initialQuery])
 
-  const loadSchools = async () => {
-    try {
-      const response = await api.schools.list({})
-      setSchools(response.data.items || [])
-    } catch (error) {
-      console.error('Failed to load schools:', error)
-    }
-  }
-
   const performSearch = async (searchQuery: string, pageNum: number) => {
     if (!searchQuery.trim()) return
 
     setLoading(true)
     try {
-      const response = await api.search.talents({
-        q: searchQuery,
+      const response = await api.talents.list({
+        school_id: schoolFilter,
+        country_id: countryFilter,
+        role_type: roleFilter,
+        keyword: searchQuery,
         page: pageNum,
         page_size: pageSize,
       })
-      const data: SearchResponse = response.data
+      const data = response.data
 
-      // Apply client-side filters
-      let filteredItems = data.items
+      // Apply client-side filters (for filters not supported by API yet)
+      let filteredItems: Talent[] = data.items || []
 
-      if (roleFilter) {
-        filteredItems = filteredItems.filter(t => t.role_type === roleFilter)
-      }
-      if (schoolFilter) {
-        // Note: This would need school_id in the response
-        // For now, we filter by school_name match
-      }
       if (minWorks !== undefined) {
-        filteredItems = filteredItems.filter(t => t.works_count >= minWorks)
+        filteredItems = filteredItems.filter((t: Talent) => t.works_count >= minWorks)
       }
       if (minCitations !== undefined) {
-        filteredItems = filteredItems.filter(t => t.cited_by_count >= minCitations)
+        filteredItems = filteredItems.filter((t: Talent) => t.cited_by_count >= minCitations)
       }
 
       // Apply sorting
-      filteredItems.sort((a, b) => {
+      filteredItems.sort((a: Talent, b: Talent) => {
         let aVal = 0, bVal = 0
         switch (sortBy) {
           case 'works_count':
@@ -211,7 +236,7 @@ const SearchPage: React.FC = () => {
       })
 
       setResults(filteredItems)
-      setTotal(data.total)
+      setTotal(data.total || filteredItems.length)
       setPage(pageNum)
     } catch (error) {
       console.error('Search failed:', error)
@@ -243,6 +268,11 @@ const SearchPage: React.FC = () => {
     setSchoolFilter(undefined)
     setMinWorks(undefined)
     setMinCitations(undefined)
+    setCountryFilter(undefined)
+    setTechElementFilter(undefined)
+    setTechDirectionFilter(undefined)
+    setIsGraduatedFilter(undefined)
+    setConfirmStatusFilter(undefined)
     setSortBy('cited_by_count')
     setSortOrder('desc')
     if (query) {
@@ -387,6 +417,27 @@ const SearchPage: React.FC = () => {
     />
   )
 
+  // Options for dropdowns
+  const countryOptions = countries.map(c => ({ value: c.country_id, label: c.country_name_cn }))
+  const schoolOptions = schools.map(s => ({ value: s.school_id, label: s.school_name }))
+  const techElementOptions = techElements.map(e => ({ value: e.tech_element_id, label: e.element_name }))
+
+  const currentElement = techElements.find(e => e.tech_element_id === techElementFilter)
+  const directionOptions = (currentElement?.directions || []).map(d => ({
+    value: d.tech_direction_id,
+    label: d.direction_name
+  }))
+
+  const isGraduatedOptions = [
+    { value: 'yes', label: '已毕业' },
+    { value: 'no', label: '在读' },
+  ]
+
+  const confirmStatusOptions = [
+    { value: 'confirmed', label: '已确认' },
+    { value: 'pending', label: '待确认' },
+  ]
+
   const allColumns = [
     {
       title: '收藏',
@@ -492,6 +543,10 @@ const SearchPage: React.FC = () => {
   // Filter columns based on user settings
   const columns = allColumns.filter(col => isColumnVisible(col.key as string))
 
+  // Check if any filter is active
+  const hasActiveFilters = roleFilter || schoolFilter || minWorks || minCitations ||
+    countryFilter || techElementFilter || techDirectionFilter || isGraduatedFilter || confirmStatusFilter
+
   return (
     <div>
       <Title level={3}>
@@ -524,13 +579,61 @@ const SearchPage: React.FC = () => {
         </Row>
       </Card>
 
-      {/* Filters */}
+      {/* Enhanced Filters */}
       <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 24px' }}>
-        <Row gutter={16} align="middle">
-          <Col>
-            <Space size={8}>
+        <Row gutter={[16, 8]}>
+          <Col span={24}>
+            <Space size={8} wrap>
               <Text type="secondary">筛选:</Text>
 
+              {/* 技术要素 */}
+              <Select
+                placeholder="技术要素"
+                value={techElementFilter}
+                onChange={(val) => { setTechElementFilter(val); setTechDirectionFilter(undefined); handleFilterChange(); }}
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                style={{ width: 140 }}
+                options={techElementOptions}
+              />
+
+              {/* 技术方向 */}
+              <Select
+                placeholder="技术方向"
+                value={techDirectionFilter}
+                onChange={(val) => { setTechDirectionFilter(val); handleFilterChange(); }}
+                allowClear
+                style={{ width: 140 }}
+                options={directionOptions}
+                disabled={!techElementFilter}
+              />
+
+              {/* 国家 */}
+              <Select
+                placeholder="国家"
+                value={countryFilter}
+                onChange={(val) => { setCountryFilter(val); handleFilterChange(); }}
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                style={{ width: 120 }}
+                options={countryOptions}
+              />
+
+              {/* 学校 */}
+              <Select
+                placeholder="学校"
+                value={schoolFilter}
+                onChange={(val) => { setSchoolFilter(val); handleFilterChange(); }}
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                style={{ width: 180 }}
+                options={schoolOptions}
+              />
+
+              {/* 角色 */}
               <Select
                 placeholder="角色"
                 value={roleFilter}
@@ -544,17 +647,30 @@ const SearchPage: React.FC = () => {
                 ]}
               />
 
+              {/* 是否已毕业 */}
               <Select
-                placeholder="学校"
-                value={schoolFilter}
-                onChange={(val) => { setSchoolFilter(val); handleFilterChange(); }}
+                placeholder="毕业状态"
+                value={isGraduatedFilter}
+                onChange={(val) => { setIsGraduatedFilter(val); handleFilterChange(); }}
                 allowClear
-                showSearch
-                optionFilterProp="label"
-                style={{ width: 180 }}
-                options={schools.map(s => ({ value: s.school_id, label: s.school_name }))}
+                style={{ width: 100 }}
+                options={isGraduatedOptions}
               />
 
+              {/* 待确认状态 */}
+              <Select
+                placeholder="确认状态"
+                value={confirmStatusFilter}
+                onChange={(val) => { setConfirmStatusFilter(val); handleFilterChange(); }}
+                allowClear
+                style={{ width: 100 }}
+                options={confirmStatusOptions}
+              />
+            </Space>
+          </Col>
+          <Col span={24}>
+            <Space size={8}>
+              {/* 最少论文 */}
               <Select
                 placeholder="最少论文"
                 value={minWorks}
@@ -568,6 +684,7 @@ const SearchPage: React.FC = () => {
                 ]}
               />
 
+              {/* 最少引用 */}
               <Select
                 placeholder="最少引用"
                 value={minCitations}
@@ -581,8 +698,8 @@ const SearchPage: React.FC = () => {
                 ]}
               />
 
-              {(roleFilter || schoolFilter || minWorks || minCitations) && (
-                <Button type="link" onClick={handleResetFilters}>
+              {hasActiveFilters && (
+                <Button type="link" icon={<ReloadOutlined />} onClick={handleResetFilters}>
                   重置筛选
                 </Button>
               )}
@@ -694,6 +811,9 @@ const SearchPage: React.FC = () => {
           <Text type="secondary" style={{ fontSize: 12 }}>
             当前筛选: {[
               roleFilter && `角色=${roleFilter}`,
+              techElementFilter && `技术要素`,
+              countryFilter && `国家`,
+              schoolFilter && `学校`,
               minWorks && `论文≥${minWorks}`,
               minCitations && `引用≥${minCitations}`,
             ].filter(Boolean).join(', ') || '无'}
