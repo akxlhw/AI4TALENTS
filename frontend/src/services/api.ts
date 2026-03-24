@@ -170,4 +170,28 @@ export const api = {
     getTalents: (id: number, params?: { direction_id?: number; country_id?: number; school_id?: number; role_type?: string; keyword?: string; page?: number; page_size?: number }) =>
       apiClient.get(`/tech-elements/${id}/talents`, { params }),
   },
+
+  // Talent Pools
+  talentPools: {
+    list: () =>
+      apiClient.get('/talent-pools'),
+    get: (id: number) =>
+      apiClient.get(`/talent-pools/${id}`),
+    create: (data: { pool_name: string; pool_type?: string; scope_desc?: string }) =>
+      apiClient.post('/talent-pools', data),
+    update: (id: number, data: { pool_name?: string; scope_desc?: string; pool_status?: string }) =>
+      apiClient.put(`/talent-pools/${id}`, data),
+    delete: (id: number) =>
+      apiClient.delete(`/talent-pools/${id}`),
+    addMember: (poolId: number, talentId: number, notes?: string) =>
+      apiClient.post(`/talent-pools/${poolId}/members`, { talent_id: talentId, notes }),
+    removeMember: (poolId: number, talentId: number) =>
+      apiClient.delete(`/talent-pools/${poolId}/members/${talentId}`),
+    getMembers: (poolId: number, params?: { page?: number; page_size?: number }) =>
+      apiClient.get(`/talent-pools/${poolId}/members`, { params }),
+    updateFollowupStatus: (talentId: number, status: string) =>
+      apiClient.put(`/talent-pools/favorites/${talentId}/followup`, { followup_status: status }),
+    getFollowupStatuses: () =>
+      apiClient.get('/talent-pools/followup-statuses'),
+  },
 }

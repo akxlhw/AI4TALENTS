@@ -9,7 +9,7 @@ from app.models.talent import Talent, RoleProfile, SelectedWork
 from app.models.tech_element import TechElement, TechDirection, TalentTechTag
 from app.models.collaboration import Collaboration, WorkAuthor
 from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
-from app.models.iam import UserAccount, UserSchoolScope, FavoriteTalent
+from app.models.iam import UserAccount, UserSchoolScope, FavoriteTalent, TalentPool, TalentPoolMember
 from app.models.sync import SyncBatch, RawSourceRecord
 from app.models.search import SearchTalentDocument
 from app.models.audit import AuditOperationLog
@@ -41,6 +41,8 @@ __all__ = [
     "UserAccount",
     "UserSchoolScope",
     "FavoriteTalent",
+    "TalentPool",
+    "TalentPoolMember",
     # Sync
     "SyncBatch",
     "RawSourceRecord",

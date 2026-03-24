@@ -37,6 +37,7 @@ class UserAccount(Base, TimestampMixin):
     # Relationships
     school_scopes = relationship("UserSchoolScope", back_populates="user")
     favorites = relationship("FavoriteTalent", back_populates="user", lazy="dynamic")
+    talent_pools = relationship("TalentPool", back_populates="owner")
 
     def __repr__(self):
         return f"<UserAccount(user_id={self.user_id}, username={self.username}, role={self.role_type})>"
@@ -79,6 +80,7 @@ class FavoriteTalent(Base, TimestampMixin):
     user_id = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=False, index=True)
     talent_id = Column(Integer, ForeignKey("core_talent.talent_id"), nullable=False, index=True)
     notes = Column(Text, nullable=True)  # User's notes about this talent
+    followup_status = Column(String(30), default="new_found", nullable=False)  # 跟进状态
     is_active = Column(Boolean, default=True, nullable=False)
 
     # Relationships
@@ -91,3 +93,46 @@ class FavoriteTalent(Base, TimestampMixin):
 
     def __repr__(self):
         return f"<FavoriteTalent(user_id={self.user_id}, talent_id={self.talent_id})>"
+
+
+class TalentPool(Base, TimestampMixin):
+    """人才池"""
+
+    __tablename__ = "iam_talent_pool"
+
+    pool_id = Column(Integer, primary_key=True, index=True)
+    pool_name = Column(String(100), nullable=False)
+    pool_type = Column(String(30), default="custom", nullable=False)  # tech_element/country/campaign/custom
+    owner_user_id = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=False, index=True)
+    scope_desc = Column(Text, nullable=True)
+    pool_status = Column(String(20), default="active", nullable=False)  # active/archived
+
+    # Relationships
+    owner = relationship("UserAccount", back_populates="talent_pools")
+    members = relationship("TalentPoolMember", back_populates="pool", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<TalentPool(pool_id={self.pool_id}, name={self.pool_name})>"
+
+
+class TalentPoolMember(Base, TimestampMixin):
+    """人才池成员"""
+
+    __tablename__ = "iam_talent_pool_member"
+
+    member_id = Column(Integer, primary_key=True, index=True)
+    pool_id = Column(Integer, ForeignKey("iam_talent_pool.pool_id"), nullable=False, index=True)
+    talent_id = Column(Integer, ForeignKey("core_talent.talent_id"), nullable=False, index=True)
+    added_by = Column(Integer, nullable=False)  # user_id who added
+    notes = Column(Text, nullable=True)
+
+    # Relationships
+    pool = relationship("TalentPool", back_populates="members")
+    talent = relationship("Talent")
+
+    __table_args__ = (
+        UniqueConstraint('pool_id', 'talent_id', name='uq_pool_talent'),
+    )
+
+    def __repr__(self):
+        return f"<TalentPoolMember(pool_id={self.pool_id}, talent_id={self.talent_id})>"

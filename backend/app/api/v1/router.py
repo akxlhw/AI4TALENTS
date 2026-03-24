@@ -4,7 +4,7 @@ Aggregates all endpoint routers.
 """
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import health, overview, countries, schools, talents, search, auth, permissions, audit, favorites, tech_element
+from app.api.v1.endpoints import health, overview, countries, schools, talents, search, auth, permissions, audit, favorites, tech_element, talent_pool
 
 
 api_router = APIRouter()
@@ -35,6 +35,9 @@ api_router.include_router(talents.router)
 
 # Tech Element endpoints
 api_router.include_router(tech_element.router)
+
+# Talent Pool endpoints
+api_router.include_router(talent_pool.router)
 
 # Search endpoints
 api_router.include_router(search.router)

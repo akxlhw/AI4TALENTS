@@ -18,6 +18,7 @@ import {
   Tooltip,
   Dropdown,
   Menu,
+  Tabs,
 } from 'antd'
 import {
   StarFilled,
@@ -26,6 +27,9 @@ import {
   SearchOutlined,
   DownloadOutlined,
   DownOutlined,
+  PlusOutlined,
+  FolderOutlined,
+  TeamOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
 import TalentCompareModal from '../components/TalentCompareModal'
@@ -45,15 +49,24 @@ interface FavoriteTalent {
   cited_by_count: number
   h_index: number
   notes: string | null
+  followup_status: string
   created_at: string
 }
 
-interface FavoritesResponse {
-  items: FavoriteTalent[]
-  total: number
-  page: number
-  page_size: number
-  total_pages: number
+interface TalentPool {
+  pool_id: number
+  pool_name: string
+  pool_type: string
+  owner_user_id: number
+  scope_desc: string | null
+  pool_status: string
+  member_count: number
+  created_at: string
+}
+
+interface FollowupStatus {
+  value: string
+  label: string
 }
 
 const roleTypeMap: Record<string, { color: string; text: string }> = {
@@ -61,6 +74,15 @@ const roleTypeMap: Record<string, { color: string; text: string }> = {
   student: { color: 'blue', text: '学生' },
   graduated: { color: 'orange', text: '毕业生' },
   unknown: { color: 'default', text: '未知' },
+}
+
+const followupStatusMap: Record<string, { color: string; text: string }> = {
+  new_found: { color: 'blue', text: '新发现' },
+  reviewed: { color: 'cyan', text: '已审阅' },
+  followed: { color: 'green', text: '已跟进' },
+  pending_evaluation: { color: 'orange', text: '待评估' },
+  recommend_contact: { color: 'purple', text: '推荐联系' },
+  no_followup: { color: 'default', text: '暂不跟进' },
 }
 
 const FavoritesPage: React.FC = () => {
@@ -74,12 +96,29 @@ const FavoritesPage: React.FC = () => {
   // Filters
   const [roleFilter, setRoleFilter] = useState<string | undefined>()
   const [keyword, setKeyword] = useState('')
+  const [followupFilter, setFollowupFilter] = useState<string | undefined>()
+
+  // Talent pools
+  const [pools, setPools] = useState<TalentPool[]>([])
+  const [poolsLoading, setPoolsLoading] = useState(false)
+  const [createPoolModalVisible, setCreatePoolModalVisible] = useState(false)
+  const [newPoolName, setNewPoolName] = useState('')
+  const [newPoolDesc, setNewPoolDesc] = useState('')
+  const [createPoolLoading, setCreatePoolLoading] = useState(false)
+
+  // Followup statuses
+  const [followupStatuses, setFollowupStatuses] = useState<FollowupStatus[]>([])
 
   // Edit notes modal
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [editingFavorite, setEditingFavorite] = useState<FavoriteTalent | null>(null)
   const [editNotes, setEditNotes] = useState('')
   const [editLoading, setEditLoading] = useState(false)
+
+  // Add to pool modal
+  const [addToPoolModalVisible, setAddToPoolModalVisible] = useState(false)
+  const [addingToPoolFavorite, setAddingToPoolFavorite] = useState<FavoriteTalent | null>(null)
+  const [selectedPoolId, setSelectedPoolId] = useState<number | undefined>()
 
   // Selection state
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
@@ -88,9 +127,14 @@ const FavoritesPage: React.FC = () => {
   // Compare state
   const [compareModalVisible, setCompareModalVisible] = useState(false)
 
+  // Active tab
+  const [activeTab, setActiveTab] = useState('favorites')
+
   useEffect(() => {
     loadFavorites()
-  }, [page, roleFilter, keyword])
+    loadPools()
+    loadFollowupStatuses()
+  }, [page, roleFilter, keyword, followupFilter])
 
   const loadFavorites = async () => {
     setLoading(true)
@@ -101,13 +145,33 @@ const FavoritesPage: React.FC = () => {
         role_type: roleFilter,
         keyword: keyword || undefined,
       })
-      const data: FavoritesResponse = response.data
-      setFavorites(data.items)
-      setTotal(data.total)
+      setFavorites(response.data.items || [])
+      setTotal(response.data.total || 0)
     } catch (error) {
       console.error('Failed to load favorites:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadPools = async () => {
+    setPoolsLoading(true)
+    try {
+      const response = await api.talentPools.list()
+      setPools(response.data.items || [])
+    } catch (error) {
+      console.error('Failed to load pools:', error)
+    } finally {
+      setPoolsLoading(false)
+    }
+  }
+
+  const loadFollowupStatuses = async () => {
+    try {
+      const response = await api.talentPools.getFollowupStatuses()
+      setFollowupStatuses(response.data || [])
+    } catch (error) {
+      console.error('Failed to load followup statuses:', error)
     }
   }
 
@@ -123,6 +187,7 @@ const FavoritesPage: React.FC = () => {
   const handleResetFilters = () => {
     setRoleFilter(undefined)
     setKeyword('')
+    setFollowupFilter(undefined)
     setPage(1)
   }
 
@@ -138,7 +203,6 @@ const FavoritesPage: React.FC = () => {
     setEditLoading(true)
     try {
       await api.favorites.update(editingFavorite.talent_id, editNotes)
-      // Update local state
       setFavorites(prev => prev.map(f =>
         f.favorite_id === editingFavorite.favorite_id
           ? { ...f, notes: editNotes }
@@ -173,6 +237,60 @@ const FavoritesPage: React.FC = () => {
     })
   }
 
+  const handleUpdateFollowupStatus = async (talentId: number, status: string) => {
+    try {
+      await api.talentPools.updateFollowupStatus(talentId, status)
+      setFavorites(prev => prev.map(f =>
+        f.talent_id === talentId ? { ...f, followup_status: status } : f
+      ))
+      message.success('跟进状态已更新')
+    } catch (error) {
+      message.error('更新失败')
+    }
+  }
+
+  const handleCreatePool = async () => {
+    if (!newPoolName.trim()) {
+      message.warning('请输入人才池名称')
+      return
+    }
+
+    setCreatePoolLoading(true)
+    try {
+      await api.talentPools.create({
+        pool_name: newPoolName.trim(),
+        scope_desc: newPoolDesc || undefined,
+      })
+      message.success('人才池已创建')
+      setCreatePoolModalVisible(false)
+      setNewPoolName('')
+      setNewPoolDesc('')
+      loadPools()
+    } catch (error) {
+      message.error('创建失败')
+    } finally {
+      setCreatePoolLoading(false)
+    }
+  }
+
+  const handleAddToPool = async () => {
+    if (!selectedPoolId || !addingToPoolFavorite) return
+
+    try {
+      await api.talentPools.addMember(selectedPoolId, addingToPoolFavorite.talent_id)
+      message.success('已加入人才池')
+      setAddToPoolModalVisible(false)
+      setSelectedPoolId(undefined)
+      setAddingToPoolFavorite(null)
+    } catch (error: any) {
+      if (error.response?.data?.detail) {
+        message.warning(error.response.data.detail)
+      } else {
+        message.error('加入失败')
+      }
+    }
+  }
+
   const handleExport = async (format: 'csv' | 'xlsx') => {
     if (selectedRowKeys.length === 0) {
       message.warning('请先选择要导出的候选人')
@@ -181,7 +299,6 @@ const FavoritesPage: React.FC = () => {
 
     setExporting(true)
     try {
-      // Get talent_ids from selected favorites
       const talentIds = favorites
         .filter(f => selectedRowKeys.includes(f.favorite_id))
         .map(f => f.talent_id)
@@ -272,29 +389,6 @@ const FavoritesPage: React.FC = () => {
         ),
     },
     {
-      title: '职位',
-      dataIndex: 'current_title',
-      key: 'current_title',
-      width: 150,
-      ellipsis: true,
-      render: (title: string | null) => title || <Text type="secondary">-</Text>,
-    },
-    {
-      title: '论文',
-      dataIndex: 'works_count',
-      key: 'works_count',
-      width: 80,
-      align: 'center' as const,
-    },
-    {
-      title: '引用',
-      dataIndex: 'cited_by_count',
-      key: 'cited_by_count',
-      width: 100,
-      align: 'right' as const,
-      render: (count: number) => count.toLocaleString(),
-    },
-    {
       title: 'H指数',
       dataIndex: 'h_index',
       key: 'h_index',
@@ -302,38 +396,63 @@ const FavoritesPage: React.FC = () => {
       align: 'center' as const,
     },
     {
+      title: '跟进状态',
+      dataIndex: 'followup_status',
+      key: 'followup_status',
+      width: 120,
+      render: (status: string, record: FavoriteTalent) => {
+        const config = followupStatusMap[status] || { color: 'default', text: status }
+        return (
+          <Dropdown
+            trigger={['click']}
+            menu={{
+              items: followupStatuses.map(s => ({
+                key: s.value,
+                label: s.label,
+              })),
+              onClick: (e) => handleUpdateFollowupStatus(record.talent_id, e.key),
+            }}
+          >
+            <Tag color={config.color} style={{ cursor: 'pointer' }}>
+              {config.text} <DownOutlined style={{ marginLeft: 4, fontSize: 10 }} />
+            </Tag>
+          </Dropdown>
+        )
+      },
+    },
+    {
       title: '备注',
       dataIndex: 'notes',
       key: 'notes',
-      width: 200,
+      width: 150,
       ellipsis: true,
       render: (notes: string | null) =>
         notes ? (
           <Tooltip title={notes}>
-            <Text ellipsis style={{ maxWidth: 180 }}>{notes}</Text>
+            <Text ellipsis style={{ maxWidth: 130 }}>{notes}</Text>
           </Tooltip>
         ) : (
           <Text type="secondary">-</Text>
         ),
     },
     {
-      title: '收藏时间',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      width: 120,
-      render: (date: string) => {
-        if (!date) return '-'
-        const d = new Date(date)
-        return d.toLocaleDateString('zh-CN')
-      },
-    },
-    {
       title: '操作',
       key: 'actions',
-      width: 100,
+      width: 140,
       fixed: 'right' as const,
       render: (_: any, record: FavoriteTalent) => (
         <Space size="small">
+          <Tooltip title="加入人才池">
+            <Button
+              type="text"
+              size="small"
+              icon={<FolderOutlined />}
+              onClick={() => {
+                setAddingToPoolFavorite(record)
+                setAddToPoolModalVisible(true)
+              }}
+            />
+          </Tooltip>
           <Tooltip title="编辑备注">
             <Button
               type="text"
@@ -363,101 +482,174 @@ const FavoritesPage: React.FC = () => {
         我的收藏
       </Title>
 
-      {/* Filters */}
-      <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 24px' }}>
-        <Row gutter={16} align="middle">
-          <Col>
-            <Space size={8}>
-              <Text type="secondary">筛选:</Text>
+      <Tabs activeKey={activeTab} onChange={setActiveTab}>
+        <Tabs.TabPane
+          tab={<><StarFilled /> 收藏列表</>}
+          key="favorites"
+        >
+          {/* Filters */}
+          <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 24px' }}>
+            <Row gutter={16} align="middle">
+              <Col>
+                <Space size={8}>
+                  <Text type="secondary">筛选:</Text>
 
-              <Select
-                placeholder="角色"
-                value={roleFilter}
-                onChange={(val) => { setRoleFilter(val); setPage(1); }}
-                allowClear
-                style={{ width: 100 }}
-                options={[
-                  { value: 'professor', label: '教授' },
-                  { value: 'student', label: '学生' },
-                  { value: 'graduated', label: '毕业生' },
-                ]}
+                  <Select
+                    placeholder="角色"
+                    value={roleFilter}
+                    onChange={(val) => { setRoleFilter(val); setPage(1); }}
+                    allowClear
+                    style={{ width: 100 }}
+                    options={[
+                      { value: 'professor', label: '教授' },
+                      { value: 'student', label: '学生' },
+                      { value: 'graduated', label: '毕业生' },
+                    ]}
+                  />
+
+                  <Select
+                    placeholder="跟进状态"
+                    value={followupFilter}
+                    onChange={(val) => { setFollowupFilter(val); setPage(1); }}
+                    allowClear
+                    style={{ width: 120 }}
+                    options={followupStatuses}
+                  />
+
+                  <Input.Search
+                    placeholder="搜索姓名..."
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    onSearch={handleSearch}
+                    allowClear
+                    style={{ width: 200 }}
+                    enterButton={<SearchOutlined />}
+                  />
+
+                  {(roleFilter || keyword || followupFilter) && (
+                    <Button type="link" onClick={handleResetFilters}>
+                      重置筛选
+                    </Button>
+                  )}
+                </Space>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Table */}
+          <Card bodyStyle={{ padding: 0 }}>
+            {selectedRowKeys.length > 0 && (
+              <div style={{ padding: '12px 16px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
+                <Space>
+                  <Text>已选择 <strong>{selectedRowKeys.length}</strong> 项</Text>
+                  <Button size="small" onClick={() => setSelectedRowKeys([])}>取消选择</Button>
+                  <Button
+                    size="small"
+                    onClick={handleCompare}
+                    disabled={selectedRowKeys.length < 2 || selectedRowKeys.length > 4}
+                  >
+                    对比 ({selectedRowKeys.length}/4)
+                  </Button>
+                  <Dropdown overlay={exportMenu} trigger={['click']}>
+                    <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>
+                      导出 <DownOutlined />
+                    </Button>
+                  </Dropdown>
+                </Space>
+              </div>
+            )}
+            <Spin spinning={loading}>
+              <Table
+                dataSource={favorites}
+                columns={columns}
+                rowKey="favorite_id"
+                rowSelection={{
+                  selectedRowKeys,
+                  onChange: setSelectedRowKeys,
+                }}
+                scroll={{ x: 1000 }}
+                pagination={{
+                  current: page,
+                  pageSize,
+                  total: total,
+                  showSizeChanger: false,
+                  showTotal: (total) => `共 ${total} 位收藏`,
+                }}
+                onChange={handleTableChange}
+                locale={{
+                  emptyText: (
+                    <Empty
+                      description="暂无收藏"
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    >
+                      <Button type="primary" onClick={() => navigate('/search')}>
+                        去搜索人才
+                      </Button>
+                    </Empty>
+                  ),
+                }}
               />
+            </Spin>
+          </Card>
+        </Tabs.TabPane>
 
-              <Input.Search
-                placeholder="搜索姓名..."
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                onSearch={handleSearch}
-                allowClear
-                style={{ width: 200 }}
-                enterButton={<SearchOutlined />}
-              />
-
-              {(roleFilter || keyword) && (
-                <Button type="link" onClick={handleResetFilters}>
-                  重置筛选
-                </Button>
-              )}
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-
-      {/* Table */}
-      <Card bodyStyle={{ padding: 0 }}>
-        {selectedRowKeys.length > 0 && (
-          <div style={{ padding: '12px 16px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
-            <Space>
-              <Text>已选择 <strong>{selectedRowKeys.length}</strong> 项</Text>
-              <Button size="small" onClick={() => setSelectedRowKeys([])}>取消选择</Button>
+        <Tabs.TabPane
+          tab={<><FolderOutlined /> 人才池</>}
+          key="pools"
+        >
+          <Card>
+            <div style={{ marginBottom: 16 }}>
               <Button
-                size="small"
-                onClick={handleCompare}
-                disabled={selectedRowKeys.length < 2 || selectedRowKeys.length > 4}
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setCreatePoolModalVisible(true)}
               >
-                对比 ({selectedRowKeys.length}/4)
+                创建人才池
               </Button>
-              <Dropdown overlay={exportMenu} trigger={['click']}>
-                <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>
-                  导出 <DownOutlined />
-                </Button>
-              </Dropdown>
-            </Space>
-          </div>
-        )}
-        <Spin spinning={loading}>
-          <Table
-            dataSource={favorites}
-            columns={columns}
-            rowKey="favorite_id"
-            rowSelection={{
-              selectedRowKeys,
-              onChange: setSelectedRowKeys,
-            }}
-            scroll={{ x: 1200 }}
-            pagination={{
-              current: page,
-              pageSize,
-              total: total,
-              showSizeChanger: false,
-              showTotal: (total) => `共 ${total} 位收藏`,
-            }}
-            onChange={handleTableChange}
-            locale={{
-              emptyText: (
-                <Empty
-                  description="暂无收藏"
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                >
-                  <Button type="primary" onClick={() => navigate('/search')}>
-                    去搜索人才
+            </div>
+
+            <Spin spinning={poolsLoading}>
+              {pools.length > 0 ? (
+                <Row gutter={[16, 16]}>
+                  {pools.map(pool => (
+                    <Col span={8} key={pool.pool_id}>
+                      <Card
+                        hoverable
+                        onClick={() => navigate(`/pools/${pool.pool_id}`)}
+                      >
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          <Text strong style={{ fontSize: 16 }}>
+                            <FolderOutlined style={{ marginRight: 8 }} />
+                            {pool.pool_name}
+                          </Text>
+                          {pool.scope_desc && (
+                            <Text type="secondary" ellipsis>
+                              {pool.scope_desc}
+                            </Text>
+                          )}
+                          <div>
+                            <Tag color="blue">
+                              <TeamOutlined style={{ marginRight: 4 }} />
+                              {pool.member_count} 人
+                            </Tag>
+                            <Tag>{pool.pool_type === 'custom' ? '自定义' : pool.pool_type}</Tag>
+                          </div>
+                        </Space>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              ) : (
+                <Empty description="暂无人才池">
+                  <Button type="primary" onClick={() => setCreatePoolModalVisible(true)}>
+                    创建人才池
                   </Button>
                 </Empty>
-              ),
-            }}
-          />
-        </Spin>
-      </Card>
+              )}
+            </Spin>
+          </Card>
+        </Tabs.TabPane>
+      </Tabs>
 
       {/* Compare Modal */}
       <TalentCompareModal
@@ -489,6 +681,68 @@ const FavoritesPage: React.FC = () => {
             showCount
           />
         </div>
+      </Modal>
+
+      {/* Create Pool Modal */}
+      <Modal
+        title="创建人才池"
+        open={createPoolModalVisible}
+        onOk={handleCreatePool}
+        onCancel={() => {
+          setCreatePoolModalVisible(false)
+          setNewPoolName('')
+          setNewPoolDesc('')
+        }}
+        confirmLoading={createPoolLoading}
+        okText="创建"
+        cancelText="取消"
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Text type="secondary">人才池可以帮助您分类管理关注的候选人</Text>
+        </div>
+        <Input
+          placeholder="人才池名称"
+          value={newPoolName}
+          onChange={(e) => setNewPoolName(e.target.value)}
+          style={{ marginBottom: 12 }}
+        />
+        <Input.TextArea
+          placeholder="描述（可选）"
+          value={newPoolDesc}
+          onChange={(e) => setNewPoolDesc(e.target.value)}
+          rows={3}
+        />
+      </Modal>
+
+      {/* Add to Pool Modal */}
+      <Modal
+        title="加入人才池"
+        open={addToPoolModalVisible}
+        onOk={handleAddToPool}
+        onCancel={() => {
+          setAddToPoolModalVisible(false)
+          setSelectedPoolId(undefined)
+          setAddingToPoolFavorite(null)
+        }}
+        okText="加入"
+        cancelText="取消"
+        okButtonProps={{ disabled: !selectedPoolId }}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Text>将 <strong>{addingToPoolFavorite?.name}</strong> 加入人才池：</Text>
+        </div>
+        <Select
+          placeholder="选择人才池"
+          value={selectedPoolId}
+          onChange={setSelectedPoolId}
+          style={{ width: '100%' }}
+          options={pools.map(p => ({ value: p.pool_id, label: `${p.pool_name} (${p.member_count}人)` }))}
+        />
+        {pools.length === 0 && (
+          <Text type="secondary" style={{ marginTop: 8, display: 'block' }}>
+            暂无人才池，请先创建
+          </Text>
+        )}
       </Modal>
     </div>
   )
