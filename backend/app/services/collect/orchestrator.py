@@ -253,37 +253,12 @@ class CollectionOrchestrator:
             self.progress_tracker.add_log("warning", "Author fetcher not configured")
             return
 
-        # Get all unique author IDs from raw works (including already processed)
-        # Use raw SQL to get all author_ids from raw_work table
-        from sqlalchemy import text
-        result = await self.session.execute(
-            text("SELECT author_ids FROM raw_work WHERE fetch_task_id = :task_id"),
-            {"task_id": task_id}
-        )
-        rows = result.fetchall()
-
-        all_author_ids = set()
-        for row in rows:
-            if row[0]:
-                try:
-                    author_ids = json.loads(row[0])
-                    all_author_ids.update(author_ids)
-                except:
-                    pass
+        # Get all unique author IDs from raw works using repository
+        all_author_ids = await self.raw_work_repo.get_author_ids_by_task(task_id)
 
         # Also get from all raw_works if task-specific query returns nothing
         if not all_author_ids:
-            result = await self.session.execute(
-                text("SELECT author_ids FROM raw_work LIMIT 10000")
-            )
-            rows = result.fetchall()
-            for row in rows:
-                if row[0]:
-                    try:
-                        author_ids = json.loads(row[0])
-                        all_author_ids.update(author_ids)
-                    except:
-                        pass
+            all_author_ids = await self.raw_work_repo.get_all_author_ids(limit=10000)
 
         if not all_author_ids:
             self.progress_tracker.add_log("info", "未找到作者ID")

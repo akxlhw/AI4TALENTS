@@ -86,6 +86,50 @@ class RawWorkRepository:
                     pass
         return author_ids
 
+    async def get_author_ids_by_task(self, task_id: int) -> Set[str]:
+        """Extract unique author IDs from works collected in a specific task.
+
+        Args:
+            task_id: The fetch task ID to filter by
+
+        Returns:
+            Set of unique OpenAlex author IDs
+        """
+        result = await self.session.execute(
+            select(RawWork.author_ids).where(RawWork.fetch_task_id == task_id)
+        )
+        author_ids = set()
+        for row in result.fetchall():
+            if row[0]:
+                try:
+                    ids = json.loads(row[0])
+                    author_ids.update(ids)
+                except:
+                    pass
+        return author_ids
+
+    async def get_all_author_ids(self, limit: int = 10000) -> Set[str]:
+        """Extract unique author IDs from all works.
+
+        Args:
+            limit: Maximum number of works to process
+
+        Returns:
+            Set of unique OpenAlex author IDs
+        """
+        result = await self.session.execute(
+            select(RawWork.author_ids).limit(limit)
+        )
+        author_ids = set()
+        for row in result.fetchall():
+            if row[0]:
+                try:
+                    ids = json.loads(row[0])
+                    author_ids.update(ids)
+                except:
+                    pass
+        return author_ids
+
     async def get_pending(self, limit: int = 100) -> List[RawWork]:
         """Get pending works for processing"""
         result = await self.session.execute(
