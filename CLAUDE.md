@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with this project.
+This file provides guidance to Claude Code when working with code in this repository.
 
 ## Project Overview
 
@@ -21,6 +21,7 @@ This file provides guidance to Claude Code when working with this project.
 - Vite
 - Ant Design v5
 - React Router v6
+- Zustand (state management)
 
 ## Project Structure
 
@@ -33,6 +34,10 @@ talent-platform/
 │   │   ├── schemas/           # Pydantic DTOs
 │   │   ├── repositories/      # Data access layer
 │   │   ├── services/          # Business logic
+│   │   │   ├── collect/       # Data collection orchestration
+│   │   │   ├── sync/          # Data synchronization
+│   │   │   └── normalizers/   # Data normalization
+│   │   ├── builders/          # Object construction (ETL transform)
 │   │   └── core/              # Config, database, security
 │   ├── migrations/            # Alembic migrations
 │   └── scripts/               # Utility scripts
@@ -41,61 +46,69 @@ talent-platform/
 │   │   ├── pages/             # Page components
 │   │   ├── components/        # Reusable components
 │   │   ├── services/          # API client
-│   │   ├── contexts/          # React contexts
+│   │   ├── contexts/          # React contexts (Auth, Favorites)
 │   │   └── hooks/             # Custom hooks
-│   └── ...
+│   └── tests/                 # Playwright E2E tests
 └── docs/                      # Project documentation
 ```
-
-## Development Guidelines
-
-### Backend
-- Use async/await for all database operations
-- Repository pattern for data access
-- Pydantic schemas for request/response validation
-- Alembic for database migrations
-- JWT for authentication
-
-### Frontend
-- Functional components with hooks
-- Ant Design components for UI
-- React Context for global state (auth, favorites)
-- localStorage for user preferences (column config, search templates)
-
-### Database
-- Table naming: `{module}_{entity}` (e.g., `core_talent`, `iam_user_account`)
-- Primary keys: `{entity}_id` (e.g., `talent_id`, `school_id`)
-- Timestamps: `created_at`, `updated_at` via TimestampMixin
-
-## Key Files
-
-| Purpose | Path |
-|---------|------|
-| API endpoints | `backend/app/api/v1/endpoints/` |
-| Data models | `backend/app/models/` |
-| Frontend pages | `frontend/src/pages/` |
-| Frontend components | `frontend/src/components/` |
-| API client | `frontend/src/services/api.ts` |
-| Database config | `backend/app/core/database.py` |
-| Data sync script | `backend/scripts/sync_openalex_data.py` |
 
 ## Common Commands
 
 ```bash
 # Backend
 cd backend
-python -m venv .venv && source .venv/bin/activate  # Create/activate venv
+python -m venv .venv && .venv/Scripts/activate  # Windows
 pip install -r requirements.txt
 alembic upgrade head          # Run migrations
-python scripts/sync_openalex_data.py  # Sync data from OpenAlex
 uvicorn app.main:app --reload --port 8003
+
+# Backend Testing
+pytest                        # Run all tests
+pytest tests/test_models.py   # Run specific test file
+pytest -v --cov=app           # Run with coverage
+pytest -m "not slow"          # Skip slow tests
+
+# Backend Linting
+ruff check app/               # Lint
+black app/                    # Format
+mypy app/                     # Type check
 
 # Frontend
 cd frontend
 npm install
-npm run dev     # Start dev server on port 5178
+npm run dev     # Start dev server on port 5173
 npm run build   # Production build
+npm run lint    # ESLint
+
+# Frontend E2E Testing
+npx playwright test           # Run all Playwright tests
+npx playwright test --ui      # Run with UI
 ```
+
+## Architecture Patterns
+
+### Backend Layered Architecture
+1. **Endpoints**: Request handling, validation via Pydantic schemas
+2. **Services**: Business logic, orchestration
+3. **Repositories**: Database operations, query building
+4. **Builders**: Transform raw data into domain objects (ETL pattern)
+5. **Models**: SQLAlchemy ORM models
+
+### Data Collection Pipeline
+- `services/collect/` - Task creation and venue execution
+- `services/sync/` - Author, school, tech tag synchronization
+- `services/normalizers/` - Data standardization (school names, author names)
+
+### Frontend State Management
+- **AuthContext**: User authentication state
+- **FavoritesContext**: Favorites and talent pool state
+- **Zustand**: Global state store
+- **localStorage**: Column configs, search templates
+
+### Database Naming Conventions
+- Table naming: `{module}_{entity}` (e.g., `core_talent`, `iam_user_account`)
+- Primary keys: `{entity}_id` (e.g., `talent_id`, `school_id`)
+- Timestamps: `created_at`, `updated_at` via TimestampMixin
 
 ## API Conventions
 
@@ -104,16 +117,25 @@ npm run build   # Production build
 - Pagination: `page`, `page_size` query params
 - Response format: JSON with consistent structure
 
+## Key Files
+
+| Purpose | Path |
+|---------|------|
+| API endpoints | `backend/app/api/v1/endpoints/` |
+| Data models | `backend/app/models/` |
+| Frontend pages | `frontend/src/pages/` |
+| API client | `frontend/src/services/api.ts` |
+| Test fixtures | `backend/tests/conftest.py` |
+
 ## Git Workflow
 
 - `main` - Production-ready code
 - `feature/*` - Feature branches
 - Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`
-- Tag releases: `v1.0.0-mvp-baseline`, `v1.1.0`, etc.
 
 ## Notes
 
 - Development uses SQLite; production uses PostgreSQL
 - Default admin: `admin` / `admin123`
-- Frontend runs on port 5178, backend on 8003
+- Frontend port: 5173 (fixed), Backend port: 8003
 - OpenAlex API: https://api.openalex.org
