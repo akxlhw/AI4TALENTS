@@ -4,7 +4,6 @@ Initializes the database with required initial data.
 """
 import asyncio
 import sys
-import hashlib
 from datetime import datetime
 from pathlib import Path
 
@@ -16,11 +15,7 @@ from app.models.country import Country
 from app.models.iam import UserAccount, UserSchoolScope
 from app.models.statistics import OverviewStatSnapshot
 from app.models.enums import UserRoleType, ScopeType
-
-
-def hash_password(password: str) -> str:
-    """Hash password using SHA256 (for MVP, use bcrypt in production)."""
-    return hashlib.sha256(password.encode()).hexdigest()
+from app.core.auth import hash_password
 
 
 async def seed_database():

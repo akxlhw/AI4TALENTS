@@ -5,11 +5,17 @@ import enum
 
 
 class RoleType(str, enum.Enum):
-    """Talent role type enumeration."""
+    """Talent role type enumeration.
+
+    Unified role types for academic talent identification.
+    - PROFESSOR: 教授/研究员 (h_index >= 25 or high citation count)
+    - STUDENT: 在读学生 (works <= 8 and low citations)
+    - GRADUATE: 毕业/早期研究者 (8 < works < 30, transitioning)
+    - UNKNOWN: 未知 (insufficient data)
+    """
     PROFESSOR = "professor"
-    TEACHING_RESEARCH = "teaching_research"
     STUDENT = "student"
-    GRADUATED = "graduated"
+    GRADUATE = "graduate"
     UNKNOWN = "unknown"
 
 

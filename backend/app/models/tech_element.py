@@ -2,7 +2,7 @@
 Technology Element and Direction models.
 技术要素与技术方向模型
 """
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, Float, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, Float, UniqueConstraint, JSON, DateTime
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -22,8 +22,12 @@ class TechElement(Base, TimestampMixin):
     sort_order = Column(Integer, default=0)
     is_enabled = Column(Boolean, default=True, nullable=False)
 
+    # 最后采集时间
+    last_collect_at = Column(DateTime, nullable=True)
+
     # Relationships
     directions = relationship("TechDirection", back_populates="tech_element")
+    venue_bindings = relationship("VenueTechBinding", back_populates="tech_element")
 
     def __repr__(self):
         return f"<TechElement(id={self.tech_element_id}, name={self.element_name})>"

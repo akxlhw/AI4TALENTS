@@ -36,7 +36,7 @@ const MainLayout: React.FC = () => {
     {
       key: '/country-school',
       icon: <GlobalOutlined />,
-      label: '国家院校',
+      label: '院校机构',
     },
     {
       key: '/search',

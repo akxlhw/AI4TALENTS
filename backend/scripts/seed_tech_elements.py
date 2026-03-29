@@ -204,6 +204,17 @@ async def assign_tech_tags():
                     element = result.scalar_one_or_none()
 
                 if element:
+                    # Check if tag already exists
+                    from app.models.tech_element import TalentTechTag
+                    existing = await session.execute(
+                        select(TalentTechTag).where(
+                            TalentTechTag.talent_id == talent.talent_id,
+                            TalentTechTag.tech_direction_id == direction.tech_direction_id
+                        )
+                    )
+                    if existing.scalar_one_or_none():
+                        continue  # Skip duplicate
+
                     tag = TalentTechTag(
                         talent_id=talent.talent_id,
                         tech_element_id=direction.tech_element_id,

@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from app.builders.base import BuildResult, extract_openalex_id, normalize_name
 from app.builders.school_builder import SchoolBuilder, INSTITUTION_NAME_MAPPING
 from app.builders.talent_builder import TalentBuilder
+from app.services.role_identifier import RoleIdentifier
 
 
 class TestBaseBuilder:
@@ -110,44 +111,62 @@ class TestTalentBuilder:
         assert builder.batch_id == 1
         assert builder.session == mock_session
 
-    def test_identify_role_type_professor(self, mock_session):
-        """Test role identification for professor."""
-        builder = TalentBuilder(mock_session, batch_id=1)
 
-        # Professor indicators
-        raw_data = {
+class TestRoleIdentifier:
+    """Tests for RoleIdentifier service (replaces TalentBuilder._identify_role_type)."""
+
+    def test_identify_role_type_professor_high_h_index(self):
+        """Test role identification for professor with high h_index."""
+        result = RoleIdentifier.identify(
+            works_count=50,
+            cited_by_count=1000,
+            h_index=25
+        )
+        assert result.role_type == "professor"
+        assert result.confidence >= 0.95
+
+    def test_identify_role_type_professor_high_works(self):
+        """Test role identification for professor with high works and citations."""
+        result = RoleIdentifier.identify(
+            works_count=50,
+            cited_by_count=2000,
+            h_index=10
+        )
+        assert result.role_type == "professor"
+        assert result.confidence >= 0.90
+
+    def test_identify_role_type_student(self):
+        """Test role identification for student."""
+        result = RoleIdentifier.identify(
+            works_count=2,
+            cited_by_count=10,
+            h_index=0
+        )
+        assert result.role_type == "student"
+        assert result.confidence >= 0.75
+
+    def test_identify_role_type_graduate(self):
+        """Test role identification for graduate."""
+        result = RoleIdentifier.identify(
+            works_count=15,
+            cited_by_count=100,
+            h_index=5
+        )
+        assert result.role_type == "graduate"
+
+    def test_identify_from_author_data(self):
+        """Test role identification from author data."""
+        author_data = {
             "works_count": 50,
             "cited_by_count": 1000,
+            "summary_stats": {"h_index": 30}
         }
-        role = builder._identify_role_type(raw_data)
-        assert role == "professor"
+        result = RoleIdentifier.identify_from_author_data(author_data)
+        assert result.role_type == "professor"
 
-    def test_identify_role_type_student(self, mock_session):
-        """Test role identification for student."""
-        builder = TalentBuilder(mock_session, batch_id=1)
-
-        # Student indicators
-        raw_data = {
-            "works_count": 2,
-            "cited_by_count": 10,
-        }
-        role = builder._identify_role_type(raw_data)
-        assert role == "student"
-
-    def test_identify_role_type_graduate(self, mock_session):
-        """Test role identification for graduate."""
-        builder = TalentBuilder(mock_session, batch_id=1)
-
-        # Graduate indicators
-        raw_data = {
-            "works_count": 15,
-            "cited_by_count": 100,
-        }
-        role = builder._identify_role_type(raw_data)
-        assert role == "graduated"
-
-    def test_extract_topics(self, mock_session):
-        """Test topic extraction."""
+    def test_extract_topics(self):
+        """Test topic extraction from TalentBuilder."""
+        mock_session = AsyncMock()
         builder = TalentBuilder(mock_session, batch_id=1)
 
         raw_data = {
@@ -164,8 +183,9 @@ class TestTalentBuilder:
         assert "Machine Learning" in topics
         assert "Computer Science" in topics
 
-    def test_extract_orcid(self, mock_session):
-        """Test ORCID extraction."""
+    def test_extract_orcid(self):
+        """Test ORCID extraction from TalentBuilder."""
+        mock_session = AsyncMock()
         builder = TalentBuilder(mock_session, batch_id=1)
 
         # From URL

@@ -19,9 +19,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Enable required extensions
-    op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
-    op.execute('CREATE EXTENSION IF NOT EXISTS "pg_trgm"')
+    # Check if PostgreSQL (skip extensions for SQLite)
+    bind = op.get_bind()
+    is_postgres = bind.dialect.name == 'postgresql'
+
+    # Enable required extensions (PostgreSQL only)
+    if is_postgres:
+        op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
+        op.execute('CREATE EXTENSION IF NOT EXISTS "pg_trgm"')
 
     # Create enum types
     role_type_enum = postgresql.ENUM(

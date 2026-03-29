@@ -22,6 +22,9 @@ class OverviewStatSnapshot(Base):
     professor_count = Column(Integer, default=0)
     student_count = Column(Integer, default=0)
     talent_count = Column(Integer, default=0)
+    country_count = Column(Integer, default=0)  # 覆盖国家数
+    tech_element_count = Column(Integer, default=0)  # 技术要素数
+    tech_direction_count = Column(Integer, default=0)  # 技术方向数
 
     # Metadata
     generated_by_batch_id = Column(Integer, nullable=True)

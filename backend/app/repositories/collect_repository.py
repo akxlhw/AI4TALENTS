@@ -1,231 +1,21 @@
 """
-Repository for collect configuration operations.
-采集配置数据访问层
+Repository for collect configuration operations - Simplified for MVP v1.1
+采集配置数据访问层 - 简化版
+
+采集逻辑简化：
+- 移除 Scope 和 Strategy 概念
+- 任务直接关联技术要素
+- 数据类型固定：学者+论文+机构
+- 时间范围固定：2010.1.1至今
 """
 from typing import List, Optional
 from datetime import datetime
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.models.sync import CollectScope, CollectStrategy, CollectTask
-
-
-class CollectScopeRepository:
-    """Repository for CollectScope operations."""
-
-    def __init__(self, session: AsyncSession):
-        self.session = session
-
-    async def list_scopes(
-        self,
-        scope_type: Optional[str] = None,
-        is_enabled: Optional[bool] = None,
-    ) -> List[CollectScope]:
-        """List all collect scopes with optional filters."""
-        query = select(CollectScope)
-
-        if scope_type:
-            query = query.where(CollectScope.scope_type == scope_type)
-        if is_enabled is not None:
-            query = query.where(CollectScope.is_enabled == is_enabled)
-
-        query = query.order_by(CollectScope.scope_id)
-        result = await self.session.execute(query)
-        return list(result.scalars().all())
-
-    async def get_by_id(self, scope_id: int) -> Optional[CollectScope]:
-        """Get collect scope by ID."""
-        result = await self.session.execute(
-            select(CollectScope).where(CollectScope.scope_id == scope_id)
-        )
-        return result.scalar_one_or_none()
-
-    async def get_by_code(self, scope_code: str) -> Optional[CollectScope]:
-        """Get collect scope by code."""
-        result = await self.session.execute(
-            select(CollectScope).where(CollectScope.scope_code == scope_code)
-        )
-        return result.scalar_one_or_none()
-
-    async def create_scope(
-        self,
-        scope_code: str,
-        scope_name: str,
-        scope_type: str,
-        scope_value: List,
-        description: Optional[str] = None,
-        created_by: Optional[int] = None,
-    ) -> CollectScope:
-        """Create a new collect scope."""
-        scope = CollectScope(
-            scope_code=scope_code,
-            scope_name=scope_name,
-            scope_type=scope_type,
-            scope_value=scope_value,
-            description=description,
-            created_by=created_by,
-            is_enabled=True,
-        )
-        self.session.add(scope)
-        await self.session.flush()
-        return scope
-
-    async def update_scope(
-        self,
-        scope_id: int,
-        scope_name: Optional[str] = None,
-        scope_value: Optional[List] = None,
-        is_enabled: Optional[bool] = None,
-        description: Optional[str] = None,
-    ) -> Optional[CollectScope]:
-        """Update collect scope."""
-        scope = await self.get_by_id(scope_id)
-        if not scope:
-            return None
-
-        if scope_name is not None:
-            scope.scope_name = scope_name
-        if scope_value is not None:
-            scope.scope_value = scope_value
-        if is_enabled is not None:
-            scope.is_enabled = is_enabled
-        if description is not None:
-            scope.description = description
-
-        return scope
-
-    async def delete_scope(self, scope_id: int) -> bool:
-        """Delete collect scope."""
-        scope = await self.get_by_id(scope_id)
-        if not scope:
-            return False
-
-        await self.session.delete(scope)
-        return True
-
-
-class CollectStrategyRepository:
-    """Repository for CollectStrategy operations."""
-
-    def __init__(self, session: AsyncSession):
-        self.session = session
-
-    async def list_strategies(
-        self,
-        strategy_type: Optional[str] = None,
-        is_enabled: Optional[bool] = None,
-    ) -> List[CollectStrategy]:
-        """List all collect strategies with optional filters."""
-        query = select(CollectStrategy)
-
-        if strategy_type:
-            query = query.where(CollectStrategy.strategy_type == strategy_type)
-        if is_enabled is not None:
-            query = query.where(CollectStrategy.is_enabled == is_enabled)
-
-        query = query.order_by(CollectStrategy.strategy_id)
-        result = await self.session.execute(query)
-        return list(result.scalars().all())
-
-    async def get_by_id(self, strategy_id: int) -> Optional[CollectStrategy]:
-        """Get collect strategy by ID."""
-        result = await self.session.execute(
-            select(CollectStrategy).where(CollectStrategy.strategy_id == strategy_id)
-        )
-        return result.scalar_one_or_none()
-
-    async def get_by_code(self, strategy_code: str) -> Optional[CollectStrategy]:
-        """Get collect strategy by code."""
-        result = await self.session.execute(
-            select(CollectStrategy).where(CollectStrategy.strategy_code == strategy_code)
-        )
-        return result.scalar_one_or_none()
-
-    async def create_strategy(
-        self,
-        strategy_code: str,
-        strategy_name: str,
-        strategy_type: str,
-        data_types: List[str],
-        scope_ids: Optional[List[int]] = None,
-        schedule_cron: Optional[str] = None,
-        fetch_config: Optional[dict] = None,
-        description: Optional[str] = None,
-        created_by: Optional[int] = None,
-    ) -> CollectStrategy:
-        """Create a new collect strategy."""
-        strategy = CollectStrategy(
-            strategy_code=strategy_code,
-            strategy_name=strategy_name,
-            strategy_type=strategy_type,
-            schedule_cron=schedule_cron,
-            scope_ids=scope_ids,
-            data_types=data_types,
-            fetch_config=fetch_config,
-            description=description,
-            created_by=created_by,
-            is_enabled=True,
-        )
-        self.session.add(strategy)
-        await self.session.flush()
-        return strategy
-
-    async def update_strategy(
-        self,
-        strategy_id: int,
-        strategy_name: Optional[str] = None,
-        scope_ids: Optional[List[int]] = None,
-        data_types: Optional[List[str]] = None,
-        schedule_cron: Optional[str] = None,
-        fetch_config: Optional[dict] = None,
-        is_enabled: Optional[bool] = None,
-        description: Optional[str] = None,
-    ) -> Optional[CollectStrategy]:
-        """Update collect strategy."""
-        strategy = await self.get_by_id(strategy_id)
-        if not strategy:
-            return None
-
-        if strategy_name is not None:
-            strategy.strategy_name = strategy_name
-        if scope_ids is not None:
-            strategy.scope_ids = scope_ids
-        if data_types is not None:
-            strategy.data_types = data_types
-        if schedule_cron is not None:
-            strategy.schedule_cron = schedule_cron
-        if fetch_config is not None:
-            strategy.fetch_config = fetch_config
-        if is_enabled is not None:
-            strategy.is_enabled = is_enabled
-        if description is not None:
-            strategy.description = description
-
-        return strategy
-
-    async def update_last_run(
-        self,
-        strategy_id: int,
-        status: str,
-        run_at: Optional[datetime] = None,
-    ) -> bool:
-        """Update last run info for strategy."""
-        strategy = await self.get_by_id(strategy_id)
-        if not strategy:
-            return False
-
-        strategy.last_run_at = run_at or datetime.now()
-        strategy.last_run_status = status
-        return True
-
-    async def delete_strategy(self, strategy_id: int) -> bool:
-        """Delete collect strategy."""
-        strategy = await self.get_by_id(strategy_id)
-        if not strategy:
-            return False
-
-        await self.session.delete(strategy)
-        return True
+from app.models.sync import CollectTask
+from app.models.tech_element import TechElement
 
 
 class CollectTaskRepository:
@@ -237,17 +27,17 @@ class CollectTaskRepository:
     async def list_tasks(
         self,
         status: Optional[str] = None,
-        strategy_id: Optional[int] = None,
+        tech_element_id: Optional[int] = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[List[CollectTask], int]:
         """List collect tasks with pagination."""
-        query = select(CollectTask)
+        query = select(CollectTask).options(selectinload(CollectTask.tech_element))
 
         if status:
             query = query.where(CollectTask.status == status)
-        if strategy_id:
-            query = query.where(CollectTask.strategy_id == strategy_id)
+        if tech_element_id:
+            query = query.where(CollectTask.tech_element_id == tech_element_id)
 
         # Count
         count_query = select(func.count()).select_from(query.subquery())
@@ -266,7 +56,9 @@ class CollectTaskRepository:
     async def get_by_id(self, task_id: int) -> Optional[CollectTask]:
         """Get collect task by ID."""
         result = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
+            select(CollectTask)
+            .options(selectinload(CollectTask.tech_element))
+            .where(CollectTask.task_id == task_id)
         )
         return result.scalar_one_or_none()
 
@@ -280,18 +72,23 @@ class CollectTaskRepository:
     async def create_task(
         self,
         task_code: str,
-        task_type: str,
-        strategy_id: Optional[int] = None,
+        tech_element_id: int,
+        collect_mode: str,
         triggered_by: Optional[int] = None,
+        time_window_start: Optional[datetime] = None,
+        time_window_end: Optional[datetime] = None,
     ) -> CollectTask:
         """Create a new collect task."""
         task = CollectTask(
             task_code=task_code,
-            strategy_id=strategy_id,
-            task_type=task_type,
+            tech_element_id=tech_element_id,
+            collect_mode=collect_mode,
+            task_type="manual",  # 兼容旧字段
             triggered_by=triggered_by,
             triggered_at=datetime.now(),
             status="pending",
+            time_window_start=time_window_start,
+            time_window_end=time_window_end,
         )
         self.session.add(task)
         await self.session.flush()
@@ -387,3 +184,39 @@ class CollectTaskRepository:
             ).order_by(CollectTask.task_id)
         )
         return list(result.scalars().all())
+
+
+class TechElementCollectRepository:
+    """Repository for TechElement collect configuration."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def list_with_collect_config(self) -> List[TechElement]:
+        """List all tech elements with their collect configuration."""
+        result = await self.session.execute(
+            select(TechElement)
+            .where(TechElement.is_enabled == True)
+            .order_by(TechElement.sort_order)
+        )
+        return list(result.scalars().all())
+
+    async def get_by_id(self, tech_element_id: int) -> Optional[TechElement]:
+        """Get tech element by ID."""
+        result = await self.session.execute(
+            select(TechElement).where(TechElement.tech_element_id == tech_element_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def update_last_collect_time(
+        self,
+        tech_element_id: int,
+        collect_at: Optional[datetime] = None,
+    ) -> Optional[TechElement]:
+        """Update last collect time for a tech element."""
+        element = await self.get_by_id(tech_element_id)
+        if not element:
+            return None
+
+        element.last_collect_at = collect_at or datetime.now()
+        return element

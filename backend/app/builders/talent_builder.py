@@ -1,6 +1,8 @@
 """
 Talent object builder.
-Transforms raw OpenAlex author data into Talent domain objects.
+
+DEPRECATED: This builder uses the old RawSourceRecord model which has been removed.
+Please use ServingLayerSync from app.services.serving_layer_sync instead.
 """
 from typing import Dict, Any, List, Optional
 from datetime import datetime
@@ -13,7 +15,7 @@ from app.builders.base import BaseBuilder, BuildResult, extract_openalex_id
 from app.models.talent import Talent, RoleProfile, SelectedWork
 from app.models.school import School
 from app.models.enums import RoleType, VisibilityStatus
-from app.models.sync import RawSourceRecord
+from app.services.role_identifier import RoleIdentifier
 
 
 logger = logging.getLogger(__name__)
@@ -21,27 +23,25 @@ logger = logging.getLogger(__name__)
 
 class TalentBuilder(BaseBuilder):
     """
-    Builder for Talent objects from OpenAlex author data.
+    DEPRECATED: Use ServingLayerSync instead.
+
+    This builder uses the old RawSourceRecord model which has been removed.
     """
 
     def __init__(self, session: AsyncSession, batch_id: int):
         super().__init__(batch_id)
         self.session = session
         self._school_cache: Dict[str, int] = {}
+        logger.warning("TalentBuilder is deprecated. Use ServingLayerSync instead.")
 
     async def build(self) -> BuildResult:
         """
-        Build Talent objects from raw author records.
-
-        Process:
-        1. Load pending author records
-        2. Transform to Talent objects
-        3. Create role profiles
-        4. Mark records as processed
-
-        Returns:
-            BuildResult with statistics
+        DEPRECATED: This method is no longer supported.
         """
+        raise NotImplementedError(
+            "TalentBuilder is deprecated. "
+            "Please use ServingLayerSync from app.services.serving_layer_sync instead."
+        )
         started_at = datetime.now()
         records_processed = 0
         records_created = 0
@@ -147,7 +147,7 @@ class TalentBuilder(BaseBuilder):
             existing.h_index = raw_data.get("summary_stats", {}).get("h_index", 0)
             existing.topic_tags = self._extract_topics(raw_data)
             existing.latest_active_year = self._extract_latest_year(raw_data)
-            existing.role_type = self._identify_role_type(raw_data)
+            existing.role_type = RoleIdentifier.identify_from_author_data(raw_data).role_type
             existing.source_record_id = source_id
             existing.last_sync_batch_id = self.batch_id
 
@@ -160,7 +160,7 @@ class TalentBuilder(BaseBuilder):
             orcid=self._extract_orcid(raw_data.get("orcid")),
             school_id=school_id,
             current_title=None,
-            role_type=self._identify_role_type(raw_data),
+            role_type=RoleIdentifier.identify_from_author_data(raw_data).role_type,
             role_confidence=0.0,
             topic_tags=self._extract_topics(raw_data),
             summary=self._build_summary(raw_data),
@@ -226,33 +226,6 @@ class TalentBuilder(BaseBuilder):
             self._school_cache[inst_id] = school_id
 
         return school_id
-
-    def _identify_role_type(self, raw_data: Dict[str, Any]) -> str:
-        """
-        Identify role type based on author characteristics.
-
-        Heuristics:
-        - High works_count + high citations -> professor
-        - Low works_count -> student
-        - Medium works_count -> graduate/unknown
-        """
-        works_count = raw_data.get("works_count", 0)
-        cited_by_count = raw_data.get("cited_by_count", 0)
-
-        # Professor heuristics
-        if works_count >= 30 and cited_by_count >= 500:
-            return RoleType.PROFESSOR.value
-
-        # Student heuristics
-        if works_count < 5:
-            return RoleType.STUDENT.value
-
-        # Graduate heuristics
-        if works_count >= 5 and works_count < 30:
-            return RoleType.GRADUATED.value
-
-        # Default to unknown
-        return RoleType.UNKNOWN.value
 
     def _extract_orcid(self, orcid_url: Optional[str]) -> Optional[str]:
         """Extract ORCID ID from URL."""
@@ -324,7 +297,7 @@ class TalentBuilder(BaseBuilder):
         )
         profile = result.scalar_one_or_none()
 
-        role_type = self._identify_role_type(raw_data)
+        role_type = RoleIdentifier.identify_from_author_data(raw_data).role_type
         confidence = self._calculate_role_confidence(raw_data, role_type)
 
         if profile:

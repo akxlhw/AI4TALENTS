@@ -33,6 +33,7 @@ import {
 import { api } from '../services/api'
 import FavoriteButton from '../components/FavoriteButton'
 import CollaborationGraph, { CollaborationNode, CollaborationLink } from '../components/CollaborationGraph'
+import { getRoleTypeConfig } from '../constants/roleType'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -83,13 +84,6 @@ interface SelectedWork {
   venue_name: string | null
   citation_count: number
   doi: string | null
-}
-
-const roleTypeMap: Record<string, { color: string; text: string }> = {
-  professor: { color: 'green', text: '教授' },
-  student: { color: 'blue', text: '学生' },
-  graduated: { color: 'orange', text: '毕业生' },
-  unknown: { color: 'default', text: '未知' },
 }
 
 const confirmStatusMap: Record<string, { color: string; text: string }> = {
@@ -164,7 +158,7 @@ const TalentDetailPage: React.FC = () => {
     )
   }
 
-  const roleConfig = roleTypeMap[talent.role_type] || roleTypeMap.unknown
+  const roleConfig = getRoleTypeConfig(talent.role_type)
 
   const workColumns = [
     {
@@ -293,12 +287,12 @@ const TalentDetailPage: React.FC = () => {
               </div>
               {talent.orcid && (
                 <a
-                  href={`https://orcid.org/${talent.orcid}`}
+                  href={talent.orcid.startsWith('http') ? talent.orcid : `https://orcid.org/${talent.orcid}`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   <Tag icon={<GlobalOutlined />} color="green">
-                    ORCID: {talent.orcid}
+                    ORCID: {talent.orcid.replace('https://orcid.org/', '').replace('http://orcid.org/', '')}
                   </Tag>
                 </a>
               )}

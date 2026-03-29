@@ -1,7 +1,7 @@
 /**
  * API client for backend communication
  */
-import axios, { AxiosInstance, AxiosError } from 'axios'
+import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -33,6 +33,10 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // Don't redirect on cancelled requests
+    if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+      return Promise.reject(error)
+    }
     if (error.response?.status === 401) {
       // Handle unauthorized
       localStorage.removeItem('token')
@@ -43,6 +47,53 @@ apiClient.interceptors.response.use(
 )
 
 export default apiClient
+
+// ============================================
+// AbortController Utilities for Request Cancellation
+// ============================================
+
+/**
+ * Creates a cancellable request wrapper
+ * Usage:
+ *   const { request, cancel } = createCancellableRequest(
+ *     (signal) => api.talents.list({ ...params }, { signal })
+ *   )
+ *   useEffect(() => {
+ *     request().then(setData).catch(handleError)
+ *     return () => cancel()
+ *   }, [])
+ */
+export function createCancellableRequest<T>(
+  requestFn: (signal: AbortSignal) => Promise<T>
+): {
+  request: () => Promise<T>
+  cancel: () => void
+} {
+  const controller = new AbortController()
+
+  return {
+    request: () => requestFn(controller.signal),
+    cancel: () => controller.abort(),
+  }
+}
+
+/**
+ * Extended config with signal support
+ */
+export interface CancellableRequestConfig extends AxiosRequestConfig {
+  signal?: AbortSignal
+}
+
+/**
+ * Helper to check if an error is a cancellation error
+ */
+export function isCancellationError(error: unknown): boolean {
+  if (error && typeof error === 'object') {
+    const axiosError = error as { name?: string; code?: string }
+    return axiosError.name === 'AbortError' || axiosError.code === 'ERR_CANCELED'
+  }
+  return false
+}
 
 // API endpoints
 export const api = {
@@ -169,6 +220,14 @@ export const api = {
       apiClient.get(`/tech-elements/${id}`),
     getSummary: () =>
       apiClient.get('/tech-elements/summary'),
+    getOverallStats: () =>
+      apiClient.get('/tech-elements/overall-stats'),
+    getOverallCountries: () =>
+      apiClient.get('/tech-elements/overall-countries'),
+    getOverallSchools: (params?: { page?: number; page_size?: number }) =>
+      apiClient.get('/tech-elements/overall-schools', { params }),
+    getOverallTalents: (params?: { country_id?: number; school_id?: number; role_type?: string; keyword?: string; page?: number; page_size?: number }) =>
+      apiClient.get('/tech-elements/overall-talents', { params }),
     getStats: (id: number) =>
       apiClient.get(`/tech-elements/${id}/stats`),
     getCountries: (id: number, directionId?: number) =>
@@ -203,50 +262,31 @@ export const api = {
       apiClient.get('/talent-pools/followup-statuses'),
   },
 
-  // Collect Configuration
+  // Collect Configuration - Simplified for MVP v1.1
   collect: {
-    // Scopes
-    listScopes: (params?: { scope_type?: string; is_enabled?: boolean }) =>
-      apiClient.get('/collect/scopes', { params }),
-    getScope: (scopeId: number) =>
-      apiClient.get(`/collect/scopes/${scopeId}`),
-    createScope: (data: { scope_code: string; scope_name: string; scope_type: string; scope_value: any[]; description?: string }) =>
-      apiClient.post('/collect/scopes', data),
-    updateScope: (scopeId: number, data: { scope_name?: string; scope_value?: any[]; is_enabled?: boolean; description?: string }) =>
-      apiClient.put(`/collect/scopes/${scopeId}`, data),
-    deleteScope: (scopeId: number) =>
-      apiClient.delete(`/collect/scopes/${scopeId}`),
-    // Strategies
-    listStrategies: (params?: { strategy_type?: string; is_enabled?: boolean }) =>
-      apiClient.get('/collect/strategies', { params }),
-    getStrategy: (strategyId: number) =>
-      apiClient.get(`/collect/strategies/${strategyId}`),
-    createStrategy: (data: { strategy_code: string; strategy_name: string; strategy_type?: string; data_types: string[]; scope_ids?: number[]; schedule_cron?: string; fetch_config?: any; description?: string }) =>
-      apiClient.post('/collect/strategies', data),
-    updateStrategy: (strategyId: number, data: { strategy_name?: string; scope_ids?: number[]; data_types?: string[]; schedule_cron?: string; fetch_config?: any; is_enabled?: boolean; description?: string }) =>
-      apiClient.put(`/collect/strategies/${strategyId}`, data),
-    deleteStrategy: (strategyId: number) =>
-      apiClient.delete(`/collect/strategies/${strategyId}`),
+    // Tech Elements with Collect Config
+    listTechElements: () =>
+      apiClient.get('/collect/tech-elements'),
+    updateTechElementSources: (techElementId: number, data: { collect_sources: Array<{ id: string; name: string; type: string }> }) =>
+      apiClient.put(`/collect/tech-elements/${techElementId}/sources`, data),
     // Tasks
-    listTasks: (params?: { status?: string; strategy_id?: number; page?: number; page_size?: number }) =>
+    listTasks: (params?: { status?: string; tech_element_id?: number; page?: number; page_size?: number }) =>
       apiClient.get('/collect/tasks', { params }),
     getTask: (taskId: number) =>
       apiClient.get(`/collect/tasks/${taskId}`),
-    triggerTask: (data: { strategy_id?: number; task_type?: string }) =>
+    triggerTask: (data: { tech_element_id: number; collect_mode?: string }) =>
       apiClient.post('/collect/tasks', data),
     cancelTask: (taskId: number) =>
       apiClient.post(`/collect/tasks/${taskId}/cancel`),
+    deleteTask: (taskId: number) =>
+      apiClient.delete(`/collect/tasks/${taskId}`),
     getActiveTasks: () =>
       apiClient.get('/collect/tasks/active'),
     // Options
-    getScopeTypes: () =>
-      apiClient.get('/collect/options/scope-types'),
-    getStrategyTypes: () =>
-      apiClient.get('/collect/options/strategy-types'),
     getTaskStatuses: () =>
       apiClient.get('/collect/options/task-statuses'),
-    getDataTypes: () =>
-      apiClient.get('/collect/options/data-types'),
+    getCollectModes: () =>
+      apiClient.get('/collect/options/collect-modes'),
   },
 
   // Data Version Management
@@ -277,5 +317,34 @@ export const api = {
       apiClient.get('/data-version/quality/summary', { params: { version_id: versionId } }),
     getQualityMetrics: () =>
       apiClient.get('/data-version/quality/metrics'),
+  },
+
+  // Venue Management - 顶会顶刊配置
+  venues: {
+    // 获取所有顶会顶刊列表
+    list: (params?: { venue_type?: string; is_enabled?: boolean; keyword?: string; page?: number; page_size?: number }) =>
+      apiClient.get('/venues', { params }),
+    // 获取单个 Venue 详情
+    get: (venueId: number) =>
+      apiClient.get(`/venues/${venueId}`),
+    // 获取技术要素的已绑定 Venue
+    getTechElementBindings: (techElementId: number, isEnabled?: boolean) =>
+      apiClient.get(`/venues/tech-elements/${techElementId}/bindings`, { params: { is_enabled: isEnabled } }),
+    // 批量创建绑定
+    batchCreateBindings: (techElementId: number, venueIds: number[]) =>
+      apiClient.post('/venues/bindings/batch', { tech_element_id: techElementId, venue_ids: venueIds }),
+    // 删除绑定
+    deleteBinding: (bindingId: number) =>
+      apiClient.delete(`/venues/bindings/${bindingId}`),
+    // 批量更新绑定的启用状态
+    updateBindings: (techElementId: number, venueIds: number[]) =>
+      apiClient.post('/venues/bindings/batch', { tech_element_id: techElementId, venue_ids: venueIds }),
+  },
+
+  // Homepage - 首页聚合数据
+  homepage: {
+    // 获取首页热点数据
+    getHighlights: () =>
+      apiClient.get('/homepage/highlights'),
   },
 }

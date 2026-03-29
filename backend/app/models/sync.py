@@ -45,33 +45,6 @@ class SyncBatch(Base, TimestampMixin):
         return f"<SyncBatch(batch_id={self.batch_id}, status={self.status})>"
 
 
-class RawSourceRecord(Base, TimestampMixin):
-    """Raw data from external sources."""
-
-    __tablename__ = "raw_source_record"
-
-    record_id = Column(Integer, primary_key=True, index=True)
-    batch_id = Column(Integer, nullable=False, index=True)
-
-    # Source info
-    source_type = Column(String(50), nullable=False, index=True)  # 'institution', 'author', 'work'
-    source_id = Column(String(100), nullable=False, index=True)  # OpenAlex ID
-
-    # Raw data
-    raw_data = Column(JSON, nullable=False)
-
-    # Processing status
-    processed_status = Column(String(20), default="pending", index=True)  # 'pending', 'processed', 'error'
-    processed_at = Column(DateTime, nullable=True)
-    error_info = Column(Text, nullable=True)
-
-    # Timing
-    fetched_at = Column(DateTime, nullable=False)
-
-    def __repr__(self):
-        return f"<RawSourceRecord(record_id={self.record_id}, source={self.source_type}:{self.source_id})>"
-
-
 class CollectScope(Base, TimestampMixin):
     """采集范围配置"""
 
@@ -140,21 +113,29 @@ class CollectStrategy(Base, TimestampMixin):
 
 
 class CollectTask(Base, TimestampMixin):
-    """采集任务"""
+    """采集任务 - 简化版，直接关联技术要素"""
 
     __tablename__ = "sync_collect_task"
 
     task_id = Column(Integer, primary_key=True, index=True)
     task_code = Column(String(50), unique=True, nullable=False, index=True)
 
-    # Associated strategy
-    strategy_id = Column(Integer, ForeignKey("sync_collect_strategy.strategy_id"), nullable=True, index=True)
+    # 旧字段（保留以兼容现有数据库）
+    strategy_id = Column(Integer, nullable=True)  # 不再使用，保留兼容
+    task_type = Column(String(30), default="manual", nullable=False)  # 保留兼容
 
-    # Task type
-    task_type = Column(String(30), nullable=False)  # 'scheduled', 'manual', 'retry'
+    # 关联技术要素（采集最小单位）
+    tech_element_id = Column(Integer, ForeignKey("core_tech_element.tech_element_id"), nullable=True, index=True)
+
+    # 采集模式：full=全量, incremental=增量
+    collect_mode = Column(String(20), default="full", nullable=False)
+
+    # Time window for collection
+    time_window_start = Column(DateTime, nullable=True)
+    time_window_end = Column(DateTime, nullable=True)
 
     # Trigger info
-    triggered_by = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=True)  # user_id or null for system
+    triggered_by = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=True)
     triggered_at = Column(DateTime, nullable=False)
 
     # Status
@@ -181,6 +162,12 @@ class CollectTask(Base, TimestampMixin):
 
     # Result summary
     result_summary = Column(JSON, nullable=True)
+
+    # Execution logs - 新增字段
+    execution_logs = Column(JSON, nullable=True)  # List of {timestamp, level, message}
+
+    # Relationships
+    tech_element = relationship("TechElement")
 
     def __repr__(self):
         return f"<CollectTask(task_id={self.task_id}, status={self.status})>"

@@ -11,9 +11,12 @@ from app.models.collaboration import Collaboration, WorkAuthor
 from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
 from app.models.iam import UserAccount, UserSchoolScope, FavoriteTalent, TalentPool, TalentPoolMember
 from app.models.sync import (
-    SyncBatch, RawSourceRecord, CollectScope, CollectStrategy, CollectTask,
+    SyncBatch, CollectScope, CollectStrategy, CollectTask,
     DataVersion, DataPublishRecord, DataCorrectionRecord, DataQualitySummary,
 )
+from app.models.venue import Venue, VenueTechBinding, VenueSubTask
+from app.models.raw_data import RawWork, RawAuthor, RawInstitution, AuthorTechBelong
+from app.models.standardized import StdAuthor, StdSchool, SchoolNameAlias
 from app.models.search import SearchTalentDocument
 from app.models.audit import AuditOperationLog
 
@@ -48,7 +51,6 @@ __all__ = [
     "TalentPoolMember",
     # Sync
     "SyncBatch",
-    "RawSourceRecord",
     "CollectScope",
     "CollectStrategy",
     "CollectTask",
@@ -56,6 +58,19 @@ __all__ = [
     "DataPublishRecord",
     "DataCorrectionRecord",
     "DataQualitySummary",
+    # Venue Config
+    "Venue",
+    "VenueTechBinding",
+    "VenueSubTask",
+    # Raw Data Layer
+    "RawWork",
+    "RawAuthor",
+    "RawInstitution",
+    "AuthorTechBelong",
+    # Standardized Layer
+    "StdAuthor",
+    "StdSchool",
+    "SchoolNameAlias",
     # Search
     "SearchTalentDocument",
     # Audit

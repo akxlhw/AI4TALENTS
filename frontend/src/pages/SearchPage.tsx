@@ -38,24 +38,13 @@ import ColumnSettings from '../components/ColumnSettings'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useSearchTemplates } from '../hooks/useSearchTemplates'
 import { useColumnConfig } from '../hooks/useColumnConfig'
+import { getRoleTypeConfig } from '../constants/roleType'
+import type { SearchTalent, TechElement } from '../types'
 
 const { Title, Text } = Typography
 const { Search } = Input
 
-interface Talent {
-  talent_id: number
-  name: string
-  name_en: string | null
-  role_type: string
-  school_id: number | null
-  school_name: string | null
-  current_title: string | null
-  works_count: number
-  cited_by_count: number
-  h_index: number
-  topic_tags: string[]
-}
-
+// 页面内部使用的简化类型（从API响应派生）
 interface School {
   school_id: number
   school_name: string
@@ -67,27 +56,6 @@ interface Country {
   country_name_cn: string
 }
 
-interface TechElement {
-  tech_element_id: number
-  element_code: string
-  element_name: string
-  directions: TechDirection[]
-}
-
-interface TechDirection {
-  tech_direction_id: number
-  direction_code: string
-  direction_name: string
-  tech_element_id: number
-}
-
-const roleTypeMap: Record<string, { color: string; text: string }> = {
-  professor: { color: 'green', text: '教授' },
-  student: { color: 'blue', text: '学生' },
-  graduated: { color: 'orange', text: '毕业生' },
-  unknown: { color: 'default', text: '未知' },
-}
-
 const SearchPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -97,7 +65,7 @@ const SearchPage: React.FC = () => {
   // Search state
   const [query, setQuery] = useState(initialQuery)
   const [loading, setLoading] = useState(false)
-  const [results, setResults] = useState<Talent[]>([])
+  const [results, setResults] = useState<SearchTalent[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const pageSize = 20
@@ -182,38 +150,41 @@ const SearchPage: React.FC = () => {
   }, [loadReferenceData])
 
   useEffect(() => {
+    // 页面加载时默认加载所有人才列表
     if (initialQuery) {
+      setQuery(initialQuery)
       performSearch(initialQuery, 1)
+    } else {
+      // 没有初始搜索词时，默认加载所有人才
+      performSearch('', 1)
     }
   }, [initialQuery])
 
   const performSearch = async (searchQuery: string, pageNum: number) => {
-    if (!searchQuery.trim()) return
-
     setLoading(true)
     try {
       const response = await api.talents.list({
         school_id: schoolFilter,
         country_id: countryFilter,
         role_type: roleFilter,
-        keyword: searchQuery,
+        keyword: searchQuery.trim() || undefined,
         page: pageNum,
         page_size: pageSize,
       })
       const data = response.data
 
       // Apply client-side filters (for filters not supported by API yet)
-      let filteredItems: Talent[] = data.items || []
+      let filteredItems: SearchTalent[] = data.items || []
 
       if (minWorks !== undefined) {
-        filteredItems = filteredItems.filter((t: Talent) => t.works_count >= minWorks)
+        filteredItems = filteredItems.filter((t) => t.works_count >= minWorks)
       }
       if (minCitations !== undefined) {
-        filteredItems = filteredItems.filter((t: Talent) => t.cited_by_count >= minCitations)
+        filteredItems = filteredItems.filter((t) => t.cited_by_count >= minCitations)
       }
 
       // Apply sorting
-      filteredItems.sort((a: Talent, b: Talent) => {
+      filteredItems.sort((a, b) => {
         let aVal = 0, bVal = 0
         switch (sortBy) {
           case 'works_count':
@@ -249,8 +220,10 @@ const SearchPage: React.FC = () => {
     setQuery(value)
     if (value.trim()) {
       navigate(`/search?q=${encodeURIComponent(value.trim())}`)
-      performSearch(value, 1)
+    } else {
+      navigate('/search')
     }
+    performSearch(value, 1)
   }
 
   const handleTableChange = (pagination: any) => {
@@ -258,9 +231,7 @@ const SearchPage: React.FC = () => {
   }
 
   const handleFilterChange = () => {
-    if (query) {
-      performSearch(query, 1)
-    }
+    performSearch(query, 1)
   }
 
   const handleResetFilters = () => {
@@ -275,9 +246,7 @@ const SearchPage: React.FC = () => {
     setConfirmStatusFilter(undefined)
     setSortBy('cited_by_count')
     setSortOrder('desc')
-    if (query) {
-      performSearch(query, 1)
-    }
+    performSearch(query, 1)
   }
 
   const handleExport = async (format: 'csv' | 'xlsx') => {
@@ -355,9 +324,7 @@ const SearchPage: React.FC = () => {
       setSortBy(template.filters.sort_by || 'cited_by_count')
       setSortOrder(template.filters.sort_order || 'desc')
       message.success(`已加载模板: ${template.name}`)
-      if (query) {
-        performSearch(query, 1)
-      }
+      performSearch(query, 1)
     }
   }
 
@@ -402,9 +369,7 @@ const SearchPage: React.FC = () => {
         const [field, order] = e.key.split('-')
         setSortBy(field)
         setSortOrder(order as 'desc' | 'asc')
-        if (query) {
-          performSearch(query, 1)
-        }
+        performSearch(query, 1)
       }}
       items={[
         { key: 'cited_by_count-desc', label: '引用数 (高到低)' },
@@ -444,7 +409,7 @@ const SearchPage: React.FC = () => {
       key: 'favorite',
       width: 60,
       align: 'center' as const,
-      render: (_: any, record: Talent) => (
+      render: (_: unknown, record: SearchTalent) => (
         <FavoriteButton talentId={record.talent_id} size="small" />
       ),
     },
@@ -453,7 +418,7 @@ const SearchPage: React.FC = () => {
       dataIndex: 'name',
       key: 'name',
       width: 180,
-      render: (name: string, record: Talent) => (
+      render: (name: string, record: SearchTalent) => (
         <a onClick={() => navigate(`/talents/${record.talent_id}`)} style={{ fontWeight: 500 }}>
           <Space direction="vertical" size={0}>
             <span>{name}</span>
@@ -470,7 +435,7 @@ const SearchPage: React.FC = () => {
       key: 'role_type',
       width: 100,
       render: (role: string) => {
-        const config = roleTypeMap[role] || roleTypeMap.unknown
+        const config = getRoleTypeConfig(role)
         return <Tag color={config.color}>{config.text}</Tag>
       },
     },
@@ -480,7 +445,7 @@ const SearchPage: React.FC = () => {
       key: 'school_name',
       width: 150,
       ellipsis: true,
-      render: (name: string, record: Talent) =>
+      render: (name: string, record: SearchTalent) =>
         name ? (
           <a onClick={() => navigate(`/schools/${record.school_id}`)}>{name}</a>
         ) : (
@@ -639,9 +604,9 @@ const SearchPage: React.FC = () => {
                 value={roleFilter}
                 onChange={(val) => { setRoleFilter(val); handleFilterChange(); }}
                 allowClear
-                style={{ width: 100 }}
+                style={{ width: 140 }}
                 options={[
-                  { value: 'professor', label: '教授' },
+                  { value: 'professor', label: '教授/研究员' },
                   { value: 'student', label: '学生' },
                   { value: 'graduated', label: '毕业生' },
                 ]}
@@ -723,61 +688,59 @@ const SearchPage: React.FC = () => {
       </Card>
 
       {/* Results */}
-      {query && (
-        <Card bodyStyle={{ padding: 0 }}>
-          {selectedRowKeys.length > 0 && (
-            <div style={{ padding: '12px 16px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
-              <Space>
-                <Text>已选择 <strong>{selectedRowKeys.length}</strong> 项</Text>
-                <Button size="small" onClick={() => setSelectedRowKeys([])}>取消选择</Button>
-                <Button
-                  size="small"
-                  onClick={handleCompare}
-                  disabled={selectedRowKeys.length < 2 || selectedRowKeys.length > 4}
-                >
-                  对比 ({selectedRowKeys.length}/4)
+      <Card bodyStyle={{ padding: 0 }}>
+        {selectedRowKeys.length > 0 && (
+          <div style={{ padding: '12px 16px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
+            <Space>
+              <Text>已选择 <strong>{selectedRowKeys.length}</strong> 项</Text>
+              <Button size="small" onClick={() => setSelectedRowKeys([])}>取消选择</Button>
+              <Button
+                size="small"
+                onClick={handleCompare}
+                disabled={selectedRowKeys.length < 2 || selectedRowKeys.length > 4}
+              >
+                对比 ({selectedRowKeys.length}/4)
+              </Button>
+              <Dropdown overlay={exportMenu} trigger={['click']}>
+                <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>
+                  导出 <DownOutlined />
                 </Button>
-                <Dropdown overlay={exportMenu} trigger={['click']}>
-                  <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>
-                    导出 <DownOutlined />
-                  </Button>
-                </Dropdown>
-              </Space>
-            </div>
-          )}
-          <Spin spinning={loading}>
-            <Table
-              dataSource={results}
-              columns={columns}
-              rowKey="talent_id"
-              rowSelection={{
-                selectedRowKeys,
-                onChange: setSelectedRowKeys,
-              }}
-              pagination={{
-                current: page,
-                pageSize,
-                total: total,
-                showSizeChanger: false,
-                showTotal: (total) => `共 ${total} 条结果`,
-                pageSizeOptions: ['20', '50', '100'],
-              }}
-              onChange={handleTableChange}
-              locale={{
-                emptyText: (
-                  <Empty
-                    description={
-                      query
-                        ? `未找到与"${query}"相关的人才`
-                        : '请输入关键词搜索'
-                    }
-                  />
-                ),
-              }}
-            />
-          </Spin>
-        </Card>
-      )}
+              </Dropdown>
+            </Space>
+          </div>
+        )}
+        <Spin spinning={loading}>
+          <Table
+            dataSource={results}
+            columns={columns}
+            rowKey="talent_id"
+            rowSelection={{
+              selectedRowKeys,
+              onChange: setSelectedRowKeys,
+            }}
+            pagination={{
+              current: page,
+              pageSize,
+              total: total,
+              showSizeChanger: false,
+              showTotal: (total) => `共 ${total} 条结果`,
+              pageSizeOptions: ['20', '50', '100'],
+            }}
+            onChange={handleTableChange}
+            locale={{
+              emptyText: (
+                <Empty
+                  description={
+                    query
+                      ? `未找到与"${query}"相关的人才`
+                      : '暂无人才数据'
+                  }
+                />
+              ),
+            }}
+          />
+        </Spin>
+      </Card>
 
       {/* Compare Modal */}
       <TalentCompareModal
@@ -829,12 +792,6 @@ const SearchPage: React.FC = () => {
         onReset={resetColumns}
         onClose={() => setColumnSettingsVisible(false)}
       />
-
-      {!query && (
-        <Card>
-          <Empty description="请输入关键词开始搜索" />
-        </Card>
-      )}
     </div>
   )
 }

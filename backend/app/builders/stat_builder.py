@@ -111,7 +111,7 @@ class StatBuilder(BaseBuilder):
                 Talent.is_visible == True,
                 Talent.role_type.in_([
                     RoleType.STUDENT.value,
-                    RoleType.GRADUATED.value,
+                    RoleType.GRADUATE.value,
                 ]),
             )
         )
@@ -215,7 +215,7 @@ class StatBuilder(BaseBuilder):
             .where(
                 Talent.school_id == school_id,
                 Talent.is_visible == True,
-                Talent.role_type == RoleType.GRADUATED.value,
+                Talent.role_type == RoleType.GRADUATE.value,
             )
         )
         graduate_count = graduate_result.scalar() or 0

@@ -28,6 +28,9 @@ class School(Base, TimestampMixin):
     is_visible = Column(Boolean, default=True, nullable=False)
     status = Column(String(20), default="active", nullable=False)
 
+    # Top school flag - 管理员配置的Top院校标记
+    is_top_school = Column(Boolean, default=False, nullable=False, index=True)
+
     # Source tracking
     source_type = Column(String(50), nullable=True)
     source_record_id = Column(String(100), nullable=True, index=True)

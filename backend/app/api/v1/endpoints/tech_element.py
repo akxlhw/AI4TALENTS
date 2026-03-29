@@ -20,6 +20,7 @@ from app.schemas.tech_element import (
     SchoolDistributionItem,
     SchoolDistributionResponse,
     TalentInTechElement,
+    OverallStatsResponse,
 )
 
 router = APIRouter(prefix="/tech-elements", tags=["Tech Elements"])
@@ -77,6 +78,105 @@ async def get_tech_element_summary(
     repo = TechElementRepository(session)
     stats = await repo.get_element_stats()
     return TechElementSummary(**stats)
+
+
+@router.get(
+    "/overall-stats",
+    response_model=OverallStatsResponse,
+    summary="获取总体统计",
+    description="返回用户权限范围内的总体统计数据（人才总数、教授数、学生数、国家数、院校数等）",
+)
+async def get_overall_stats(
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Get overall statistics for user's permission scope."""
+    repo = TechElementRepository(session)
+    stats = await repo.get_overall_stats()
+    return OverallStatsResponse(**stats)
+
+
+@router.get(
+    "/overall-countries",
+    response_model=CountryDistributionResponse,
+    summary="获取总体国家分布",
+    description="返回用户权限范围内所有人才的国家分布",
+)
+async def get_overall_country_distribution(
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Get overall country distribution."""
+    repo = TechElementRepository(session)
+    items = await repo.get_country_distribution()
+    return CountryDistributionResponse(items=[CountryDistributionItem(**item) for item in items])
+
+
+@router.get(
+    "/overall-schools",
+    response_model=SchoolDistributionResponse,
+    summary="获取总体院校分布",
+    description="返回用户权限范围内所有人才的院校分布",
+)
+async def get_overall_school_distribution(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Get overall school distribution."""
+    repo = TechElementRepository(session)
+    items, total = await repo.get_school_distribution(page=page, page_size=page_size)
+    return SchoolDistributionResponse(
+        items=[SchoolDistributionItem(**item) for item in items],
+        total=total,
+    )
+
+
+@router.get(
+    "/overall-talents",
+    response_model=PaginatedResponse[TalentInTechElement],
+    summary="获取总体人才列表",
+    description="返回用户权限范围内所有人才列表",
+)
+async def get_overall_talents(
+    country_id: Optional[int] = Query(None, description="按国家筛选"),
+    school_id: Optional[int] = Query(None, description="按院校筛选"),
+    role_type: Optional[str] = Query(None, description="按角色类型筛选"),
+    keyword: Optional[str] = Query(None, description="搜索关键词"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Get overall talent list."""
+    repo = TechElementRepository(session)
+    talents, total = await repo.get_talent_list(
+        country_id=country_id,
+        school_id=school_id,
+        role_type=role_type,
+        keyword=keyword,
+        page=page,
+        page_size=page_size,
+    )
+
+    items = [
+        TalentInTechElement(
+            talent_id=t.talent_id,
+            name=t.name,
+            name_en=t.name_en,
+            role_type=t.role_type,
+            school_name=t.school.school_name if t.school else None,
+            current_title=t.current_title,
+            h_index=t.h_index,
+            works_count=t.works_count,
+            topic_tags=t.topic_tags or [],
+        )
+        for t in talents
+    ]
+
+    return PaginatedResponse.create(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get(

@@ -49,6 +49,17 @@ class TechElementStatsResponse(BaseModel):
     school_count: int
 
 
+class OverallStatsResponse(BaseModel):
+    """总体统计响应（用户权限范围内）"""
+    talent_count: int
+    professor_count: int
+    student_count: int
+    country_count: int
+    school_count: int
+    tech_element_count: int
+    tech_direction_count: int
+
+
 class CountryDistributionItem(BaseModel):
     """国家分布项"""
     country_id: int

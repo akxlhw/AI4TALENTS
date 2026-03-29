@@ -108,6 +108,86 @@ class TechElementRepository:
                 'talent_count': talents_count.scalar() or 0,
             }
 
+    async def get_overall_stats(self) -> dict:
+        """Get overall statistics for the tech element page."""
+        # Total talent count with tech tags
+        talent_count_query = select(
+            func.count(func.distinct(Talent.talent_id))
+        ).select_from(TalentTechTag).join(
+            Talent, TalentTechTag.talent_id == Talent.talent_id
+        ).where(TalentTechTag.is_enabled == True)
+
+        # Professor count
+        professor_count_query = select(
+            func.count(func.distinct(Talent.talent_id))
+        ).select_from(TalentTechTag).join(
+            Talent, TalentTechTag.talent_id == Talent.talent_id
+        ).where(and_(
+            TalentTechTag.is_enabled == True,
+            Talent.role_type == 'professor'
+        ))
+
+        # Student count
+        student_count_query = select(
+            func.count(func.distinct(Talent.talent_id))
+        ).select_from(TalentTechTag).join(
+            Talent, TalentTechTag.talent_id == Talent.talent_id
+        ).where(and_(
+            TalentTechTag.is_enabled == True,
+            Talent.role_type.in_(['student', 'graduated'])
+        ))
+
+        # Country count
+        country_count_query = select(
+            func.count(func.distinct(Country.country_id))
+        ).select_from(TalentTechTag).join(
+            Talent, TalentTechTag.talent_id == Talent.talent_id
+        ).join(
+            School, Talent.school_id == School.school_id
+        ).join(
+            Country, School.country_id == Country.country_id
+        ).where(TalentTechTag.is_enabled == True)
+
+        # School count
+        school_count_query = select(
+            func.count(func.distinct(School.school_id))
+        ).select_from(TalentTechTag).join(
+            Talent, TalentTechTag.talent_id == Talent.talent_id
+        ).join(
+            School, Talent.school_id == School.school_id
+        ).where(TalentTechTag.is_enabled == True)
+
+        # Tech element count
+        element_count_query = select(
+            func.count(func.distinct(TechElement.tech_element_id))
+        ).select_from(TalentTechTag).join(
+            TechElement, TalentTechTag.tech_element_id == TechElement.tech_element_id
+        ).where(TalentTechTag.is_enabled == True)
+
+        # Tech direction count
+        direction_count_query = select(
+            func.count(func.distinct(TalentTechTag.tech_direction_id))
+        ).where(TalentTechTag.is_enabled == True)
+
+        # Execute all queries
+        talent_count = await self.session.execute(talent_count_query)
+        professor_count = await self.session.execute(professor_count_query)
+        student_count = await self.session.execute(student_count_query)
+        country_count = await self.session.execute(country_count_query)
+        school_count = await self.session.execute(school_count_query)
+        element_count = await self.session.execute(element_count_query)
+        direction_count = await self.session.execute(direction_count_query)
+
+        return {
+            'talent_count': talent_count.scalar() or 0,
+            'professor_count': professor_count.scalar() or 0,
+            'student_count': student_count.scalar() or 0,
+            'country_count': country_count.scalar() or 0,
+            'school_count': school_count.scalar() or 0,
+            'tech_element_count': element_count.scalar() or 0,
+            'tech_direction_count': direction_count.scalar() or 0,
+        }
+
     async def get_country_distribution(
         self, element_id: Optional[int] = None, direction_id: Optional[int] = None
     ) -> List[dict]:
@@ -214,40 +294,90 @@ class TechElementRepository:
         role_type: Optional[str] = None, keyword: Optional[str] = None,
         page: int = 1, page_size: int = 20
     ) -> Tuple[List[Talent], int]:
-        """Get talent list with filters."""
-        query = select(Talent).join(
-            TalentTechTag, Talent.talent_id == TalentTechTag.talent_id
-        ).join(
-            School, Talent.school_id == School.school_id, isouter=True
-        ).where(TalentTechTag.is_enabled == True)
+        """Get talent list with filters - optimized with raw SQL for speed."""
+        from sqlalchemy import text
 
-        # Apply filters
+        # Build WHERE conditions
+        conditions = ["ttt.is_enabled = 1"]
+        params = {}
+
         if element_id:
-            query = query.where(TalentTechTag.tech_element_id == element_id)
+            conditions.append("ttt.tech_element_id = :element_id")
+            params['element_id'] = element_id
         if direction_id:
-            query = query.where(TalentTechTag.tech_direction_id == direction_id)
-        if country_id:
-            query = query.where(School.country_id == country_id)
+            conditions.append("ttt.tech_direction_id = :direction_id")
+            params['direction_id'] = direction_id
         if school_id:
-            query = query.where(Talent.school_id == school_id)
+            conditions.append("t.school_id = :school_id")
+            params['school_id'] = school_id
+        if country_id:
+            conditions.append("s.country_id = :country_id")
+            params['country_id'] = country_id
         if role_type:
-            query = query.where(Talent.role_type == role_type)
+            conditions.append("t.role_type = :role_type")
+            params['role_type'] = role_type
         if keyword:
-            query = query.where(Talent.name.ilike(f'%{keyword}%'))
+            conditions.append("t.name LIKE :keyword")
+            params['keyword'] = f'%{keyword}%'
 
-        # Count query
-        count_query = select(func.count(func.distinct(Talent.talent_id))).select_from(
-            query.subquery()
-        )
-        total_result = await self.session.execute(count_query)
+        where_clause = " AND ".join(conditions)
+
+        # Count query - fast with DISTINCT
+        count_sql = text(f"""
+            SELECT COUNT(DISTINCT t.talent_id)
+            FROM core_talent_tech_tag ttt
+            INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
+            LEFT JOIN core_school s ON t.school_id = s.school_id
+            WHERE {where_clause}
+        """)
+        total_result = await self.session.execute(count_sql, params)
         total = total_result.scalar() or 0
 
-        # Apply pagination and ordering
-        query = query.distinct(Talent.talent_id).order_by(
-            Talent.h_index.desc().nullslast()
-        ).offset((page - 1) * page_size).limit(page_size)
+        # Main query with pagination
+        offset = (page - 1) * page_size
+        main_sql = text(f"""
+            SELECT DISTINCT t.talent_id, t.name, t.name_en, t.role_type,
+                   t.current_title, t.h_index, t.works_count, t.topic_tags,
+                   s.school_id, s.school_name
+            FROM core_talent_tech_tag ttt
+            INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
+            LEFT JOIN core_school s ON t.school_id = s.school_id
+            WHERE {where_clause}
+            ORDER BY t.h_index DESC NULLS LAST
+            LIMIT :limit OFFSET :offset
+        """)
+        params['limit'] = page_size
+        params['offset'] = offset
 
-        result = await self.session.execute(query.options(selectinload(Talent.school)))
-        talents = list(result.scalars().all())
+        result = await self.session.execute(main_sql, params)
+
+        # Build Talent objects with school data
+        talents = []
+        for row in result.fetchall():
+            # Parse topic_tags if it's a string
+            topic_tags = row.topic_tags or []
+            if isinstance(topic_tags, str):
+                try:
+                    import json
+                    topic_tags = json.loads(topic_tags)
+                except:
+                    topic_tags = []
+
+            talent = Talent(
+                talent_id=row.talent_id,
+                name=row.name,
+                name_en=row.name_en,
+                role_type=row.role_type,
+                current_title=row.current_title,
+                h_index=row.h_index,
+                works_count=row.works_count,
+                topic_tags=topic_tags,
+            )
+            if row.school_id:
+                talent.school = School(
+                    school_id=row.school_id,
+                    school_name=row.school_name,
+                )
+            talents.append(talent)
 
         return talents, total

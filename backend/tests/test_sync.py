@@ -5,8 +5,8 @@ import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, patch, MagicMock
 
-from app.repositories.sync_repository import SyncBatchRepository, RawSourceRecordRepository
-from app.models.sync import SyncBatch, RawSourceRecord
+from app.repositories.sync_repository import SyncBatchRepository
+from app.models.sync import SyncBatch
 from app.models.enums import SyncJobStatus, SourceType
 
 
@@ -79,61 +79,6 @@ class TestSyncBatchRepository:
         mock_session.execute.assert_called_once()
 
 
-class TestRawSourceRecordRepository:
-    """Tests for RawSourceRecordRepository."""
-
-    @pytest.fixture
-    def mock_session(self):
-        """Create mock session."""
-        return AsyncMock()
-
-    @pytest.fixture
-    def repo(self, mock_session):
-        """Create repository instance."""
-        return RawSourceRecordRepository(mock_session)
-
-    @pytest.mark.asyncio
-    async def test_save_record(self, repo, mock_session):
-        """Test saving a raw record."""
-        mock_session.flush = AsyncMock()
-
-        record = await repo.save_record(
-            batch_id=1,
-            source_type="institution",
-            source_id="I123456",
-            raw_data={"id": "I123456", "display_name": "MIT"},
-        )
-
-        assert record is not None
-        mock_session.add.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_save_records_batch(self, repo, mock_session):
-        """Test saving multiple records."""
-        mock_session.flush = AsyncMock()
-
-        records = [
-            {"id": "https://openalex.org/I1", "display_name": "MIT"},
-            {"id": "https://openalex.org/I2", "display_name": "Stanford"},
-        ]
-
-        count = await repo.save_records_batch(
-            batch_id=1,
-            source_type="institution",
-            records=records,
-        )
-
-        assert count == 2
-        assert mock_session.add.call_count == 2
-
-    @pytest.mark.asyncio
-    async def test_mark_processed(self, repo, mock_session):
-        """Test marking a record as processed."""
-        await repo.mark_processed(record_id=1, status="processed")
-
-        mock_session.execute.assert_called_once()
-
-
 class TestSyncService:
     """Tests for SyncService."""
 
@@ -153,14 +98,14 @@ class TestSyncService:
 
     @pytest.mark.asyncio
     async def test_extract_id(self):
-        """Test ID extraction from URL."""
-        from app.services.sync_service import SyncService
+        """Test ID extraction from URL using extract_openalex_id."""
+        from app.builders.base import extract_openalex_id
 
         # Test URL format
-        assert SyncService._extract_id("https://openalex.org/I123456") == "I123456"
+        assert extract_openalex_id("https://openalex.org/I123456") == "I123456"
 
         # Test ID format
-        assert SyncService._extract_id("I123456") == "I123456"
+        assert extract_openalex_id("I123456") == "I123456"
 
         # Test with trailing slash
-        assert SyncService._extract_id("https://openalex.org/I123456/") == "I123456"
+        assert extract_openalex_id("https://openalex.org/I123456/") == "I123456"

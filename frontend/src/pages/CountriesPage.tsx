@@ -109,10 +109,10 @@ const CountriesPage: React.FC = () => {
       ),
     },
     {
-      title: '教授数',
+      title: '教授/研究员',
       dataIndex: 'professor_count',
       key: 'professor_count',
-      width: 100,
+      width: 120,
       render: (count: number) => (
         <Badge count={count} showZero style={{ backgroundColor: '#52c41a' }} />
       ),
@@ -137,10 +137,10 @@ const CountriesPage: React.FC = () => {
       ellipsis: true,
     },
     {
-      title: '教授',
+      title: '教授/研究员',
       dataIndex: 'professor_count',
       key: 'professor_count',
-      width: 80,
+      width: 120,
     },
     {
       title: '学生',

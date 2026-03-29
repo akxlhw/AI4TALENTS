@@ -15,34 +15,6 @@ import { api } from '../services/api'
 const { Title, Paragraph, Text } = Typography
 const { Search } = Input
 
-// 热门技术要素（模拟数据，后续从API获取）
-const HOT_TECH_ELEMENTS = [
-  { id: 'ai', name: '人工智能', count: 156 },
-  { id: 'ml', name: '机器学习', count: 128 },
-  { id: 'nlp', name: '自然语言处理', count: 89 },
-  { id: 'cv', name: '计算机视觉', count: 76 },
-  { id: 'robotics', name: '机器人', count: 52 },
-  { id: 'dl', name: '深度学习', count: 45 },
-]
-
-// 重点国家（模拟数据）
-const KEY_COUNTRIES = [
-  { id: 'us', name: '美国', count: 320 },
-  { id: 'cn', name: '中国', count: 180 },
-  { id: 'gb', name: '英国', count: 95 },
-  { id: 'de', name: '德国', count: 72 },
-  { id: 'jp', name: '日本', count: 58 },
-]
-
-// 重点院校（模拟数据）
-const KEY_SCHOOLS = [
-  { id: 1, name: 'MIT', count: 45 },
-  { id: 2, name: 'Stanford', count: 42 },
-  { id: 3, name: 'Harvard', count: 38 },
-  { id: 4, name: '清华', count: 35 },
-  { id: 5, name: 'Cambridge', count: 32 },
-]
-
 interface OverviewStats {
   stats: {
     school_count: number
@@ -57,10 +29,41 @@ interface OverviewStats {
   generated_at: string
 }
 
+// 首页热点数据类型
+interface HotTechElement {
+  tech_element_id: number
+  element_code: string
+  element_name: string
+  talent_count: number
+}
+
+interface TopCountry {
+  country_id: number
+  country_code: string
+  country_name: string
+  talent_count: number
+}
+
+interface TopSchool {
+  school_id: number
+  school_name: string
+  country_name: string | null
+  talent_count: number
+}
+
+interface HomepageHighlights {
+  hot_tech_elements: HotTechElement[]
+  top_countries: TopCountry[]
+  top_schools: TopSchool[]
+  version: string
+  generated_at: string
+}
+
 const HomePage: React.FC = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState<OverviewStats | null>(null)
+  const [highlights, setHighlights] = useState<HomepageHighlights | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -69,8 +72,12 @@ const HomePage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const overviewRes = await api.overview.get()
+      const [overviewRes, highlightsRes] = await Promise.all([
+        api.overview.get(),
+        api.homepage.getHighlights(),
+      ])
       setOverview(overviewRes.data)
+      setHighlights(highlightsRes.data)
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {
@@ -84,11 +91,11 @@ const HomePage: React.FC = () => {
     }
   }
 
-  const handleTechElementClick = (techElementId: string) => {
-    navigate(`/tech-element?tech_element=${techElementId}`)
+  const handleTechElementClick = (techElementId: number) => {
+    navigate(`/tech-element?tech_element_id=${techElementId}`)
   }
 
-  const handleCountryClick = (countryId: string) => {
+  const handleCountryClick = (countryId: number) => {
     navigate(`/country-school?country_id=${countryId}`)
   }
 
@@ -106,6 +113,10 @@ const HomePage: React.FC = () => {
     country_count: 0,
   }
 
+  const hotTechElements = highlights?.hot_tech_elements || []
+  const topCountries = highlights?.top_countries || []
+  const topSchools = highlights?.top_schools || []
+
   return (
     <Spin spinning={loading}>
       <div>
@@ -113,7 +124,7 @@ const HomePage: React.FC = () => {
         <div style={{ marginBottom: 24 }}>
           <Title level={2} style={{ margin: 0, marginBottom: 4 }}>智能学术界人才库</Title>
           <Paragraph type="secondary" style={{ margin: 0 }}>
-            基于OpenAlex学术数据库的人才发现平台 - 汇聚全球高校教授与学生信息
+            基于学术界公开数据的人才发现平台 - 汇聚全球高校科研院所人才信息
           </Paragraph>
         </div>
 
@@ -122,7 +133,7 @@ const HomePage: React.FC = () => {
           <Col span={4}>
             <Card size="small">
               <Statistic
-                title="已收录高校"
+                title="已收录院校机构"
                 value={stats.school_count}
                 prefix={<BankOutlined />}
                 valueStyle={{ color: '#1890ff', fontSize: 24 }}
@@ -132,7 +143,7 @@ const HomePage: React.FC = () => {
           <Col span={4}>
             <Card size="small">
               <Statistic
-                title="教授类人才"
+                title="教授/研究员"
                 value={stats.professor_count}
                 prefix={<TeamOutlined />}
                 valueStyle={{ color: '#52c41a', fontSize: 24 }}
@@ -163,7 +174,7 @@ const HomePage: React.FC = () => {
             <Card size="small">
               <Statistic
                 title="技术要素"
-                value={stats.tech_element_count || HOT_TECH_ELEMENTS.length}
+                value={stats.tech_element_count || hotTechElements.length}
                 prefix={<AppstoreOutlined />}
                 valueStyle={{ color: '#13c2c2', fontSize: 24 }}
               />
@@ -173,7 +184,7 @@ const HomePage: React.FC = () => {
             <Card size="small">
               <Statistic
                 title="覆盖国家"
-                value={stats.country_count || KEY_COUNTRIES.length}
+                value={stats.country_count || topCountries.length}
                 prefix={<GlobalOutlined />}
                 valueStyle={{ color: '#eb2f96', fontSize: 24 }}
               />
@@ -204,7 +215,7 @@ const HomePage: React.FC = () => {
               title={
                 <Space>
                   <AppstoreOutlined style={{ color: '#1890ff' }} />
-                  <span>技术要素视角</span>
+                  <span>技术要素</span>
                 </Space>
               }
               extra={
@@ -217,7 +228,7 @@ const HomePage: React.FC = () => {
               {/* 概要统计 */}
               <Row gutter={16} style={{ marginBottom: 16 }}>
                 <Col span={8}>
-                  <Statistic title="技术要素" value={stats.tech_element_count || HOT_TECH_ELEMENTS.length} />
+                  <Statistic title="技术要素" value={stats.tech_element_count || hotTechElements.length} />
                 </Col>
                 <Col span={8}>
                   <Statistic title="技术方向" value={stats.tech_direction_count || 24} />
@@ -228,10 +239,10 @@ const HomePage: React.FC = () => {
               </Row>
               <Row gutter={16} style={{ marginBottom: 16 }}>
                 <Col span={12}>
-                  <Statistic title="覆盖国家" value={stats.country_count || KEY_COUNTRIES.length} />
+                  <Statistic title="覆盖国家" value={stats.country_count || topCountries.length} />
                 </Col>
                 <Col span={12}>
-                  <Statistic title="覆盖院校" value={stats.school_count} />
+                  <Statistic title="覆盖院校机构" value={stats.school_count} />
                 </Col>
               </Row>
 
@@ -241,16 +252,19 @@ const HomePage: React.FC = () => {
               <div>
                 <Text type="secondary" style={{ fontSize: 12 }}>热门技术要素：</Text>
                 <div style={{ marginTop: 8 }}>
-                  {HOT_TECH_ELEMENTS.slice(0, 6).map((item) => (
+                  {hotTechElements.slice(0, 6).map((item) => (
                     <Tag
-                      key={item.id}
+                      key={item.tech_element_id}
                       style={{ marginBottom: 4, cursor: 'pointer' }}
                       color="blue"
-                      onClick={() => handleTechElementClick(item.id)}
+                      onClick={() => handleTechElementClick(item.tech_element_id)}
                     >
-                      {item.name} ({item.count})
+                      {item.element_name} ({item.talent_count})
                     </Tag>
                   ))}
+                  {hotTechElements.length === 0 && (
+                    <Text type="secondary">暂无数据</Text>
+                  )}
                 </div>
               </div>
             </Card>
@@ -262,7 +276,7 @@ const HomePage: React.FC = () => {
               title={
                 <Space>
                   <GlobalOutlined style={{ color: '#52c41a' }} />
-                  <span>国家院校视角</span>
+                  <span>院校机构</span>
                 </Space>
               }
               extra={
@@ -275,10 +289,10 @@ const HomePage: React.FC = () => {
               {/* 概要统计 */}
               <Row gutter={16} style={{ marginBottom: 16 }}>
                 <Col span={8}>
-                  <Statistic title="覆盖国家" value={stats.country_count || KEY_COUNTRIES.length} />
+                  <Statistic title="覆盖国家" value={stats.country_count || topCountries.length} />
                 </Col>
                 <Col span={8}>
-                  <Statistic title="覆盖院校" value={stats.school_count} />
+                  <Statistic title="覆盖院校机构" value={stats.school_count} />
                 </Col>
                 <Col span={8}>
                   <Statistic title="人才总数" value={stats.talent_count} />
@@ -286,7 +300,7 @@ const HomePage: React.FC = () => {
               </Row>
               <Row gutter={16} style={{ marginBottom: 16 }}>
                 <Col span={12}>
-                  <Statistic title="覆盖技术要素" value={stats.tech_element_count || HOT_TECH_ELEMENTS.length} />
+                  <Statistic title="覆盖技术要素" value={stats.tech_element_count || hotTechElements.length} />
                 </Col>
                 <Col span={12}>
                   <Statistic title="技术方向" value={stats.tech_direction_count || 24} />
@@ -295,37 +309,43 @@ const HomePage: React.FC = () => {
 
               <Divider style={{ margin: '12px 0' }} />
 
-              {/* 重点国家标签 */}
+              {/* 主要国家标签 */}
               <div style={{ marginBottom: 8 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>重点国家：</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>主要国家：</Text>
                 <div style={{ marginTop: 8 }}>
-                  {KEY_COUNTRIES.slice(0, 5).map((item) => (
+                  {topCountries.slice(0, 5).map((item) => (
                     <Tag
-                      key={item.id}
+                      key={item.country_id}
                       style={{ marginBottom: 4, cursor: 'pointer' }}
                       color="green"
-                      onClick={() => handleCountryClick(item.id)}
+                      onClick={() => handleCountryClick(item.country_id)}
                     >
-                      {item.name} ({item.count})
+                      {item.country_name} ({item.talent_count})
                     </Tag>
                   ))}
+                  {topCountries.length === 0 && (
+                    <Text type="secondary">暂无数据</Text>
+                  )}
                 </div>
               </div>
 
-              {/* 重点院校标签 */}
+              {/* Top院校标签 */}
               <div>
-                <Text type="secondary" style={{ fontSize: 12 }}>重点院校：</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>Top院校机构：</Text>
                 <div style={{ marginTop: 8 }}>
-                  {KEY_SCHOOLS.slice(0, 5).map((item) => (
+                  {topSchools.slice(0, 5).map((item) => (
                     <Tag
-                      key={item.id}
+                      key={item.school_id}
                       style={{ marginBottom: 4, cursor: 'pointer' }}
                       color="orange"
-                      onClick={() => handleSchoolClick(item.id)}
+                      onClick={() => handleSchoolClick(item.school_id)}
                     >
-                      {item.name} ({item.count})
+                      {item.school_name} ({item.talent_count})
                     </Tag>
                   ))}
+                  {topSchools.length === 0 && (
+                    <Text type="secondary">暂无数据</Text>
+                  )}
                 </div>
               </div>
             </Card>

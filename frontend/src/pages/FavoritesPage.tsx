@@ -33,48 +33,10 @@ import {
 } from '@ant-design/icons'
 import { api } from '../services/api'
 import TalentCompareModal from '../components/TalentCompareModal'
+import { getRoleTypeConfig } from '../constants/roleType'
+import type { FavoriteTalent, TalentPool, FollowupStatus } from '../types'
 
 const { Title, Text } = Typography
-
-interface FavoriteTalent {
-  favorite_id: number
-  talent_id: number
-  name: string
-  name_en: string | null
-  role_type: string
-  school_id: number | null
-  school_name: string | null
-  current_title: string | null
-  works_count: number
-  cited_by_count: number
-  h_index: number
-  notes: string | null
-  followup_status: string
-  created_at: string
-}
-
-interface TalentPool {
-  pool_id: number
-  pool_name: string
-  pool_type: string
-  owner_user_id: number
-  scope_desc: string | null
-  pool_status: string
-  member_count: number
-  created_at: string
-}
-
-interface FollowupStatus {
-  value: string
-  label: string
-}
-
-const roleTypeMap: Record<string, { color: string; text: string }> = {
-  professor: { color: 'green', text: '教授' },
-  student: { color: 'blue', text: '学生' },
-  graduated: { color: 'orange', text: '毕业生' },
-  unknown: { color: 'default', text: '未知' },
-}
 
 const followupStatusMap: Record<string, { color: string; text: string }> = {
   new_found: { color: 'blue', text: '新发现' },
@@ -369,7 +331,7 @@ const FavoritesPage: React.FC = () => {
       key: 'role_type',
       width: 100,
       render: (role: string) => {
-        const config = roleTypeMap[role] || roleTypeMap.unknown
+        const config = getRoleTypeConfig(role)
         return <Tag color={config.color}>{config.text}</Tag>
       },
     },
@@ -499,9 +461,9 @@ const FavoritesPage: React.FC = () => {
                     value={roleFilter}
                     onChange={(val) => { setRoleFilter(val); setPage(1); }}
                     allowClear
-                    style={{ width: 100 }}
+                    style={{ width: 140 }}
                     options={[
-                      { value: 'professor', label: '教授' },
+                      { value: 'professor', label: '教授/研究员' },
                       { value: 'student', label: '学生' },
                       { value: 'graduated', label: '毕业生' },
                     ]}
