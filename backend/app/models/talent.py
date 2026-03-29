@@ -16,6 +16,9 @@ class Talent(Base, TimestampMixin):
 
     talent_id = Column(Integer, primary_key=True, index=True)
 
+    # Link to standardized layer
+    std_author_id = Column(Integer, ForeignKey("std_author.std_author_id"), nullable=True, index=True)
+
     # Source tracking
     source_type = Column(String(50), nullable=True)
     source_record_id = Column(String(100), nullable=True, index=True)
@@ -34,7 +37,10 @@ class Talent(Base, TimestampMixin):
     role_type = Column(String(20), default=RoleType.UNKNOWN.value, nullable=False, index=True)
     role_confidence = Column(Float, default=0.0)
 
-    # Research info (stored as JSON array for compatibility)
+    # Research info
+    # topic_tags: Cached field computed from TalentTechTag table
+    # Format: ["AI", "Machine Learning", "Deep Learning"]
+    # This field is updated when tech_tags relationship changes
     topic_tags = Column(JSON, default=[])
     research_interests = Column(Text, nullable=True)
 
@@ -61,6 +67,27 @@ class Talent(Base, TimestampMixin):
     school = relationship("School", back_populates="talents")
     role_profile = relationship("RoleProfile", back_populates="talent", uselist=False)
     selected_works = relationship("SelectedWork", back_populates="talent")
+    tech_tags = relationship("TalentTechTag", back_populates="talent")
+    std_author = relationship("StdAuthor", back_populates="talent")
+
+    def update_topic_tags_from_tech_tags(self):
+        """
+        Update topic_tags from the tech_tags relationship.
+
+        This method should be called after modifying tech_tags to keep
+        the cached topic_tags field in sync. The topic_tags field is a
+        denormalized cache for quick filtering and display.
+        """
+        if self.tech_tags:
+            # Get unique tech element names from tech_tags
+            from app.models.tech_element import TechElement
+            element_names = set()
+            for tag in self.tech_tags:
+                if tag.is_enabled and tag.tech_element:
+                    element_names.add(tag.tech_element.element_name)
+            self.topic_tags = sorted(list(element_names))
+        else:
+            self.topic_tags = []
 
     def __repr__(self):
         return f"<Talent(talent_id={self.talent_id}, name={self.name}, role={self.role_type})>"

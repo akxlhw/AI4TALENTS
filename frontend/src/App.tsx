@@ -9,6 +9,10 @@ import LoginPage from './pages/LoginPage'
 import AdminPage from './pages/AdminPage'
 import FavoritesPage from './pages/FavoritesPage'
 import ProfilePage from './pages/ProfilePage'
+import TechElementPage from './pages/TechElementPage'
+import CountrySchoolPage from './pages/CountrySchoolPage'
+import CollectPage from './pages/CollectPage'
+import DataVersionPage from './pages/DataVersionPage'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FavoritesProvider } from './contexts/FavoritesContext'
 
@@ -93,6 +97,8 @@ function AppRoutes() {
         }
       >
         <Route index element={<HomePage />} />
+        <Route path="tech-element" element={<TechElementPage />} />
+        <Route path="country-school" element={<CountrySchoolPage />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="talents/:id" element={<TalentDetailPage />} />
         <Route path="schools/:id" element={<SchoolDetailPage />} />
@@ -103,6 +109,22 @@ function AppRoutes() {
           element={
             <AdminRoute>
               <AdminPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="collect"
+          element={
+            <AdminRoute>
+              <CollectPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="data-version"
+          element={
+            <AdminRoute>
+              <DataVersionPage />
             </AdminRoute>
           }
         />

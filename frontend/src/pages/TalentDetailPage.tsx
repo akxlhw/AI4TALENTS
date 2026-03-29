@@ -15,6 +15,8 @@ import {
   Divider,
   Empty,
   Tooltip,
+  Alert,
+  Progress,
 } from 'antd'
 import {
   UserOutlined,
@@ -24,12 +26,26 @@ import {
   GlobalOutlined,
   TrophyOutlined,
   TeamOutlined,
+  AppstoreOutlined,
+  ExclamationCircleOutlined,
+  BulbOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
 import FavoriteButton from '../components/FavoriteButton'
 import CollaborationGraph, { CollaborationNode, CollaborationLink } from '../components/CollaborationGraph'
+import { getRoleTypeConfig } from '../constants/roleType'
 
 const { Title, Text, Paragraph } = Typography
+
+interface TechTag {
+  tech_element_id: number
+  tech_element_name: string
+  tech_direction_id: number
+  tech_direction_name: string
+  tag_level: string
+  confidence_score: number
+  confirm_status: string
+}
 
 interface TalentDetail {
   talent_id: number
@@ -53,6 +69,12 @@ interface TalentDetail {
   role_reason: string | null
   academic_age: number | null
   selected_works: SelectedWork[]
+  // v1.1 新增字段
+  tech_tags?: TechTag[]
+  recruitment_summary?: string | null
+  data_completeness?: number
+  pending_confirm_items?: string[]
+  is_graduated?: boolean
 }
 
 interface SelectedWork {
@@ -64,11 +86,10 @@ interface SelectedWork {
   doi: string | null
 }
 
-const roleTypeMap: Record<string, { color: string; text: string }> = {
-  professor: { color: 'green', text: '教授' },
-  student: { color: 'blue', text: '学生' },
-  graduated: { color: 'orange', text: '毕业生' },
-  unknown: { color: 'default', text: '未知' },
+const confirmStatusMap: Record<string, { color: string; text: string }> = {
+  confirmed: { color: 'success', text: '已确认' },
+  auto_identified: { color: 'processing', text: '自动识别' },
+  pending_confirm: { color: 'warning', text: '待确认' },
 }
 
 const TalentDetailPage: React.FC = () => {
@@ -137,7 +158,7 @@ const TalentDetailPage: React.FC = () => {
     )
   }
 
-  const roleConfig = roleTypeMap[talent.role_type] || roleTypeMap.unknown
+  const roleConfig = getRoleTypeConfig(talent.role_type)
 
   const workColumns = [
     {
@@ -181,6 +202,9 @@ const TalentDetailPage: React.FC = () => {
     },
   ]
 
+  // 计算数据完整度
+  const completeness = talent.data_completeness ?? calculateCompleteness(talent)
+
   return (
     <div>
       {/* 返回按钮 */}
@@ -190,6 +214,24 @@ const TalentDetailPage: React.FC = () => {
         </Button>
         <FavoriteButton talentId={talent.talent_id} showText />
       </div>
+
+      {/* 待确认项提示 */}
+      {talent.pending_confirm_items && talent.pending_confirm_items.length > 0 && (
+        <Alert
+          type="warning"
+          icon={<ExclamationCircleOutlined />}
+          message="存在待确认信息"
+          description={
+            <Space direction="vertical" size={4}>
+              {talent.pending_confirm_items.map((item, index) => (
+                <Text key={index}>• {item}</Text>
+              ))}
+            </Space>
+          }
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
       {/* 基本信息卡片 */}
       <Card style={{ marginBottom: 16 }}>
@@ -209,6 +251,9 @@ const TalentDetailPage: React.FC = () => {
                 <Tag color={roleConfig.color} style={{ fontSize: 14, padding: '2px 8px' }}>
                   {roleConfig.text}
                 </Tag>
+                {talent.is_graduated && (
+                  <Tag color="orange">已毕业</Tag>
+                )}
                 {talent.school_name && (
                   <Tag
                     icon={<BankOutlined />}
@@ -230,14 +275,24 @@ const TalentDetailPage: React.FC = () => {
           </Col>
           <Col>
             <Space direction="vertical" align="end">
+              {/* 数据完整度 */}
+              <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>数据完整度</Text>
+                <Progress
+                  percent={completeness}
+                  size="small"
+                  style={{ width: 120 }}
+                  strokeColor={completeness >= 80 ? '#52c41a' : completeness >= 50 ? '#faad14' : '#ff4d4f'}
+                />
+              </div>
               {talent.orcid && (
                 <a
-                  href={`https://orcid.org/${talent.orcid}`}
+                  href={talent.orcid.startsWith('http') ? talent.orcid : `https://orcid.org/${talent.orcid}`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   <Tag icon={<GlobalOutlined />} color="green">
-                    ORCID: {talent.orcid}
+                    ORCID: {talent.orcid.replace('https://orcid.org/', '').replace('http://orcid.org/', '')}
                   </Tag>
                 </a>
               )}
@@ -298,10 +353,58 @@ const TalentDetailPage: React.FC = () => {
               )}
             </Row>
           </Card>
+
+          {/* 招聘判断摘要 - v1.1新增 */}
+          {talent.recruitment_summary && (
+            <Card
+              title={<><BulbOutlined style={{ marginRight: 8 }} />招聘判断摘要</>}
+              style={{ marginBottom: 16 }}
+              bodyStyle={{ backgroundColor: '#f6ffed' }}
+            >
+              <Paragraph style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                {talent.recruitment_summary}
+              </Paragraph>
+            </Card>
+          )}
         </Col>
 
-        {/* 研究方向 */}
+        {/* 研究方向 & 技术标签 */}
         <Col xs={24} lg={16}>
+          {/* 技术要素与技术方向 - v1.1新增 */}
+          {talent.tech_tags && talent.tech_tags.length > 0 && (
+            <Card
+              title={<><AppstoreOutlined style={{ marginRight: 8 }} />技术要素与技术方向</>}
+              style={{ marginBottom: 16 }}
+            >
+              <Space direction="vertical" style={{ width: '100%' }}>
+                {Object.entries(groupBy(talent.tech_tags, 'tech_element_name')).map(([element, tags]) => (
+                  <div key={element}>
+                    <Text strong style={{ marginBottom: 4, display: 'block' }}>{element}</Text>
+                    <Space size={4} wrap>
+                      {tags.map((tag, index) => (
+                        <Tooltip
+                          key={index}
+                          title={`置信度: ${(tag.confidence_score * 100).toFixed(0)}% | ${confirmStatusMap[tag.confirm_status]?.text || tag.confirm_status}`}
+                        >
+                          <Tag
+                            color={tag.tag_level === 'primary' ? 'blue' : 'default'}
+                            style={{ marginBottom: 4 }}
+                          >
+                            {tag.tech_direction_name}
+                            {tag.confirm_status === 'pending_confirm' && (
+                              <ExclamationCircleOutlined style={{ marginLeft: 4, color: '#faad14' }} />
+                            )}
+                          </Tag>
+                        </Tooltip>
+                      ))}
+                    </Space>
+                  </div>
+                ))}
+              </Space>
+            </Card>
+          )}
+
+          {/* 研究方向 */}
           <Card title="研究方向" style={{ marginBottom: 16 }}>
             {talent.topic_tags.length > 0 ? (
               <Space size={[8, 16]} wrap>
@@ -376,6 +479,50 @@ const TalentDetailPage: React.FC = () => {
       </Card>
     </div>
   )
+}
+
+// Helper function to group tech tags by element
+function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
+  return array.reduce((result, item) => {
+    const groupKey = String(item[key])
+    if (!result[groupKey]) {
+      result[groupKey] = []
+    }
+    result[groupKey].push(item)
+    return result
+  }, {} as Record<string, T[]>)
+}
+
+// Helper function to calculate completeness
+function calculateCompleteness(talent: TalentDetail): number {
+  let score = 0
+  const weights = {
+    name: 10,
+    school: 15,
+    role: 15,
+    title: 10,
+    works: 10,
+    citations: 10,
+    h_index: 5,
+    topic_tags: 10,
+    research_interests: 5,
+    orcid: 5,
+    tech_tags: 5,
+  }
+
+  if (talent.name) score += weights.name
+  if (talent.school_id) score += weights.school
+  if (talent.role_type && talent.role_type !== 'unknown') score += weights.role
+  if (talent.current_title) score += weights.title
+  if (talent.works_count > 0) score += weights.works
+  if (talent.cited_by_count > 0) score += weights.citations
+  if (talent.h_index > 0) score += weights.h_index
+  if (talent.topic_tags && talent.topic_tags.length > 0) score += weights.topic_tags
+  if (talent.research_interests) score += weights.research_interests
+  if (talent.orcid) score += weights.orcid
+  if (talent.tech_tags && talent.tech_tags.length > 0) score += weights.tech_tags
+
+  return score
 }
 
 export default TalentDetailPage

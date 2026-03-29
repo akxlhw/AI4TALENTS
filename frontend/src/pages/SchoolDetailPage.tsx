@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Card,
-  Descriptions,
   Typography,
   Tag,
   Space,
@@ -13,7 +12,6 @@ import {
   Spin,
   Button,
   Empty,
-  Tabs,
   Badge,
 } from 'antd'
 import {
@@ -23,9 +21,9 @@ import {
   UserOutlined,
   ArrowLeftOutlined,
   TrophyOutlined,
-  FileTextOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
+import { getRoleTypeConfig, ROLE_TYPE_MAP } from '../constants/roleType'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -65,13 +63,6 @@ interface TalentListResponse {
   total: number
   page: number
   page_size: number
-}
-
-const roleTypeMap: Record<string, { color: string; text: string }> = {
-  professor: { color: 'green', text: '教授' },
-  student: { color: 'blue', text: '学生' },
-  graduated: { color: 'orange', text: '毕业生' },
-  unknown: { color: 'default', text: '未知' },
 }
 
 const SchoolDetailPage: React.FC = () => {
@@ -171,7 +162,7 @@ const SchoolDetailPage: React.FC = () => {
       key: 'role_type',
       width: 100,
       render: (role: string) => {
-        const config = roleTypeMap[role] || roleTypeMap.unknown
+        const config = getRoleTypeConfig(role)
         return <Tag color={config.color}>{config.text}</Tag>
       },
     },
@@ -280,7 +271,7 @@ const SchoolDetailPage: React.FC = () => {
           </Col>
           <Col xs={12} sm={6}>
             <Statistic
-              title="教授"
+              title="教授/研究员"
               value={school.professor_count}
               prefix={<TrophyOutlined />}
               valueStyle={{ color: '#52c41a' }}
@@ -323,7 +314,7 @@ const SchoolDetailPage: React.FC = () => {
             >
               全部
             </Tag>
-            {Object.entries(roleTypeMap).map(([key, config]) => (
+            {Object.entries(ROLE_TYPE_MAP).map(([key, config]) => (
               <Tag
                 key={key}
                 color={roleFilter === key ? 'blue' : 'default'}

@@ -21,7 +21,7 @@ class TestHealthEndpoints:
         assert "service" in data
         assert "database" in data
 
-        assert data["service"]["name"] == "智能人才库 API"
+        assert data["service"]["name"] == "智能学术界人才库 API"
         assert data["service"]["version"] == "1.0.0"
 
     @pytest.mark.asyncio
@@ -52,6 +52,6 @@ class TestHealthEndpoints:
         assert response.status_code == 200
         data = response.json()
 
-        assert data["name"] == "智能人才库 API"
+        assert data["name"] == "智能学术界人才库 API"
         assert data["version"] == "1.0.0"
         assert data["docs"] == "/docs"

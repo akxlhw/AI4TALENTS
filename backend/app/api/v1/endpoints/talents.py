@@ -1,6 +1,8 @@
 """
 Talents API endpoints.
 Provides talent list, detail, and filtering.
+
+Architecture: Endpoint -> Service -> Repository
 """
 import io
 import csv
@@ -10,9 +12,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.repositories.talent_repository import TalentRepository
+from app.services.talent_service import TalentService
 from app.schemas.common import PaginatedResponse
-from app.schemas.overview import TalentSummary, TalentDetail, SelectedWorkResponse
+from app.schemas.overview import TalentSummary, TalentDetail, SelectedWorkResponse, TechTagItem
 
 router = APIRouter(prefix="/talents", tags=["Talents"])
 
@@ -45,8 +47,8 @@ async def list_talents(
     - min_citations: Minimum citation count
     - keyword: Search in name, English name, and title
     """
-    repo = TalentRepository(session)
-    talents, total = await repo.get_list(
+    service = TalentService(session)
+    talents, total = await service.get_talent_list(
         school_id=school_id,
         country_id=country_id,
         role_type=role_type,
@@ -103,9 +105,13 @@ async def get_talent(
     - Research statistics
     - Role profile
     - Selected works
+    - Tech tags
     """
-    repo = TalentRepository(session)
-    talent = await repo.get_by_id(talent_id)
+    from sqlalchemy import select
+    from app.models.tech_element import TalentTechTag, TechElement, TechDirection
+
+    service = TalentService(session)
+    talent = await service.get_talent_by_id(talent_id)
 
     if not talent:
         raise HTTPException(status_code=404, detail="Talent not found")
@@ -123,6 +129,22 @@ async def get_talent(
         for work in (talent.selected_works or [])
     ]
 
+    # Fetch tech tags
+    tech_tags = []
+    result = await session.execute(
+        select(TalentTechTag, TechElement, TechDirection)
+        .join(TechElement, TalentTechTag.tech_element_id == TechElement.tech_element_id)
+        .outerjoin(TechDirection, TalentTechTag.tech_direction_id == TechDirection.tech_direction_id)
+        .where(TalentTechTag.talent_id == talent_id)
+    )
+    for tag, element, direction in result.fetchall():
+        tech_tags.append(TechTagItem(
+            tech_element_id=element.tech_element_id,
+            tech_element_name=element.element_name,
+            tech_direction_id=direction.tech_direction_id if direction else None,
+            tech_direction_name=direction.direction_name if direction else None,
+        ))
+
     return TalentDetail(
         talent_id=talent.talent_id,
         name=talent.name,
@@ -138,6 +160,7 @@ async def get_talent(
         h_index=talent.h_index,
         latest_active_year=talent.latest_active_year,
         topic_tags=talent.topic_tags or [],
+        tech_tags=tech_tags,
         research_interests=talent.research_interests,
         summary=talent.summary,
         department_name=talent.department_name,
@@ -164,14 +187,13 @@ async def get_talent_works(
 
     Returns list of representative works ordered by citation count.
     """
-    repo = TalentRepository(session)
+    service = TalentService(session)
 
     # Verify talent exists
-    talent = await repo.get_by_id(talent_id, include_relations=False)
-    if not talent:
+    if not await service.talent_exists(talent_id):
         raise HTTPException(status_code=404, detail="Talent not found")
 
-    works = await repo.get_selected_works(talent_id, limit=limit)
+    works = await service.get_selected_works(talent_id, limit=limit)
 
     return [
         SelectedWorkResponse(
@@ -201,14 +223,10 @@ async def export_talents(
     """
     from openpyxl import Workbook
 
-    repo = TalentRepository(session)
+    service = TalentService(session)
 
     # Fetch talents by IDs
-    talents = []
-    for talent_id in talent_ids:
-        talent = await repo.get_by_id(talent_id)
-        if talent:
-            talents.append(talent)
+    talents = await service.get_talents_by_ids(talent_ids)
 
     if not talents:
         raise HTTPException(status_code=404, detail="未找到要导出的人才")
@@ -299,14 +317,10 @@ async def compare_talents(
     if len(talent_ids) < 2 or len(talent_ids) > 4:
         raise HTTPException(status_code=400, detail="请选择2-4位候选人进行对比")
 
-    repo = TalentRepository(session)
+    service = TalentService(session)
 
     # Fetch talents by IDs
-    talents = []
-    for talent_id in talent_ids:
-        talent = await repo.get_by_id(talent_id)
-        if talent:
-            talents.append(talent)
+    talents = await service.get_talents_by_ids(talent_ids)
 
     if not talents:
         raise HTTPException(status_code=404, detail="未找到要对比的人才")
@@ -389,17 +403,16 @@ async def get_talent_collaborations(
     """
     from app.services.collaboration_service import CollaborationService
 
-    repo = TalentRepository(session)
+    talent_service = TalentService(session)
 
     # Verify talent exists
-    talent = await repo.get_by_id(talent_id, include_relations=False)
-    if not talent:
+    if not await talent_service.talent_exists(talent_id):
         raise HTTPException(status_code=404, detail="Talent not found")
 
     # Get collaboration network
-    service = CollaborationService(session)
+    collab_service = CollaborationService(session)
     try:
-        network = await service.get_collaboration_network(talent_id, limit)
+        network = await collab_service.get_collaboration_network(talent_id, limit)
         return network
     finally:
-        await service.close()
+        await collab_service.close()

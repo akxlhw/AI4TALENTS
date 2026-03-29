@@ -1,0 +1,678 @@
+{
+  "tech_elements": [
+    {
+      "tech_element_id": 1,
+      "element_code": "ai",
+      "element_name": "人工智能",
+      "element_name_en": "Artificial Intelligence",
+      "element_desc": "人工智能相关技术",
+      "sort_order": 1,
+      "is_enabled": 1,
+      "collect_sources": "[{\"id\": \"S199944782\", \"name\": \"IEEE Transactions on Pattern Analysis and Machine Intelligence\", \"type\": \"journal\"}, {\"id\": \"S118988714\", \"name\": \"Journal of Machine Learning Research\", \"type\": \"journal\"}, {\"id\": \"S4306419272\", \"name\": \"International Conference on Computer Vision (ICCV)\", \"type\": \"conference\"}, {\"id\": \"S4363607701\", \"name\": \"IEEE/CVF Conference on Computer Vision and Pattern Recognition\", \"type\": \"conference\"}, {\"id\": \"S4306419999\", \"name\": \"International Joint Conference on Artificial Intelligence (IJCAI)\", \"type\": \"conference\"}, {\"id\": \"S4210191458\", \"name\": \"AAAI Conference on Artificial Intelligence\", \"type\": \"conference\"}, {\"id\": \"S4306419637\", \"name\": \"International Conference on Learning Representations (ICLR)\", \"type\": \"conference\"}, {\"id\": \"S4306419644\", \"name\": \"International Conference on Machine Learning (ICML)\", \"type\": \"conference\"}, {\"id\": \"S4306420609\", \"name\": \"Neural Information Processing Systems (NeurIPS)\", \"type\": \"conference\"}]"
+    },
+    {
+      "tech_element_id": 2,
+      "element_code": "robotics",
+      "element_name": "机器人",
+      "element_name_en": "Robotics",
+      "element_desc": "机器人技术相关领域",
+      "sort_order": 2,
+      "is_enabled": 1,
+      "collect_sources": "[{\"id\": \"S4207185280\", \"name\": \"International Conference on Robotics and Automation (ICRA)\", \"type\": \"conference\"}, {\"id\": \"S10461428\", \"name\": \"International Conference on Intelligent Robots and Systems (IROS)\", \"type\": \"conference\"}, {\"id\": \"S205968086\", \"name\": \"Robotics: Science and Systems (RSS)\", \"type\": \"conference\"}, {\"id\": \"S14180242\", \"name\": \"IEEE Transactions on Robotics\", \"type\": \"journal\"}, {\"id\": \"S2764899478\", \"name\": \"International Journal of Robotics Research\", \"type\": \"journal\"}]"
+    },
+    {
+      "tech_element_id": 3,
+      "element_code": "data_science",
+      "element_name": "数据科学",
+      "element_name_en": "Data Science",
+      "element_desc": "数据科学与分析",
+      "sort_order": 3,
+      "is_enabled": 1,
+      "collect_sources": "[{\"id\": \"S161814294\", \"name\": \"ACM SIGKDD Conference on Knowledge Discovery and Data Mining\", \"type\": \"conference\"}, {\"id\": \"S205853817\", \"name\": \"ACM SIGMOD Conference\", \"type\": \"conference\"}, {\"id\": \"S12842838\", \"name\": \"VLDB Conference\", \"type\": \"conference\"}, {\"id\": \"S222535825\", \"name\": \"IEEE Transactions on Knowledge and Data Engineering\", \"type\": \"journal\"}]"
+    },
+    {
+      "tech_element_id": 4,
+      "element_code": "networks",
+      "element_name": "网络与通信",
+      "element_name_en": "Networks & Communications",
+      "element_desc": "计算机网络与通信技术",
+      "sort_order": 4,
+      "is_enabled": 1,
+      "collect_sources": "[{\"id\": \"S69883565\", \"name\": \"ACM SIGCOMM Conference\", \"type\": \"conference\"}, {\"id\": \"S11751522\", \"name\": \"ACM MobiCom\", \"type\": \"conference\"}, {\"id\": \"S79605003\", \"name\": \"IEEE Journal on Selected Areas in Communications\", \"type\": \"journal\"}]"
+    },
+    {
+      "tech_element_id": 5,
+      "element_code": "systems",
+      "element_name": "系统与软件",
+      "element_name_en": "Systems & Software",
+      "element_desc": "计算机系统与软件工程",
+      "sort_order": 5,
+      "is_enabled": 1,
+      "collect_sources": "[{\"id\": \"S23662088\", \"name\": \"USENIX OSDI\", \"type\": \"conference\"}, {\"id\": \"S16653527\", \"name\": \"ACM SOSP\", \"type\": \"conference\"}, {\"id\": \"S2764997393\", \"name\": \"IEEE Transactions on Software Engineering\", \"type\": \"journal\"}]"
+    },
+    {
+      "tech_element_id": 6,
+      "element_code": "security",
+      "element_name": "信息安全",
+      "element_name_en": "Information Security",
+      "element_desc": "信息安全与密码学",
+      "sort_order": 6,
+      "is_enabled": 1,
+      "collect_sources": "[{\"id\": \"S4363608815\", \"name\": \"ACM SIGSAC Conference on Computer and Communications Security (CCS)\", \"type\": \"conference\"}, {\"id\": \"S4306421123\", \"name\": \"USENIX Security Symposium\", \"type\": \"conference\"}, {\"id\": \"S4210233669\", \"name\": \"IEEE Symposium on Security and Privacy (S&P)\", \"type\": \"conference\"}, {\"id\": \"S61310614\", \"name\": \"IEEE Transactions on Information Forensics and Security\", \"type\": \"journal\"}]"
+    }
+  ],
+  "venues": [
+    {
+      "venue_id": 1,
+      "venue_code": "s4306420609",
+      "venue_name": "Neural Information Processing Systems (NeurIPS)",
+      "venue_name_en": null,
+      "openalex_source_id": "S4306420609",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 2,
+      "venue_code": "s4306419644",
+      "venue_name": "International Conference on Machine Learning (ICML)",
+      "venue_name_en": null,
+      "openalex_source_id": "S4306419644",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 3,
+      "venue_code": "s4306419637",
+      "venue_name": "International Conference on Learning Representations (ICLR)",
+      "venue_name_en": null,
+      "openalex_source_id": "S4306419637",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 4,
+      "venue_code": "s4210191458",
+      "venue_name": "AAAI Conference on Artificial Intelligence",
+      "venue_name_en": null,
+      "openalex_source_id": "S4210191458",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 5,
+      "venue_code": "s4306419999",
+      "venue_name": "International Joint Conference on Artificial Intelligence (IJCAI)",
+      "venue_name_en": null,
+      "openalex_source_id": "S4306419999",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 6,
+      "venue_code": "s4363607701",
+      "venue_name": "IEEE/CVF Conference on Computer Vision and Pattern Recognition",
+      "venue_name_en": null,
+      "openalex_source_id": "S4363607701",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 7,
+      "venue_code": "s4306419272",
+      "venue_name": "International Conference on Computer Vision (ICCV)",
+      "venue_name_en": null,
+      "openalex_source_id": "S4306419272",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 8,
+      "venue_code": "s118988714",
+      "venue_name": "Journal of Machine Learning Research",
+      "venue_name_en": null,
+      "openalex_source_id": "S118988714",
+      "venue_type": "journal",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 9,
+      "venue_code": "s199944782",
+      "venue_name": "IEEE Transactions on Pattern Analysis and Machine Intelligence",
+      "venue_name_en": null,
+      "openalex_source_id": "S199944782",
+      "venue_type": "journal",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 10,
+      "venue_code": "s4207185280",
+      "venue_name": "International Conference on Robotics and Automation (ICRA)",
+      "venue_name_en": null,
+      "openalex_source_id": "S4207185280",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 11,
+      "venue_code": "s10461428",
+      "venue_name": "International Conference on Intelligent Robots and Systems (IROS)",
+      "venue_name_en": null,
+      "openalex_source_id": "S10461428",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 12,
+      "venue_code": "s205968086",
+      "venue_name": "Robotics: Science and Systems (RSS)",
+      "venue_name_en": null,
+      "openalex_source_id": "S205968086",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 13,
+      "venue_code": "s14180242",
+      "venue_name": "IEEE Transactions on Robotics",
+      "venue_name_en": null,
+      "openalex_source_id": "S14180242",
+      "venue_type": "journal",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 14,
+      "venue_code": "s2764899478",
+      "venue_name": "International Journal of Robotics Research",
+      "venue_name_en": null,
+      "openalex_source_id": "S2764899478",
+      "venue_type": "journal",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 15,
+      "venue_code": "s161814294",
+      "venue_name": "ACM SIGKDD Conference on Knowledge Discovery and Data Mining",
+      "venue_name_en": null,
+      "openalex_source_id": "S161814294",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 16,
+      "venue_code": "s205853817",
+      "venue_name": "ACM SIGMOD Conference",
+      "venue_name_en": null,
+      "openalex_source_id": "S205853817",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 17,
+      "venue_code": "s12842838",
+      "venue_name": "VLDB Conference",
+      "venue_name_en": null,
+      "openalex_source_id": "S12842838",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 18,
+      "venue_code": "s222535825",
+      "venue_name": "IEEE Transactions on Knowledge and Data Engineering",
+      "venue_name_en": null,
+      "openalex_source_id": "S222535825",
+      "venue_type": "journal",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 19,
+      "venue_code": "s69883565",
+      "venue_name": "ACM SIGCOMM Conference",
+      "venue_name_en": null,
+      "openalex_source_id": "S69883565",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 20,
+      "venue_code": "s11751522",
+      "venue_name": "ACM MobiCom",
+      "venue_name_en": null,
+      "openalex_source_id": "S11751522",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 21,
+      "venue_code": "s79605003",
+      "venue_name": "IEEE Journal on Selected Areas in Communications",
+      "venue_name_en": null,
+      "openalex_source_id": "S79605003",
+      "venue_type": "journal",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 22,
+      "venue_code": "s23662088",
+      "venue_name": "USENIX OSDI",
+      "venue_name_en": null,
+      "openalex_source_id": "S23662088",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 23,
+      "venue_code": "s16653527",
+      "venue_name": "ACM SOSP",
+      "venue_name_en": null,
+      "openalex_source_id": "S16653527",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 24,
+      "venue_code": "s2764997393",
+      "venue_name": "IEEE Transactions on Software Engineering",
+      "venue_name_en": null,
+      "openalex_source_id": "S2764997393",
+      "venue_type": "journal",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 25,
+      "venue_code": "s4363608815",
+      "venue_name": "ACM SIGSAC Conference on Computer and Communications Security (CCS)",
+      "venue_name_en": null,
+      "openalex_source_id": "S4363608815",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 26,
+      "venue_code": "s4306421123",
+      "venue_name": "USENIX Security Symposium",
+      "venue_name_en": null,
+      "openalex_source_id": "S4306421123",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 27,
+      "venue_code": "s4210233669",
+      "venue_name": "IEEE Symposium on Security and Privacy (S&P)",
+      "venue_name_en": null,
+      "openalex_source_id": "S4210233669",
+      "venue_type": "conference",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    },
+    {
+      "venue_id": 28,
+      "venue_code": "s61310614",
+      "venue_name": "IEEE Transactions on Information Forensics and Security",
+      "venue_name_en": null,
+      "openalex_source_id": "S61310614",
+      "venue_type": "journal",
+      "country_code": null,
+      "publisher": null,
+      "h_index": 0,
+      "works_count": 0,
+      "cited_by_count": 0,
+      "is_enabled": 1,
+      "description": null
+    }
+  ],
+  "bindings": [
+    {
+      "venue_id": 1,
+      "tech_element_id": 1,
+      "priority": 0,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 2,
+      "tech_element_id": 1,
+      "priority": 1,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 3,
+      "tech_element_id": 1,
+      "priority": 2,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 4,
+      "tech_element_id": 1,
+      "priority": 3,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 5,
+      "tech_element_id": 1,
+      "priority": 4,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 6,
+      "tech_element_id": 1,
+      "priority": 5,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 7,
+      "tech_element_id": 1,
+      "priority": 6,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 8,
+      "tech_element_id": 1,
+      "priority": 7,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 9,
+      "tech_element_id": 1,
+      "priority": 8,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 10,
+      "tech_element_id": 2,
+      "priority": 0,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 11,
+      "tech_element_id": 2,
+      "priority": 1,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 12,
+      "tech_element_id": 2,
+      "priority": 2,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 13,
+      "tech_element_id": 2,
+      "priority": 3,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 14,
+      "tech_element_id": 2,
+      "priority": 4,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 15,
+      "tech_element_id": 3,
+      "priority": 0,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 16,
+      "tech_element_id": 3,
+      "priority": 1,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 17,
+      "tech_element_id": 3,
+      "priority": 2,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 18,
+      "tech_element_id": 3,
+      "priority": 3,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 19,
+      "tech_element_id": 4,
+      "priority": 0,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 20,
+      "tech_element_id": 4,
+      "priority": 1,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 21,
+      "tech_element_id": 4,
+      "priority": 2,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 22,
+      "tech_element_id": 5,
+      "priority": 0,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 23,
+      "tech_element_id": 5,
+      "priority": 1,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 24,
+      "tech_element_id": 5,
+      "priority": 2,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 25,
+      "tech_element_id": 6,
+      "priority": 0,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 26,
+      "tech_element_id": 6,
+      "priority": 1,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 27,
+      "tech_element_id": 6,
+      "priority": 2,
+      "is_enabled": 1
+    },
+    {
+      "venue_id": 28,
+      "tech_element_id": 6,
+      "priority": 3,
+      "is_enabled": 1
+    }
+  ],
+  "users": [
+    {
+      "user_id": 1,
+      "username": "admin",
+      "email": "admin@talent.local",
+      "role_type": "super_admin",
+      "is_active": 1,
+      "display_name": "系统管理员",
+      "department": null,
+      "default_view": "tech_element"
+    },
+    {
+      "user_id": 2,
+      "username": "demo",
+      "email": "demo@talent.local",
+      "role_type": "user",
+      "is_active": 1,
+      "display_name": "演示用户",
+      "department": null,
+      "default_view": "tech_element"
+    }
+  ]
+}

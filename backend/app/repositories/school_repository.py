@@ -25,6 +25,7 @@ class SchoolRepository:
         page: int = 1,
         page_size: int = 20,
         visible_only: bool = True,
+        is_top_school: Optional[bool] = None,
     ) -> tuple[List[School], int]:
         """
         Get paginated list of schools with filters.
@@ -35,6 +36,7 @@ class SchoolRepository:
             page: Page number (1-based)
             page_size: Items per page
             visible_only: If True, only return visible schools
+            is_top_school: Filter by top school status (None = all)
 
         Returns:
             Tuple of (list of schools, total count)
@@ -51,6 +53,9 @@ class SchoolRepository:
 
         if country_id:
             query = query.where(School.country_id == country_id)
+
+        if is_top_school is not None:
+            query = query.where(School.is_top_school == is_top_school)
 
         if keyword:
             keyword_pattern = f"%{keyword}%"

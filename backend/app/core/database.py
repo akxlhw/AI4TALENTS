@@ -3,7 +3,7 @@ Database connection and session management.
 """
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
@@ -12,6 +12,16 @@ from app.core.config import settings
 # Check if using SQLite
 IS_SQLITE = "sqlite" in settings.DATABASE_URL
 
+
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    """Enable SQLite WAL mode for concurrent read/write access."""
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=30000")  # 30 seconds timeout
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.close()
+
+
 # Async engine for application
 if IS_SQLITE:
     async_engine = create_async_engine(
@@ -19,6 +29,8 @@ if IS_SQLITE:
         echo=settings.DEBUG,
         connect_args={"check_same_thread": False},
     )
+    # Enable WAL mode for async engine
+    event.listen(async_engine.sync_engine, "connect", _set_sqlite_pragma)
 else:
     async_engine = create_async_engine(
         settings.DATABASE_URL,
@@ -37,6 +49,9 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
+# Alias for background tasks
+async_session_factory = AsyncSessionLocal
+
 # Sync engine for Alembic migrations
 if IS_SQLITE:
     sync_engine = create_engine(
@@ -44,6 +59,8 @@ if IS_SQLITE:
         echo=settings.DEBUG,
         connect_args={"check_same_thread": False},
     )
+    # Enable WAL mode for sync engine
+    event.listen(sync_engine, "connect", _set_sqlite_pragma)
 else:
     sync_engine = create_engine(
         settings.DATABASE_SYNC_URL,

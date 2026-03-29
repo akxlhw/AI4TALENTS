@@ -278,7 +278,6 @@ async def build_objects_after_sync():
 
         print(f"\nBuild Results:")
         print(f"  Schools: {result['schools']['created']} created")
-        print(f"  Talents: {result['talents']['created']} created")
         print(f"  Statistics: {result['statistics']['created']} snapshots")
 
 

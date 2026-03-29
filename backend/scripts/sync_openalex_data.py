@@ -39,6 +39,26 @@ class OpenAlexSync:
     async def close(self):
         await self.client.aclose()
 
+    async def fetch_author_works(self, author_openalex_id: str, max_works: int = 10) -> List[Dict]:
+        """Fetch top works for an author, sorted by citation count."""
+        url = f"{OPENALEX_BASE_URL}/works"
+
+        # Filter by author and sort by cited_by_count descending
+        params = {
+            "filter": f"author.id:{author_openalex_id}",
+            "sort": "cited_by_count:desc",
+            "per-page": max_works,
+        }
+
+        try:
+            response = await self.client.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            return data.get("results", [])
+        except Exception as e:
+            print(f"      Error fetching works: {e}")
+            return []
+
     async def fetch_authors_by_institution(
         self,
         institution_id: str,
@@ -299,7 +319,48 @@ class OpenAlexSync:
                             "source_id": author.get("id", ""),
                             "now": datetime.now()
                         })
+
+                        # Get the inserted talent_id
+                        result = conn.execute(text("SELECT last_insert_rowid()"))
+                        talent_id = result.scalar()
                         total_authors += 1
+
+                        # Fetch and insert representative works (only for professors with works > 5)
+                        if role_type == "professor" and author.get("works_count", 0) > 5:
+                            author_openalex_id = author.get("id", "").replace("https://openalex.org/", "")
+                            works = await self.fetch_author_works(author_openalex_id, max_works=10)
+
+                            for idx, work in enumerate(works):
+                                if not work:
+                                    continue
+
+                                # Extract venue name
+                                primary_location = work.get("primary_location", {})
+                                source = primary_location.get("source", {}) if primary_location else {}
+                                venue_name = source.get("display_name") if source else None
+
+                                # Extract publication year
+                                publication_year = work.get("publication_year")
+
+                                conn.execute(text('''
+                                    INSERT INTO core_selected_work (
+                                        talent_id, title, publication_year, venue_name,
+                                        citation_count, doi, display_order, created_at, updated_at
+                                    ) VALUES (
+                                        :talent_id, :title, :publication_year, :venue_name,
+                                        :citation_count, :doi, :display_order, :now, :now
+                                    )
+                                '''), {
+                                    "talent_id": talent_id,
+                                    "title": work.get("title", ""),
+                                    "publication_year": publication_year,
+                                    "venue_name": venue_name,
+                                    "citation_count": work.get("cited_by_count", 0),
+                                    "doi": work.get("doi"),
+                                    "display_order": idx,
+                                    "now": datetime.now()
+                                })
+
                     except Exception as e:
                         print(f"      Error: {e}")
 
@@ -311,15 +372,102 @@ class OpenAlexSync:
         for role, count in role_counts.items():
             print(f"  {role}: {count}")
 
+    async def sync_works_for_existing_talents(self, batch_size: int = 50):
+        """Fetch and insert representative works for existing talents."""
+        print("\n=== Syncing Works for Existing Talents ===")
+
+        with self.engine.connect() as conn:
+            # Get talents with source_record_id but no works
+            result = conn.execute(text('''
+                SELECT t.talent_id, t.source_record_id, t.name, t.works_count
+                FROM core_talent t
+                WHERE t.source_record_id IS NOT NULL
+                  AND t.role_type = 'professor'
+                  AND t.works_count > 5
+                  AND NOT EXISTS (
+                      SELECT 1 FROM core_selected_work sw WHERE sw.talent_id = t.talent_id
+                  )
+                ORDER BY t.works_count DESC
+            '''))
+            talents = result.fetchall()
+
+            print(f"Found {len(talents)} professors needing works sync")
+
+            total_works = 0
+            for i, talent in enumerate(talents):
+                talent_id = talent[0]
+                source_id = talent[1]
+                name = talent[2]
+                works_count = talent[3]
+
+                # Extract OpenAlex author ID
+                author_openalex_id = source_id.replace("https://openalex.org/", "") if source_id else None
+                if not author_openalex_id:
+                    continue
+
+                print(f"  [{i+1}/{len(talents)}] {name} ({works_count} works)...")
+
+                try:
+                    works = await self.fetch_author_works(author_openalex_id, max_works=10)
+
+                    for idx, work in enumerate(works):
+                        if not work:
+                            continue
+
+                        primary_location = work.get("primary_location", {})
+                        source = primary_location.get("source", {}) if primary_location else {}
+                        venue_name = source.get("display_name") if source else None
+                        publication_year = work.get("publication_year")
+
+                        conn.execute(text('''
+                            INSERT INTO core_selected_work (
+                                talent_id, title, publication_year, venue_name,
+                                citation_count, doi, display_order, created_at, updated_at
+                            ) VALUES (
+                                :talent_id, :title, :publication_year, :venue_name,
+                                :citation_count, :doi, :display_order, :now, :now
+                            )
+                        '''), {
+                            "talent_id": talent_id,
+                            "title": work.get("title", ""),
+                            "publication_year": publication_year,
+                            "venue_name": venue_name,
+                            "citation_count": work.get("cited_by_count", 0),
+                            "doi": work.get("doi"),
+                            "display_order": idx,
+                            "now": datetime.now()
+                        })
+                        total_works += 1
+
+                    conn.commit()
+
+                    # Rate limiting
+                    if (i + 1) % 10 == 0:
+                        print(f"    Pausing to respect rate limits...")
+                        await asyncio.sleep(1)
+
+                except Exception as e:
+                    print(f"    Error: {e}")
+
+            print(f"\n=== Works Sync Complete ===")
+            print(f"Total works inserted: {total_works}")
+
 
 async def main():
     """Main sync function."""
+    import sys
+
     sync = OpenAlexSync()
 
     try:
-        sync.clean_database()
-        school_ids = sync.insert_schools()
-        await sync.sync_authors(school_ids, professors_per_school=50, students_per_school=30)
+        if len(sys.argv) > 1 and sys.argv[1] == "--works-only":
+            # Only sync works for existing talents
+            await sync.sync_works_for_existing_talents()
+        else:
+            # Full sync
+            sync.clean_database()
+            school_ids = sync.insert_schools()
+            await sync.sync_authors(school_ids, professors_per_school=50, students_per_school=30)
     finally:
         await sync.close()
 

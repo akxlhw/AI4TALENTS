@@ -1,0 +1,222 @@
+"""
+Repository for collect configuration operations - Simplified for MVP v1.1
+采集配置数据访问层 - 简化版
+
+采集逻辑简化：
+- 移除 Scope 和 Strategy 概念
+- 任务直接关联技术要素
+- 数据类型固定：学者+论文+机构
+- 时间范围固定：2010.1.1至今
+"""
+from typing import List, Optional
+from datetime import datetime
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.models.sync import CollectTask
+from app.models.tech_element import TechElement
+
+
+class CollectTaskRepository:
+    """Repository for CollectTask operations."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def list_tasks(
+        self,
+        status: Optional[str] = None,
+        tech_element_id: Optional[int] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[List[CollectTask], int]:
+        """List collect tasks with pagination."""
+        query = select(CollectTask).options(selectinload(CollectTask.tech_element))
+
+        if status:
+            query = query.where(CollectTask.status == status)
+        if tech_element_id:
+            query = query.where(CollectTask.tech_element_id == tech_element_id)
+
+        # Count
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self.session.execute(count_query)
+        total = total_result.scalar() or 0
+
+        # Paginate
+        offset = (page - 1) * page_size
+        query = query.offset(offset).limit(page_size).order_by(CollectTask.task_id.desc())
+
+        result = await self.session.execute(query)
+        tasks = list(result.scalars().all())
+
+        return tasks, total
+
+    async def get_by_id(self, task_id: int) -> Optional[CollectTask]:
+        """Get collect task by ID."""
+        result = await self.session.execute(
+            select(CollectTask)
+            .options(selectinload(CollectTask.tech_element))
+            .where(CollectTask.task_id == task_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_by_code(self, task_code: str) -> Optional[CollectTask]:
+        """Get collect task by code."""
+        result = await self.session.execute(
+            select(CollectTask).where(CollectTask.task_code == task_code)
+        )
+        return result.scalar_one_or_none()
+
+    async def create_task(
+        self,
+        task_code: str,
+        tech_element_id: int,
+        collect_mode: str,
+        triggered_by: Optional[int] = None,
+        time_window_start: Optional[datetime] = None,
+        time_window_end: Optional[datetime] = None,
+    ) -> CollectTask:
+        """Create a new collect task."""
+        task = CollectTask(
+            task_code=task_code,
+            tech_element_id=tech_element_id,
+            collect_mode=collect_mode,
+            task_type="manual",  # 兼容旧字段
+            triggered_by=triggered_by,
+            triggered_at=datetime.now(),
+            status="pending",
+            time_window_start=time_window_start,
+            time_window_end=time_window_end,
+        )
+        self.session.add(task)
+        await self.session.flush()
+        return task
+
+    async def update_task_status(
+        self,
+        task_id: int,
+        status: str,
+        progress_percent: Optional[int] = None,
+        current_step: Optional[str] = None,
+        started_at: Optional[datetime] = None,
+        completed_at: Optional[datetime] = None,
+        error_message: Optional[str] = None,
+        error_details: Optional[dict] = None,
+    ) -> Optional[CollectTask]:
+        """Update task status and progress."""
+        task = await self.get_by_id(task_id)
+        if not task:
+            return None
+
+        task.status = status
+        if progress_percent is not None:
+            task.progress_percent = progress_percent
+        if current_step is not None:
+            task.current_step = current_step
+        if started_at is not None:
+            task.started_at = started_at
+        if completed_at is not None:
+            task.completed_at = completed_at
+        if error_message is not None:
+            task.error_message = error_message
+        if error_details is not None:
+            task.error_details = error_details
+
+        return task
+
+    async def update_task_counts(
+        self,
+        task_id: int,
+        total_records: Optional[int] = None,
+        processed_records: Optional[int] = None,
+        success_records: Optional[int] = None,
+        failed_records: Optional[int] = None,
+        skipped_records: Optional[int] = None,
+    ) -> Optional[CollectTask]:
+        """Update task record counts."""
+        task = await self.get_by_id(task_id)
+        if not task:
+            return None
+
+        if total_records is not None:
+            task.total_records = total_records
+        if processed_records is not None:
+            task.processed_records = processed_records
+        if success_records is not None:
+            task.success_records = success_records
+        if failed_records is not None:
+            task.failed_records = failed_records
+        if skipped_records is not None:
+            task.skipped_records = skipped_records
+
+        return task
+
+    async def complete_task(
+        self,
+        task_id: int,
+        success: bool,
+        result_summary: Optional[dict] = None,
+        error_message: Optional[str] = None,
+    ) -> Optional[CollectTask]:
+        """Mark task as completed."""
+        task = await self.get_by_id(task_id)
+        if not task:
+            return None
+
+        task.status = "completed" if success else "failed"
+        task.completed_at = datetime.now()
+        task.progress_percent = 100
+
+        if result_summary:
+            task.result_summary = result_summary
+        if error_message:
+            task.error_message = error_message
+
+        return task
+
+    async def get_active_tasks(self) -> List[CollectTask]:
+        """Get all currently active (pending or running) tasks."""
+        result = await self.session.execute(
+            select(CollectTask).where(
+                CollectTask.status.in_(["pending", "running"])
+            ).order_by(CollectTask.task_id)
+        )
+        return list(result.scalars().all())
+
+
+class TechElementCollectRepository:
+    """Repository for TechElement collect configuration."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def list_with_collect_config(self) -> List[TechElement]:
+        """List all tech elements with their collect configuration."""
+        result = await self.session.execute(
+            select(TechElement)
+            .where(TechElement.is_enabled == True)
+            .order_by(TechElement.sort_order)
+        )
+        return list(result.scalars().all())
+
+    async def get_by_id(self, tech_element_id: int) -> Optional[TechElement]:
+        """Get tech element by ID."""
+        result = await self.session.execute(
+            select(TechElement).where(TechElement.tech_element_id == tech_element_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def update_last_collect_time(
+        self,
+        tech_element_id: int,
+        collect_at: Optional[datetime] = None,
+    ) -> Optional[TechElement]:
+        """Update last collect time for a tech element."""
+        element = await self.get_by_id(tech_element_id)
+        if not element:
+            return None
+
+        element.last_collect_at = collect_at or datetime.now()
+        return element

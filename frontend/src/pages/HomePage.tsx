@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, Statistic, Input, Typography, Tabs, Table, Tag, Space, Spin, Badge } from 'antd'
+import { Card, Row, Col, Statistic, Input, Typography, Tag, Space, Spin, Button, Divider } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import {
   TeamOutlined,
@@ -7,32 +7,13 @@ import {
   UserOutlined,
   SearchOutlined,
   GlobalOutlined,
+  AppstoreOutlined,
+  ArrowRightOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
 
-const { Title, Paragraph } = Typography
+const { Title, Paragraph, Text } = Typography
 const { Search } = Input
-const { TabPane } = Tabs
-
-// 区域定义
-const REGIONS: Record<string, { name: string; countries: string[] }> = {
-  asia_pacific: {
-    name: '亚太地区',
-    countries: ['CN', 'JP', 'KR', 'SG', 'AU'],
-  },
-  europe: {
-    name: '欧洲',
-    countries: ['GB', 'DE', 'FR', 'CH', 'NL', 'SE', 'IT', 'ES'],
-  },
-  north_america: {
-    name: '北美',
-    countries: ['US', 'CA'],
-  },
-  other: {
-    name: '其他地区',
-    countries: [], // 其余国家
-  },
-}
 
 interface OverviewStats {
   stats: {
@@ -40,39 +21,49 @@ interface OverviewStats {
     professor_count: number
     student_count: number
     talent_count: number
+    tech_element_count?: number
+    tech_direction_count?: number
+    country_count?: number
   }
   version: string
   generated_at: string
 }
 
-interface School {
-  school_id: number
-  school_name: string
-  school_alias: string | null
-  country_id: number
-  country_name: string | null
-  country_code: string | null
-  professor_count: number
-  student_count: number
-  homepage_url: string | null
+// 首页热点数据类型
+interface HotTechElement {
+  tech_element_id: number
+  element_code: string
+  element_name: string
+  talent_count: number
 }
 
-interface Country {
+interface TopCountry {
   country_id: number
   country_code: string
-  country_name_cn: string
-  country_name_en: string | null
-  school_count: number
-  professor_count: number
+  country_name: string
+  talent_count: number
+}
+
+interface TopSchool {
+  school_id: number
+  school_name: string
+  country_name: string | null
+  talent_count: number
+}
+
+interface HomepageHighlights {
+  hot_tech_elements: HotTechElement[]
+  top_countries: TopCountry[]
+  top_schools: TopSchool[]
+  version: string
+  generated_at: string
 }
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState<OverviewStats | null>(null)
-  const [schools, setSchools] = useState<School[]>([])
-  const [countries, setCountries] = useState<Country[]>([])
-  const [activeRegion, setActiveRegion] = useState('north_america')
+  const [highlights, setHighlights] = useState<HomepageHighlights | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -81,14 +72,12 @@ const HomePage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [overviewRes, schoolsRes, countriesRes] = await Promise.all([
+      const [overviewRes, highlightsRes] = await Promise.all([
         api.overview.get(),
-        api.schools.list({}),
-        api.countries.list(),
+        api.homepage.getHighlights(),
       ])
       setOverview(overviewRes.data)
-      setSchools(schoolsRes.data.items || [])
-      setCountries(countriesRes.data.items || [])
+      setHighlights(highlightsRes.data)
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {
@@ -102,28 +91,16 @@ const HomePage: React.FC = () => {
     }
   }
 
-  const getSchoolsByRegion = (regionKey: string): School[] => {
-    const region = REGIONS[regionKey]
-    if (!region) return []
-
-    if (regionKey === 'other') {
-      // 其他地区：不在任何已定义区域的国家
-      const definedCountries = Object.values(REGIONS)
-        .filter(r => r.countries.length > 0)
-        .flatMap(r => r.countries)
-      return schools.filter(s => !definedCountries.includes(s.country_code || ''))
-    }
-
-    return schools.filter(s => region.countries.includes(s.country_code || ''))
+  const handleTechElementClick = (techElementId: number) => {
+    navigate(`/tech-element?tech_element_id=${techElementId}`)
   }
 
-  const getRegionStats = (regionKey: string) => {
-    const regionSchools = getSchoolsByRegion(regionKey)
-    return {
-      schoolCount: regionSchools.length,
-      professorCount: regionSchools.reduce((sum, s) => sum + (s.professor_count || 0), 0),
-      studentCount: regionSchools.reduce((sum, s) => sum + (s.student_count || 0), 0),
-    }
+  const handleCountryClick = (countryId: number) => {
+    navigate(`/country-school?country_id=${countryId}`)
+  }
+
+  const handleSchoolClick = (schoolId: number) => {
+    navigate(`/country-school?school_id=${schoolId}`)
   }
 
   const stats = overview?.stats || {
@@ -131,115 +108,85 @@ const HomePage: React.FC = () => {
     professor_count: 0,
     student_count: 0,
     talent_count: 0,
+    tech_element_count: 0,
+    tech_direction_count: 0,
+    country_count: 0,
   }
 
-  const schoolColumns = [
-    {
-      title: '学校名称',
-      dataIndex: 'school_name',
-      key: 'school_name',
-      render: (text: string, record: School) => (
-        <a onClick={() => navigate(`/schools/${record.school_id}`)} style={{ fontWeight: 500 }}>
-          {text}
-        </a>
-      ),
-    },
-    {
-      title: '国家/地区',
-      dataIndex: 'country_name',
-      key: 'country_name',
-      width: 120,
-      render: (name: string, record: School) => (
-        <Tag icon={<GlobalOutlined />} color="blue">
-          {name || record.country_code}
-        </Tag>
-      ),
-    },
-    {
-      title: '教授',
-      dataIndex: 'professor_count',
-      key: 'professor_count',
-      width: 80,
-      align: 'center' as const,
-      render: (count: number) => (
-        <Badge count={count} showZero style={{ backgroundColor: '#52c41a' }} />
-      ),
-    },
-    {
-      title: '学生',
-      dataIndex: 'student_count',
-      key: 'student_count',
-      width: 80,
-      align: 'center' as const,
-      render: (count: number) => (
-        <Badge count={count} showZero style={{ backgroundColor: '#faad14' }} />
-      ),
-    },
-    {
-      title: '主页',
-      dataIndex: 'homepage_url',
-      key: 'homepage_url',
-      width: 80,
-      align: 'center' as const,
-      render: (url: string | null) =>
-        url ? (
-          <a href={url} target="_blank" rel="noopener noreferrer">
-            访问
-          </a>
-        ) : (
-          <span style={{ color: '#ccc' }}>-</span>
-        ),
-    },
-  ]
+  const hotTechElements = highlights?.hot_tech_elements || []
+  const topCountries = highlights?.top_countries || []
+  const topSchools = highlights?.top_schools || []
 
   return (
     <Spin spinning={loading}>
       <div>
         {/* 标题和描述 */}
-        <Title level={2}>智能学术界人才库</Title>
-        <Paragraph type="secondary">
-          基于OpenAlex学术数据库的人才发现平台 - 汇聚全球高校教授与学生信息
-        </Paragraph>
+        <div style={{ marginBottom: 24 }}>
+          <Title level={2} style={{ margin: 0, marginBottom: 4 }}>智能学术界人才库</Title>
+          <Paragraph type="secondary" style={{ margin: 0 }}>
+            基于学术界公开数据的人才发现平台 - 汇聚全球高校科研院所人才信息
+          </Paragraph>
+        </div>
 
-        {/* 统计总览 */}
+        {/* 基础统计卡片 */}
         <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col span={6}>
-            <Card>
+          <Col span={4}>
+            <Card size="small">
               <Statistic
-                title="已收录高校"
+                title="已收录院校机构"
                 value={stats.school_count}
                 prefix={<BankOutlined />}
-                valueStyle={{ color: '#1890ff' }}
+                valueStyle={{ color: '#1890ff', fontSize: 24 }}
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card>
+          <Col span={4}>
+            <Card size="small">
               <Statistic
-                title="教授类人才"
+                title="教授/研究员"
                 value={stats.professor_count}
                 prefix={<TeamOutlined />}
-                valueStyle={{ color: '#52c41a' }}
+                valueStyle={{ color: '#52c41a', fontSize: 24 }}
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card>
+          <Col span={4}>
+            <Card size="small">
               <Statistic
                 title="学生类人才"
                 value={stats.student_count}
                 prefix={<UserOutlined />}
-                valueStyle={{ color: '#faad14' }}
+                valueStyle={{ color: '#faad14', fontSize: 24 }}
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card>
+          <Col span={4}>
+            <Card size="small">
               <Statistic
                 title="总人才数"
                 value={stats.talent_count}
                 prefix={<TeamOutlined />}
-                valueStyle={{ color: '#722ed1' }}
+                valueStyle={{ color: '#722ed1', fontSize: 24 }}
+              />
+            </Card>
+          </Col>
+          <Col span={4}>
+            <Card size="small">
+              <Statistic
+                title="技术要素"
+                value={stats.tech_element_count || hotTechElements.length}
+                prefix={<AppstoreOutlined />}
+                valueStyle={{ color: '#13c2c2', fontSize: 24 }}
+              />
+            </Card>
+          </Col>
+          <Col span={4}>
+            <Card size="small">
+              <Statistic
+                title="覆盖国家"
+                value={stats.country_count || topCountries.length}
+                prefix={<GlobalOutlined />}
+                valueStyle={{ color: '#eb2f96', fontSize: 24 }}
               />
             </Card>
           </Col>
@@ -254,40 +201,156 @@ const HomePage: React.FC = () => {
             onSearch={handleSearch}
           />
           {overview && (
-            <Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0, fontSize: 12 }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
               数据版本: {overview.version} | 更新时间: {overview.generated_at}
-            </Paragraph>
+            </Text>
           )}
         </Card>
 
-        {/* 区域学校列表 */}
-        <Card title={<><BankOutlined style={{ marginRight: 8 }} />全球高校分布</>}>
-          <Tabs activeKey={activeRegion} onChange={setActiveRegion}>
-            {Object.entries(REGIONS).map(([key, region]) => {
-              const regionStats = getRegionStats(key)
-              return (
-                <TabPane
-                  key={key}
-                  tab={
-                    <Space>
-                      <span>{region.name}</span>
-                      <Badge count={regionStats.schoolCount} showZero style={{ backgroundColor: '#1890ff' }} />
-                    </Space>
-                  }
-                >
-                  <Table
-                    dataSource={getSchoolsByRegion(key)}
-                    columns={schoolColumns}
-                    rowKey="school_id"
-                    pagination={{ pageSize: 10, showSizeChanger: false }}
-                    size="small"
-                    locale={{ emptyText: '该区域暂无学校数据' }}
-                  />
-                </TabPane>
-              )
-            })}
-          </Tabs>
-        </Card>
+        {/* 主视角概要区 */}
+        <Row gutter={16} style={{ marginBottom: 24 }}>
+          {/* 技术要素概要卡 */}
+          <Col span={12}>
+            <Card
+              title={
+                <Space>
+                  <AppstoreOutlined style={{ color: '#1890ff' }} />
+                  <span>技术要素</span>
+                </Space>
+              }
+              extra={
+                <Button type="link" onClick={() => navigate('/tech-element')}>
+                  进入 <ArrowRightOutlined />
+                </Button>
+              }
+              style={{ height: '100%' }}
+            >
+              {/* 概要统计 */}
+              <Row gutter={16} style={{ marginBottom: 16 }}>
+                <Col span={8}>
+                  <Statistic title="技术要素" value={stats.tech_element_count || hotTechElements.length} />
+                </Col>
+                <Col span={8}>
+                  <Statistic title="技术方向" value={stats.tech_direction_count || 24} />
+                </Col>
+                <Col span={8}>
+                  <Statistic title="人才总数" value={stats.talent_count} />
+                </Col>
+              </Row>
+              <Row gutter={16} style={{ marginBottom: 16 }}>
+                <Col span={12}>
+                  <Statistic title="覆盖国家" value={stats.country_count || topCountries.length} />
+                </Col>
+                <Col span={12}>
+                  <Statistic title="覆盖院校机构" value={stats.school_count} />
+                </Col>
+              </Row>
+
+              <Divider style={{ margin: '12px 0' }} />
+
+              {/* 热门技术要素标签 */}
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>热门技术要素：</Text>
+                <div style={{ marginTop: 8 }}>
+                  {hotTechElements.slice(0, 6).map((item) => (
+                    <Tag
+                      key={item.tech_element_id}
+                      style={{ marginBottom: 4, cursor: 'pointer' }}
+                      color="blue"
+                      onClick={() => handleTechElementClick(item.tech_element_id)}
+                    >
+                      {item.element_name} ({item.talent_count})
+                    </Tag>
+                  ))}
+                  {hotTechElements.length === 0 && (
+                    <Text type="secondary">暂无数据</Text>
+                  )}
+                </div>
+              </div>
+            </Card>
+          </Col>
+
+          {/* 国家院校概要卡 */}
+          <Col span={12}>
+            <Card
+              title={
+                <Space>
+                  <GlobalOutlined style={{ color: '#52c41a' }} />
+                  <span>院校机构</span>
+                </Space>
+              }
+              extra={
+                <Button type="link" onClick={() => navigate('/country-school')}>
+                  进入 <ArrowRightOutlined />
+                </Button>
+              }
+              style={{ height: '100%' }}
+            >
+              {/* 概要统计 */}
+              <Row gutter={16} style={{ marginBottom: 16 }}>
+                <Col span={8}>
+                  <Statistic title="覆盖国家" value={stats.country_count || topCountries.length} />
+                </Col>
+                <Col span={8}>
+                  <Statistic title="覆盖院校机构" value={stats.school_count} />
+                </Col>
+                <Col span={8}>
+                  <Statistic title="人才总数" value={stats.talent_count} />
+                </Col>
+              </Row>
+              <Row gutter={16} style={{ marginBottom: 16 }}>
+                <Col span={12}>
+                  <Statistic title="覆盖技术要素" value={stats.tech_element_count || hotTechElements.length} />
+                </Col>
+                <Col span={12}>
+                  <Statistic title="技术方向" value={stats.tech_direction_count || 24} />
+                </Col>
+              </Row>
+
+              <Divider style={{ margin: '12px 0' }} />
+
+              {/* 主要国家标签 */}
+              <div style={{ marginBottom: 8 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>主要国家：</Text>
+                <div style={{ marginTop: 8 }}>
+                  {topCountries.slice(0, 5).map((item) => (
+                    <Tag
+                      key={item.country_id}
+                      style={{ marginBottom: 4, cursor: 'pointer' }}
+                      color="green"
+                      onClick={() => handleCountryClick(item.country_id)}
+                    >
+                      {item.country_name} ({item.talent_count})
+                    </Tag>
+                  ))}
+                  {topCountries.length === 0 && (
+                    <Text type="secondary">暂无数据</Text>
+                  )}
+                </div>
+              </div>
+
+              {/* Top院校标签 */}
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Top院校机构：</Text>
+                <div style={{ marginTop: 8 }}>
+                  {topSchools.slice(0, 5).map((item) => (
+                    <Tag
+                      key={item.school_id}
+                      style={{ marginBottom: 4, cursor: 'pointer' }}
+                      color="orange"
+                      onClick={() => handleSchoolClick(item.school_id)}
+                    >
+                      {item.school_name} ({item.talent_count})
+                    </Tag>
+                  ))}
+                  {topSchools.length === 0 && (
+                    <Text type="secondary">暂无数据</Text>
+                  )}
+                </div>
+              </div>
+            </Card>
+          </Col>
+        </Row>
       </div>
     </Spin>
   )

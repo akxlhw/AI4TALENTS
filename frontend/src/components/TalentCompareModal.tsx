@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Modal, Table, Tag, Spin, message, Typography, Space } from 'antd'
 import { api } from '../services/api'
+import { getRoleTypeConfig } from '../constants/roleType'
 
 const { Text } = Typography
 
@@ -30,13 +31,6 @@ interface TalentCompareModalProps {
   visible: boolean
   talentIds: number[]
   onClose: () => void
-}
-
-const roleTypeMap: Record<string, { color: string; text: string }> = {
-  professor: { color: 'green', text: '教授' },
-  student: { color: 'blue', text: '学生' },
-  graduated: { color: 'orange', text: '毕业生' },
-  unknown: { color: 'default', text: '未知' },
 }
 
 const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
@@ -77,7 +71,7 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
           </Space>
         )
       case 'role_type':
-        const config = roleTypeMap[talent.role_type] || roleTypeMap.unknown
+        const config = getRoleTypeConfig(talent.role_type)
         return <Tag color={config.color}>{config.text}</Tag>
       case 'topic_tags':
         return (
@@ -106,7 +100,7 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
       width: 120,
       fixed: 'left' as const,
     },
-    ...(data?.talents || []).map((t, idx) => ({
+    ...(data?.talents || []).map((t) => ({
       title: t.name,
       dataIndex: `talent_${t.talent_id}`,
       key: `talent_${t.talent_id}`,

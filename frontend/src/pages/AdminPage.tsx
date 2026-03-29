@@ -15,7 +15,6 @@ import {
   Badge,
   Tabs,
   List,
-  Divider,
 } from 'antd'
 import {
   UserOutlined,
@@ -27,7 +26,7 @@ import {
 import { api } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 interface User {
   user_id: number
@@ -37,6 +36,7 @@ interface User {
   display_name: string | null
   department: string | null
   is_active: boolean
+  default_view: string
   last_login_at: string | null
 }
 
@@ -113,6 +113,7 @@ const AdminPage: React.FC = () => {
       display_name: user.display_name,
       department: user.department,
       role: user.role,
+      default_view: user.default_view,
     })
     setUserModalVisible(true)
   }
@@ -225,6 +226,16 @@ const AdminPage: React.FC = () => {
           status={active ? 'success' : 'error'}
           text={active ? '正常' : '已禁用'}
         />
+      ),
+    },
+    {
+      title: '默认视角',
+      dataIndex: 'default_view',
+      key: 'default_view',
+      render: (view: string) => (
+        <Tag color={view === 'tech_element' ? 'blue' : 'green'}>
+          {view === 'tech_element' ? '技术要素' : '国家院校'}
+        </Tag>
       ),
     },
     {
@@ -357,6 +368,14 @@ const AdminPage: React.FC = () => {
               />
             </Form.Item>
           )}
+          <Form.Item name="default_view" label="默认视角">
+            <Select
+              options={[
+                { value: 'tech_element', label: '技术要素' },
+                { value: 'country_school', label: '国家院校' },
+              ]}
+            />
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -400,6 +419,8 @@ const AdminPage: React.FC = () => {
                                 ? '学校'
                                 : scope.scope_type === 'country'
                                 ? '国家'
+                                : scope.scope_type === 'tech_element'
+                                ? '技术要素'
                                 : '全部'}
                             </Tag>
                             <Text>{scope.scope_value}</Text>
@@ -433,6 +454,7 @@ const AdminPage: React.FC = () => {
                       options={[
                         { value: 'school', label: '学校' },
                         { value: 'country', label: '国家' },
+                        { value: 'tech_element', label: '技术要素' },
                         { value: 'all', label: '全部' },
                       ]}
                     />
@@ -441,9 +463,9 @@ const AdminPage: React.FC = () => {
                     name="scope_value"
                     label="权限值"
                     rules={[{ required: true }]}
-                    extra="学校ID、国家代码(如US、CN)或 * (全部)"
+                    extra="学校ID、国家代码(如US、CN)、技术要素ID 或 * (全部)"
                   >
-                    <Input placeholder="如: 1, US, *" />
+                    <Input placeholder="如: 1, US, 1, *" />
                   </Form.Item>
                   <Form.Item name="notes" label="备注">
                     <Input.TextArea rows={2} />

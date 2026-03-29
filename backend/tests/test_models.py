@@ -10,7 +10,7 @@ from app.core.database import Base
 from app.models import (
     Country, School, SchoolAlias, Talent, RoleProfile, SelectedWork,
     OverviewStatSnapshot, SchoolStatSnapshot, UserAccount, UserSchoolScope,
-    SyncBatch, RawSourceRecord, SearchTalentDocument, AuditOperationLog
+    SyncBatch, SearchTalentDocument, AuditOperationLog
 )
 from app.models.enums import RoleType, VisibilityStatus, UserRoleType, SyncJobStatus
 

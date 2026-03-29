@@ -13,6 +13,9 @@ class OverviewStats(BaseModel):
     professor_count: int = Field(description="Total number of professors")
     student_count: int = Field(description="Total number of students")
     talent_count: int = Field(description="Total number of talents")
+    country_count: int = Field(default=0, description="Total number of countries")
+    tech_element_count: int = Field(default=0, description="Total number of tech elements")
+    tech_direction_count: int = Field(default=0, description="Total number of tech directions")
 
 
 class OverviewResponse(BaseModel):
@@ -53,6 +56,7 @@ class SchoolSummary(BaseModel):
     professor_count: int = Field(default=0)
     student_count: int = Field(default=0)
     homepage_url: Optional[str] = None
+    is_top_school: bool = Field(default=False, description="是否为Top院校")
 
 
 class SchoolDetail(BaseModel):
@@ -71,6 +75,7 @@ class SchoolDetail(BaseModel):
     talent_count: int = Field(default=0)
     graduate_count: int = Field(default=0)
     unknown_count: int = Field(default=0)
+    is_top_school: bool = Field(default=False, description="是否为Top院校")
 
 
 class SchoolStats(BaseModel):
@@ -101,6 +106,15 @@ class TalentSummary(BaseModel):
     topic_tags: list[str] = Field(default_factory=list)
 
 
+class TechTagItem(BaseModel):
+    """Tech tag for talent."""
+
+    tech_element_id: int
+    tech_element_name: str
+    tech_direction_id: Optional[int] = None
+    tech_direction_name: Optional[str] = None
+
+
 class TalentDetail(BaseModel):
     """Talent detail response."""
 
@@ -118,6 +132,7 @@ class TalentDetail(BaseModel):
     h_index: int = 0
     latest_active_year: Optional[int] = None
     topic_tags: list[str] = Field(default_factory=list)
+    tech_tags: list[TechTagItem] = Field(default_factory=list, description="技术要素标签")
     research_interests: Optional[str] = None
     summary: Optional[str] = None
     department_name: Optional[str] = None

@@ -1,16 +1,17 @@
 """
 Object build orchestrator.
 Coordinates the complete build process from raw data to domain objects.
+
+NOTE: Talent building is now handled by ServingLayerSync from app.services.serving_layer_sync
 """
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.builders.base import BuildResult
 from app.builders.school_builder import SchoolBuilder
-from app.builders.talent_builder import TalentBuilder
 from app.builders.stat_builder import StatBuilder
 from app.builders.search_builder import SearchBuilder
 
@@ -24,9 +25,10 @@ class BuildOrchestrator:
 
     Build order:
     1. Build schools from institutions
-    2. Build talents from authors
-    3. Build statistics
-    4. Build search documents
+    2. Build statistics
+    3. Build search documents
+
+    NOTE: Talent building is now handled by ServingLayerSync from app.services.serving_layer_sync
     """
 
     def __init__(self, session: AsyncSession, batch_id: int):
@@ -61,23 +63,9 @@ class BuildOrchestrator:
             f"{results['schools'].records_failed} failed"
         )
 
-        # Step 2: Build talents
+        # Step 2: Build statistics
         logger.info("\n" + "="*50)
-        logger.info("Step 2: Building talents")
-        logger.info("="*50)
-
-        talent_builder = TalentBuilder(self.session, self.batch_id)
-        results["talents"] = await talent_builder.build()
-
-        logger.info(
-            f"Talents: {results['talents'].records_created} created, "
-            f"{results['talents'].records_updated} updated, "
-            f"{results['talents'].records_failed} failed"
-        )
-
-        # Step 3: Build statistics
-        logger.info("\n" + "="*50)
-        logger.info("Step 3: Building statistics")
+        logger.info("Step 2: Building statistics")
         logger.info("="*50)
 
         stat_builder = StatBuilder(self.session, self.batch_id, self.version)
@@ -87,9 +75,9 @@ class BuildOrchestrator:
             f"Statistics: {results['statistics'].records_created} snapshots created"
         )
 
-        # Step 4: Build search documents
+        # Step 3: Build search documents
         logger.info("\n" + "="*50)
-        logger.info("Step 4: Building search documents")
+        logger.info("Step 3: Building search documents")
         logger.info("="*50)
 
         search_builder = SearchBuilder(self.session, self.batch_id)
@@ -115,11 +103,6 @@ class BuildOrchestrator:
                 "updated": results["schools"].records_updated,
                 "failed": results["schools"].records_failed,
             },
-            "talents": {
-                "created": results["talents"].records_created,
-                "updated": results["talents"].records_updated,
-                "failed": results["talents"].records_failed,
-            },
             "statistics": {
                 "created": results["statistics"].records_created,
             },
@@ -143,11 +126,6 @@ class BuildOrchestrator:
     async def build_schools_only(self) -> BuildResult:
         """Build only schools."""
         builder = SchoolBuilder(self.session, self.batch_id)
-        return await builder.build()
-
-    async def build_talents_only(self) -> BuildResult:
-        """Build only talents."""
-        builder = TalentBuilder(self.session, self.batch_id)
         return await builder.build()
 
     async def build_stats_only(self) -> BuildResult:

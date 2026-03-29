@@ -1,24 +1,24 @@
 """
 School object builder.
-Transforms raw OpenAlex institution data into School domain objects.
+
+DEPRECATED: This builder uses the old RawSourceRecord model which has been removed.
+Please use ServingLayerSync from app.services.serving_layer_sync instead.
 """
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import logging
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.builders.base import BaseBuilder, BuildResult, extract_openalex_id, normalize_name
+from app.builders.base import BaseBuilder, BuildResult
 from app.models.school import School, SchoolAlias
 from app.models.country import Country
-from app.models.sync import RawSourceRecord
 
 
 logger = logging.getLogger(__name__)
 
 
-# Known institution name mappings
+# Known institution name mappings - kept for reference
 INSTITUTION_NAME_MAPPING = {
     "massachusetts institute of technology": "MIT",
     "massachusetts institute of technology (mit)": "MIT",
@@ -39,27 +39,25 @@ INSTITUTION_NAME_MAPPING = {
 
 class SchoolBuilder(BaseBuilder):
     """
-    Builder for School objects from OpenAlex institution data.
+    DEPRECATED: Use ServingLayerSync instead.
+
+    This builder uses the old RawSourceRecord model which has been removed.
     """
 
     def __init__(self, session: AsyncSession, batch_id: int):
         super().__init__(batch_id)
         self.session = session
         self._country_cache: Dict[str, int] = {}
+        logger.warning("SchoolBuilder is deprecated. Use ServingLayerSync instead.")
 
     async def build(self) -> BuildResult:
         """
-        Build School objects from raw institution records.
-
-        Process:
-        1. Load pending institution records
-        2. Transform to School objects
-        3. Create aliases for name variants
-        4. Mark records as processed
-
-        Returns:
-            BuildResult with statistics
+        DEPRECATED: This method is no longer supported.
         """
+        raise NotImplementedError(
+            "SchoolBuilder is deprecated. "
+            "Please use ServingLayerSync from app.services.serving_layer_sync instead."
+        )
         started_at = datetime.now()
         records_processed = 0
         records_created = 0

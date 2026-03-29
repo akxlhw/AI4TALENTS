@@ -19,7 +19,6 @@ const ColumnSettings: React.FC<ColumnSettingsProps> = ({
   onReset,
   onClose,
 }) => {
-  const optionalColumns = columns.filter(col => !col.required)
   const visibleCount = columns.filter(col => col.visible).length
 
   return (

@@ -7,6 +7,10 @@ import {
   UserOutlined,
   LogoutOutlined,
   StarOutlined,
+  AppstoreOutlined,
+  GlobalOutlined,
+  ThunderboltOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -16,13 +20,23 @@ const { Text } = Typography
 const MainLayout: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout, isAdmin, isSuperAdmin } = useAuth()
+  const { user, logout, isAdmin } = useAuth()
 
   const menuItems = [
     {
       key: '/',
       icon: <HomeOutlined />,
       label: '首页',
+    },
+    {
+      key: '/tech-element',
+      icon: <AppstoreOutlined />,
+      label: '技术要素',
+    },
+    {
+      key: '/country-school',
+      icon: <GlobalOutlined />,
+      label: '院校机构',
     },
     {
       key: '/search',
@@ -38,6 +52,16 @@ const MainLayout: React.FC = () => {
       key: '/admin',
       icon: <SettingOutlined />,
       label: '权限管理',
+    }] : []),
+    ...(isAdmin ? [{
+      key: '/collect',
+      icon: <ThunderboltOutlined />,
+      label: '采集配置',
+    }] : []),
+    ...(isAdmin ? [{
+      key: '/data-version',
+      icon: <DatabaseOutlined />,
+      label: '数据版本',
     }] : []),
   ]
 
