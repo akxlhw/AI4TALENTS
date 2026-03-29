@@ -9,9 +9,10 @@ Options:
     --batch-id N       Specific batch ID to process
     --full             Run full build (default)
     --schools-only     Build only schools
-    --talents-only     Build only talents
     --stats-only       Build only statistics
     --search-only      Build only search documents
+
+NOTE: Talent building is now handled by ServingLayerSync during data collection.
 """
 import asyncio
 import argparse
@@ -61,7 +62,7 @@ async def run_build(
 
     Args:
         batch_id: Specific batch ID (None for latest successful)
-        build_type: 'full', 'schools', 'talents', 'stats', or 'search'
+        build_type: 'full', 'schools', 'stats', or 'search'
 
     Returns:
         Build summary dictionary
@@ -90,17 +91,6 @@ async def run_build(
                 "batch_id": batch_id,
                 "success": build_result.success,
                 "schools": {
-                    "created": build_result.records_created,
-                    "updated": build_result.records_updated,
-                    "failed": build_result.records_failed,
-                },
-            }
-        elif build_type == "talents":
-            build_result = await orchestrator.build_talents_only()
-            result = {
-                "batch_id": batch_id,
-                "success": build_result.success,
-                "talents": {
                     "created": build_result.records_created,
                     "updated": build_result.records_updated,
                     "failed": build_result.records_failed,
@@ -152,13 +142,6 @@ def print_summary(result: dict):
         print(f"  Updated: {schools.get('updated', 0)}")
         print(f"  Failed: {schools.get('failed', 0)}")
 
-    if "talents" in result:
-        talents = result["talents"]
-        print(f"\nTalents:")
-        print(f"  Created: {talents.get('created', 0)}")
-        print(f"  Updated: {talents.get('updated', 0)}")
-        print(f"  Failed: {talents.get('failed', 0)}")
-
     if "statistics" in result:
         stats = result["statistics"]
         print(f"\nStatistics:")
@@ -201,12 +184,6 @@ def main():
     )
 
     parser.add_argument(
-        "--talents-only",
-        action="store_true",
-        help="Build only talents",
-    )
-
-    parser.add_argument(
         "--stats-only",
         action="store_true",
         help="Build only statistics",
@@ -230,8 +207,6 @@ def main():
     build_type = "full"
     if args.schools_only:
         build_type = "schools"
-    elif args.talents_only:
-        build_type = "talents"
     elif args.stats_only:
         build_type = "stats"
     elif args.search_only:

@@ -98,8 +98,14 @@ make dev-frontend
 ### 访问地址
 
 - 前端: http://localhost:5173
-- 后端 API: http://localhost:8000
-- API 文档: http://localhost:8000/docs
+- 后端 API: http://localhost:8003
+- API 文档: http://localhost:8003/docs
+- API 文档 (ReDoc): http://localhost:8003/redoc
+
+### 默认账号
+
+- 用户名: `admin`
+- 密码: `admin123`
 
 ## 开发命令
 
@@ -110,6 +116,24 @@ make lint           # 代码检查
 make migrate        # 运行数据库迁移
 make seed           # 初始化数据
 make sync           # 同步 OpenAlex 数据
+```
+
+### 后端测试
+
+```bash
+cd backend
+pytest                        # 运行所有测试
+pytest tests/test_models.py   # 运行指定测试文件
+pytest -v --cov=app           # 带覆盖率报告
+pytest -m "not slow"          # 跳过慢速测试
+```
+
+### 前端 E2E 测试
+
+```bash
+cd frontend
+npx playwright test           # 运行所有测试
+npx playwright test --ui      # UI 模式运行
 ```
 
 ## 文档

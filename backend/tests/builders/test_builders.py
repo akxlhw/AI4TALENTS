@@ -3,11 +3,10 @@ Tests for builders.
 """
 import pytest
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 from app.builders.base import BuildResult, extract_openalex_id, normalize_name
 from app.builders.school_builder import SchoolBuilder, INSTITUTION_NAME_MAPPING
-from app.builders.talent_builder import TalentBuilder
 from app.services.role_identifier import RoleIdentifier
 
 
@@ -96,22 +95,6 @@ class TestSchoolBuilder:
         assert builder.errors == []
 
 
-class TestTalentBuilder:
-    """Tests for TalentBuilder."""
-
-    @pytest.fixture
-    def mock_session(self):
-        """Create mock session."""
-        return AsyncMock()
-
-    def test_builder_initialization(self, mock_session):
-        """Test builder initialization."""
-        builder = TalentBuilder(mock_session, batch_id=1)
-
-        assert builder.batch_id == 1
-        assert builder.session == mock_session
-
-
 class TestRoleIdentifier:
     """Tests for RoleIdentifier service (replaces TalentBuilder._identify_role_type)."""
 
@@ -163,36 +146,3 @@ class TestRoleIdentifier:
         }
         result = RoleIdentifier.identify_from_author_data(author_data)
         assert result.role_type == "professor"
-
-    def test_extract_topics(self):
-        """Test topic extraction from TalentBuilder."""
-        mock_session = AsyncMock()
-        builder = TalentBuilder(mock_session, batch_id=1)
-
-        raw_data = {
-            "x_concepts": [
-                {"display_name": "Machine Learning", "score": 0.9},
-                {"display_name": "Computer Science", "score": 0.8},
-                {"display_name": "Artificial Intelligence", "score": 0.7},
-            ]
-        }
-
-        topics = builder._extract_topics(raw_data)
-
-        assert len(topics) == 3
-        assert "Machine Learning" in topics
-        assert "Computer Science" in topics
-
-    def test_extract_orcid(self):
-        """Test ORCID extraction from TalentBuilder."""
-        mock_session = AsyncMock()
-        builder = TalentBuilder(mock_session, batch_id=1)
-
-        # From URL
-        assert builder._extract_orcid("https://orcid.org/0000-0001-2345-6789") == "0000-0001-2345-6789"
-
-        # Already ID
-        assert builder._extract_orcid("0000-0001-2345-6789") == "0000-0001-2345-6789"
-
-        # None
-        assert builder._extract_orcid(None) is None
