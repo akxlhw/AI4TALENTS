@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     # Application
     APP_NAME: str = "智能人才库 API"
-    APP_VERSION: str = "1.0.0"
+    APP_VERSION: str = "1.2.0"
     DEBUG: bool = False
     ENVIRONMENT: str = "development"  # development, test, production
 
@@ -35,6 +35,10 @@ class Settings(BaseSettings):
 
     # CORS - 前端固定使用 5173 端口
     CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+
+    # Rate Limiting
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_PER_MINUTE: int = 100  # Requests per minute per user/IP
 
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20

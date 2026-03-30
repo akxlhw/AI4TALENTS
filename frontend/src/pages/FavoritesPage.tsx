@@ -33,19 +33,10 @@ import {
 } from '@ant-design/icons'
 import { api } from '../services/api'
 import TalentCompareModal from '../components/TalentCompareModal'
-import { getRoleTypeConfig } from '../constants/roleType'
+import { getRoleTypeConfig, getFollowupStatusConfig } from '../constants'
 import type { FavoriteTalent, TalentPool, FollowupStatus } from '../types'
 
 const { Title, Text } = Typography
-
-const followupStatusMap: Record<string, { color: string; text: string }> = {
-  new_found: { color: 'blue', text: '新发现' },
-  reviewed: { color: 'cyan', text: '已审阅' },
-  followed: { color: 'green', text: '已跟进' },
-  pending_evaluation: { color: 'orange', text: '待评估' },
-  recommend_contact: { color: 'purple', text: '推荐联系' },
-  no_followup: { color: 'default', text: '暂不跟进' },
-}
 
 const FavoritesPage: React.FC = () => {
   const navigate = useNavigate()
@@ -363,7 +354,7 @@ const FavoritesPage: React.FC = () => {
       key: 'followup_status',
       width: 120,
       render: (status: string, record: FavoriteTalent) => {
-        const config = followupStatusMap[status] || { color: 'default', text: status }
+        const config = getFollowupStatusConfig(status)
         return (
           <Dropdown
             trigger={['click']}

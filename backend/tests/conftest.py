@@ -9,6 +9,12 @@ Features:
 - Common test utilities
 """
 import asyncio
+import os
+
+# Disable rate limiting for tests - must be set before any app imports
+os.environ["RATE_LIMIT_ENABLED"] = "false"
+os.environ["ENVIRONMENT"] = "test"
+
 import pytest
 from typing import AsyncGenerator
 from datetime import datetime
@@ -17,6 +23,11 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import select
+
+# Clear settings cache and import fresh
+from app.core import config
+config.get_settings.cache_clear()
+from app.core.config import settings
 
 from app.main import app
 from app.core.database import Base, get_async_session

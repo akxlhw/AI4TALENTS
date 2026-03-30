@@ -43,6 +43,11 @@ import {
   LoadingOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
+import {
+  getTaskStatusConfig,
+  getCollectModeConfig,
+  getVenueTypeConfig,
+} from '../constants'
 import type { VenueItem, VenueBinding, TechElementCollect, CollectTask } from '../types'
 
 const { Text, Title } = Typography
@@ -60,25 +65,6 @@ const getErrorMessage = (error: unknown, defaultMsg: string): string => {
     }
   }
   return defaultMsg
-}
-
-// Option mappings
-const taskStatusMap: Record<string, { label: string; color: string; status: 'success' | 'processing' | 'error' | 'default' | 'warning' }> = {
-  pending: { label: '待执行', color: 'default', status: 'default' },
-  running: { label: '执行中', color: 'processing', status: 'processing' },
-  completed: { label: '已完成', color: 'success', status: 'success' },
-  failed: { label: '失败', color: 'error', status: 'error' },
-  cancelled: { label: '已取消', color: 'warning', status: 'warning' },
-}
-
-const collectModeMap: Record<string, { label: string; color: string }> = {
-  full: { label: '全量采集', color: 'blue' },
-  incremental: { label: '增量采集', color: 'green' },
-}
-
-const venueTypeMap: Record<string, { label: string; color: string }> = {
-  conference: { label: '会议', color: 'blue' },
-  journal: { label: '期刊', color: 'purple' },
 }
 
 const CollectPage: React.FC = () => {
@@ -288,7 +274,7 @@ const CollectPage: React.FC = () => {
           <Space size={[4, 4]} wrap>
             {displayVenues.map((v) => (
               <Tooltip key={v.id} title={v.id}>
-                <Tag color={venueTypeMap[v.type]?.color || 'default'}>
+                <Tag color={getVenueTypeConfig(v.type).color}>
                   {v.name || v.id}
                 </Tag>
               </Tooltip>
@@ -364,7 +350,7 @@ const CollectPage: React.FC = () => {
       dataIndex: 'collect_mode',
       key: 'collect_mode',
       render: (mode: string) => {
-        const item = collectModeMap[mode] || { label: mode, color: 'default' }
+        const item = getCollectModeConfig(mode)
         return <Tag color={item.color}>{item.label}</Tag>
       },
     },
@@ -373,7 +359,7 @@ const CollectPage: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => {
-        const item = taskStatusMap[status] || { label: status, color: 'default', status: 'default' as const }
+        const item = getTaskStatusConfig(status)
         return <Badge status={item.status} text={item.label} />
       },
     },
@@ -549,8 +535,8 @@ const CollectPage: React.FC = () => {
             onChange={(newTargetKeys) => setSelectedVenueIds(newTargetKeys as string[])}
             render={(item) => (
               <span>
-                <Tag color={venueTypeMap[item.venue_type]?.color || 'default'} style={{ marginRight: 4 }}>
-                  {venueTypeMap[item.venue_type]?.label || item.venue_type}
+                <Tag color={getVenueTypeConfig(item.venue_type).color} style={{ marginRight: 4 }}>
+                  {getVenueTypeConfig(item.venue_type).label}
                 </Tag>
                 {item.title}
                 {item.description && <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>({item.description})</Text>}
@@ -587,7 +573,7 @@ const CollectPage: React.FC = () => {
           <Descriptions.Item label="采集范围">
             <Space size={[4, 4]} wrap>
               {(selectedElement?.collect_sources || []).slice(0, 5).map(v => (
-                <Tag key={v.id} color={venueTypeMap[v.type]?.color || 'default'}>
+                <Tag key={v.id} color={getVenueTypeConfig(v.type).color}>
                   {v.name || v.id}
                 </Tag>
               ))}
@@ -660,13 +646,13 @@ const CollectPage: React.FC = () => {
               <Descriptions.Item label="任务编码">{selectedTask.task_code}</Descriptions.Item>
               <Descriptions.Item label="状态">
                 <Badge
-                  status={taskStatusMap[selectedTask.status]?.status}
-                  text={taskStatusMap[selectedTask.status]?.label}
+                  status={getTaskStatusConfig(selectedTask.status).status}
+                  text={getTaskStatusConfig(selectedTask.status).label}
                 />
               </Descriptions.Item>
               <Descriptions.Item label="技术要素">{selectedTask.tech_element_name}</Descriptions.Item>
               <Descriptions.Item label="采集模式">
-                {collectModeMap[selectedTask.collect_mode]?.label}
+                {getCollectModeConfig(selectedTask.collect_mode).label}
               </Descriptions.Item>
               <Descriptions.Item label="进度" span={2}>
                 <Progress

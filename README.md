@@ -167,6 +167,17 @@ npx playwright test --ui      # UI 模式运行
 - [x] TP8 采集配置与任务管理
 - [x] TP9 版本发布与数据质量
 
+### MVP v1.2 (当前版本)
+技术债务清理、架构优化、测试补全
+
+- [x] CR-01 前端废弃文件清理
+- [x] CR-02 前端通用组件抽象 (PageHeader, FilterSection, SelectionActions)
+- [x] CR-03 前端常量统一 (followupStatusMap, taskStatusMap, collectModeMap)
+- [x] CR-04 后端限流中间件 (100 req/min per user/IP)
+- [x] CR-05 后端日志系统配置 (JSON 结构化日志)
+- [x] CR-06 后端请求日志中间件 (request_id 追踪)
+- [x] CR-07 核心API测试补充 (search, talents)
+
 ### 功能清单
 
 #### v1.0 基线功能

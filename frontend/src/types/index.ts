@@ -105,11 +105,12 @@ export interface Collaboration {
 
 // User & Permissions
 export interface User {
-  user_id: string
+  user_id: number
   username: string
   email: string
-  role: 'user' | 'admin' | 'super_admin'
-  created_at: string
+  role: string
+  display_name: string | null
+  department: string | null
 }
 
 export interface UserPermission {

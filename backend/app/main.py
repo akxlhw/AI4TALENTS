@@ -2,23 +2,30 @@
 FastAPI application entry point.
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.database import async_engine
+from app.core.logging_config import setup_logging, get_logger
 from app.api.v1.router import api_router
+
+# Setup logging first
+setup_logging()
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events handler."""
     # Startup
-    print(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
-    print(f"Environment: {settings.ENVIRONMENT}")
+    logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    logger.info(f"Environment: {settings.ENVIRONMENT}")
+    logger.info(f"Rate limiting enabled: {settings.RATE_LIMIT_ENABLED}")
     yield
     # Shutdown
-    print(f"Shutting down {settings.APP_NAME}")
+    logger.info(f"Shutting down {settings.APP_NAME}")
     await async_engine.dispose()
 
 
@@ -43,6 +50,35 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Rate limiting middleware (must be added before request logging)
+    if settings.RATE_LIMIT_ENABLED:
+        from app.middleware.rate_limit import RateLimitMiddleware
+        app.add_middleware(RateLimitMiddleware)
+
+    # Request logging middleware
+    from app.middleware.request_logging import RequestLoggingMiddleware
+    app.add_middleware(RequestLoggingMiddleware)
+
+    # Global exception handler
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        logger.error(
+            f"Unhandled exception: {exc}",
+            extra={
+                "request_id": getattr(request.state, "request_id", "unknown"),
+                "path": request.url.path,
+                "method": request.method,
+            },
+            exc_info=True,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "Internal server error",
+                "request_id": getattr(request.state, "request_id", "unknown"),
+            },
+        )
+
     # Include API router
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
@@ -53,7 +89,7 @@ app = create_application()
 
 
 @app.get("/", tags=["Root"])
-async def root():
+async def root(request: Request):
     """Root endpoint."""
     return {
         "name": settings.APP_NAME,

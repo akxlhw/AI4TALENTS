@@ -1,15 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { message } from 'antd'
 import { api } from '../services/api'
-
-interface User {
-  user_id: number
-  username: string
-  email: string
-  role: string
-  display_name: string | null
-  department: string | null
-}
+import type { User } from '../types'
 
 interface AuthContextType {
   user: User | null

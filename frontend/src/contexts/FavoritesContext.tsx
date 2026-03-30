@@ -1,22 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { message } from 'antd'
 import { api } from '../services/api'
-
-interface FavoriteTalent {
-  favorite_id: number
-  talent_id: number
-  name: string
-  name_en: string | null
-  role_type: string
-  school_id: number | null
-  school_name: string | null
-  current_title: string | null
-  works_count: number
-  cited_by_count: number
-  h_index: number
-  notes: string | null
-  created_at: string
-}
+import type { FavoriteTalent } from '../types'
 
 interface FavoritesContextType {
   favoriteIds: Set<number>
