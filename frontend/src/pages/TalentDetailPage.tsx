@@ -28,7 +28,6 @@ import {
   TeamOutlined,
   ExclamationCircleOutlined,
   BulbOutlined,
-  SyncOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
 import FavoriteButton from '../components/FavoriteButton'
@@ -84,7 +83,6 @@ const TalentDetailPage: React.FC = () => {
   const [collabLoading, setCollabLoading] = useState(false)
   const [collabNodes, setCollabNodes] = useState<CollaborationNode[]>([])
   const [collabLinks, setCollabLinks] = useState<CollaborationLink[]>([])
-  const [syncingCollab, setSyncingCollab] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -114,23 +112,6 @@ const TalentDetailPage: React.FC = () => {
       console.error('Failed to fetch collaborations:', error)
     } finally {
       setCollabLoading(false)
-    }
-  }
-
-  // CR-03: Sync collaborations for this talent
-  const handleSyncCollaborations = async () => {
-    if (!talent) return
-    setSyncingCollab(true)
-    try {
-      await api.talents.syncCollaborations(talent.talent_id)
-      // Wait a moment then refresh
-      setTimeout(() => {
-        fetchCollaborations(talent.talent_id)
-      }, 2000)
-    } catch (error) {
-      console.error('Failed to sync collaborations:', error)
-    } finally {
-      setSyncingCollab(false)
     }
   }
 
@@ -449,29 +430,31 @@ const TalentDetailPage: React.FC = () => {
       </Card>
 
       {/* 合作网络 */}
-      <Card
-        title={<><TeamOutlined style={{ marginRight: 8 }} />合作网络</>}
-        extra={
-          <Button
-            type="link"
-            icon={<SyncOutlined spin={syncingCollab} />}
-            onClick={handleSyncCollaborations}
-            loading={syncingCollab}
-          >
-            同步合作数据
-          </Button>
-        }
-      >
-        <CollaborationGraph
-          nodes={collabNodes}
-          links={collabLinks}
-          loading={collabLoading}
-          onNodeClick={(nodeId) => {
-            if (nodeId !== String(talent.talent_id)) {
-              navigate(`/talents/${nodeId}`)
+      <Card title={<><TeamOutlined style={{ marginRight: 8 }} />合作网络</>}>
+        {collabNodes.length > 0 ? (
+          <CollaborationGraph
+            nodes={collabNodes}
+            links={collabLinks}
+            loading={collabLoading}
+            onNodeClick={(nodeId) => {
+              if (nodeId !== String(talent.talent_id)) {
+                navigate(`/talents/${nodeId}`)
+              }
+            }}
+          />
+        ) : (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={
+              <Space direction="vertical" size={4}>
+                <Text type="secondary">暂无合作数据</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  请联系管理员在「采集配置 - 合作网络同步」中同步数据
+                </Text>
+              </Space>
             }
-          }}
-        />
+          />
+        )}
       </Card>
     </div>
   )

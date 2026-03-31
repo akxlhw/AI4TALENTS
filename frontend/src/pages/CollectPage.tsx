@@ -29,6 +29,9 @@ import {
   Timeline,
   Alert,
   Transfer,
+  Row,
+  Col,
+  Statistic,
 } from 'antd'
 import {
   SettingOutlined,
@@ -42,6 +45,8 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   LoadingOutlined,
+  TeamOutlined,
+  SyncOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
 import {
@@ -96,11 +101,27 @@ const CollectPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('tech-elements')
 
+  // Collaboration sync state
+  const [collabSyncStatus, setCollabSyncStatus] = useState<{
+    status: string
+    processed: number
+    total: number
+    collaborations: number
+  } | null>(null)
+  const [collabDataStatus, setCollabDataStatus] = useState<{
+    total_collaborations: number
+    talents_with_collaborations: number
+    last_sync: string | null
+  } | null>(null)
+  const [collabSyncLoading, setCollabSyncLoading] = useState(false)
+
   useEffect(() => {
     if (activeTab === 'tech-elements') {
       loadTechElements()
-    } else {
+    } else if (activeTab === 'tasks') {
       loadTasks()
+    } else if (activeTab === 'collaborations') {
+      loadCollabSyncStatus()
     }
   }, [activeTab])
 
@@ -253,6 +274,60 @@ const CollectPage: React.FC = () => {
       loadTasks()
     } catch (error) {
       message.error(getErrorMessage(error, '删除失败'))
+    }
+  }
+
+  // Collaboration sync operations
+  const loadCollabSyncStatus = async () => {
+    setCollabSyncLoading(true)
+    try {
+      const response = await api.talents.getCollaborationSyncStatus()
+      setCollabSyncStatus(response.data.sync_progress)
+      setCollabDataStatus(response.data.data_status)
+    } catch (error) {
+      message.error('加载同步状态失败')
+    } finally {
+      setCollabSyncLoading(false)
+    }
+  }
+
+  const handleSyncAllCollaborations = async () => {
+    try {
+      // 立即显示启动状态
+      setCollabSyncStatus({ status: 'pending', processed: 0, total: 0, collaborations: 0 })
+      message.info('正在启动同步任务...')
+
+      const response = await api.talents.syncCollaborations()
+      message.success('同步任务已启动')
+
+      // 立即更新状态为 running
+      setCollabSyncStatus({ status: 'running', processed: 0, total: 0, collaborations: 0 })
+
+      // 开始轮询进度，间隔1秒
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await api.talents.getCollaborationSyncStatus()
+          const progress = statusResponse.data.sync_progress
+          setCollabSyncStatus(progress)
+          setCollabDataStatus(statusResponse.data.data_status)
+
+          // 只有 completed 或 error 时才停止轮询
+          if (progress.status === 'completed' || progress.status.startsWith('error')) {
+            clearInterval(pollInterval)
+            if (progress.status === 'completed') {
+              message.success(`同步完成！处理 ${progress.processed} 篇论文，创建 ${progress.collaborations} 条合作关系`)
+            }
+          }
+        } catch (err) {
+          console.error('轮询状态失败:', err)
+        }
+      }, 1000)
+
+      // 60秒后停止轮询（防止无限轮询）
+      setTimeout(() => clearInterval(pollInterval), 60000)
+    } catch (error) {
+      message.error(getErrorMessage(error, '启动同步失败'))
+      setCollabSyncStatus(null)
     }
   }
 
@@ -502,6 +577,155 @@ const CollectPage: React.FC = () => {
                     locale={{
                       emptyText: <Empty description="暂无采集任务" />,
                     }}
+                  />
+                </Spin>
+              </Card>
+            ),
+          },
+          {
+            key: 'collaborations',
+            label: (
+              <span>
+                <TeamOutlined />
+                合作网络同步
+              </span>
+            ),
+            children: (
+              <Card>
+                <Spin spinning={collabSyncLoading}>
+                  {/* 状态面板 */}
+                  <Row gutter={16} style={{ marginBottom: 24 }}>
+                    <Col span={8}>
+                      <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                        <Statistic
+                          title="已同步学者数"
+                          value={collabDataStatus?.talents_with_collaborations || 0}
+                          prefix={<TeamOutlined />}
+                        />
+                      </Card>
+                    </Col>
+                    <Col span={8}>
+                      <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                        <Statistic
+                          title="合作关系数"
+                          value={collabDataStatus?.total_collaborations || 0}
+                          prefix={<TeamOutlined />}
+                        />
+                      </Card>
+                    </Col>
+                    <Col span={8}>
+                      <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                        <Statistic
+                          title="最后同步时间"
+                          value={collabDataStatus?.last_sync ? new Date(collabDataStatus.last_sync).toLocaleString() : '-'}
+                          valueStyle={{ fontSize: 16 }}
+                        />
+                      </Card>
+                    </Col>
+                  </Row>
+
+                  {/* 同步进度 */}
+                  {(collabSyncStatus?.status === 'running' || collabSyncStatus?.status === 'pending') && (
+                    <Alert
+                      type="info"
+                      showIcon
+                      icon={<SyncOutlined spin />}
+                      style={{ marginBottom: 16 }}
+                      message={collabSyncStatus?.status === 'pending' ? '正在启动同步任务...' : '同步进行中...'}
+                      description={
+                        <div>
+                          {collabSyncStatus?.total > 0 && (
+                            <>
+                              <Progress
+                                percent={Math.round((collabSyncStatus.processed / collabSyncStatus.total) * 100)}
+                                status="active"
+                              />
+                              <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                                <Text type="secondary">
+                                  已处理 {collabSyncStatus.processed.toLocaleString()} / {collabSyncStatus.total.toLocaleString()} 篇论文
+                                </Text>
+                                <Text type="secondary">
+                                  新增 {collabSyncStatus.collaborations.toLocaleString()} 条合作关系
+                                </Text>
+                              </Space>
+                            </>
+                          )}
+                          {collabSyncStatus?.total === 0 && (
+                            <Text type="secondary">正在扫描论文数据...</Text>
+                          )}
+                        </div>
+                      }
+                    />
+                  )}
+
+                  {/* 同步完成提示 */}
+                  {collabSyncStatus?.status === 'completed' && (
+                    <Alert
+                      type="success"
+                      showIcon
+                      icon={<CheckCircleOutlined />}
+                      style={{ marginBottom: 16 }}
+                      message="同步完成"
+                      description={
+                        <Space direction="vertical" size={4}>
+                          <Text>
+                            已处理 <Text strong>{collabSyncStatus.processed?.toLocaleString()}</Text> 篇论文，
+                            新增 <Text strong type="success">{collabSyncStatus.collaborations?.toLocaleString()}</Text> 条合作关系
+                          </Text>
+                          {collabSyncStatus.total_works && (
+                            <Text type="secondary">
+                              共 {collabSyncStatus.total_works.toLocaleString()} 篇论文数据
+                            </Text>
+                          )}
+                        </Space>
+                      }
+                    />
+                  )}
+
+                  {/* 错误提示 */}
+                  {collabSyncStatus?.status?.startsWith('error') && (
+                    <Alert
+                      type="error"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                      message="同步失败"
+                      description={collabSyncStatus.status}
+                    />
+                  )}
+
+                  {/* 操作按钮 */}
+                  <Space>
+                    <Button
+                      type="primary"
+                      icon={<SyncOutlined spin={collabSyncStatus?.status === 'running'} />}
+                      onClick={handleSyncAllCollaborations}
+                      loading={collabSyncStatus?.status === 'running'}
+                      disabled={collabSyncStatus?.status === 'running'}
+                    >
+                      {collabSyncStatus?.status === 'running' ? '同步中...' : '批量同步所有学者'}
+                    </Button>
+                    <Button
+                      icon={<ReloadOutlined />}
+                      onClick={loadCollabSyncStatus}
+                      loading={collabSyncLoading}
+                    >
+                      刷新状态
+                    </Button>
+                  </Space>
+
+                  {/* 说明 */}
+                  <Alert
+                    type="info"
+                    showIcon
+                    style={{ marginTop: 24 }}
+                    message="功能说明"
+                    description={
+                      <ul style={{ margin: 0, paddingLeft: 20 }}>
+                        <li>从已采集的论文数据中提取学者合作关系，无需重复调用 API</li>
+                        <li>请确保已执行过采集任务，有论文数据后才能提取合作关系</li>
+                        <li>同步完成后，学者详情页的合作网络将自动展示数据</li>
+                      </ul>
+                    }
                   />
                 </Spin>
               </Card>
