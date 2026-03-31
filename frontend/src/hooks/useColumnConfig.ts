@@ -15,7 +15,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { key: 'name', label: '姓名', visible: true, required: true },
   { key: 'role_type', label: '角色', visible: true },
   { key: 'school_name', label: '学校', visible: true },
-  { key: 'current_title', label: '职位', visible: true },
   { key: 'works_count', label: '论文数', visible: true },
   { key: 'cited_by_count', label: '引用数', visible: true },
   { key: 'h_index', label: 'H指数', visible: true },
