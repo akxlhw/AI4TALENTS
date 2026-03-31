@@ -1,8 +1,9 @@
 """
 Author normalizer for the standardized layer.
 """
+import json
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +21,45 @@ class AuthorNormalizer:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.school_normalizer = SchoolNormalizer(session)
+
+    def _extract_topics(self, raw_json: str) -> List[str]:
+        """
+        Extract research topics from OpenAlex raw_json.
+
+        OpenAlex topics format (actual API response):
+        {
+            "topics": [
+                {
+                    "id": "https://openalex.org/T11307",
+                    "display_name": "Domain Adaptation and Few-Shot Learning",
+                    "count": 78,
+                    "subfield": {"display_name": "Artificial Intelligence"},
+                    "field": {"display_name": "Computer Science"},
+                    "domain": {"display_name": "Physical Sciences"}
+                },
+                ...
+            ]
+        }
+
+        Note: OpenAlex does NOT return a 'score' field. The 'count' field
+        represents the number of works in that topic. Topics are already
+        sorted by count (descending) in the API response.
+        """
+        try:
+            data = json.loads(raw_json)
+            topics_data = data.get("topics", [])
+            # Extract display_name for topics with count >= 3, up to 10 topics
+            # Topics are already sorted by count (descending)
+            topics = []
+            for topic in topics_data[:10]:
+                # Only include topics with at least 3 works for relevance
+                if topic.get("count", 0) >= 3:
+                    display_name = topic.get("display_name")
+                    if display_name:
+                        topics.append(display_name)
+            return topics
+        except (json.JSONDecodeError, TypeError):
+            return []
 
     def normalize_author_name(self, name: str) -> str:
         """Normalize author name"""
@@ -54,6 +94,9 @@ class AuthorNormalizer:
         task_id: Optional[int] = None
     ) -> StdAuthor:
         """Create a new StdAuthor from RawAuthor"""
+        # Extract topics from raw_json
+        topics = self._extract_topics(raw_author.raw_json)
+
         std_author = StdAuthor(
             openalex_author_id=raw_author.openalex_author_id,
             name_normalized=self.normalize_author_name(raw_author.display_name or ""),
@@ -68,6 +111,7 @@ class AuthorNormalizer:
             raw_institution_id=raw_author.last_known_institution_id,
             confirm_status="auto_identified",
             confidence_score=0.8 if std_school_id else 0.5,
+            openalex_topics=topics,
             source_task_id=task_id,
             normalized_at=datetime.utcnow()
         )
@@ -97,7 +141,10 @@ class AuthorNormalizer:
         # Check if already exists
         existing = await self.find_std_author(raw_author.openalex_author_id)
         if existing:
-            # Update existing (including school linkage)
+            # Extract topics from raw_json
+            topics = self._extract_topics(raw_author.raw_json)
+
+            # Update existing (including school linkage and topics)
             existing.name_normalized = self.normalize_author_name(raw_author.display_name or "")
             existing.works_count = raw_author.works_count
             existing.cited_by_count = raw_author.cited_by_count
@@ -105,6 +152,7 @@ class AuthorNormalizer:
             existing.i10_index = raw_author.i10_index
             existing.raw_institution_id = raw_author.last_known_institution_id
             existing.std_school_id = std_school_id
+            existing.openalex_topics = topics
             existing.normalized_at = datetime.utcnow()
             await self.session.flush()
             return existing
