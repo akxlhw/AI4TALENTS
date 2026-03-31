@@ -141,6 +141,7 @@ class TestE2EDataFlow:
             h_index=18,
             std_school_id=std_school.std_school_id,
             source_task_id=task.task_id,
+            cs_concepts_score=0.8,  # CS background score
         )
         test_session.add(std_author)
         await test_session.flush()
@@ -244,6 +245,7 @@ class TestE2EDataFlow:
                 cited_by_count=cited,
                 h_index=h_idx,
                 source_task_id=task.task_id,
+                cs_concepts_score=0.8,  # CS background score
             )
             test_session.add(std_author)
             await test_session.flush()
@@ -297,6 +299,7 @@ class TestE2EDataFlow:
                 cited_by_count=300 + i * 100,
                 h_index=10 + i * 2,
                 source_task_id=task.task_id,
+                cs_concepts_score=0.8,  # CS background score
             )
             test_session.add(std_author)
             await test_session.flush()

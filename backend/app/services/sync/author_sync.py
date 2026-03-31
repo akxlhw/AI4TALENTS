@@ -13,6 +13,7 @@ from app.models.talent import Talent, RoleProfile
 from app.models.school import School
 from app.models.enums import VisibilityStatus
 from app.services.role_identifier import RoleIdentifier
+from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class AuthorSyncService:
         self,
         std_author: StdAuthor,
         update_existing: bool = True
-    ) -> Tuple[Talent, bool]:
+    ) -> Tuple[Optional[Talent], bool]:
         """
         Sync standardized author to serving layer Talent table
 
@@ -36,8 +37,19 @@ class AuthorSyncService:
             update_existing: Whether to update existing records
 
         Returns:
-            Tuple[Talent, bool]: (Talent object, is_new)
+            Tuple[Optional[Talent], bool]: (Talent object or None, is_new)
+            Returns (None, False) if author's CS score is below threshold
         """
+        # Filter non-CS background authors
+        # Handle None value as 0.0 (filtered)
+        cs_score = std_author.cs_concepts_score or 0.0
+        if cs_score < CS_SCORE_THRESHOLD:
+            logger.info(
+                f"Skipping {std_author.name_normalized}: "
+                f"CS score {cs_score:.2f} < {CS_SCORE_THRESHOLD}"
+            )
+            return None, False
+
         # 1. Find existing Talent by source ID
         result = await self.session.execute(
             select(Talent).where(

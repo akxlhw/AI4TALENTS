@@ -426,6 +426,7 @@ class TestServingLayerSync:
             h_index=16,  # h_index >= 15 with works >= 30 triggers professor
             std_school_id=std_school.std_school_id,
             source_task_id=1,
+            cs_concepts_score=0.8,  # CS background score
         )
         test_session.add(std_author)
         await test_session.flush()
@@ -759,6 +760,7 @@ class TestEndToEndFlow:
             h_index=6,
             std_school_id=std_school.std_school_id,
             source_task_id=task.task_id,
+            cs_concepts_score=0.8,  # CS background score
         )
         test_session.add(std_author)
         await test_session.flush()
@@ -839,6 +841,7 @@ class TestEndToEndFlow:
             h_index=10,
             std_school_id=std_school.std_school_id,
             source_task_id=1,
+            cs_concepts_score=0.8,  # CS background score
         )
         test_session.add(std_author)
         await test_session.flush()

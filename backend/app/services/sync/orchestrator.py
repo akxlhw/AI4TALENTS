@@ -67,6 +67,7 @@ class ServingLayerOrchestrator:
             "authors_synced": 0,
             "authors_created": 0,
             "authors_updated": 0,
+            "authors_filtered": 0,  # Filtered due to low CS score
             "schools_synced": 0,
             "schools_created": 0,
             "tags_created": 0,
@@ -85,6 +86,7 @@ class ServingLayerOrchestrator:
         logger.info(
             f"Sync completed: {stats['authors_synced']} authors "
             f"({stats['authors_created']} created, {stats['authors_updated']} updated), "
+            f"{stats['authors_filtered']} filtered (low CS score), "
             f"{stats['schools_synced']} schools ({stats['schools_created']} created), "
             f"{stats['tags_created']} tech tags created"
         )
@@ -124,6 +126,12 @@ class ServingLayerOrchestrator:
             try:
                 # Sync author to Talent
                 talent, is_new = await self.author_sync.sync_author_to_talent(std_author)
+
+                # Check if author was filtered (talent is None)
+                if talent is None:
+                    stats["authors_filtered"] += 1
+                    continue
+
                 stats["authors_synced"] += 1
                 if is_new:
                     stats["authors_created"] += 1

@@ -51,6 +51,10 @@ class StdAuthor(Base, TimestampMixin):
     # Research topics from OpenAlex (topics field)
     openalex_topics = Column(JSON, default=[])
 
+    # CS background score (0.0-1.0), calculated from OpenAlex x_concepts
+    # Used to filter non-CS/AI background authors
+    cs_concepts_score = Column(Float, default=0.0)
+
     # Processing metadata
     source_task_id = Column(Integer, ForeignKey("sync_collect_task.task_id"), nullable=True)
     normalized_at = Column(DateTime, nullable=True)

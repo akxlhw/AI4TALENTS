@@ -2,6 +2,7 @@
 Author normalizer for the standardized layer.
 """
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Optional, List
 
@@ -13,6 +14,9 @@ from app.models.standardized import StdAuthor, StdSchool
 from app.repositories.raw_data_repository import RawAuthorRepository
 from app.services.normalizers.base import NormalizationResult
 from app.services.normalizers.school import SchoolNormalizer
+from app.services.common.cs_concepts import CORE_CS_CONCEPTS
+
+logger = logging.getLogger(__name__)
 
 
 class AuthorNormalizer:
@@ -58,8 +62,47 @@ class AuthorNormalizer:
                     if display_name:
                         topics.append(display_name)
             return topics
-        except (json.JSONDecodeError, TypeError):
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(f"Failed to parse raw_json for topics: {e}")
             return []
+
+    def _calculate_cs_score(self, raw_json: str) -> float:
+        """
+        Calculate CS background score from OpenAlex x_concepts.
+
+        OpenAlex x_concepts format:
+        [{
+            "id": "https://openalex.org/C41008148",
+            "display_name": "Computer science",
+            "score": 0.85,
+            "level": 0
+        }, ...]
+
+        Args:
+            raw_json: Raw JSON string from RawAuthor.raw_json
+
+        Returns:
+            CS related concepts score sum (0.0-1.0)
+        """
+        try:
+            data = json.loads(raw_json)
+            concepts = data.get("x_concepts", [])
+
+            total_score = 0.0
+            for concept in concepts:
+                # Extract concept ID from URL format
+                concept_url = concept.get("id", "")
+                concept_id = concept_url.split("/")[-1] if concept_url else ""
+
+                if concept_id in CORE_CS_CONCEPTS:
+                    score = concept.get("score", 0)
+                    total_score += score
+
+            # Cap at 1.0
+            return min(total_score, 1.0)
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(f"Failed to parse raw_json for CS score: {e}")
+            return 0.0
 
     def normalize_author_name(self, name: str) -> str:
         """Normalize author name"""
@@ -96,6 +139,8 @@ class AuthorNormalizer:
         """Create a new StdAuthor from RawAuthor"""
         # Extract topics from raw_json
         topics = self._extract_topics(raw_author.raw_json)
+        # Calculate CS background score
+        cs_score = self._calculate_cs_score(raw_author.raw_json)
 
         std_author = StdAuthor(
             openalex_author_id=raw_author.openalex_author_id,
@@ -112,6 +157,7 @@ class AuthorNormalizer:
             confirm_status="auto_identified",
             confidence_score=0.8 if std_school_id else 0.5,
             openalex_topics=topics,
+            cs_concepts_score=cs_score,
             source_task_id=task_id,
             normalized_at=datetime.now(timezone.utc)
         )
@@ -143,6 +189,8 @@ class AuthorNormalizer:
         if existing:
             # Extract topics from raw_json
             topics = self._extract_topics(raw_author.raw_json)
+            # Calculate CS background score
+            cs_score = self._calculate_cs_score(raw_author.raw_json)
 
             # Update existing (including school linkage and topics)
             existing.name_normalized = self.normalize_author_name(raw_author.display_name or "")
@@ -153,6 +201,7 @@ class AuthorNormalizer:
             existing.raw_institution_id = raw_author.last_known_institution_id
             existing.std_school_id = std_school_id
             existing.openalex_topics = topics
+            existing.cs_concepts_score = cs_score
             existing.normalized_at = datetime.now(timezone.utc)
             await self.session.flush()
             return existing
