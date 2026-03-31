@@ -5,7 +5,7 @@ Talent Service - 统一的人才服务入口
 遵循架构规范：Endpoint -> Service -> Repository
 """
 from typing import Optional, List, Tuple
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -248,6 +248,6 @@ class TalentService:
             if hasattr(talent, key):
                 setattr(talent, key, value)
 
-        talent.updated_at = datetime.utcnow()
+        talent.updated_at = datetime.now(timezone.utc)
         await self.session.flush()
         return talent

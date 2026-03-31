@@ -6,10 +6,17 @@ import json
 import asyncio
 import aiohttp
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log
+)
 
 from app.models.raw_data import RawWork, RawAuthor, RawInstitution
 from app.models.venue import Venue
@@ -26,6 +33,38 @@ logger = logging.getLogger(__name__)
 # Maximum records to fetch per venue (0 = no limit)
 # Can be overridden via environment variable or task config
 MAX_WORKS_PER_VENUE = 0  # 0 means no limit
+
+# API 请求超时配置
+DEFAULT_TIMEOUT = aiohttp.ClientTimeout(
+    total=30,      # 总超时 30 秒
+    connect=10,    # 连接超时 10 秒
+    sock_read=30   # 读取超时 30 秒
+)
+
+
+class RetryableError(Exception):
+    """可重试的错误（如速率限制、临时网络问题）"""
+    pass
+
+
+def with_retry(max_attempts: int = 3, min_wait: float = 1.0, max_wait: float = 10.0):
+    """创建重试装饰器
+
+    Args:
+        max_attempts: 最大重试次数
+        min_wait: 最小等待时间（秒）
+        max_wait: 最大等待时间（秒）
+
+    Returns:
+        重试装饰器
+    """
+    return retry(
+        stop=stop_after_attempt(max_attempts),
+        wait=wait_exponential(multiplier=1, min=min_wait, max=max_wait),
+        retry=retry_if_exception_type(RetryableError),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True
+    )
 
 
 class OpenAlexClient:
@@ -47,6 +86,36 @@ class WorkFetcher:
         self.session = session
         self.client = client or OpenAlexClient()
         self.repo = RawWorkRepository(session)
+
+    @with_retry(max_attempts=3)
+    async def _fetch_page_with_retry(
+        self,
+        http_session: aiohttp.ClientSession,
+        url: str,
+        params: dict,
+        headers: dict
+    ) -> dict:
+        """带重试的单页获取
+
+        Args:
+            http_session: aiohttp 会话
+            url: 请求 URL
+            params: 请求参数
+            headers: 请求头
+
+        Returns:
+            JSON 响应数据
+
+        Raises:
+            RetryableError: 可重试的错误（速率限制、临时网络问题）
+        """
+        async with http_session.get(url, params=params, headers=headers) as response:
+            if response.status == 429:
+                # 速率限制，触发重试
+                raise RetryableError(f"Rate limited (HTTP 429)")
+            if response.status != 200:
+                raise Exception(f"HTTP {response.status}")
+            return await response.json()
 
     async def get_work_count_from_venue(
         self,
@@ -105,7 +174,7 @@ class WorkFetcher:
         sub_task_id: Optional[int] = None,
         progress_callback: Optional[callable] = None
     ) -> FetchProgress:
-        """Fetch all works from a venue"""
+        """Fetch all works from a venue with retry support"""
         progress = FetchProgress()
         progress.current_step = f"Fetching works from {venue.venue_name}"
 
@@ -113,7 +182,7 @@ class WorkFetcher:
             progress.current_step = f"Venue {venue.venue_name} has no OpenAlex source ID"
             return progress
 
-        async with aiohttp.ClientSession() as http_session:
+        async with aiohttp.ClientSession(timeout=DEFAULT_TIMEOUT) as http_session:
             cursor = "*"
             total_fetched = 0
             batch_size = 100  # Commit every 100 records
@@ -144,12 +213,13 @@ class WorkFetcher:
                 if self.client.email:
                     headers["mailto"] = self.client.email
 
-                async with http_session.get(url, params=params, headers=headers) as response:
-                    if response.status != 200:
-                        progress.failed += 1
-                        break
-
-                    data = await response.json()
+                # 使用带重试的请求方法
+                try:
+                    data = await self._fetch_page_with_retry(http_session, url, params, headers)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch page after retries: {e}")
+                    progress.failed += 1
+                    break
 
                 works = data.get("results", [])
                 progress.total = data.get("meta", {}).get("count", 0)
@@ -176,7 +246,7 @@ class WorkFetcher:
                             author_ids=json.dumps(author_ids),
                             fetch_task_id=task_id,
                             sub_task_id=sub_task_id,
-                            fetched_at=datetime.utcnow()
+                            fetched_at=datetime.now(timezone.utc)
                         )
                         await self.repo.upsert(raw_work)
                         total_fetched += 1
@@ -331,7 +401,7 @@ class AuthorFetcher:
                                 last_known_institution_id=extract_short_id(inst_info.get("id", "")),
                                 last_known_institution_name=inst_info.get("display_name"),
                                 fetch_task_id=task_id,
-                                fetched_at=datetime.utcnow()
+                                fetched_at=datetime.now(timezone.utc)
                             )
                             await self.repo.upsert(raw_author)
                             progress.fetched += 1
@@ -424,7 +494,7 @@ class InstitutionFetcher:
                                 ror=inst_data.get("ror"),
                                 type=inst_data.get("type"),
                                 fetch_task_id=task_id,
-                                fetched_at=datetime.utcnow()
+                                fetched_at=datetime.now(timezone.utc)
                             )
                             await self.repo.upsert(raw_inst)
                             progress.fetched += 1

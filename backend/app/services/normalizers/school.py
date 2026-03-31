@@ -2,7 +2,7 @@
 School normalizer for the standardized layer.
 """
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Tuple
 
 from sqlalchemy import select
@@ -101,7 +101,7 @@ class SchoolNormalizer:
             inst_type=raw_inst.type,
             confirm_status="auto_identified",
             source_task_id=task_id,
-            normalized_at=datetime.utcnow()
+            normalized_at=datetime.now(timezone.utc)
         )
         self.session.add(std_school)
         await self.session.flush()
@@ -127,7 +127,7 @@ class SchoolNormalizer:
             matched.country_name = raw_inst.country_name
             matched.ror = raw_inst.ror
             matched.inst_type = raw_inst.type
-            matched.normalized_at = datetime.utcnow()
+            matched.normalized_at = datetime.now(timezone.utc)
             await self.session.flush()
             return matched
         else:

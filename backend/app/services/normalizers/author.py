@@ -2,7 +2,7 @@
 Author normalizer for the standardized layer.
 """
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 
 from sqlalchemy import select
@@ -113,7 +113,7 @@ class AuthorNormalizer:
             confidence_score=0.8 if std_school_id else 0.5,
             openalex_topics=topics,
             source_task_id=task_id,
-            normalized_at=datetime.utcnow()
+            normalized_at=datetime.now(timezone.utc)
         )
         self.session.add(std_author)
         await self.session.flush()
@@ -153,7 +153,7 @@ class AuthorNormalizer:
             existing.raw_institution_id = raw_author.last_known_institution_id
             existing.std_school_id = std_school_id
             existing.openalex_topics = topics
-            existing.normalized_at = datetime.utcnow()
+            existing.normalized_at = datetime.now(timezone.utc)
             await self.session.flush()
             return existing
 

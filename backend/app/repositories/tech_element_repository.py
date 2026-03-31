@@ -338,6 +338,7 @@ class TechElementRepository:
         main_sql = text(f"""
             SELECT DISTINCT t.talent_id, t.name, t.name_en, t.role_type,
                    t.current_title, t.h_index, t.works_count, t.topic_tags,
+                   t.openalex_topics,
                    s.school_id, s.school_name
             FROM core_talent_tech_tag ttt
             INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
@@ -363,6 +364,17 @@ class TechElementRepository:
                 except:
                     topic_tags = []
 
+            # Parse openalex_topics if it's a string (access by attribute name)
+            openalex_topics = row.openalex_topics if hasattr(row, 'openalex_topics') else []
+            if openalex_topics is None:
+                openalex_topics = []
+            if isinstance(openalex_topics, str):
+                try:
+                    import json
+                    openalex_topics = json.loads(openalex_topics)
+                except:
+                    openalex_topics = []
+
             talent = Talent(
                 talent_id=row.talent_id,
                 name=row.name,
@@ -372,6 +384,7 @@ class TechElementRepository:
                 h_index=row.h_index,
                 works_count=row.works_count,
                 topic_tags=topic_tags,
+                openalex_topics=openalex_topics,
             )
             if row.school_id:
                 talent.school = School(

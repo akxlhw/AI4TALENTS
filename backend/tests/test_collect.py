@@ -836,3 +836,246 @@ class TestDataValidation:
         assert saved is not None
         aliases = json.loads(saved.name_aliases)
         assert "Stanford" in aliases
+
+
+# ============ Code Review Fix Tests ============
+# 以下测试验证 code-review-fixes.md 中的修复
+
+class TestTransactionManagement:
+    """CR-01: 事务管理测试
+
+    验证 update_progress 不会自动 commit，事务边界由 orchestrator 统一管理。
+    """
+
+    @pytest.fixture
+    def progress_tracker(self, mock_session):
+        from app.services.collect.progress_tracker import ProgressTracker
+        return ProgressTracker(mock_session)
+
+    @pytest.mark.asyncio
+    async def test_update_progress_should_not_commit(self, progress_tracker, mock_session):
+        """验证 update_progress 只 flush 不 commit"""
+        # 设置 mock
+        mock_session.flush = AsyncMock()
+        mock_session.commit = AsyncMock()
+
+        # 创建测试任务
+        mock_task = MagicMock(spec=CollectTask)
+        mock_task.task_id = 1
+        mock_task.current_step = None
+        mock_task.progress_percent = 0
+
+        # 调用 update_progress
+        await progress_tracker.update_progress(mock_task, "测试步骤", 50)
+
+        # 验证调用了 flush
+        mock_session.flush.assert_called_once()
+
+        # 验证没有调用 commit
+        mock_session.commit.assert_not_called()
+
+        # 验证任务属性被更新
+        assert mock_task.current_step == "测试步骤"
+        assert mock_task.progress_percent == 50
+
+    @pytest.mark.asyncio
+    async def test_update_task_status_flushes_without_commit(self, progress_tracker, mock_session):
+        """验证 update_task_status 也只 flush 不 commit"""
+        mock_session.flush = AsyncMock()
+        mock_session.commit = AsyncMock()
+
+        mock_task = MagicMock(spec=CollectTask)
+        mock_task.task_id = 1
+
+        await progress_tracker.update_task_status(mock_task, "running")
+
+        # 验证只 flush 不 commit
+        mock_session.flush.assert_called_once()
+        mock_session.commit.assert_not_called()
+
+
+class TestTalentQueryOptimization:
+    """CR-02: 全表查询优化测试
+
+    验证 _update_talent_topic_tags 只查询与当前任务相关的人才。
+    """
+
+    @pytest.fixture
+    def orchestrator(self, mock_session):
+        from app.services.collect.orchestrator import CollectionOrchestrator
+        return CollectionOrchestrator(mock_session)
+
+    @pytest.mark.asyncio
+    async def test_update_topic_tags_filters_by_tech_element(
+        self,
+        test_session: AsyncSession,
+        test_data_setup
+    ):
+        """验证只查询与任务关联 tech_element 的人才"""
+        from app.services.collect.orchestrator import CollectionOrchestrator
+        from app.services.common.progress import CollectionProgress
+
+        # 创建测试数据
+        tech_element_1 = test_data_setup["tech_element"]
+
+        # 创建第二个技术要素
+        tech_element_2 = TechElement(
+            element_code="CV",
+            element_name="计算机视觉",
+            is_enabled=True,
+            sort_order=2,
+        )
+        test_session.add(tech_element_2)
+        await test_session.flush()
+
+        # 创建两个任务，关联不同的技术要素
+        task_1 = CollectTask(
+            task_code="CR02-TEST-001",
+            tech_element_id=tech_element_1.tech_element_id,
+            collect_mode="full",
+            triggered_by=1,
+            triggered_at=datetime.utcnow(),  # 添加必填字段
+            status="running",
+        )
+        test_session.add(task_1)
+
+        task_2 = CollectTask(
+            task_code="CR02-TEST-002",
+            tech_element_id=tech_element_2.tech_element_id,
+            collect_mode="full",
+            triggered_by=1,
+            triggered_at=datetime.utcnow(),  # 添加必填字段
+            status="pending",
+        )
+        test_session.add(task_2)
+        await test_session.flush()
+
+        # 创建人才
+        talent_1 = Talent(
+            source_type="openalex",
+            source_record_id="CR02-TALENT-001",
+            name="AI Researcher",
+            role_type=RoleType.PROFESSOR.value,
+            visibility_status=VisibilityStatus.ACTIVE.value,
+            is_visible=True,
+        )
+        talent_2 = Talent(
+            source_type="openalex",
+            source_record_id="CR02-TALENT-002",
+            name="CV Researcher",
+            role_type=RoleType.PROFESSOR.value,
+            visibility_status=VisibilityStatus.ACTIVE.value,
+            is_visible=True,
+        )
+        test_session.add_all([talent_1, talent_2])
+        await test_session.flush()
+
+        # 创建技术标签
+        tag_1 = TalentTechTag(
+            talent_id=talent_1.talent_id,
+            tech_element_id=tech_element_1.tech_element_id,
+            tech_direction_id=test_data_setup["tech_direction"].tech_direction_id,  # 添加必填字段
+            tag_level="primary",
+            tag_source="auto_mapping",
+            is_enabled=True,
+        )
+        tag_2 = TalentTechTag(
+            talent_id=talent_2.talent_id,
+            tech_element_id=tech_element_2.tech_element_id,
+            tech_direction_id=test_data_setup["tech_direction"].tech_direction_id,  # 添加必填字段
+            tag_level="primary",
+            tag_source="auto_mapping",
+            is_enabled=True,
+        )
+        test_session.add_all([tag_1, tag_2])
+        await test_session.commit()
+
+        # 创建 orchestrator 并调用方法
+        orchestrator = CollectionOrchestrator(test_session)
+        progress = CollectionProgress(task_id=task_1.task_id)
+
+        await orchestrator._update_talent_topic_tags(task_1.task_id, progress)
+
+        # 刷新并验证结果
+        await test_session.refresh(talent_1)
+        await test_session.refresh(talent_2)
+
+        # talent_1 应该有 topic_tags（关联 tech_element_1）
+        assert talent_1.topic_tags is not None
+        assert "人工智能" in talent_1.topic_tags
+
+        # talent_2 不应该有 topic_tags（关联 tech_element_2，不在任务 1 范围内）
+        # 注意：由于我们只更新了 task_1 相关的人才，talent_2 不应被修改
+        assert talent_2.topic_tags is None or "计算机视觉" not in (talent_2.topic_tags or [])
+
+    @pytest.mark.asyncio
+    async def test_update_topic_tags_handles_missing_task(
+        self,
+        test_session: AsyncSession,
+    ):
+        """验证任务不存在时的优雅处理"""
+        from app.services.collect.orchestrator import CollectionOrchestrator
+        from app.services.common.progress import CollectionProgress
+        from app.models.tech_element import TalentTechTag  # 修复导入路径
+
+        orchestrator = CollectionOrchestrator(test_session)
+        progress = CollectionProgress(task_id=99999)
+
+        # 不应抛出异常
+        await orchestrator._update_talent_topic_tags(99999, progress)
+
+        # 验证日志记录了警告
+        assert any("不存在" in log.get("message", "") for log in orchestrator.progress_tracker.get_logs())
+
+
+class TestOrchestratorTransactionBoundary:
+    """集成测试：验证 orchestrator 的事务边界"""
+
+    @pytest.mark.asyncio
+    async def test_execute_task_commits_at_end(
+        self,
+        test_session: AsyncSession,
+        test_data_setup
+    ):
+        """验证 execute_task 在结束时统一 commit"""
+        from app.services.collect.orchestrator import CollectionOrchestrator
+        from unittest.mock import patch, AsyncMock
+
+        # 创建测试任务
+        task = CollectTask(
+            task_code="TX-TEST-001",
+            tech_element_id=test_data_setup["tech_element"].tech_element_id,
+            collect_mode="full",
+            triggered_by=1,
+            triggered_at=datetime.utcnow(),  # 添加必填字段
+            status="pending",
+        )
+        test_session.add(task)
+        await test_session.commit()
+
+        # 创建 orchestrator
+        orchestrator = CollectionOrchestrator(test_session)
+
+        # Mock 各阶段方法以简化测试
+        with patch.object(orchestrator, '_estimate_total_works', return_value=0), \
+             patch.object(orchestrator, '_execute_venue_sub_tasks', new_callable=AsyncMock), \
+             patch.object(orchestrator, '_fetch_all_authors', new_callable=AsyncMock), \
+             patch.object(orchestrator, '_fetch_all_institutions', new_callable=AsyncMock), \
+             patch.object(orchestrator, '_normalize_schools', new_callable=AsyncMock), \
+             patch.object(orchestrator, '_normalize_authors', new_callable=AsyncMock), \
+             patch.object(orchestrator, '_calculate_tech_belong', new_callable=AsyncMock), \
+             patch.object(orchestrator, '_sync_to_serving_layer', return_value=[]), \
+             patch.object(orchestrator, '_fetch_selected_works', new_callable=AsyncMock), \
+             patch.object(orchestrator, '_update_talent_topic_tags', new_callable=AsyncMock), \
+             patch.object(orchestrator, '_update_school_statistics', new_callable=AsyncMock), \
+             patch.object(orchestrator, '_build_statistics', new_callable=AsyncMock):
+
+            progress = await orchestrator.execute_task(task.task_id)
+
+            # 验证任务状态为 completed
+            assert progress.status == "completed"
+
+        # 验证任务在数据库中被更新
+        await test_session.refresh(task)
+        assert task.status == "completed"
+        assert task.progress_percent == 100

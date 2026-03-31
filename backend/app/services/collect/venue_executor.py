@@ -2,7 +2,7 @@
 Venue sub-task executor for collection tasks.
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,7 +71,7 @@ class VenueSubTaskExecutor:
         )
 
         # Update venue last_collect_at
-        await self.venue_repo.update_last_collect_at(venue.venue_id, datetime.utcnow())
+        await self.venue_repo.update_last_collect_at(venue.venue_id, datetime.now(timezone.utc))
 
         return work_progress.fetched
 

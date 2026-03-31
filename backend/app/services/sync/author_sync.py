@@ -2,7 +2,7 @@
 Author sync service for synchronizing StdAuthor to Talent.
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Tuple
 
 from sqlalchemy import select
@@ -158,7 +158,7 @@ class AuthorSyncService:
             role_confidence=role_result.confidence,
             role_reason=role_result.reason,
             identification_method="heuristic",
-            identified_at=datetime.utcnow().isoformat(),
+            identified_at=datetime.now(timezone.utc).isoformat(),
         )
         self.session.add(profile)
         await self.session.flush()
@@ -176,7 +176,7 @@ class AuthorSyncService:
             profile.role_confidence = role_result.confidence
             profile.role_reason = role_result.reason
             profile.identification_method = "heuristic"
-            profile.identified_at = datetime.utcnow().isoformat()
+            profile.identified_at = datetime.now(timezone.utc).isoformat()
         else:
             profile = await self._create_role_profile(talent, role_result)
 
