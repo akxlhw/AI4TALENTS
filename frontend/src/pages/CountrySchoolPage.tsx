@@ -180,7 +180,8 @@ const CountrySchoolPage: React.FC = () => {
   const fetchSchools = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await api.schools.list()
+      // 获取所有学校数据（page_size=2000 足够覆盖当前数据量）
+      const response = await api.schools.list({ page_size: 2000 })
       setSchools(response.data.items || [])
     } catch (error) {
       console.error('Failed to fetch schools:', error)
@@ -213,6 +214,25 @@ const CountrySchoolPage: React.FC = () => {
     fetchSummary()
     fetchSchools()
   }, [])
+
+  // CR-01: 根据URL中的country_id自动切换区域标签
+  useEffect(() => {
+    if (countryId && countries.length > 0) {
+      const country = countries.find(c => c.country_id === countryId)
+      if (country) {
+        // 查找国家所属区域
+        if (NORTH_AMERICA_CODES.has(country.country_code)) {
+          setActiveRegion('north_america')
+        } else if (ASIA_PACIFIC_CODES.has(country.country_code)) {
+          setActiveRegion('asia_pacific')
+        } else if (EUROPE_CODES.has(country.country_code)) {
+          setActiveRegion('europe')
+        } else if (otherRegionCountryCodes.has(country.country_code)) {
+          setActiveRegion('other')
+        }
+      }
+    }
+  }, [countryId, countries, otherRegionCountryCodes])
 
   // 处理URL参数中的school_id - 自动跳转到学校详情页
   useEffect(() => {

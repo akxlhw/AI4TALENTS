@@ -6,8 +6,9 @@ Architecture: Endpoint -> Service -> Repository
 """
 import io
 import csv
+import asyncio
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -74,6 +75,7 @@ async def list_talents(
             cited_by_count=talent.cited_by_count,
             h_index=talent.h_index,
             topic_tags=talent.topic_tags or [],
+            openalex_topics=talent.openalex_topics or [],
         )
         for talent in talents
     ]
@@ -160,6 +162,7 @@ async def get_talent(
         h_index=talent.h_index,
         latest_active_year=talent.latest_active_year,
         topic_tags=talent.topic_tags or [],
+        openalex_topics=talent.openalex_topics or [],
         tech_tags=tech_tags,
         research_interests=talent.research_interests,
         summary=talent.summary,
@@ -416,3 +419,104 @@ async def get_talent_collaborations(
         return network
     finally:
         await collab_service.close()
+
+
+# Background task for syncing collaborations
+_sync_progress = {"status": "idle", "processed": 0, "total": 0, "collaborations": 0}
+
+
+async def sync_collaborations_task(talent_id: Optional[int] = None):
+    """Background task for syncing collaborations."""
+    global _sync_progress
+    from app.core.database import async_session_maker
+    from app.services.collaboration_service import CollaborationService
+
+    _sync_progress = {"status": "running", "processed": 0, "total": 0, "collaborations": 0}
+
+    async with async_session_maker() as session:
+        service = CollaborationService(session)
+        try:
+            if talent_id:
+                # Sync single talent
+                from app.services.talent_service import TalentService
+                talent_service = TalentService(session)
+                talent = await talent_service.get_talent_by_id(talent_id)
+                if talent:
+                    count = await service.sync_collaborations_for_talent(talent)
+                    _sync_progress["processed"] = 1
+                    _sync_progress["total"] = 1
+                    _sync_progress["collaborations"] = count
+            else:
+                # Sync all talents
+                result = await service.sync_all_collaborations(
+                    progress_callback=lambda p, t, c: _sync_progress.update({
+                        "processed": p, "total": t, "collaborations": c
+                    })
+                )
+                _sync_progress.update(result)
+
+            _sync_progress["status"] = "completed"
+        except Exception as e:
+            _sync_progress["status"] = f"error: {str(e)}"
+        finally:
+            await service.close()
+
+
+@router.post(
+    "/collaborations/sync",
+    summary="同步合作网络数据",
+    description="触发合作关系数据同步，可选单个学者或全部学者",
+)
+async def sync_collaborations(
+    background_tasks: BackgroundTasks,
+    talent_id: Optional[int] = Query(None, description="单个学者ID，为空则同步全部"),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    Trigger collaboration data sync.
+
+    - If talent_id is provided, sync for that specific talent only.
+    - Otherwise, sync for all talents in the database.
+    """
+    global _sync_progress
+
+    if _sync_progress["status"] == "running":
+        raise HTTPException(status_code=409, detail="同步任务正在进行中，请稍后再试")
+
+    # Reset progress
+    _sync_progress = {"status": "pending", "processed": 0, "total": 0, "collaborations": 0}
+
+    # Add background task
+    background_tasks.add_task(sync_collaborations_task, talent_id)
+
+    return {
+        "message": "同步任务已启动",
+        "talent_id": talent_id,
+        "sync_all": talent_id is None
+    }
+
+
+@router.get(
+    "/collaborations/status",
+    summary="获取同步状态",
+    description="获取合作网络数据同步的进度状态",
+)
+async def get_sync_status(
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    Get collaboration sync status.
+    """
+    global _sync_progress
+    from app.services.collaboration_service import CollaborationService
+
+    # Get current data status
+    service = CollaborationService(session)
+    try:
+        data_status = await service.get_sync_status()
+        return {
+            "sync_progress": _sync_progress,
+            "data_status": data_status
+        }
+    finally:
+        await service.close()

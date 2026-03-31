@@ -22,7 +22,6 @@ interface OverviewStats {
     student_count: number
     talent_count: number
     tech_element_count?: number
-    tech_direction_count?: number
     country_count?: number
   }
   version: string
@@ -109,7 +108,6 @@ const HomePage: React.FC = () => {
     student_count: 0,
     talent_count: 0,
     tech_element_count: 0,
-    tech_direction_count: 0,
     country_count: 0,
   }
 
@@ -231,18 +229,18 @@ const HomePage: React.FC = () => {
                   <Statistic title="技术要素" value={stats.tech_element_count || hotTechElements.length} />
                 </Col>
                 <Col span={8}>
-                  <Statistic title="技术方向" value={stats.tech_direction_count || 24} />
+                  <Statistic title="人才总数" value={stats.talent_count} />
                 </Col>
                 <Col span={8}>
-                  <Statistic title="人才总数" value={stats.talent_count} />
+                  <Statistic title="覆盖国家" value={stats.country_count || topCountries.length} />
                 </Col>
               </Row>
               <Row gutter={16} style={{ marginBottom: 16 }}>
                 <Col span={12}>
-                  <Statistic title="覆盖国家" value={stats.country_count || topCountries.length} />
+                  <Statistic title="覆盖院校机构" value={stats.school_count} />
                 </Col>
                 <Col span={12}>
-                  <Statistic title="覆盖院校机构" value={stats.school_count} />
+                  <Statistic title="教授/研究员" value={stats.professor_count} />
                 </Col>
               </Row>
 
@@ -300,10 +298,10 @@ const HomePage: React.FC = () => {
               </Row>
               <Row gutter={16} style={{ marginBottom: 16 }}>
                 <Col span={12}>
-                  <Statistic title="覆盖技术要素" value={stats.tech_element_count || hotTechElements.length} />
+                  <Statistic title="教授/研究员" value={stats.professor_count} />
                 </Col>
                 <Col span={12}>
-                  <Statistic title="技术方向" value={stats.tech_direction_count || 24} />
+                  <Statistic title="学生类人才" value={stats.student_count} />
                 </Col>
               </Row>
 

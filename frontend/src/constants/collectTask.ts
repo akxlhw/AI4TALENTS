@@ -5,7 +5,7 @@
  * Used in collect page and related components.
  */
 
-import type { TaskStatusConfig, CollectModeConfig, VenueTypeConfig } from '../types'
+import type { TaskStatusConfig, VenueTypeConfig } from '../types'
 
 /**
  * Task status display configuration map
@@ -19,20 +19,53 @@ export const TASK_STATUS_MAP: Record<string, TaskStatusConfig> = {
 }
 
 /**
- * Collect mode display configuration map
- */
-export const COLLECT_MODE_MAP: Record<string, CollectModeConfig> = {
-  full: { label: '全量采集', color: 'blue' },
-  incremental: { label: '增量采集', color: 'green' },
-}
-
-/**
  * Venue type display configuration map
  */
 export const VENUE_TYPE_MAP: Record<string, VenueTypeConfig> = {
   conference: { label: '会议', color: 'blue' },
   journal: { label: '期刊', color: 'purple' },
   workshop: { label: '研讨会', color: 'cyan' },
+}
+
+/**
+ * Time range configuration
+ */
+export const TIME_RANGE_CONFIG = {
+  MIN_START_YEAR: 2015,
+  DEFAULT_START_YEAR: 2020,
+}
+
+/**
+ * Get current year
+ */
+export function getCurrentYear(): number {
+  return new Date().getFullYear()
+}
+
+/**
+ * Get start year options
+ */
+export function getStartYearOptions(): Array<{ value: number; label: string }> {
+  const currentYear = getCurrentYear()
+  const options = []
+  for (let year = currentYear; year >= TIME_RANGE_CONFIG.MIN_START_YEAR; year--) {
+    options.push({ value: year, label: `${year}年` })
+  }
+  return options
+}
+
+/**
+ * Get end year options based on start year
+ */
+export function getEndYearOptions(startYear: number): Array<{ value: number | null; label: string }> {
+  const currentYear = getCurrentYear()
+  const options: Array<{ value: number | null; label: string }> = [
+    { value: null, label: '至今' }
+  ]
+  for (let year = currentYear; year >= startYear; year--) {
+    options.push({ value: year, label: `${year}年` })
+  }
+  return options
 }
 
 /**
@@ -44,13 +77,6 @@ export function getTaskStatusConfig(status: string): TaskStatusConfig {
     color: 'default',
     status: 'default',
   }
-}
-
-/**
- * Get collect mode config with fallback
- */
-export function getCollectModeConfig(mode: string): CollectModeConfig {
-  return COLLECT_MODE_MAP[mode] || { label: mode, color: 'default' }
 }
 
 /**

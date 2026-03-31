@@ -110,6 +110,7 @@ class AuthorSyncService:
         talent.works_count = std_author.works_count or 0
         talent.cited_by_count = std_author.cited_by_count or 0
         talent.h_index = std_author.h_index or 0
+        talent.openalex_topics = std_author.openalex_topics or []
         talent.source_type = "openalex"
         talent.source_record_id = std_author.openalex_author_id
 
@@ -136,6 +137,7 @@ class AuthorSyncService:
             works_count=std_author.works_count or 0,
             cited_by_count=std_author.cited_by_count or 0,
             h_index=std_author.h_index or 0,
+            openalex_topics=std_author.openalex_topics or [],
             visibility_status=VisibilityStatus.ACTIVE.value,
             is_visible=True,
         )

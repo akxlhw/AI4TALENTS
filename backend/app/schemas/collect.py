@@ -1,16 +1,26 @@
 """
-Collect configuration schemas - Simplified for MVP v1.1
-采集配置相关 DTO - 简化版
+Collect configuration schemas - MVP v1.2
+采集配置相关 DTO
 
 采集逻辑：
 - 采集最小单位：技术要素
 - 数据类型：固定为学者+论文+机构
-- 时间范围：固定为2010.1.1至今
-- 采集模式：全量/增量
+- 时间范围：用户可配置年份范围（2015年至今）
 """
 from typing import Optional, List, Any
 from pydantic import BaseModel, Field
 from datetime import datetime
+
+
+def get_current_year() -> int:
+    """Get current year."""
+    from datetime import date
+    return date.today().year
+
+
+# 时间范围配置常量
+MIN_START_YEAR = 2015
+DEFAULT_START_YEAR = 2020
 
 
 # ============ Venue (顶会顶刊) Schema ============
@@ -57,7 +67,15 @@ class UpdateCollectSourcesRequest(BaseModel):
 class TriggerCollectTaskRequest(BaseModel):
     """触发采集任务请求"""
     tech_element_id: int = Field(..., description="技术要素ID")
-    collect_mode: str = Field(default="full", pattern="^(full|incremental)$", description="采集模式：full=全量, incremental=增量")
+    start_year: int = Field(
+        default=DEFAULT_START_YEAR,
+        ge=MIN_START_YEAR,
+        description=f"起始年份，最小{MIN_START_YEAR}年"
+    )
+    end_year: Optional[int] = Field(
+        default=None,
+        description="截止年份，None表示至今"
+    )
 
 
 class CollectTaskResponse(BaseModel):
@@ -66,7 +84,8 @@ class CollectTaskResponse(BaseModel):
     task_code: str
     tech_element_id: Optional[int] = None
     tech_element_name: Optional[str] = None
-    collect_mode: str
+    start_year: int = Field(default=DEFAULT_START_YEAR, description="起始年份")
+    end_year: Optional[int] = Field(default=None, description="截止年份，None表示至今")
     triggered_by: Optional[Any] = None  # Can be user ID (int) or username (str)
     triggered_at: datetime
     status: str
@@ -82,7 +101,7 @@ class CollectTaskResponse(BaseModel):
     error_message: Optional[str] = None
     error_details: Optional[dict] = None
     result_summary: Optional[dict] = None
-    execution_logs: Optional[List[dict]] = None  # 新增：执行日志
+    execution_logs: Optional[List[dict]] = None
     created_at: datetime
 
     class Config:
@@ -107,7 +126,24 @@ TASK_STATUS_OPTIONS = [
     {"value": "cancelled", "label": "已取消"},
 ]
 
-COLLECT_MODE_OPTIONS = [
-    {"value": "full", "label": "全量采集"},
-    {"value": "incremental", "label": "增量采集"},
-]
+
+# ============ Year Options ============
+
+def get_year_options() -> List[dict]:
+    """获取年份选项列表"""
+    current_year = get_current_year()
+    return [
+        {"value": year, "label": f"{year}年"}
+        for year in range(current_year, MIN_START_YEAR - 1, -1)
+    ]
+
+
+def get_end_year_options(start_year: int) -> List[dict]:
+    """获取截止年份选项列表（包含"至今"选项）"""
+    current_year = get_current_year()
+    options = [
+        {"value": year, "label": f"{year}年"}
+        for year in range(current_year, start_year - 1, -1)
+    ]
+    options.insert(0, {"value": None, "label": "至今"})
+    return options

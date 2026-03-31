@@ -10,7 +10,7 @@
  */
 import { Modal, Descriptions, Badge, Progress, Card, Space, Typography, Table, Timeline, Alert, Button, Popconfirm } from 'antd'
 import { ReloadOutlined, DeleteOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
-import type { CollectTask, TaskStatusConfig, CollectModeConfig } from '../../types'
+import type { CollectTask, TaskStatusConfig } from '../../types'
 
 const { Text } = Typography
 
@@ -18,7 +18,6 @@ export interface TaskDetailModalProps {
   visible: boolean
   task: CollectTask | null
   taskStatusMap: Record<string, TaskStatusConfig>
-  collectModeMap: Record<string, CollectModeConfig>
   onRefresh: () => void
   onCancelTask: (taskId: number) => void
   onDeleteTask: (taskId: number) => void
@@ -29,7 +28,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   visible,
   task,
   taskStatusMap,
-  collectModeMap,
   onRefresh,
   onCancelTask,
   onDeleteTask,
@@ -106,8 +104,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           />
         </Descriptions.Item>
         <Descriptions.Item label="技术要素">{task.tech_element_name}</Descriptions.Item>
-        <Descriptions.Item label="采集模式">
-          {collectModeMap[task.collect_mode]?.label}
+        <Descriptions.Item label="时间范围">
+          {task.start_year}年 ~ {task.end_year ? `${task.end_year}年` : '至今'}
         </Descriptions.Item>
         <Descriptions.Item label="进度" span={2}>
           <Progress

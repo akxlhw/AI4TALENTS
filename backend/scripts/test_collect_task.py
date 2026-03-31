@@ -80,7 +80,7 @@ async def test_collect_task():
 
         # 创建 VenueSubTask
         from datetime import timedelta
-        time_start = datetime(2015, 1, 1)
+        time_start = datetime(2020, 1, 1)
         time_end = datetime.utcnow()
 
         for binding in bindings:

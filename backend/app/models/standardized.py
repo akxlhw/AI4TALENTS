@@ -2,7 +2,7 @@
 Standardized data layer models.
 标准化层模型 - 经过清洗和归一的数据
 """
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, Float, Index
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, Float, Index, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -47,6 +47,9 @@ class StdAuthor(Base, TimestampMixin):
 
     # Confidence score
     confidence_score = Column(Float, default=0.8)
+
+    # Research topics from OpenAlex (topics field)
+    openalex_topics = Column(JSON, default=[])
 
     # Processing metadata
     source_task_id = Column(Integer, ForeignKey("sync_collect_task.task_id"), nullable=True)

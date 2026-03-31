@@ -305,3 +305,98 @@ class CollaborationService:
 
         await self.session.commit()
         return collaborations_created
+
+    async def sync_all_collaborations(
+        self,
+        batch_size: int = 100,
+        works_per_author: int = 50,
+        progress_callback: Optional[callable] = None
+    ) -> Dict:
+        """
+        Sync collaboration data for all talents in the database.
+
+        Args:
+            batch_size: Number of talents to process in each batch
+            works_per_author: Maximum works to fetch per author
+            progress_callback: Optional callback for progress updates
+
+        Returns:
+            Dict with sync statistics
+        """
+        from sqlalchemy import func
+
+        # Get total count
+        count_stmt = select(func.count(Talent.talent_id))
+        result = await self.session.execute(count_stmt)
+        total_talents = result.scalar() or 0
+
+        if total_talents == 0:
+            return {"total_talents": 0, "processed": 0, "collaborations_created": 0}
+
+        processed = 0
+        total_collaborations = 0
+        offset = 0
+
+        while offset < total_talents:
+            # Fetch batch of talents
+            stmt = select(Talent).offset(offset).limit(batch_size)
+            result = await self.session.execute(stmt)
+            talents = result.scalars().all()
+
+            for talent in talents:
+                try:
+                    count = await self.sync_collaborations_for_talent(talent, works_per_author)
+                    total_collaborations += count
+                    processed += 1
+
+                    if progress_callback:
+                        progress_callback(processed, total_talents, total_collaborations)
+
+                except Exception as e:
+                    print(f"Error syncing collaborations for talent {talent.talent_id}: {e}")
+
+            offset += batch_size
+
+        return {
+            "total_talents": total_talents,
+            "processed": processed,
+            "collaborations_created": total_collaborations
+        }
+
+    async def get_sync_status(self) -> Dict:
+        """
+        Get current collaboration sync status.
+
+        Returns statistics about collaboration data.
+        """
+        from sqlalchemy import func
+        from app.models.collaboration import Collaboration
+
+        # Count total collaborations
+        collab_count_stmt = select(func.count(Collaboration.collaboration_id))
+        result = await self.session.execute(collab_count_stmt)
+        total_collaborations = result.scalar() or 0
+
+        # Count talents with collaborations
+        talent_count_stmt = select(func.count(Talent.talent_id.distinct())).select_from(
+            Collaboration.__table__.join(
+                Talent.__table__,
+                or_(
+                    Collaboration.talent_id_1 == Talent.talent_id,
+                    Collaboration.talent_id_2 == Talent.talent_id
+                )
+            )
+        )
+        # Simpler approach: count unique talent IDs from collaborations
+        talents_with_collab = set()
+        stmt = select(Collaboration)
+        result = await self.session.execute(stmt)
+        for collab in result.scalars().all():
+            talents_with_collab.add(collab.talent_id_1)
+            talents_with_collab.add(collab.talent_id_2)
+
+        return {
+            "total_collaborations": total_collaborations,
+            "talents_with_collaborations": len(talents_with_collab),
+            "last_sync": None  # Could be enhanced to track last sync time
+        }

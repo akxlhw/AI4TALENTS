@@ -42,6 +42,9 @@ class Talent(Base, TimestampMixin):
     # Format: ["AI", "Machine Learning", "Deep Learning"]
     # This field is updated when tech_tags relationship changes
     topic_tags = Column(JSON, default=[])
+    # openalex_topics: Research topics from OpenAlex API (topics field)
+    # Format: ["Machine Learning", "Computer Vision", "Natural Language Processing"]
+    openalex_topics = Column(JSON, default=[])
     research_interests = Column(Text, nullable=True)
 
     # Summary for display

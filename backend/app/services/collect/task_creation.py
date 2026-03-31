@@ -20,7 +20,7 @@ class TaskCreationService:
     """Service for creating collection tasks"""
 
     # Time window defaults
-    FULL_COLLECTION_START_YEAR = 2015
+    FULL_COLLECTION_START_YEAR = 2020
     INCREMENTAL_LOOKBACK_DAYS = 30
 
     def __init__(self, session: AsyncSession):

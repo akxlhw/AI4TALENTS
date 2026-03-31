@@ -6,9 +6,9 @@
  * - 显示任务状态、进度
  * - 提供查看、取消、删除操作
  */
-import { Table, Typography, Tag, Space, Button, Tooltip, Badge, Progress, Empty, Popconfirm } from 'antd'
+import { Table, Typography, Space, Button, Tooltip, Badge, Progress, Empty, Popconfirm } from 'antd'
 import { EyeOutlined, StopOutlined, DeleteOutlined } from '@ant-design/icons'
-import type { CollectTask, TaskStatusConfig, CollectModeConfig } from '../../types'
+import type { CollectTask, TaskStatusConfig } from '../../types'
 
 const { Text } = Typography
 
@@ -19,7 +19,6 @@ export interface CollectTaskTableProps {
   page: number
   pageSize: number
   taskStatusMap: Record<string, TaskStatusConfig>
-  collectModeMap: Record<string, CollectModeConfig>
   onViewTask: (task: CollectTask) => void
   onCancelTask: (taskId: number) => void
   onDeleteTask: (taskId: number) => void
@@ -33,7 +32,6 @@ const CollectTaskTable: React.FC<CollectTaskTableProps> = ({
   page,
   pageSize,
   taskStatusMap,
-  collectModeMap,
   onViewTask,
   onCancelTask,
   onDeleteTask,
@@ -52,13 +50,11 @@ const CollectTaskTable: React.FC<CollectTaskTableProps> = ({
       key: 'tech_element_name',
     },
     {
-      title: '采集模式',
-      dataIndex: 'collect_mode',
-      key: 'collect_mode',
-      render: (mode: string) => {
-        const item = collectModeMap[mode] || { label: mode, color: 'default' }
-        return <Tag color={item.color}>{item.label}</Tag>
-      },
+      title: '时间范围',
+      key: 'time_range',
+      render: (_: unknown, record: CollectTask) => (
+        <Text>{record.start_year}年 ~ {record.end_year ? `${record.end_year}年` : '至今'}</Text>
+      ),
     },
     {
       title: '状态',

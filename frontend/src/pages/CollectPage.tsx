@@ -1,10 +1,11 @@
 /**
- * 采集配置管理页面 - MVP v1.1 简化版
+ * 采集配置管理页面 - MVP v1.2
  *
  * 功能说明：
  * - 技术要素配置：管理技术要素关联的顶会顶刊
- * - 采集任务：基于技术要素触发采集，支持全量/增量模式
- * - 固定参数：数据类型（学者+论文+机构）、时间范围（2015.1.1至今）
+ * - 采集任务：基于技术要素触发采集，可配置年份范围
+ * - 固定参数：数据类型（学者+论文+机构）
+ * - 可配置参数：时间范围（起始年份~截止年份/至今）
  */
 import { useEffect, useState } from 'react'
 import {
@@ -24,7 +25,7 @@ import {
   Tooltip,
   Empty,
   Spin,
-  Radio,
+  Select,
   Timeline,
   Alert,
   Transfer,
@@ -45,8 +46,10 @@ import {
 import { api } from '../services/api'
 import {
   getTaskStatusConfig,
-  getCollectModeConfig,
   getVenueTypeConfig,
+  getStartYearOptions,
+  getEndYearOptions,
+  TIME_RANGE_CONFIG,
 } from '../constants'
 import type { VenueItem, VenueBinding, TechElementCollect, CollectTask } from '../types'
 
@@ -73,7 +76,10 @@ const CollectPage: React.FC = () => {
   const [venueModalVisible, setVenueModalVisible] = useState(false)
   const [collectModalVisible, setCollectModalVisible] = useState(false)
   const [selectedElement, setSelectedElement] = useState<TechElementCollect | null>(null)
-  const [collectMode, setCollectMode] = useState<string>('full')
+
+  // Time range state
+  const [startYear, setStartYear] = useState<number>(TIME_RANGE_CONFIG.DEFAULT_START_YEAR)
+  const [endYear, setEndYear] = useState<number | null>(null)  // null = 至今
 
   // Venue selection state
   const [allVenues, setAllVenues] = useState<VenueItem[]>([])
@@ -187,7 +193,8 @@ const CollectPage: React.FC = () => {
 
   const handleOpenCollect = (element: TechElementCollect) => {
     setSelectedElement(element)
-    setCollectMode('full')
+    setStartYear(TIME_RANGE_CONFIG.DEFAULT_START_YEAR)
+    setEndYear(null)
     setCollectModalVisible(true)
   }
 
@@ -197,7 +204,8 @@ const CollectPage: React.FC = () => {
     try {
       await api.collect.triggerTask({
         tech_element_id: selectedElement.tech_element_id,
-        collect_mode: collectMode,
+        start_year: startYear,
+        end_year: endYear,
       })
       message.success('采集任务已启动')
       setCollectModalVisible(false)
@@ -346,13 +354,13 @@ const CollectPage: React.FC = () => {
       key: 'tech_element_name',
     },
     {
-      title: '采集模式',
-      dataIndex: 'collect_mode',
-      key: 'collect_mode',
-      render: (mode: string) => {
-        const item = getCollectModeConfig(mode)
-        return <Tag color={item.color}>{item.label}</Tag>
-      },
+      title: '时间范围',
+      key: 'time_range',
+      render: (_: unknown, record: CollectTask) => (
+        <Text>
+          {record.start_year}年 ~ {record.end_year ? `${record.end_year}年` : '至今'}
+        </Text>
+      ),
     },
     {
       title: '状态',
@@ -581,12 +589,29 @@ const CollectPage: React.FC = () => {
             </Space>
           </Descriptions.Item>
           <Descriptions.Item label="数据类型">学者、论文、机构</Descriptions.Item>
-          <Descriptions.Item label="时间范围">2015.1.1 至今</Descriptions.Item>
-          <Descriptions.Item label="采集模式">
-            <Radio.Group value={collectMode} onChange={(e) => setCollectMode(e.target.value)}>
-              <Radio.Button value="full">全量采集</Radio.Button>
-              <Radio.Button value="incremental">增量采集</Radio.Button>
-            </Radio.Group>
+          <Descriptions.Item label="时间范围">
+            <Space>
+              <Select
+                value={startYear}
+                onChange={(value) => {
+                  setStartYear(value)
+                  // 如果截止年份小于起始年份，自动调整
+                  if (endYear !== null && endYear < value) {
+                    setEndYear(null)
+                  }
+                }}
+                style={{ width: 120 }}
+                options={getStartYearOptions()}
+              />
+              <Text>至</Text>
+              <Select
+                value={endYear}
+                onChange={setEndYear}
+                style={{ width: 120 }}
+                options={getEndYearOptions(startYear)}
+                placeholder="至今"
+              />
+            </Space>
           </Descriptions.Item>
         </Descriptions>
       </Modal>
@@ -651,8 +676,8 @@ const CollectPage: React.FC = () => {
                 />
               </Descriptions.Item>
               <Descriptions.Item label="技术要素">{selectedTask.tech_element_name}</Descriptions.Item>
-              <Descriptions.Item label="采集模式">
-                {getCollectModeConfig(selectedTask.collect_mode).label}
+              <Descriptions.Item label="时间范围">
+                {selectedTask.start_year}年 ~ {selectedTask.end_year ? `${selectedTask.end_year}年` : '至今'}
               </Descriptions.Item>
               <Descriptions.Item label="进度" span={2}>
                 <Progress

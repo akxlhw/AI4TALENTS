@@ -147,7 +147,7 @@ class TestUnifiedCollectServiceUnit:
 
         start, end = service._get_time_window("full")
 
-        assert start.year == 2015  # FULL_COLLECTION_START_YEAR
+        assert start.year == 2020  # FULL_COLLECTION_START_YEAR
         assert end <= datetime.utcnow()
 
     def test_time_window_incremental_mode(self, mock_session):

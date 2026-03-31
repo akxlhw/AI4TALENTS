@@ -275,14 +275,21 @@ class AuthorFetcher:
         progress.total = len(author_ids)
         progress.current_step = "Fetching authors from OpenAlex"
 
+        logger.info(f"开始获取作者数据: 共 {len(author_ids)} 位作者")
+
         # Find which authors are already in database
         missing_ids = await self.repo.get_missing_author_ids(author_ids)
         progress.current_step = f"Fetching {len(missing_ids)} new authors"
 
+        logger.info(f"其中 {len(missing_ids)} 位需要从 API 获取，{len(author_ids) - len(missing_ids)} 位已存在")
+
         async with aiohttp.ClientSession() as http_session:
             batch_size = 50
+            total_batches = (len(missing_ids) + batch_size - 1) // batch_size
+
             for i in range(0, len(missing_ids), batch_size):
                 batch = missing_ids[i:i + batch_size]
+                batch_num = i // batch_size + 1
 
                 try:
                     url = f"{OPENALEX_API_BASE}/authors"
@@ -297,12 +304,14 @@ class AuthorFetcher:
 
                     async with http_session.get(url, params=params, headers=headers) as response:
                         if response.status != 200:
+                            logger.warning(f"批次 {batch_num}/{total_batches} 请求失败: HTTP {response.status}")
                             progress.failed += len(batch)
                             continue
 
                         data = await response.json()
 
                     authors = data.get("results", [])
+                    batch_fetched = 0
                     for author_data in authors:
                         try:
                             # OpenAlex returns 'last_known_institutions' (plural, list)
@@ -326,10 +335,18 @@ class AuthorFetcher:
                             )
                             await self.repo.upsert(raw_author)
                             progress.fetched += 1
+                            batch_fetched += 1
                         except Exception as e:
+                            logger.warning(f"解析作者数据失败: {e}")
                             progress.failed += 1
 
+                    # 每 10 批提交一次（约 500 条），减少锁持有时间
+                    if batch_num % 10 == 0:
+                        await self.session.commit()
+                        logger.info(f"作者获取进度: {batch_num}/{total_batches} 批次, 已获取 {progress.fetched} 位")
+
                 except Exception as e:
+                    logger.error(f"批次 {batch_num} 获取失败: {e}")
                     progress.failed += len(batch)
 
                 if progress_callback:
@@ -337,6 +354,7 @@ class AuthorFetcher:
 
                 await asyncio.sleep(REQUEST_DELAY)
 
+        logger.info(f"作者获取完成: 共 {progress.fetched} 位, 失败 {progress.failed} 位")
         return progress
 
 
@@ -359,14 +377,21 @@ class InstitutionFetcher:
         progress.total = len(institution_ids)
         progress.current_step = "Fetching institutions from OpenAlex"
 
+        logger.info(f"开始获取机构数据: 共 {len(institution_ids)} 个机构")
+
         # Find which institutions are already in database
         missing_ids = await self.repo.get_missing_ids(institution_ids)
         progress.current_step = f"Fetching {len(missing_ids)} new institutions"
 
+        logger.info(f"其中 {len(missing_ids)} 个需要从 API 获取，{len(institution_ids) - len(missing_ids)} 个已存在")
+
         async with aiohttp.ClientSession() as http_session:
             batch_size = 50
+            total_batches = (len(missing_ids) + batch_size - 1) // batch_size
+
             for i in range(0, len(missing_ids), batch_size):
                 batch = missing_ids[i:i + batch_size]
+                batch_num = i // batch_size + 1
 
                 try:
                     url = f"{OPENALEX_API_BASE}/institutions"
@@ -381,6 +406,7 @@ class InstitutionFetcher:
 
                     async with http_session.get(url, params=params, headers=headers) as response:
                         if response.status != 200:
+                            logger.warning(f"批次 {batch_num}/{total_batches} 请求失败: HTTP {response.status}")
                             progress.failed += len(batch)
                             continue
 
@@ -403,9 +429,16 @@ class InstitutionFetcher:
                             await self.repo.upsert(raw_inst)
                             progress.fetched += 1
                         except Exception as e:
+                            logger.warning(f"解析机构数据失败: {e}")
                             progress.failed += 1
 
+                    # 每 5 批提交一次，减少锁持有时间
+                    if batch_num % 5 == 0:
+                        await self.session.commit()
+                        logger.info(f"机构获取进度: {batch_num}/{total_batches} 批次, 已获取 {progress.fetched} 个")
+
                 except Exception as e:
+                    logger.error(f"批次 {batch_num} 获取失败: {e}")
                     progress.failed += len(batch)
 
                 if progress_callback:
@@ -413,4 +446,5 @@ class InstitutionFetcher:
 
                 await asyncio.sleep(REQUEST_DELAY)
 
+        logger.info(f"机构获取完成: 共 {progress.fetched} 个, 失败 {progress.failed} 个")
         return progress

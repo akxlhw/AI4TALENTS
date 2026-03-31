@@ -249,7 +249,8 @@ export interface CollectTask {
   task_code: string
   tech_element_id: number
   tech_element_name: string | null
-  collect_mode: string
+  start_year: number
+  end_year: number | null  // null 表示至今
   triggered_by: number | null
   triggered_at: string
   status: string
@@ -295,12 +296,6 @@ export interface TaskStatusConfig {
   label: string
   color: string
   status: 'success' | 'processing' | 'error' | 'default' | 'warning'
-}
-
-// Collect Mode Config - 采集模式配置
-export interface CollectModeConfig {
-  label: string
-  color: string
 }
 
 // Venue Type Config - 顶会顶刊类型配置

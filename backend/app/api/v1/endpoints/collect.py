@@ -1,12 +1,12 @@
 """
-Collect configuration API endpoints - Simplified for MVP v1.1
-采集配置相关接口 - 简化版
+Collect configuration API endpoints - MVP v1.2
+采集配置相关接口
 
 功能说明：
 - 技术要素配置：管理技术要素关联的顶会顶刊
-- 采集任务：基于技术要素触发采集，支持全量/增量模式
-- 固定参数：数据类型（学者+论文+机构）、时间范围（2010.1.1至今）
-- 新增：Venue级别的子任务追踪
+- 采集任务：基于技术要素触发采集，可配置年份范围
+- 固定参数：数据类型（学者+论文+机构）
+- 可配置参数：时间范围（起始年份~截止年份/至今）
 """
 import logging
 from typing import Optional, List
@@ -28,7 +28,11 @@ from app.schemas.collect import (
     CollectTaskResponse,
     CollectTaskListResponse,
     TASK_STATUS_OPTIONS,
-    COLLECT_MODE_OPTIONS,
+    get_year_options,
+    get_end_year_options,
+    get_current_year,
+    MIN_START_YEAR,
+    DEFAULT_START_YEAR,
 )
 from app.schemas.venue import VenueSubTaskResponse, VenueSubTaskListResponse
 from app.api.v1.endpoints.auth import require_user
@@ -47,91 +51,6 @@ def require_admin_user(current_user: dict = Depends(require_user)) -> dict:
 
 # Background task runner
 import asyncio
-import subprocess
-import sys
-import os
-
-
-def run_collect_task_in_subprocess(task_id: int):
-    """
-    Run collection task in a separate subprocess for maximum reliability.
-    Uses a standalone script file to avoid Windows asyncio issues.
-    """
-    import sys
-    import os
-
-    # Get the backend directory
-    current_file = os.path.abspath(__file__)
-    endpoints_dir = os.path.dirname(current_file)
-    v1_dir = os.path.dirname(endpoints_dir)
-    api_dir = os.path.dirname(v1_dir)
-    app_dir = os.path.dirname(api_dir)
-    backend_dir = os.path.dirname(app_dir)
-
-    print(f"[DEBUG] Backend dir: {backend_dir}")
-    sys.stdout.flush()
-
-    try:
-        # Use the dedicated script file
-        script_path = os.path.join(backend_dir, 'scripts', 'run_collect_task.py')
-
-        print(f"[DEBUG] Running subprocess with script: {script_path}")
-        sys.stdout.flush()
-
-        # Run in subprocess with proper environment
-        env = os.environ.copy()
-        env['PYTHONIOENCODING'] = 'utf-8'
-
-        result = subprocess.run(
-            [sys.executable, script_path, str(task_id)],
-            capture_output=True,
-            text=True,
-            timeout=600,  # 10 minute timeout
-            cwd=backend_dir,
-            env=env
-        )
-
-        print(f"[DEBUG] Subprocess returncode: {result.returncode}")
-        print(f"[DEBUG] Subprocess stdout: {result.stdout[:1000] if result.stdout else 'empty'}")
-        if result.stderr:
-            print(f"[DEBUG] Subprocess stderr: {result.stderr[:500]}")
-        sys.stdout.flush()
-
-        if result.returncode != 0:
-            error_msg = result.stderr[:500] if result.stderr else 'Unknown error'
-            logger.error(f"Subprocess failed: {error_msg}")
-            # Update task status using absolute path
-            db_path = os.path.join(backend_dir, 'talent.db')
-            import sqlite3
-            from datetime import datetime
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute(
-                'UPDATE sync_collect_task SET status = ?, error_message = ?, completed_at = ?, current_step = ? WHERE task_id = ? AND status = ?',
-                ('failed', error_msg, datetime.utcnow().isoformat(), '执行失败', task_id, 'running')
-            )
-            conn.commit()
-            conn.close()
-        else:
-            logger.info(f"Subprocess completed: {result.stdout}")
-    except Exception as e:
-        print(f"[DEBUG] Exception in run_collect_task_in_subprocess: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.stdout.flush()
-        logger.error(f"Failed to run subprocess: {e}")
-
-
-def start_background_task_in_thread(task_id: int):
-    """Start background task in a separate thread for reliable execution."""
-    import threading
-    print(f"[DEBUG] start_background_task_in_thread called for task #{task_id}")
-    sys.stdout.flush()
-    thread = threading.Thread(target=run_collect_task_in_subprocess, args=(task_id,), daemon=False)
-    thread.start()
-    print(f"[DEBUG] Thread started: {thread.is_alive()}")
-    sys.stdout.flush()
-    logger.info(f"Started background thread for task #{task_id}")
 
 
 async def run_collect_task_background(task_id: int):
@@ -289,12 +208,24 @@ async def list_tasks(
 
     items = []
     for t in tasks:
+        # 从 time_window_start/end 提取年份
+        start_year = t.time_window_start.year if t.time_window_start else DEFAULT_START_YEAR
+        end_year = t.time_window_end.year if t.time_window_end else None
+        # 如果 end_year 是当前年份且 time_window_end 接近当前时间，则显示为"至今"
+        current_year = get_current_year()
+        if end_year == current_year and t.time_window_end:
+            # 检查是否是"至今"（接近当前时间）
+            from datetime import timedelta
+            if datetime.utcnow() - t.time_window_end < timedelta(days=1):
+                end_year = None
+
         items.append(CollectTaskResponse(
             task_id=t.task_id,
             task_code=t.task_code,
             tech_element_id=t.tech_element_id,
             tech_element_name=t.tech_element.element_name if t.tech_element else None,
-            collect_mode=t.collect_mode,
+            start_year=start_year,
+            end_year=end_year,
             triggered_by=t.triggered_by,
             triggered_at=t.triggered_at,
             status=t.status,
@@ -325,11 +256,11 @@ async def list_tasks(
 
 **固定参数：**
 - 数据类型：学者、论文、机构
-- 时间范围：2010.1.1 至今
 
 **可配置参数：**
-- tech_element_id：技术要素ID
-- collect_mode：full（全量）或 incremental（增量）
+- tech_element_id：技术要素ID（必填）
+- start_year：起始年份，默认2020，最小2015
+- end_year：截止年份，默认为至今
 
 **说明：**
 采集任务在后台异步执行，可通过任务列表查看进度。
@@ -369,17 +300,40 @@ async def trigger_task(
                 detail=f"There is already a running task (#{t.task_id}) for this tech element."
             )
 
-    # Determine time window BEFORE creating task
-    from datetime import timedelta
-    if request.collect_mode == "full":
-        time_start = datetime(2015, 1, 1)
+    # Validate year range
+    current_year = get_current_year()
+    start_year = request.start_year
+
+    if start_year < MIN_START_YEAR:
+        raise HTTPException(
+            status_code=400,
+            detail=f"起始年份不能早于 {MIN_START_YEAR} 年"
+        )
+    if start_year > current_year:
+        raise HTTPException(
+            status_code=400,
+            detail=f"起始年份不能晚于当前年份 ({current_year})"
+        )
+
+    end_year = request.end_year
+    if end_year is not None:
+        if end_year < start_year:
+            raise HTTPException(
+                status_code=400,
+                detail="截止年份不能早于起始年份"
+            )
+        if end_year > current_year:
+            raise HTTPException(
+                status_code=400,
+                detail=f"截止年份不能晚于当前年份 ({current_year})"
+            )
+
+    # Calculate time window
+    time_start = datetime(start_year, 1, 1)
+    if end_year is None:
+        time_end = datetime.utcnow()  # 至今
     else:
-        # Incremental: look back 30 days, or use last_collect_at if available
-        if element.last_collect_at:
-            time_start = element.last_collect_at - timedelta(days=30)
-        else:
-            time_start = datetime.utcnow() - timedelta(days=30)
-    time_end = datetime.utcnow()
+        time_end = datetime(end_year, 12, 31, 23, 59, 59)
 
     # Generate unique task code
     task_code = f"COLLECT-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
@@ -387,7 +341,7 @@ async def trigger_task(
     task = await task_repo.create_task(
         task_code=task_code,
         tech_element_id=request.tech_element_id,
-        collect_mode=request.collect_mode,
+        collect_mode="full",  # 保留字段以兼容数据库，但不再使用
         triggered_by=current_user.get("user_id"),
         time_window_start=time_start,
         time_window_end=time_end,
@@ -418,7 +372,8 @@ async def trigger_task(
 
     await session.commit()
 
-    logger.info(f"Created collect task {task.task_id} for {element.element_name} with {len(bindings)} venues")
+    logger.info(f"Created collect task {task.task_id} for {element.element_name} "
+                f"with {len(bindings)} venues, year range: {start_year}-{end_year or '至今'}")
 
     # Start background task using asyncio (in-process, works reliably on Windows)
     asyncio.create_task(run_collect_task_background(task.task_id))
@@ -429,7 +384,8 @@ async def trigger_task(
         task_code=task.task_code,
         tech_element_id=task.tech_element_id,
         tech_element_name=element.element_name,
-        collect_mode=task.collect_mode,
+        start_year=start_year,
+        end_year=end_year,
         triggered_by=task.triggered_by,
         triggered_at=task.triggered_at,
         status=task.status,
@@ -467,12 +423,23 @@ async def get_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    # 从 time_window_start/end 提取年份
+    start_year = task.time_window_start.year if task.time_window_start else DEFAULT_START_YEAR
+    end_year = task.time_window_end.year if task.time_window_end else None
+    # 如果 end_year 是当前年份且 time_window_end 接近当前时间，则显示为"至今"
+    current_year = get_current_year()
+    if end_year == current_year and task.time_window_end:
+        from datetime import timedelta
+        if datetime.utcnow() - task.time_window_end < timedelta(days=1):
+            end_year = None
+
     return CollectTaskResponse(
         task_id=task.task_id,
         task_code=task.task_code,
         tech_element_id=task.tech_element_id,
         tech_element_name=task.tech_element.element_name if task.tech_element else None,
-        collect_mode=task.collect_mode,
+        start_year=start_year,
+        end_year=end_year,
         triggered_by=task.triggered_by,
         triggered_at=task.triggered_at,
         status=task.status,
@@ -617,7 +584,8 @@ async def get_active_tasks(
         task_code=t.task_code,
         tech_element_id=t.tech_element_id,
         tech_element_name=t.tech_element.element_name if t.tech_element else None,
-        collect_mode=t.collect_mode,
+        start_year=t.time_window_start.year if t.time_window_start else DEFAULT_START_YEAR,
+        end_year=t.time_window_end.year if t.time_window_end else None,
         triggered_by=t.triggered_by,
         triggered_at=t.triggered_at,
         status=t.status,
@@ -650,13 +618,18 @@ async def get_task_statuses():
 
 
 @router.get(
-    "/options/collect-modes",
-    summary="获取采集模式选项",
-    description="获取所有可用的采集模式选项"
+    "/options/years",
+    summary="获取年份选项",
+    description="获取可用的年份选项列表"
 )
-async def get_collect_modes():
-    """Get collect mode options."""
-    return COLLECT_MODE_OPTIONS
+async def get_years():
+    """Get year options for time range selection."""
+    return {
+        "start_years": get_year_options(),
+        "min_year": MIN_START_YEAR,
+        "default_year": DEFAULT_START_YEAR,
+        "current_year": get_current_year(),
+    }
 
 
 # ============ Venue Sub-Task Endpoints ============

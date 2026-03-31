@@ -26,9 +26,9 @@ import {
   GlobalOutlined,
   TrophyOutlined,
   TeamOutlined,
-  AppstoreOutlined,
   ExclamationCircleOutlined,
   BulbOutlined,
+  SyncOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
 import FavoriteButton from '../components/FavoriteButton'
@@ -36,16 +36,6 @@ import CollaborationGraph, { CollaborationNode, CollaborationLink } from '../com
 import { getRoleTypeConfig } from '../constants/roleType'
 
 const { Title, Text, Paragraph } = Typography
-
-interface TechTag {
-  tech_element_id: number
-  tech_element_name: string
-  tech_direction_id: number
-  tech_direction_name: string
-  tag_level: string
-  confidence_score: number
-  confirm_status: string
-}
 
 interface TalentDetail {
   talent_id: number
@@ -62,6 +52,7 @@ interface TalentDetail {
   h_index: number
   latest_active_year: number | null
   topic_tags: string[]
+  openalex_topics: string[]  // CR-02: OpenAlex研究主题
   research_interests: string | null
   summary: string | null
   department_name: string | null
@@ -70,7 +61,6 @@ interface TalentDetail {
   academic_age: number | null
   selected_works: SelectedWork[]
   // v1.1 新增字段
-  tech_tags?: TechTag[]
   recruitment_summary?: string | null
   data_completeness?: number
   pending_confirm_items?: string[]
@@ -86,12 +76,6 @@ interface SelectedWork {
   doi: string | null
 }
 
-const confirmStatusMap: Record<string, { color: string; text: string }> = {
-  confirmed: { color: 'success', text: '已确认' },
-  auto_identified: { color: 'processing', text: '自动识别' },
-  pending_confirm: { color: 'warning', text: '待确认' },
-}
-
 const TalentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -100,6 +84,7 @@ const TalentDetailPage: React.FC = () => {
   const [collabLoading, setCollabLoading] = useState(false)
   const [collabNodes, setCollabNodes] = useState<CollaborationNode[]>([])
   const [collabLinks, setCollabLinks] = useState<CollaborationLink[]>([])
+  const [syncingCollab, setSyncingCollab] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -129,6 +114,23 @@ const TalentDetailPage: React.FC = () => {
       console.error('Failed to fetch collaborations:', error)
     } finally {
       setCollabLoading(false)
+    }
+  }
+
+  // CR-03: Sync collaborations for this talent
+  const handleSyncCollaborations = async () => {
+    if (!talent) return
+    setSyncingCollab(true)
+    try {
+      await api.talents.syncCollaborations(talent.talent_id)
+      // Wait a moment then refresh
+      setTimeout(() => {
+        fetchCollaborations(talent.talent_id)
+      }, 2000)
+    } catch (error) {
+      console.error('Failed to sync collaborations:', error)
+    } finally {
+      setSyncingCollab(false)
     }
   }
 
@@ -368,45 +370,27 @@ const TalentDetailPage: React.FC = () => {
           )}
         </Col>
 
-        {/* 研究方向 & 技术标签 */}
+        {/* 研究方向 */}
         <Col xs={24} lg={16}>
-          {/* 技术要素与技术方向 - v1.1新增 */}
-          {talent.tech_tags && talent.tech_tags.length > 0 && (
-            <Card
-              title={<><AppstoreOutlined style={{ marginRight: 8 }} />技术要素与技术方向</>}
-              style={{ marginBottom: 16 }}
-            >
-              <Space direction="vertical" style={{ width: '100%' }}>
-                {Object.entries(groupBy(talent.tech_tags, 'tech_element_name')).map(([element, tags]) => (
-                  <div key={element}>
-                    <Text strong style={{ marginBottom: 4, display: 'block' }}>{element}</Text>
-                    <Space size={4} wrap>
-                      {tags.map((tag, index) => (
-                        <Tooltip
-                          key={index}
-                          title={`置信度: ${(tag.confidence_score * 100).toFixed(0)}% | ${confirmStatusMap[tag.confirm_status]?.text || tag.confirm_status}`}
-                        >
-                          <Tag
-                            color={tag.tag_level === 'primary' ? 'blue' : 'default'}
-                            style={{ marginBottom: 4 }}
-                          >
-                            {tag.tech_direction_name}
-                            {tag.confirm_status === 'pending_confirm' && (
-                              <ExclamationCircleOutlined style={{ marginLeft: 4, color: '#faad14' }} />
-                            )}
-                          </Tag>
-                        </Tooltip>
-                      ))}
-                    </Space>
-                  </div>
+          {/* 研究方向 - CR-02: 使用OpenAlex研究主题 */}
+          <Card title={<><BulbOutlined style={{ marginRight: 8 }} />研究方向</>} style={{ marginBottom: 16 }}>
+            {talent.openalex_topics && talent.openalex_topics.length > 0 ? (
+              <Space size={[8, 16]} wrap>
+                {talent.openalex_topics.map((topic, index) => (
+                  <Tag
+                    key={index}
+                    style={{
+                      fontSize: 14,
+                      padding: '4px 12px',
+                      background: `hsl(${(index * 60) % 360}, 70%, 95%)`,
+                      border: `1px solid hsl(${(index * 60) % 360}, 70%, 85%)`,
+                    }}
+                  >
+                    {topic}
+                  </Tag>
                 ))}
               </Space>
-            </Card>
-          )}
-
-          {/* 研究方向 */}
-          <Card title="研究方向" style={{ marginBottom: 16 }}>
-            {talent.topic_tags.length > 0 ? (
+            ) : talent.topic_tags.length > 0 ? (
               <Space size={[8, 16]} wrap>
                 {talent.topic_tags.map((tag, index) => (
                   <Tag
@@ -465,7 +449,19 @@ const TalentDetailPage: React.FC = () => {
       </Card>
 
       {/* 合作网络 */}
-      <Card title={<><TeamOutlined style={{ marginRight: 8 }} />合作网络</>}>
+      <Card
+        title={<><TeamOutlined style={{ marginRight: 8 }} />合作网络</>}
+        extra={
+          <Button
+            type="link"
+            icon={<SyncOutlined spin={syncingCollab} />}
+            onClick={handleSyncCollaborations}
+            loading={syncingCollab}
+          >
+            同步合作数据
+          </Button>
+        }
+      >
         <CollaborationGraph
           nodes={collabNodes}
           links={collabLinks}
@@ -479,18 +475,6 @@ const TalentDetailPage: React.FC = () => {
       </Card>
     </div>
   )
-}
-
-// Helper function to group tech tags by element
-function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
-  return array.reduce((result, item) => {
-    const groupKey = String(item[key])
-    if (!result[groupKey]) {
-      result[groupKey] = []
-    }
-    result[groupKey].push(item)
-    return result
-  }, {} as Record<string, T[]>)
 }
 
 // Helper function to calculate completeness
@@ -507,7 +491,6 @@ function calculateCompleteness(talent: TalentDetail): number {
     topic_tags: 10,
     research_interests: 5,
     orcid: 5,
-    tech_tags: 5,
   }
 
   if (talent.name) score += weights.name
@@ -520,7 +503,6 @@ function calculateCompleteness(talent: TalentDetail): number {
   if (talent.topic_tags && talent.topic_tags.length > 0) score += weights.topic_tags
   if (talent.research_interests) score += weights.research_interests
   if (talent.orcid) score += weights.orcid
-  if (talent.tech_tags && talent.tech_tags.length > 0) score += weights.tech_tags
 
   return score
 }

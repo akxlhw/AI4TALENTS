@@ -79,7 +79,6 @@ const SearchPage: React.FC = () => {
   // Filter state - New for v1.1
   const [countryFilter, setCountryFilter] = useState<number | undefined>()
   const [techElementFilter, setTechElementFilter] = useState<number | undefined>()
-  const [techDirectionFilter, setTechDirectionFilter] = useState<number | undefined>()
   const [isGraduatedFilter, setIsGraduatedFilter] = useState<string | undefined>()
   const [confirmStatusFilter, setConfirmStatusFilter] = useState<string | undefined>()
 
@@ -241,7 +240,6 @@ const SearchPage: React.FC = () => {
     setMinCitations(undefined)
     setCountryFilter(undefined)
     setTechElementFilter(undefined)
-    setTechDirectionFilter(undefined)
     setIsGraduatedFilter(undefined)
     setConfirmStatusFilter(undefined)
     setSortBy('cited_by_count')
@@ -387,12 +385,6 @@ const SearchPage: React.FC = () => {
   const schoolOptions = schools.map(s => ({ value: s.school_id, label: s.school_name }))
   const techElementOptions = techElements.map(e => ({ value: e.tech_element_id, label: e.element_name }))
 
-  const currentElement = techElements.find(e => e.tech_element_id === techElementFilter)
-  const directionOptions = (currentElement?.directions || []).map(d => ({
-    value: d.tech_direction_id,
-    label: d.direction_name
-  }))
-
   const isGraduatedOptions = [
     { value: 'yes', label: '已毕业' },
     { value: 'no', label: '在读' },
@@ -510,7 +502,7 @@ const SearchPage: React.FC = () => {
 
   // Check if any filter is active
   const hasActiveFilters = roleFilter || schoolFilter || minWorks || minCitations ||
-    countryFilter || techElementFilter || techDirectionFilter || isGraduatedFilter || confirmStatusFilter
+    countryFilter || techElementFilter || isGraduatedFilter || confirmStatusFilter
 
   return (
     <div>
@@ -555,23 +547,12 @@ const SearchPage: React.FC = () => {
               <Select
                 placeholder="技术要素"
                 value={techElementFilter}
-                onChange={(val) => { setTechElementFilter(val); setTechDirectionFilter(undefined); handleFilterChange(); }}
+                onChange={(val) => { setTechElementFilter(val); handleFilterChange(); }}
                 allowClear
                 showSearch
                 optionFilterProp="label"
                 style={{ width: 140 }}
                 options={techElementOptions}
-              />
-
-              {/* 技术方向 */}
-              <Select
-                placeholder="技术方向"
-                value={techDirectionFilter}
-                onChange={(val) => { setTechDirectionFilter(val); handleFilterChange(); }}
-                allowClear
-                style={{ width: 140 }}
-                options={directionOptions}
-                disabled={!techElementFilter}
               />
 
               {/* 国家 */}

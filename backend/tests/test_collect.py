@@ -384,7 +384,7 @@ class TestCollectTaskIntegration:
             task_id=task.task_id,
             venue_id=test_data_setup["venue"].venue_id,
             status="pending",
-            time_window_start=datetime(2015, 1, 1),
+            time_window_start=datetime(2020, 1, 1),
             time_window_end=datetime.utcnow(),
         )
         await sub_task_repo.create(sub_task)

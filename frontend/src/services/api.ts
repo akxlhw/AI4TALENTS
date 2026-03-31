@@ -131,7 +131,7 @@ export const api = {
 
   // Schools
   schools: {
-    list: (params?: { country_id?: number; keyword?: string; page?: number }) =>
+    list: (params?: { country_id?: number; keyword?: string; page?: number; page_size?: number }) =>
       apiClient.get('/schools', { params }),
     get: (id: number) => apiClient.get(`/schools/${id}`),
     getTalents: (id: number, params?: { role_type?: string; page?: number }) =>
@@ -156,6 +156,11 @@ export const api = {
       }),
     getCollaborations: (id: number, limit?: number) =>
       apiClient.get(`/talents/${id}/collaborations`, { params: { limit } }),
+    // CR-03: Collaboration sync
+    syncCollaborations: (talentId?: number) =>
+      apiClient.post('/talents/collaborations/sync', null, { params: { talent_id: talentId } }),
+    getCollaborationSyncStatus: () =>
+      apiClient.get('/talents/collaborations/status'),
   },
 
   // Search
@@ -274,7 +279,7 @@ export const api = {
       apiClient.get('/collect/tasks', { params }),
     getTask: (taskId: number) =>
       apiClient.get(`/collect/tasks/${taskId}`),
-    triggerTask: (data: { tech_element_id: number; collect_mode?: string }) =>
+    triggerTask: (data: { tech_element_id: number; start_year?: number; end_year?: number | null }) =>
       apiClient.post('/collect/tasks', data),
     cancelTask: (taskId: number) =>
       apiClient.post(`/collect/tasks/${taskId}/cancel`),
@@ -285,8 +290,8 @@ export const api = {
     // Options
     getTaskStatuses: () =>
       apiClient.get('/collect/options/task-statuses'),
-    getCollectModes: () =>
-      apiClient.get('/collect/options/collect-modes'),
+    getYearOptions: () =>
+      apiClient.get('/collect/options/years'),
   },
 
   // Data Version Management

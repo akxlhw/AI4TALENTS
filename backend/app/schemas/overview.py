@@ -104,6 +104,7 @@ class TalentSummary(BaseModel):
     cited_by_count: int = 0
     h_index: int = 0
     topic_tags: list[str] = Field(default_factory=list)
+    openalex_topics: list[str] = Field(default_factory=list, description="OpenAlex研究主题")
 
 
 class TechTagItem(BaseModel):
@@ -132,6 +133,7 @@ class TalentDetail(BaseModel):
     h_index: int = 0
     latest_active_year: Optional[int] = None
     topic_tags: list[str] = Field(default_factory=list)
+    openalex_topics: list[str] = Field(default_factory=list, description="OpenAlex研究主题")
     tech_tags: list[TechTagItem] = Field(default_factory=list, description="技术要素标签")
     research_interests: Optional[str] = None
     summary: Optional[str] = None
@@ -181,6 +183,7 @@ class SearchTalentResult(BaseModel):
     cited_by_count: int = 0
     h_index: int = 0
     topic_tags: list[str] = Field(default_factory=list)
+    openalex_topics: list[str] = Field(default_factory=list, description="OpenAlex研究主题")
     highlight: Optional[str] = None
 
 

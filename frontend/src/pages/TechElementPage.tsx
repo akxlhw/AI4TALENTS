@@ -73,7 +73,6 @@ interface OverallStats {
   country_count: number
   school_count: number
   tech_element_count: number
-  tech_direction_count: number
 }
 
 const TechElementPage: React.FC = () => {
@@ -84,7 +83,6 @@ const TechElementPage: React.FC = () => {
   const [techElementId, setTechElementId] = useState<number | undefined>(
     searchParams.get('tech_element_id') ? Number(searchParams.get('tech_element_id')) : undefined
   )
-  const [techDirectionId, setTechDirectionId] = useState<number | undefined>()
   const [keyword, setKeyword] = useState('')
   const [countryId, setCountryId] = useState<number | undefined>()
   const [schoolId, setSchoolId] = useState<number | undefined>()
@@ -104,7 +102,6 @@ const TechElementPage: React.FC = () => {
     country_count: 0,
     school_count: 0,
     tech_element_count: 0,
-    tech_direction_count: 0,
   })
   const [talentData, setTalentData] = useState<TalentItem[]>([])
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
@@ -186,7 +183,6 @@ const TechElementPage: React.FC = () => {
         talent_count: response.data.talent_count,
         country_count: response.data.country_count,
         school_count: response.data.school_count,
-        tech_direction_count: response.data.direction_count,
       }))
     } catch (error) {
       console.error('Failed to fetch stats:', error)
@@ -209,7 +205,6 @@ const TechElementPage: React.FC = () => {
         page,
         page_size: pagination.pageSize,
       }
-      if (techDirectionId) params.direction_id = techDirectionId
       if (countryId) params.country_id = countryId
       if (schoolId) params.school_id = schoolId
       if (roleType) params.role_type = roleType
@@ -227,7 +222,7 @@ const TechElementPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [techElementId, techDirectionId, countryId, schoolId, roleType, keyword, pagination.pageSize, fetchOverallTalents])
+  }, [techElementId, countryId, schoolId, roleType, keyword, pagination.pageSize, fetchOverallTalents])
 
   // 初始化加载
   useEffect(() => {
@@ -241,12 +236,11 @@ const TechElementPage: React.FC = () => {
     fetchFilteredStats()
     fetchFilteredTalents()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [techElementId, techDirectionId])
+  }, [techElementId])
 
   // 处理技术要素变化
   const handleTechElementChange = (value: number | undefined) => {
     setTechElementId(value)
-    setTechDirectionId(undefined)
     setPagination(prev => ({ ...prev, current: 1 }))
   }
 
@@ -260,7 +254,6 @@ const TechElementPage: React.FC = () => {
   // 处理重置
   const handleReset = () => {
     setTechElementId(undefined)
-    setTechDirectionId(undefined)
     setKeyword('')
     setCountryId(undefined)
     setSchoolId(undefined)
@@ -280,13 +273,6 @@ const TechElementPage: React.FC = () => {
     })
     fetchFilteredTalents(newPage)
   }
-
-  // 获取当前选中的技术要素的方向选项
-  const currentElement = techElements.find(e => e.tech_element_id === techElementId)
-  const directionOptions = (currentElement?.directions || []).map(d => ({
-    value: d.tech_direction_id,
-    label: d.direction_name,
-  }))
 
   // 技术要素选项
   const elementOptions = techElements.map(e => ({
@@ -398,13 +384,6 @@ const TechElementPage: React.FC = () => {
                 prefix={<AppstoreOutlined />}
               />
             </Col>
-            <Col span={4}>
-              <Statistic
-                title="技术方向"
-                value={overallStats.tech_direction_count}
-                prefix={<AppstoreOutlined />}
-              />
-            </Col>
           </Row>
         </Spin>
       </Card>
@@ -424,18 +403,6 @@ const TechElementPage: React.FC = () => {
               allowClear
               showSearch
               optionFilterProp="label"
-            />
-          </Col>
-          <Col span={6}>
-            <div style={{ marginBottom: 4 }}><Text type="secondary">技术方向</Text></div>
-            <Select
-              style={{ width: '100%' }}
-              placeholder="全部（可选筛选）"
-              value={techDirectionId}
-              onChange={setTechDirectionId}
-              options={directionOptions}
-              disabled={!techElementId}
-              allowClear
             />
           </Col>
           <Col span={6}>
@@ -482,7 +449,7 @@ const TechElementPage: React.FC = () => {
               onPressEnter={handleSearch}
             />
           </Col>
-          <Col span={12}>
+          <Col span={18}>
             <div style={{ marginBottom: 4 }}><Text type="secondary">&nbsp;</Text></div>
             <Space>
               <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>

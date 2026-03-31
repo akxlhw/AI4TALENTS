@@ -50,7 +50,7 @@ const CollectConfirmModal: React.FC<CollectConfirmModalProps> = ({
           </Space>
         </Descriptions.Item>
         <Descriptions.Item label="数据类型">学者、论文、机构</Descriptions.Item>
-        <Descriptions.Item label="时间范围">2015.1.1 至今</Descriptions.Item>
+        <Descriptions.Item label="时间范围">2020.1.1 至今</Descriptions.Item>
         <Descriptions.Item label="采集模式">
           <Radio.Group value={collectMode} onChange={(e) => onModeChange(e.target.value)}>
             <Radio.Button value="full">全量采集</Radio.Button>
