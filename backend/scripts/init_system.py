@@ -78,9 +78,8 @@ BUSINESS_TABLES = [
 ]
 
 # 基础配置表（仅在 --full 时清空）
+# 注意：期刊配置(config_venue, config_venue_tech_binding)永不清空，需要保留
 CONFIG_TABLES = [
-    "config_venue_tech_binding",
-    "config_venue",
     "iam_user_school_scope",
     "core_tech_direction",
     "core_tech_element",
