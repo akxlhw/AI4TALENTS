@@ -377,13 +377,6 @@ const CollectPage: React.FC = () => {
       ),
     },
     {
-      title: '最后采集',
-      dataIndex: 'last_collect_at',
-      key: 'last_collect_at',
-      width: 120,
-      render: (date: string | null) => date ? new Date(date).toLocaleDateString() : <Text type="secondary">-</Text>,
-    },
-    {
       title: '操作',
       key: 'actions',
       width: 180,
