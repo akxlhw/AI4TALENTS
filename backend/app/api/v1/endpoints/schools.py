@@ -28,7 +28,7 @@ async def list_schools(
     keyword: Optional[str] = Query(None, description="搜索关键词"),
     is_top_school: Optional[bool] = Query(None, description="按Top院校筛选"),
     page: int = Query(1, ge=1, description="页码"),
-    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(20, ge=1, le=5000, description="每页数量"),
     session: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -86,7 +86,7 @@ async def list_top_schools(
     country_id: Optional[int] = Query(None, description="按国家ID筛选"),
     keyword: Optional[str] = Query(None, description="搜索关键词"),
     page: int = Query(1, ge=1, description="页码"),
-    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(20, ge=1, le=5000, description="每页数量"),
     session: AsyncSession = Depends(get_async_session),
 ):
     """获取Top院校列表"""
@@ -135,7 +135,7 @@ async def get_school_talents(
     school_id: int,
     role_type: Optional[str] = Query(None, description="按角色类型筛选 (professor/student/graduated/unknown)"),
     page: int = Query(1, ge=1, description="页码"),
-    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(20, ge=1, le=5000, description="每页数量"),
     session: AsyncSession = Depends(get_async_session),
 ):
     """
