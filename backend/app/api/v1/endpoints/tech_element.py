@@ -167,6 +167,7 @@ async def get_overall_talents(
             h_index=t.h_index,
             works_count=t.works_count,
             topic_tags=t.topic_tags or [],
+            openalex_topics=t.openalex_topics or [],
         )
         for t in talents
     ]
@@ -344,6 +345,7 @@ async def get_element_talents(
             h_index=t.h_index,
             works_count=t.works_count,
             topic_tags=t.topic_tags or [],
+            openalex_topics=t.openalex_topics or [],
         )
         for t in talents
     ]

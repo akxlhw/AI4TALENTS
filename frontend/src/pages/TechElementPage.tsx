@@ -64,7 +64,7 @@ interface TalentItem {
   h_index: number
   works_count: number
   topic_tags: string[]
-  openalex_topics: string[]  // OpenAlex研究主题
+  openalex_topics: string[]  // OpenAlex研究主题（具体研究方向）
 }
 
 // 总体统计类型

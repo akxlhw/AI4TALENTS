@@ -1,24 +1,24 @@
 /**
  * 研究方向标签缩略显示组件
- * 支持两种显示模式：
- * 1. compact: 显示前N个标签，超出部分用 +N 表示
- * 2. tooltip: 鼠标悬停显示完整列表
+ *
+ * 特性：
+ * 1. 限制标签宽度，防止超出单元格
+ * 2. Tooltip 悬浮显示完整列表（白色背景）
+ * 3. 标签过长时自动省略
  */
 import React from 'react'
-import { Tag, Tooltip, Space } from 'antd'
+import { Tag, Tooltip } from 'antd'
 
 interface TopicTagsProps {
   tags: string[]
   maxVisible?: number  // 最多显示几个标签，默认2
-  mode?: 'compact' | 'tooltip'  // 显示模式，默认tooltip
-  size?: 'small' | 'default'  // 标签大小
+  maxTagWidth?: number // 单个标签最大宽度，默认80px
 }
 
 const TopicTags: React.FC<TopicTagsProps> = ({
   tags,
   maxVisible = 2,
-  mode = 'tooltip',
-  size = 'small',
+  maxTagWidth = 80,
 }) => {
   if (!tags || tags.length === 0) {
     return <span style={{ color: '#999' }}>-</span>
@@ -27,21 +27,48 @@ const TopicTags: React.FC<TopicTagsProps> = ({
   const visibleTags = tags.slice(0, maxVisible)
   const hiddenCount = tags.length - maxVisible
 
-  const tagStyle = {
+  // 标签样式：限制宽度 + 省略
+  const tagStyle: React.CSSProperties = {
     margin: 0,
-    fontSize: size === 'small' ? 11 : 12,
-    maxWidth: 150,
+    fontSize: 11,
+    maxWidth: maxTagWidth,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap' as const,
+    whiteSpace: 'nowrap',
+    display: 'inline-block',
+    verticalAlign: 'middle',
   }
 
-  // tooltip 模式：显示部分 + 悬停显示全部
-  if (mode === 'tooltip' && hiddenCount > 0) {
+  // 容器样式：flex 布局防止溢出
+  const containerStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: '100%',
+    overflow: 'hidden',
+  }
+
+  // 有隐藏标签时，显示 Tooltip
+  if (hiddenCount > 0) {
     const tooltipContent = (
-      <div style={{ maxWidth: 300 }}>
+      <div style={{
+        maxWidth: 320,
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 4,
+      }}>
         {tags.map((tag, index) => (
-          <Tag key={index} style={{ margin: '2px 4px', fontSize: 12 }}>
+          <Tag
+            key={index}
+            style={{
+              margin: 0,
+              fontSize: 12,
+              maxWidth: 150,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {tag}
           </Tag>
         ))}
@@ -49,29 +76,46 @@ const TopicTags: React.FC<TopicTagsProps> = ({
     )
 
     return (
-      <Tooltip title={tooltipContent} placement="topLeft">
-        <Space size={4} wrap={false} style={{ cursor: 'pointer' }}>
+      <Tooltip
+        title={tooltipContent}
+        placement="topLeft"
+        overlayStyle={{ maxWidth: 360 }}
+        overlayInnerStyle={{
+          background: '#fff',
+          color: '#333',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          padding: 8,
+        }}
+      >
+        <div style={{ ...containerStyle, cursor: 'pointer' }}>
           {visibleTags.map((tag, index) => (
-            <Tag key={index} style={tagStyle}>{tag}</Tag>
+            <Tag key={index} style={tagStyle} title={tag}>{tag}</Tag>
           ))}
-          <Tag style={{ ...tagStyle, background: '#f5f5f5', border: '1px dashed #d9d9d9' }}>
+          <Tag
+            style={{
+              ...tagStyle,
+              background: '#f5f5f5',
+              border: '1px dashed #d9d9d9',
+              color: '#666',
+              flexShrink: 0,
+            }}
+          >
             +{hiddenCount}
           </Tag>
-        </Space>
+        </div>
       </Tooltip>
     )
   }
 
-  // compact 模式：仅显示部分 + 数量提示
+  // 没有隐藏标签
   return (
-    <Space size={4} wrap>
+    <div style={containerStyle}>
       {visibleTags.map((tag, index) => (
-        <Tag key={index} style={tagStyle}>{tag}</Tag>
+        <Tooltip key={index} title={tag} placement="topLeft">
+          <Tag style={tagStyle}>{tag}</Tag>
+        </Tooltip>
       ))}
-      {hiddenCount > 0 && (
-        <span style={{ fontSize: 11, color: '#999' }}>+{hiddenCount}</span>
-      )}
-    </Space>
+    </div>
   )
 }
 

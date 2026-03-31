@@ -105,6 +105,7 @@ class TalentInTechElement(BaseModel):
     h_index: int = 0
     works_count: int = 0
     topic_tags: List[str] = []
+    openalex_topics: List[str] = []  # OpenAlex研究主题
 
     class Config:
         from_attributes = True
