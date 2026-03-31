@@ -33,6 +33,7 @@ import {
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { api } from '../services/api'
+import TopicTags from '../components/TopicTags'
 
 const { Title, Text } = Typography
 
@@ -63,6 +64,7 @@ interface TalentItem {
   h_index: number
   works_count: number
   topic_tags: string[]
+  openalex_topics: string[]  // OpenAlex研究主题
 }
 
 // 总体统计类型
@@ -323,17 +325,15 @@ const TechElementPage: React.FC = () => {
       sorter: true,
     },
     {
-      title: '技术方向',
-      dataIndex: 'topic_tags',
-      key: 'topic_tags',
-      render: (tags: string[]) => (
-        <Space size={[0, 4]} wrap>
-          {(tags || []).slice(0, 3).map((tag, index) => (
-            <Tag key={index} style={{ marginBottom: 2 }}>{tag}</Tag>
-          ))}
-          {tags && tags.length > 3 && <Tag>+{tags.length - 3}</Tag>}
-        </Space>
-      ),
+      title: '研究方向',
+      dataIndex: 'openalex_topics',
+      key: 'openalex_topics',
+      width: 200,
+      render: (topics: string[], record) => {
+        // 优先显示 openalex_topics，没有则回退到 topic_tags
+        const displayTopics = topics && topics.length > 0 ? topics : record.topic_tags
+        return <TopicTags tags={displayTopics} maxVisible={2} />
+      },
     },
   ]
 

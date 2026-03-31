@@ -34,6 +34,7 @@ import {
 import { api } from '../services/api'
 import FavoriteButton from '../components/FavoriteButton'
 import TalentCompareModal from '../components/TalentCompareModal'
+import TopicTags from '../components/TopicTags'
 import ColumnSettings from '../components/ColumnSettings'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useSearchTemplates } from '../hooks/useSearchTemplates'
@@ -479,21 +480,14 @@ const SearchPage: React.FC = () => {
     },
     {
       title: '研究方向',
-      dataIndex: 'topic_tags',
-      key: 'topic_tags',
+      dataIndex: 'openalex_topics',
+      key: 'openalex_topics',
       width: 200,
-      render: (tags: string[]) => (
-        <Space size={4} wrap>
-          {(tags || []).slice(0, 3).map(tag => (
-            <Tag key={tag} style={{ margin: 0, fontSize: 11 }}>
-              {tag}
-            </Tag>
-          ))}
-          {tags && tags.length > 3 && (
-            <span style={{ fontSize: 11, color: '#999' }}>+{tags.length - 3}</span>
-          )}
-        </Space>
-      ),
+      render: (topics: string[], record) => {
+        // 优先显示 openalex_topics，没有则回退到 topic_tags
+        const displayTopics = topics && topics.length > 0 ? topics : record.topic_tags
+        return <TopicTags tags={displayTopics} maxVisible={2} />
+      },
     },
   ]
 

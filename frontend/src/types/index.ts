@@ -152,6 +152,7 @@ export interface SearchTalent {
   cited_by_count: number
   h_index: number
   topic_tags: string[]
+  openalex_topics: string[]  // OpenAlex研究主题（具体研究方向）
 }
 
 // Search Filter Params - 搜索筛选参数
