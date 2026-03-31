@@ -136,15 +136,22 @@ class SchoolNormalizer:
 
     async def normalize_all_institutions(
         self,
-        task_id: Optional[int] = None,
-        limit: int = 1000
+        task_id: Optional[int] = None
     ) -> NormalizationResult:
-        """Normalize all pending institutions"""
+        """Normalize all pending institutions for a specific task.
+
+        Args:
+            task_id: The collection task ID. Only institutions from this task
+                     will be processed. If None, processes all pending institutions.
+
+        Returns:
+            NormalizationResult with statistics
+        """
         result = NormalizationResult()
 
-        # Get pending institutions
+        # Get pending institutions for this task
         raw_repo = RawInstitutionRepository(self.session)
-        pending = await raw_repo.get_pending(limit)
+        pending = await raw_repo.get_pending(task_id)
 
         result.total = len(pending)
 
@@ -157,14 +164,5 @@ class SchoolNormalizer:
                     result.pending_schools += 1
             except Exception as e:
                 result.failed += 1
-
-        # Also count existing normalized schools for accurate statistics
-        if result.total == 0:
-            from sqlalchemy import func
-            count_result = await self.session.execute(
-                select(func.count(StdSchool.std_school_id))
-            )
-            result.total = count_result.scalar() or 0
-            result.processed = result.total  # All already normalized
 
         return result

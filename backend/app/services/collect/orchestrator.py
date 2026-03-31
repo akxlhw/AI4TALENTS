@@ -253,12 +253,8 @@ class CollectionOrchestrator:
             self.progress_tracker.add_log("warning", "Author fetcher not configured")
             return
 
-        # Get all unique author IDs from raw works using repository
+        # Get all unique author IDs from raw works for this task
         all_author_ids = await self.raw_work_repo.get_author_ids_by_task(task_id)
-
-        # Also get from all raw_works if task-specific query returns nothing
-        if not all_author_ids:
-            all_author_ids = await self.raw_work_repo.get_all_author_ids(limit=10000)
 
         if not all_author_ids:
             self.progress_tracker.add_log("info", "未找到作者ID")
@@ -327,7 +323,7 @@ class CollectionOrchestrator:
         progress.current_step = "Normalizing schools"
         self.progress_tracker.add_log("info", "开始标准化学校数据")
 
-        result = await self.school_normalizer.normalize_all_institutions(task_id=task_id, limit=10000)
+        result = await self.school_normalizer.normalize_all_institutions(task_id=task_id)
         progress.normalized_schools = result.processed
 
         self.progress_tracker.add_log("info", f"学校标准化完成: {progress.normalized_schools} 所学校")
@@ -337,7 +333,7 @@ class CollectionOrchestrator:
         progress.current_step = "Normalizing authors"
         self.progress_tracker.add_log("info", "开始标准化作者数据")
 
-        result = await self.author_normalizer.normalize_all_authors(task_id=task_id, limit=10000)
+        result = await self.author_normalizer.normalize_all_authors(task_id=task_id)
         progress.normalized_authors = result.processed
 
         self.progress_tracker.add_log("info", f"作者标准化完成: {progress.normalized_authors} 位作者")

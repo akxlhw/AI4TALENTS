@@ -245,13 +245,17 @@ class RawAuthorRepository:
 
         return [aid for aid in author_ids if aid not in existing_ids]
 
-    async def get_pending(self, limit: int = 100) -> List[RawAuthor]:
-        """Get pending authors for processing"""
-        result = await self.session.execute(
-            select(RawAuthor)
-            .where(RawAuthor.processed_status == "pending")
-            .limit(limit)
-        )
+    async def get_pending(self, task_id: Optional[int] = None) -> List[RawAuthor]:
+        """Get pending authors for processing.
+
+        Args:
+            task_id: Optional task ID to filter by. If provided, only returns
+                     authors from the specified task.
+        """
+        query = select(RawAuthor).where(RawAuthor.processed_status == "pending")
+        if task_id is not None:
+            query = query.where(RawAuthor.fetch_task_id == task_id)
+        result = await self.session.execute(query)
         return list(result.scalars().all())
 
     async def mark_processed(self, author_id: int, status: str = "processed", std_author_id: Optional[int] = None) -> None:
@@ -357,13 +361,17 @@ class RawInstitutionRepository:
 
         return [iid for iid in institution_ids if iid not in existing_ids]
 
-    async def get_pending(self, limit: int = 100) -> List[RawInstitution]:
-        """Get pending institutions for processing"""
-        result = await self.session.execute(
-            select(RawInstitution)
-            .where(RawInstitution.processed_status == "pending")
-            .limit(limit)
-        )
+    async def get_pending(self, task_id: Optional[int] = None) -> List[RawInstitution]:
+        """Get pending institutions for processing.
+
+        Args:
+            task_id: Optional task ID to filter by. If provided, only returns
+                     institutions from the specified task.
+        """
+        query = select(RawInstitution).where(RawInstitution.processed_status == "pending")
+        if task_id is not None:
+            query = query.where(RawInstitution.fetch_task_id == task_id)
+        result = await self.session.execute(query)
         return list(result.scalars().all())
 
     async def mark_processed(self, inst_id: int, status: str = "processed", std_school_id: Optional[int] = None) -> None:

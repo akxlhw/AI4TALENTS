@@ -162,15 +162,22 @@ class AuthorNormalizer:
 
     async def normalize_all_authors(
         self,
-        task_id: Optional[int] = None,
-        limit: int = 1000
+        task_id: Optional[int] = None
     ) -> NormalizationResult:
-        """Normalize all pending authors"""
+        """Normalize all pending authors for a specific task.
+
+        Args:
+            task_id: The collection task ID. Only authors from this task
+                     will be processed. If None, processes all pending authors.
+
+        Returns:
+            NormalizationResult with statistics
+        """
         result = NormalizationResult()
 
-        # Get pending authors
+        # Get pending authors for this task
         raw_repo = RawAuthorRepository(self.session)
-        pending = await raw_repo.get_pending(limit)
+        pending = await raw_repo.get_pending(task_id)
 
         result.total = len(pending)
 
@@ -185,14 +192,5 @@ class AuthorNormalizer:
                 result.processed += 1
             except Exception as e:
                 result.failed += 1
-
-        # Also count existing normalized authors for accurate statistics
-        if result.total == 0:
-            from sqlalchemy import func
-            count_result = await self.session.execute(
-                select(func.count(StdAuthor.std_author_id))
-            )
-            result.total = count_result.scalar() or 0
-            result.processed = result.total  # All already normalized
 
         return result
