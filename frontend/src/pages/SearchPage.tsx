@@ -446,14 +446,6 @@ const SearchPage: React.FC = () => {
         ),
     },
     {
-      title: '职位',
-      dataIndex: 'current_title',
-      key: 'current_title',
-      width: 150,
-      ellipsis: true,
-      render: (title: string | null) => title || <Text type="secondary">-</Text>,
-    },
-    {
       title: '论文',
       dataIndex: 'works_count',
       key: 'works_count',
