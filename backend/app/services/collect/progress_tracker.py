@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional, Union
 
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sync import CollectTask
@@ -27,11 +28,16 @@ class LogLevel(str, Enum):
 
 
 class ProgressTracker:
-    """Progress tracking and logging for collection tasks"""
+    """Progress tracking and logging for collection tasks
+
+    Uses independent database connections for progress updates to avoid
+    blocking other operations during long-running collection tasks.
+    """
 
     def __init__(self, session: AsyncSession):
         self.session = session
         self._logs: List[Dict] = []
+        self._task_id: Optional[int] = None
 
     def add_log(self, level: Union[LogLevel, str], message: str, details: Optional[Dict] = None):
         """Add a log entry
@@ -53,15 +59,13 @@ class ProgressTracker:
             entry["details"] = details
         self._logs.append(entry)
 
-        # Also log to standard logger
+        # Only log WARNING and ERROR to standard logger to reduce I/O overhead
+        # INFO and DEBUG logs are saved to database for later review
         if level_value == LogLevel.ERROR.value:
             logger.error(message)
         elif level_value == LogLevel.WARNING.value:
             logger.warning(message)
-        elif level_value == LogLevel.DEBUG.value:
-            logger.debug(message)
-        else:
-            logger.info(message)
+        # Removed INFO/DEBUG console output for performance
 
     def reset_logs(self):
         """Reset logs for a new task"""
@@ -78,6 +82,7 @@ class ProgressTracker:
 
     def create_progress(self, task_id: int) -> CollectionProgress:
         """Create a new progress object"""
+        self._task_id = task_id
         return CollectionProgress(task_id=task_id)
 
     async def update_task_status(
@@ -106,17 +111,41 @@ class ProgressTracker:
         current_step: Optional[str] = None,
         progress_percent: Optional[int] = None
     ):
-        """Update task progress in real-time.
+        """Update task progress using independent database connection.
 
-        This should be called during task execution to update the frontend display.
-        Note: This method only flushes changes without committing. The transaction
-        boundary is managed by CollectionOrchestrator.execute_task() to ensure
-        atomicity of the entire pipeline.
+        This method uses a separate database session to update progress,
+        ensuring that the main collection transaction does not block
+        other database operations (like user login updates).
+
+        This is critical for SQLite which has limited write concurrency.
         """
+        from app.core.database import AsyncSessionLocal
+
+        # Build update values
+        values = {}
         if current_step:
-            task.current_step = current_step
+            values["current_step"] = current_step
         if progress_percent is not None:
-            task.progress_percent = progress_percent
-        await self.session.flush()
-        # 不再 commit，由 orchestrator 统一管理事务边界
-        # 前端通过轮询获取进度，flush 后数据对同一 session 可见
+            values["progress_percent"] = progress_percent
+
+        if not values:
+            return
+
+        # Use independent session to avoid blocking
+        async with AsyncSessionLocal() as independent_session:
+            try:
+                await independent_session.execute(
+                    update(CollectTask)
+                    .where(CollectTask.task_id == task.task_id)
+                    .values(**values)
+                )
+                await independent_session.commit()
+            except Exception as e:
+                logger.warning(f"Failed to update progress: {e}")
+                # Fallback to main session if independent update fails
+                if current_step:
+                    task.current_step = current_step
+                if progress_percent is not None:
+                    task.progress_percent = progress_percent
+                await self.session.flush()
+

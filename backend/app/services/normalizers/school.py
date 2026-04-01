@@ -147,6 +147,9 @@ class SchoolNormalizer:
         Returns:
             NormalizationResult with statistics
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         result = NormalizationResult()
 
         # Get pending institutions for this task
@@ -155,13 +158,22 @@ class SchoolNormalizer:
 
         result.total = len(pending)
 
-        for raw_inst in pending:
+        # Commit every 50 institutions to release database lock
+        commit_interval = 50
+
+        for i, raw_inst in enumerate(pending):
             try:
                 std_school = await self.normalize_institution(raw_inst, task_id)
                 await raw_repo.mark_processed(raw_inst.raw_institution_id, "processed", std_school.std_school_id)
                 result.processed += 1
                 if std_school.confirm_status == "pending_confirm":
                     result.pending_schools += 1
+
+                # Commit periodically to release database lock
+                if (i + 1) % commit_interval == 0:
+                    await self.session.commit()
+                    logger.debug(f"School normalization progress: {result.processed}/{result.total}")
+
             except Exception as e:
                 result.failed += 1
 

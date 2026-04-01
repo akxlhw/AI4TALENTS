@@ -23,35 +23,6 @@ This file provides guidance to Claude Code when working with code in this reposi
 - React Router v6
 - Zustand (state management)
 
-## Project Structure
-
-```
-talent-platform/
-├── backend/
-│   ├── app/
-│   │   ├── api/v1/endpoints/  # API endpoints
-│   │   ├── models/            # SQLAlchemy models
-│   │   ├── schemas/           # Pydantic DTOs
-│   │   ├── repositories/      # Data access layer
-│   │   ├── services/          # Business logic
-│   │   │   ├── collect/       # Data collection orchestration
-│   │   │   ├── sync/          # Data synchronization
-│   │   │   └── normalizers/   # Data normalization
-│   │   ├── builders/          # Object construction (ETL transform)
-│   │   └── core/              # Config, database, security
-│   ├── migrations/            # Alembic migrations
-│   └── scripts/               # Utility scripts
-├── frontend/
-│   ├── src/
-│   │   ├── pages/             # Page components
-│   │   ├── components/        # Reusable components
-│   │   ├── services/          # API client
-│   │   ├── contexts/          # React contexts (Auth, Favorites)
-│   │   └── hooks/             # Custom hooks
-│   └── tests/                 # Playwright E2E tests
-└── docs/                      # Project documentation
-```
-
 ## Common Commands
 
 ```bash
@@ -83,29 +54,96 @@ npm run lint    # ESLint
 # Frontend E2E Testing
 npx playwright test           # Run all Playwright tests
 npx playwright test --ui      # Run with UI
+
+# Utility Scripts (backend/scripts/)
+# System initialization
+python scripts/init_system.py              # Reset system with interactive confirmation
+python scripts/init_system.py --force      # Reset without confirmation
+python scripts/seed_tech_elements.py       # Seed six tech elements
+
+# Data maintenance
+python scripts/fix_pending_normalization.py --task-id <ID> [--sync]  # Fix pending normalization
+python scripts/refresh_stats.py                                       # Refresh all statistics
+python scripts/recalculate_cs_scores.py    # Recalculate CS background scores
+python scripts/resync_talents_v2.py        # Re-sync talents with CS filtering
 ```
 
-## Architecture Patterns
+## Architecture
+
+### Three-Layer Data Architecture
+
+The system uses a three-layer data model for data quality and traceability:
+
+| Layer | Tables | Purpose |
+|-------|--------|---------|
+| **Raw** | `raw_work`, `raw_author`, `raw_institution` | Original data from OpenAlex API |
+| **Standardized** | `std_author`, `std_school` | Cleaned and normalized data with CS score |
+| **Serving** | `core_talent`, `core_school` | User-facing data with business logic |
+
+Data flows: Raw → Standardized (via Normalizers) → Serving (via Sync services)
+
+**CS Background Filtering**: Authors are filtered at the Standardized → Serving transition. Only authors with `cs_concepts_score >= 0.5` are synced to Talent. See `services/common/cs_concepts.py` for threshold configuration.
+
+### Six Tech Elements (Domain Model)
+
+The system organizes talent by six technical domains:
+
+| Code | Name (EN) | Name (CN) |
+|------|-----------|-----------|
+| `ai` | Artificial Intelligence | 人工智能 |
+| `robotics` | Robotics | 机器人 |
+| `data_science` | Data Science | 数据科学 |
+| `networks` | Networks & Communications | 网络与通信 |
+| `systems` | Systems & Software | 系统与软件 |
+| `security` | Information Security | 信息安全 |
+
+Each element has multiple `TechDirection` subcategories. Venues (conferences/journals) are bound to tech elements via `VenueTechBinding`.
+
+### 11-Phase Collection Pipeline
+
+`CollectionOrchestrator` in `services/collect/orchestrator.py` executes:
+
+1. **Phase 0**: Estimate task scale (count works per venue)
+2. **Phase 1**: Execute venue sub-tasks (fetch works from OpenAlex)
+3. **Phase 2**: Fetch author data
+4. **Phase 3**: Fetch institution data
+5. **Phase 4**: Normalize schools (RawInstitution → StdSchool)
+6. **Phase 5**: Normalize authors (RawAuthor → StdAuthor)
+7. **Phase 6**: Calculate tech belonging (AuthorTechBelong)
+8. **Phase 7**: Sync to serving layer (StdAuthor → Talent)
+9. **Phase 8**: Fetch selected works (top papers per author)
+10. **Phase 9**: Update tech tags
+11. **Phase 10**: Update school statistics
+12. **Phase 11**: Build homepage statistics
 
 ### Backend Layered Architecture
+
 1. **Endpoints**: Request handling, validation via Pydantic schemas
 2. **Services**: Business logic, orchestration
 3. **Repositories**: Database operations, query building
 4. **Builders**: Transform raw data into domain objects (ETL pattern)
 5. **Models**: SQLAlchemy ORM models
 
-### Data Collection Pipeline
-- `services/collect/` - Task creation and venue execution
-- `services/sync/` - Author, school, tech tag synchronization
-- `services/normalizers/` - Data standardization (school names, author names)
+### Key Service Modules
+
+| Module | Purpose |
+|--------|---------|
+| `services/collect/` | Task creation, venue execution, progress tracking |
+| `services/sync/` | AuthorSync, SchoolSync, TechTagSync, ServingLayerOrchestrator |
+| `services/normalizers/` | AuthorNormalizer, SchoolNormalizer, TechBelongCalculator |
+| `services/common/cs_concepts.py` | CS background score calculation, filtering threshold |
+| `services/data_fetchers.py` | WorkFetcher, AuthorFetcher, InstitutionFetcher |
+| `services/collaboration_service.py` | Extract co-author relationships from RawWork |
 
 ### Frontend State Management
-- **AuthContext**: User authentication state
-- **FavoritesContext**: Favorites and talent pool state
-- **Zustand**: Global state store
-- **localStorage**: Column configs, search templates
+
+- **authStore** (`store/authStore.ts`): User authentication state
+- **favoritesStore** (`store/favoritesStore.ts`): Favorites and talent pool state
+- **settingsStore** (`store/settingsStore.ts`): Column configs, search templates
+- **localStorage**: Persisted user preferences
 
 ### Database Naming Conventions
+
 - Table naming: `{module}_{entity}` (e.g., `core_talent`, `iam_user_account`)
 - Primary keys: `{entity}_id` (e.g., `talent_id`, `school_id`)
 - Timestamps: `created_at`, `updated_at` via TimestampMixin
@@ -121,11 +159,17 @@ npx playwright test --ui      # Run with UI
 
 | Purpose | Path |
 |---------|------|
+| Collection orchestrator | `backend/app/services/collect/orchestrator.py` |
+| Serving layer sync | `backend/app/services/sync/orchestrator.py` |
+| CS background filtering | `backend/app/services/common/cs_concepts.py` |
+| Raw data models | `backend/app/models/raw_data.py` |
+| Standardized models | `backend/app/models/standardized.py` |
+| Serving models | `backend/app/models/talent.py`, `school.py` |
+| Tech element model | `backend/app/models/tech_element.py` |
 | API endpoints | `backend/app/api/v1/endpoints/` |
-| Data models | `backend/app/models/` |
 | Frontend pages | `frontend/src/pages/` |
+| Frontend stores (Zustand) | `frontend/src/store/` |
 | API client | `frontend/src/services/api.ts` |
-| Test fixtures | `backend/tests/conftest.py` |
 
 ## Git Workflow
 
@@ -137,5 +181,6 @@ npx playwright test --ui      # Run with UI
 
 - Development uses SQLite; production uses PostgreSQL
 - Default admin: `admin` / `admin123`
-- Frontend port: 5173 (fixed), Backend port: 8003
+- Frontend port: 5173, Backend port: 8003
 - OpenAlex API: https://api.openalex.org
+- Always use `--reload` flag when starting backend for development

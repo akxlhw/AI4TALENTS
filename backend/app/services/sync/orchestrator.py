@@ -16,6 +16,9 @@ from app.services.sync.tech_tag_sync import TechTagSyncService
 
 logger = logging.getLogger(__name__)
 
+# Log module load to verify code version
+logger.info("[SYNC_ORCHESTRATOR] Module loaded with CS score filtering enabled")
+
 # Batch size for IN queries (SQLite has variable limit)
 SQLITE_BATCH_SIZE = 500
 
@@ -101,6 +104,8 @@ class ServingLayerOrchestrator:
         stats: dict
     ):
         """Sync all authors for a task"""
+        from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
+
         # Get AuthorTechBelong records for this task and tech element
         belong_result = await self.session.execute(
             select(AuthorTechBelong).where(
@@ -111,18 +116,26 @@ class ServingLayerOrchestrator:
         belongs = belong_result.scalars().all()
 
         if not belongs:
-            logger.info(f"No AuthorTechBelong found for task_id={task_id}, tech_element_id={tech_element_id}")
+            logger.warning(f"[SYNC] No AuthorTechBelong found for task_id={task_id}, tech_element_id={tech_element_id}")
             return
 
         # Get unique openalex_author_ids
         author_ids = list(set(b.openalex_author_id for b in belongs))
-        logger.info(f"Found {len(belongs)} tech belong records, {len(author_ids)} unique authors")
+        logger.info(f"[SYNC] Found {len(belongs)} tech belong records, {len(author_ids)} unique authors")
 
         # Get StdAuthors by openalex_author_id (batched to avoid SQLite limit)
         std_authors = await self._batch_get_std_authors(author_ids)
-        logger.info(f"Found {len(std_authors)} standardized authors")
+        logger.info(f"[SYNC] Found {len(std_authors)} standardized authors")
 
-        for std_author in std_authors:
+        # Log CS score distribution
+        cs_scores = [sa.cs_concepts_score for sa in std_authors if sa.cs_concepts_score is not None]
+        if cs_scores:
+            above_threshold = sum(1 for s in cs_scores if s >= CS_SCORE_THRESHOLD)
+            logger.info(f"[SYNC] CS score distribution: {len(cs_scores)} authors, {above_threshold} >= {CS_SCORE_THRESHOLD}")
+        else:
+            logger.warning(f"[SYNC] All {len(std_authors)} authors have NULL cs_concepts_score!")
+
+        for i, std_author in enumerate(std_authors):
             try:
                 # Sync author to Talent
                 talent, is_new = await self.author_sync.sync_author_to_talent(std_author)
@@ -155,10 +168,17 @@ class ServingLayerOrchestrator:
                     )
                     stats["tags_created"] += tag_count
 
+                # Commit every 100 authors to release database lock
+                if (i + 1) % 100 == 0:
+                    await self.session.commit()
+                    logger.debug(f"Author sync progress: {stats['authors_synced']}/{len(std_authors)}")
+
             except Exception as e:
                 error_msg = f"Failed to sync author {std_author.openalex_author_id}: {str(e)}"
                 logger.error(error_msg)
                 stats["errors"].append(error_msg)
+
+        logger.info(f"[SYNC] Author sync complete: created={stats['authors_created']}, updated={stats['authors_updated']}, filtered={stats['authors_filtered']}")
 
     async def _sync_schools(self, task_id: int, tech_element_id: int, stats: dict):
         """Sync all schools for a task - called BEFORE author sync"""
@@ -191,12 +211,18 @@ class ServingLayerOrchestrator:
         logger.info(f"Syncing {len(schools_to_sync)} schools")
 
         # Sync all schools
-        for std_school in schools_to_sync.values():
+        for i, std_school in enumerate(schools_to_sync.values()):
             try:
                 school, is_new = await self.school_sync.sync_school_to_school(std_school)
                 stats["schools_synced"] += 1
                 if is_new:
                     stats["schools_created"] += 1
+
+                # Commit every 50 schools to release database lock
+                if (i + 1) % 50 == 0:
+                    await self.session.commit()
+                    logger.debug(f"School sync progress: {stats['schools_synced']}/{len(schools_to_sync)}")
+
             except Exception as e:
                 error_msg = f"Failed to sync school {std_school.openalex_institution_id}: {str(e)}"
                 logger.error(error_msg)

@@ -14,9 +14,12 @@ from app.models.standardized import StdAuthor, StdSchool
 from app.repositories.raw_data_repository import RawAuthorRepository
 from app.services.normalizers.base import NormalizationResult
 from app.services.normalizers.school import SchoolNormalizer
-from app.services.common.cs_concepts import CORE_CS_CONCEPTS
+from app.services.common.cs_concepts import CORE_CS_CONCEPTS, CS_SCORE_THRESHOLD
 
 logger = logging.getLogger(__name__)
+
+# Log module load to verify code version
+logger.info(f"[AUTHOR_NORMALIZER] Module loaded. CORE_CS_CONCEPTS count: {len(CORE_CS_CONCEPTS)}, THRESHOLD: {CS_SCORE_THRESHOLD}")
 
 
 class AuthorNormalizer:
@@ -52,14 +55,19 @@ class AuthorNormalizer:
 
             # Calculate CS score
             concepts = data.get("x_concepts", [])
+            matched_concepts = []
             for concept in concepts:
-                concept_url = concept.get("id", "")
-                concept_id = concept_url.split("/")[-1] if concept_url else ""
+                concept_id = str(concept.get("id", ""))
                 if concept_id in CORE_CS_CONCEPTS:
                     score = concept.get("score", 0)
                     cs_score += score
+                    matched_concepts.append(concept_id)
 
             cs_score = min(cs_score, 1.0)
+
+            # Debug log for CS score calculation (only log if concepts exist)
+            if concepts and len(matched_concepts) > 0:
+                logger.debug(f"CS score calculated: {cs_score:.3f} (matched {len(matched_concepts)}/{len(concepts)} concepts)")
 
         except (json.JSONDecodeError, TypeError) as e:
             logger.warning(f"Failed to parse raw_json: {e}")
@@ -200,7 +208,10 @@ class AuthorNormalizer:
 
         result.total = len(pending)
 
-        for raw_author in pending:
+        # Commit every 100 authors to release database lock
+        commit_interval = 100
+
+        for i, raw_author in enumerate(pending):
             try:
                 std_author = await self.normalize_author(raw_author, task_id)
                 await raw_repo.mark_processed(
@@ -209,6 +220,12 @@ class AuthorNormalizer:
                     std_author.std_author_id
                 )
                 result.processed += 1
+
+                # Commit periodically to release database lock
+                if (i + 1) % commit_interval == 0:
+                    await self.session.commit()
+                    logger.debug(f"Author normalization progress: {result.processed}/{result.total}")
+
             except Exception as e:
                 result.failed += 1
 

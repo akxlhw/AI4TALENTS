@@ -17,6 +17,9 @@ from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
+# Log module load to verify code version
+logger.info(f"[AUTHOR_SYNC] Module loaded. CS_SCORE_THRESHOLD: {CS_SCORE_THRESHOLD}")
+
 
 class AuthorSyncService:
     """Service for synchronizing standardized authors to serving layer"""
@@ -45,10 +48,12 @@ class AuthorSyncService:
         cs_score = std_author.cs_concepts_score or 0.0
         if cs_score < CS_SCORE_THRESHOLD:
             logger.debug(
-                f"Skipping {std_author.name_normalized}: "
+                f"[CS_FILTER] Skipping {std_author.name_normalized}: "
                 f"CS score {cs_score:.2f} < {CS_SCORE_THRESHOLD}"
             )
             return None, False
+
+        logger.debug(f"[CS_PASS] {std_author.name_normalized}: CS score {cs_score:.2f}")
 
         # 1. Find existing Talent by source ID
         result = await self.session.execute(
