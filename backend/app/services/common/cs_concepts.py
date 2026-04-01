@@ -4,38 +4,40 @@ These concept IDs are used to calculate CS background score for authors,
 helping filter non-CS/AI background talents from the database.
 
 OpenAlex Concepts: https://openalex.org/topics
+
+Note: OpenAlex x_concepts.id format is pure number string (e.g., "41008148")
 """
 
 # Core CS concepts for calculating CS background score
-# Format: OpenAlex Concept ID (without https://openalex.org/ prefix)
+# Format: Pure number string as returned by OpenAlex x_concepts.id
 CORE_CS_CONCEPTS = {
     # Level 0 - Top level
-    "C41008148",  # Computer Science
+    "41008148",  # Computer Science
 
     # Level 1 - Core disciplines
-    "C154945302",  # Artificial Intelligence
-    "C119857082",  # Machine Learning
-    "C31972630",   # Computer Vision
-    "C204321447",  # Natural Language Processing
-    "C124101348",  # Data Mining
-    "C2522767166", # Data Science
-    "C77088390",   # Database
-    "C31258907",   # Computer Network
-    "C115903868",  # Software Engineering
-    "C111919701",  # Operating System
-    "C120314980",  # Distributed Computing
-    "C199360897",  # Programming Language
-    "C76155785",   # Telecommunications
-    "C527648132",  # Information Security
+    "154945302",  # Artificial Intelligence
+    "119857082",  # Machine Learning
+    "31972630",   # Computer Vision
+    "204321447",  # Natural Language Processing
+    "124101348",  # Data Mining
+    "2522767166", # Data Science
+    "77088390",   # Database
+    "31258907",   # Computer Network
+    "115903868",  # Software Engineering
+    "111919701",  # Operating System
+    "120314980",  # Distributed Computing
+    "199360897",  # Programming Language
+    "76155785",   # Telecommunications
+    "527648132",  # Information Security
 
     # Level 2 - Secondary disciplines
-    "C90509273",   # Robot
-    "C34413123",   # Robotics
-    "C19966478",   # Mobile Robot
-    "C110875604",  # The Internet
+    "90509273",   # Robot
+    "34413123",   # Robotics
+    "19966478",   # Mobile Robot
+    "110875604",  # The Internet
 }
 
 # Threshold for filtering non-CS background authors
 # Authors with CS score below this threshold will not be synced to Talent
-# Set to 0.3 to allow some cross-disciplinary work while filtering clearly non-CS authors
-CS_SCORE_THRESHOLD = 0.3
+# Set to 0.5 to ensure only authors with strong CS background are included
+CS_SCORE_THRESHOLD = 0.5

@@ -23,20 +23,22 @@ from app.models.venue import Venue, VenueTechBinding
 
 
 # 已知的 OpenAlex Source ID 映射
+# 注意：这些 ID 来自 OpenAlex API，格式为 S + 数字
+# 可通过 https://api.openalex.org/sources?search=CONFERENCE_NAME 验证
 KNOWN_OPENALEX_SOURCES = {
     # AI/ML Top Conferences
-    "neurips": "S137534324",
-    "icml": "S216152413",
-    "iclr": "S2764757099",
-    "cvpr": "S11712273",
-    "eccv": "S2736275573",
-    "iccv": "S99458316",
-    "aaai": "S1474501",
-    "ijcai": "S1474504",
-    "acl": "S816424",
-    "emnlp": "S99460462",
-    "naacl": "S2744807627",
-    "coling": "S2766172945",
+    "neurips": "S4306420609",      # Neural Information Processing Systems
+    "icml": "S4306419644",         # International Conference on Machine Learning
+    "iclr": "S4306419637",         # International Conference on Learning Representations
+    "cvpr": "S4363607701",         # Conference on Computer Vision and Pattern Recognition
+    "eccv": "S4306418318",         # European Conference on Computer Vision
+    "iccv": "S4363607764",         # International Conference on Computer Vision
+    "aaai": "S4210191458",         # AAAI Conference on Artificial Intelligence
+    "ijcai": "S4306419999",        # International Joint Conference on Artificial Intelligence
+    "acl": "S2729999759",          # Association for Computational Linguistics
+    "emnlp": "S4306418267",        # Empirical Methods in Natural Language Processing
+    "naacl": "S2744807627",        # North American Chapter of the ACL
+    "coling": "S2766172945",       # International Conference on Computational Linguistics
 
     # Systems & Architecture
     "isca": "S816455",
@@ -57,7 +59,7 @@ KNOWN_OPENALEX_SOURCES = {
     "mobicom": "S99459432",
     "mobisys": "S2764955306",
     "infocom": "S2764626538",
-    "ccs": "S2764979084",
+    "ccs": "S4363608815",          # ACM Conference on Computer and Communications Security
     "usenix-sec": "S2764980276",
     "ndss": "S2765240444",
     "sp": "S27472868",
@@ -76,7 +78,7 @@ KNOWN_OPENALEX_SOURCES = {
     "tkde": "S2766213291",
 
     # Other AI/ML
-    "kdd": "S816468",
+    "kdd": "S4306420424",          # Knowledge Discovery and Data Mining
     "www": "S2766031128",
     "wsdm": "S2766041346",
     "recsys": "S2766042642",
@@ -84,8 +86,8 @@ KNOWN_OPENALEX_SOURCES = {
     "sdm": "S2765931314",
 
     # Robotics
-    "icra": "S99458760",
-    "iros": "S99458904",
+    "icra": "S4210217939",         # International Conference on Robotics and Automation
+    "iros": "S4363608614",         # International Conference on Intelligent Robots and Systems
     "rss": "S2766324898",
     "hri": "S2765690096",
     "corl": "S2766256584",
@@ -100,7 +102,7 @@ KNOWN_OPENALEX_SOURCES = {
     "tissec": "S2766246720",
 
     # Software Engineering
-    "icse": "S816448",
+    "icse": "S4306419842",         # International Conference on Software Engineering
     "fse": "S99459168",
     "ase": "S99459666",
     "tse": "S2765320310",

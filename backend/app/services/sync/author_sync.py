@@ -44,7 +44,7 @@ class AuthorSyncService:
         # Handle None value as 0.0 (filtered)
         cs_score = std_author.cs_concepts_score or 0.0
         if cs_score < CS_SCORE_THRESHOLD:
-            logger.info(
+            logger.debug(
                 f"Skipping {std_author.name_normalized}: "
                 f"CS score {cs_score:.2f} < {CS_SCORE_THRESHOLD}"
             )
@@ -79,7 +79,7 @@ class AuthorSyncService:
         # 4. Create new Talent
         new_talent = await self._create_talent(std_author, role_result, school_id)
 
-        logger.info(
+        logger.debug(
             f"Created talent: {new_talent.talent_id} - {new_talent.name} "
             f"(role: {role_result.role_type}, confidence: {role_result.confidence})"
         )

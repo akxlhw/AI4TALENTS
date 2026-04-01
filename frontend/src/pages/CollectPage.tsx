@@ -483,7 +483,7 @@ const CollectPage: React.FC = () => {
               onClick={() => handleViewTask(record)}
             />
           </Tooltip>
-          {record.status === 'running' && (
+          {(record.status === 'running' || record.status === 'pending') && (
             <Popconfirm
               title="确定取消此任务？"
               onConfirm={() => handleCancelTask(record.task_id)}
@@ -839,7 +839,7 @@ const CollectPage: React.FC = () => {
         open={taskDetailVisible}
         onCancel={() => setTaskDetailVisible(false)}
         footer={
-          selectedTask?.status === 'running' ? (
+          (selectedTask?.status === 'running' || selectedTask?.status === 'pending') ? (
             <Space>
               <Button onClick={() => {
                 loadTasks()

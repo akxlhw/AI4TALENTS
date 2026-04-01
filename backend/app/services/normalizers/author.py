@@ -26,83 +26,55 @@ class AuthorNormalizer:
         self.session = session
         self.school_normalizer = SchoolNormalizer(session)
 
-    def _extract_topics(self, raw_json: str) -> List[str]:
+    def _parse_raw_json(self, raw_json: str) -> tuple[List[str], float]:
         """
-        Extract research topics from OpenAlex raw_json.
+        Parse raw_json once to extract both topics and CS score.
 
-        OpenAlex topics format (actual API response):
-        {
-            "topics": [
-                {
-                    "id": "https://openalex.org/T11307",
-                    "display_name": "Domain Adaptation and Few-Shot Learning",
-                    "count": 78,
-                    "subfield": {"display_name": "Artificial Intelligence"},
-                    "field": {"display_name": "Computer Science"},
-                    "domain": {"display_name": "Physical Sciences"}
-                },
-                ...
-            ]
-        }
-
-        Note: OpenAlex does NOT return a 'score' field. The 'count' field
-        represents the number of works in that topic. Topics are already
-        sorted by count (descending) in the API response.
+        Returns:
+            Tuple of (topics_list, cs_score)
         """
+        topics = []
+        cs_score = 0.0
+
+        if not raw_json:
+            return topics, cs_score
+
         try:
             data = json.loads(raw_json)
+
+            # Extract topics
             topics_data = data.get("topics", [])
-            # Extract display_name for topics with count >= 3, up to 10 topics
-            # Topics are already sorted by count (descending)
-            topics = []
             for topic in topics_data[:10]:
-                # Only include topics with at least 3 works for relevance
                 if topic.get("count", 0) >= 3:
                     display_name = topic.get("display_name")
                     if display_name:
                         topics.append(display_name)
-            return topics
-        except (json.JSONDecodeError, TypeError) as e:
-            logger.warning(f"Failed to parse raw_json for topics: {e}")
-            return []
 
-    def _calculate_cs_score(self, raw_json: str) -> float:
-        """
-        Calculate CS background score from OpenAlex x_concepts.
-
-        OpenAlex x_concepts format:
-        [{
-            "id": "https://openalex.org/C41008148",
-            "display_name": "Computer science",
-            "score": 0.85,
-            "level": 0
-        }, ...]
-
-        Args:
-            raw_json: Raw JSON string from RawAuthor.raw_json
-
-        Returns:
-            CS related concepts score sum (0.0-1.0)
-        """
-        try:
-            data = json.loads(raw_json)
+            # Calculate CS score
             concepts = data.get("x_concepts", [])
-
-            total_score = 0.0
             for concept in concepts:
-                # Extract concept ID from URL format
                 concept_url = concept.get("id", "")
                 concept_id = concept_url.split("/")[-1] if concept_url else ""
-
                 if concept_id in CORE_CS_CONCEPTS:
                     score = concept.get("score", 0)
-                    total_score += score
+                    cs_score += score
 
-            # Cap at 1.0
-            return min(total_score, 1.0)
+            cs_score = min(cs_score, 1.0)
+
         except (json.JSONDecodeError, TypeError) as e:
-            logger.warning(f"Failed to parse raw_json for CS score: {e}")
-            return 0.0
+            logger.warning(f"Failed to parse raw_json: {e}")
+
+        return topics, cs_score
+
+    def _extract_topics(self, raw_json: str) -> List[str]:
+        """Extract research topics from OpenAlex raw_json."""
+        topics, _ = self._parse_raw_json(raw_json)
+        return topics
+
+    def _calculate_cs_score(self, raw_json: str) -> float:
+        """Calculate CS background score from OpenAlex x_concepts."""
+        _, cs_score = self._parse_raw_json(raw_json)
+        return cs_score
 
     def normalize_author_name(self, name: str) -> str:
         """Normalize author name"""
@@ -137,10 +109,8 @@ class AuthorNormalizer:
         task_id: Optional[int] = None
     ) -> StdAuthor:
         """Create a new StdAuthor from RawAuthor"""
-        # Extract topics from raw_json
-        topics = self._extract_topics(raw_author.raw_json)
-        # Calculate CS background score
-        cs_score = self._calculate_cs_score(raw_author.raw_json)
+        # Parse raw_json once to extract both topics and CS score
+        topics, cs_score = self._parse_raw_json(raw_author.raw_json)
 
         std_author = StdAuthor(
             openalex_author_id=raw_author.openalex_author_id,

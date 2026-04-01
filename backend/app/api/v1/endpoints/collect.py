@@ -59,14 +59,28 @@ async def run_collect_task_background(task_id: int):
     Runs the collection task in-process using async/await.
     This avoids SQLite database locking issues with separate processes.
     """
+    from app.core.database import AsyncSessionLocal
+    from app.models.sync import CollectTask
+    from datetime import datetime, timezone
+
+    # First, update task status to running immediately
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(CollectTask).where(CollectTask.task_id == task_id)
+        )
+        task = result.scalar_one_or_none()
+        if task and task.status == "pending":
+            task.status = "running"
+            task.started_at = datetime.now(timezone.utc)
+            task.current_step = "正在初始化..."
+            await session.commit()
+            logger.info(f"Task {task_id} status updated to running")
+
     try:
         await _run_unified_collect(task_id)
     except Exception as e:
         logger.error(f"Background task {task_id} failed: {e}")
         # Update task status to failed
-        from app.core.database import AsyncSessionLocal
-        from app.models.sync import CollectTask
-        from datetime import datetime
         async with AsyncSessionLocal() as session:
             result = await session.execute(
                 select(CollectTask).where(CollectTask.task_id == task_id)
@@ -75,7 +89,7 @@ async def run_collect_task_background(task_id: int):
             if task and task.status == "running":
                 task.status = "failed"
                 task.error_message = str(e)
-                task.completed_at = datetime.utcnow()
+                task.completed_at = datetime.now(timezone.utc)
                 task.current_step = "执行失败"
                 await session.commit()
             logger.error(f"Task {task_id} marked as failed: {e}")
