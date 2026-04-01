@@ -24,6 +24,7 @@ import {
 } from '@ant-design/icons'
 import { api } from '../services/api'
 import { getRoleTypeConfig, ROLE_TYPE_MAP } from '../constants/roleType'
+import TopicTags from '../components/TopicTags'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -56,6 +57,7 @@ interface Talent {
   cited_by_count: number
   h_index: number
   topic_tags: string[]
+  openalex_topics: string[]  // OpenAlex研究主题（具体研究方向）
 }
 
 interface TalentListResponse {
@@ -145,6 +147,7 @@ const SchoolDetailPage: React.FC = () => {
       title: '姓名',
       dataIndex: 'name',
       key: 'name',
+      width: 160,
       render: (name: string, record: Talent) => (
         <a onClick={() => navigate(`/talents/${record.talent_id}`)}>
           <Space direction="vertical" size={0}>
@@ -165,13 +168,6 @@ const SchoolDetailPage: React.FC = () => {
         const config = getRoleTypeConfig(role)
         return <Tag color={config.color}>{config.text}</Tag>
       },
-    },
-    {
-      title: '职位',
-      dataIndex: 'current_title',
-      key: 'current_title',
-      ellipsis: true,
-      render: (title: string | null) => title || '-',
     },
     {
       title: '论文',
@@ -197,21 +193,14 @@ const SchoolDetailPage: React.FC = () => {
     },
     {
       title: '研究方向',
-      dataIndex: 'topic_tags',
-      key: 'topic_tags',
+      dataIndex: 'openalex_topics',
+      key: 'openalex_topics',
       width: 200,
-      render: (tags: string[]) => (
-        <Space size={4} wrap>
-          {(tags || []).slice(0, 2).map(tag => (
-            <Tag key={tag} style={{ margin: 0, fontSize: 11 }}>
-              {tag}
-            </Tag>
-          ))}
-          {tags && tags.length > 2 && (
-            <span style={{ fontSize: 11, color: '#999' }}>+{tags.length - 2}</span>
-          )}
-        </Space>
-      ),
+      render: (topics: string[], record: Talent) => {
+        // 优先显示 openalex_topics，没有则回退到 topic_tags
+        const displayTopics = topics && topics.length > 0 ? topics : record.topic_tags
+        return <TopicTags tags={displayTopics} maxVisible={2} />
+      },
     },
   ]
 

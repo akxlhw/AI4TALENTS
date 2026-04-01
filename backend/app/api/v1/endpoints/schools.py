@@ -174,6 +174,7 @@ async def get_school_talents(
             cited_by_count=talent.cited_by_count,
             h_index=talent.h_index,
             topic_tags=talent.topic_tags or [],
+            openalex_topics=talent.openalex_topics or [],
         )
         for talent in talents
     ]
