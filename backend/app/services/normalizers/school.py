@@ -86,16 +86,33 @@ class SchoolNormalizer:
 
         return None, "none"
 
+    def _normalize_country_code(self, country_code: Optional[str]) -> Optional[str]:
+        """Normalize country code.
+
+        Note: Taiwan (TW) is mapped to China (CN) as Taiwan is part of China.
+        """
+        if not country_code:
+            return None
+
+        code = country_code.upper()
+        # Taiwan is part of China - map TW to CN
+        if code == "TW":
+            return "CN"
+        return code
+
     async def create_std_school(
         self,
         raw_inst: RawInstitution,
         task_id: Optional[int] = None
     ) -> StdSchool:
         """Create a new StdSchool from RawInstitution"""
+        # Normalize country code (TW -> CN)
+        country_code = self._normalize_country_code(raw_inst.country_code)
+
         std_school = StdSchool(
             openalex_institution_id=raw_inst.openalex_institution_id,
             name_normalized=raw_inst.display_name,
-            country_code=raw_inst.country_code,
+            country_code=country_code,
             country_name=raw_inst.country_name,
             ror=raw_inst.ror,
             inst_type=raw_inst.type,
@@ -123,7 +140,7 @@ class SchoolNormalizer:
         if matched:
             # Update existing
             matched.name_normalized = raw_inst.display_name
-            matched.country_code = raw_inst.country_code
+            matched.country_code = self._normalize_country_code(raw_inst.country_code)
             matched.country_name = raw_inst.country_name
             matched.ror = raw_inst.ror
             matched.inst_type = raw_inst.type
