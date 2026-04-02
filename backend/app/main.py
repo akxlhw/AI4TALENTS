@@ -2,14 +2,15 @@
 FastAPI application entry point.
 """
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import async_engine
-from app.core.logging_config import setup_logging, get_logger
-from app.api.v1.router import api_router
+from app.core.logging_config import get_logger, setup_logging
 
 # Setup logging first
 setup_logging()

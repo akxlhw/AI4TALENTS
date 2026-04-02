@@ -2,9 +2,10 @@
 Raw data layer models for OpenAlex entities.
 原始数据层模型 - 支持数据回溯、重试和审计
 """
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, Index
-from sqlalchemy.orm import relationship
 from datetime import datetime
+
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 from app.models.base import TimestampMixin

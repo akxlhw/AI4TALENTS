@@ -5,20 +5,19 @@ Unified collection service with layered architecture.
 DEPRECATED: This class is a facade that delegates to specialized services.
 For new code, use CollectionOrchestrator directly.
 """
-import warnings
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
-from dataclasses import dataclass, field
-from enum import Enum
+from __future__ import annotations
 
-from sqlalchemy import select
+import warnings
+from enum import Enum
+from typing import Any
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sync import CollectTask
-from app.services.common.progress import CollectionProgress
-from app.services.collect.task_creation import TaskCreationService
 from app.services.collect.orchestrator import CollectionOrchestrator
-from app.services.data_fetchers import WorkFetcher, AuthorFetcher, InstitutionFetcher
+from app.services.collect.task_creation import TaskCreationService
+from app.services.common.progress import CollectionProgress
+from app.services.data_fetchers import AuthorFetcher, InstitutionFetcher, WorkFetcher
 
 
 class CollectMode(str, Enum):
@@ -38,7 +37,7 @@ class UnifiedCollectService:
     FULL_COLLECTION_START_YEAR = 2020
     INCREMENTAL_LOOKBACK_DAYS = 30
 
-    def __init__(self, session: AsyncSession, email: Optional[str] = None):
+    def __init__(self, session: AsyncSession, email: str | None = None):
         warnings.warn(
             "UnifiedCollectService is deprecated. Use CollectionOrchestrator instead.",
             DeprecationWarning,
@@ -65,7 +64,7 @@ class UnifiedCollectService:
         self,
         tech_element_id: int,
         mode: str = "full",
-        triggered_by: Optional[int] = None
+        triggered_by: int | None = None
     ) -> CollectTask:
         """Create a new collection task"""
         return await self._task_creator.create_task(tech_element_id, mode, triggered_by)
@@ -74,7 +73,7 @@ class UnifiedCollectService:
         """Execute a collection task through all layers"""
         return await self._orchestrator.execute_task(task_id)
 
-    async def get_task_progress(self, task_id: int) -> Dict[str, Any]:
+    async def get_task_progress(self, task_id: int) -> dict[str, Any]:
         """Get progress for a task"""
         return await self._orchestrator.get_task_progress(task_id)
 
@@ -83,7 +82,7 @@ class UnifiedCollectService:
         """Backward-compatible alias for time window calculation"""
         return self._task_creator.get_time_window(mode, last_collect_at)
 
-    def _add_log(self, level: str, message: str, details: Optional[Dict] = None):
+    def _add_log(self, level: str, message: str, details: dict | None = None):
         """Backward-compatible alias for log tracking"""
         return self._orchestrator.progress_tracker.add_log(level, message, details)
 

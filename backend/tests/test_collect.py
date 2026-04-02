@@ -28,7 +28,6 @@ from app.models.raw_data import RawWork, RawAuthor, RawInstitution, AuthorTechBe
 from app.models.standardized import StdAuthor, StdSchool
 from app.models.talent import Talent
 from app.models.school import School
-from app.models.country import Country
 from app.models.enums import RoleType, VisibilityStatus
 
 
@@ -44,18 +43,8 @@ def mock_session():
 async def test_data_setup(test_session: AsyncSession):
     """
     创建测试所需的基础数据。
-    包括：国家、技术要素、技术方向、Venue
+    包括：技术要素、技术方向、Venue
     """
-    # 创建国家
-    country = Country(
-        country_id=1,
-        country_code="US",
-        country_name_cn="美国",
-        country_name_en="United States",
-        is_active=True,
-    )
-    test_session.add(country)
-
     # 创建技术要素
     tech_element = TechElement(
         tech_element_id=1,
@@ -102,7 +91,6 @@ async def test_data_setup(test_session: AsyncSession):
     await test_session.commit()
 
     return {
-        "country": country,
         "tech_element": tech_element,
         "tech_direction": tech_direction,
         "venue": venue,
@@ -474,7 +462,8 @@ class TestDataFlowIntegration:
         # 创建服务层学校
         school = School(
             school_name="Massachusetts Institute of Technology",
-            country_id=test_data_setup["country"].country_id,
+            country_code="US",
+            country_name="美国",
             source_type="openalex",
             source_record_id="I100",
             is_visible=True,
@@ -844,7 +833,7 @@ class TestDataValidation:
 class TestTransactionManagement:
     """CR-01: 事务管理测试
 
-    验证 update_progress 不会自动 commit，事务边界由 orchestrator 统一管理。
+    验证 update_progress 使用独立数据库连接更新进度，避免阻塞主事务。
     """
 
     @pytest.fixture
@@ -853,30 +842,29 @@ class TestTransactionManagement:
         return ProgressTracker(mock_session)
 
     @pytest.mark.asyncio
-    async def test_update_progress_should_not_commit(self, progress_tracker, mock_session):
-        """验证 update_progress 只 flush 不 commit"""
-        # 设置 mock
-        mock_session.flush = AsyncMock()
-        mock_session.commit = AsyncMock()
-
+    async def test_update_progress_uses_independent_session(self, progress_tracker, mock_session):
+        """验证 update_progress 使用独立 session 更新进度"""
         # 创建测试任务
         mock_task = MagicMock(spec=CollectTask)
         mock_task.task_id = 1
         mock_task.current_step = None
         mock_task.progress_percent = 0
 
-        # 调用 update_progress
-        await progress_tracker.update_progress(mock_task, "测试步骤", 50)
+        # Mock AsyncSessionLocal - patch 在 core.database 模块中
+        from unittest.mock import patch, AsyncMock
+        mock_independent_session = AsyncMock()
+        mock_independent_session.execute = AsyncMock()
+        mock_independent_session.commit = AsyncMock()
+        mock_independent_session.__aenter__ = AsyncMock(return_value=mock_independent_session)
+        mock_independent_session.__aexit__ = AsyncMock(return_value=None)
 
-        # 验证调用了 flush
-        mock_session.flush.assert_called_once()
+        with patch('app.core.database.AsyncSessionLocal', return_value=mock_independent_session):
+            # 调用 update_progress
+            await progress_tracker.update_progress(mock_task, "测试步骤", 50)
 
-        # 验证没有调用 commit
-        mock_session.commit.assert_not_called()
-
-        # 验证任务属性被更新
-        assert mock_task.current_step == "测试步骤"
-        assert mock_task.progress_percent == 50
+            # 验证独立 session 执行了 update 和 commit
+            mock_independent_session.execute.assert_called_once()
+            mock_independent_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_update_task_status_flushes_without_commit(self, progress_tracker, mock_session):

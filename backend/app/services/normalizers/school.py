@@ -1,15 +1,19 @@
 """
 School normalizer for the standardized layer.
 """
+from __future__ import annotations
+
 import re
 from datetime import datetime, timezone
-from typing import Optional, Tuple
+
+# Python 3.10 compatibility
+UTC = timezone.utc
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.raw_data import RawInstitution
-from app.models.standardized import StdSchool, SchoolNameAlias
+from app.models.standardized import SchoolNameAlias, StdSchool
 from app.repositories.raw_data_repository import RawInstitutionRepository
 from app.services.normalizers.base import NormalizationResult
 
@@ -38,10 +42,10 @@ class SchoolNormalizer:
 
     async def find_matching_school(
         self,
-        openalex_id: Optional[str],
+        openalex_id: str | None,
         raw_name: str,
-        country_code: Optional[str] = None
-    ) -> Tuple[Optional[StdSchool], str]:
+        country_code: str | None = None
+    ) -> tuple[StdSchool | None, str]:
         """Find matching school by OpenAlex ID or name
 
         Returns: (matched_school, match_type)
@@ -86,7 +90,7 @@ class SchoolNormalizer:
 
         return None, "none"
 
-    def _normalize_country_code(self, country_code: Optional[str]) -> Optional[str]:
+    def _normalize_country_code(self, country_code: str | None) -> str | None:
         """Normalize country code.
 
         Note: Taiwan (TW) is mapped to China (CN) as Taiwan is part of China.
@@ -103,7 +107,7 @@ class SchoolNormalizer:
     async def create_std_school(
         self,
         raw_inst: RawInstitution,
-        task_id: Optional[int] = None
+        task_id: int | None = None
     ) -> StdSchool:
         """Create a new StdSchool from RawInstitution"""
         # Normalize country code (TW -> CN)
@@ -127,7 +131,7 @@ class SchoolNormalizer:
     async def normalize_institution(
         self,
         raw_inst: RawInstitution,
-        task_id: Optional[int] = None
+        task_id: int | None = None
     ) -> StdSchool:
         """Normalize a raw institution to StdSchool"""
         # Try to find existing match
@@ -153,7 +157,7 @@ class SchoolNormalizer:
 
     async def normalize_all_institutions(
         self,
-        task_id: Optional[int] = None
+        task_id: int | None = None
     ) -> NormalizationResult:
         """Normalize all pending institutions for a specific task.
 
@@ -191,7 +195,7 @@ class SchoolNormalizer:
                     await self.session.commit()
                     logger.debug(f"School normalization progress: {result.processed}/{result.total}")
 
-            except Exception as e:
+            except Exception:
                 result.failed += 1
 
         return result

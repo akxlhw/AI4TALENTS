@@ -1,19 +1,23 @@
 """
 Author sync service for synchronizing StdAuthor to Talent.
 """
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timezone
-from typing import Optional, Tuple
+
+# Python 3.10 compatibility
+UTC = timezone.utc
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.standardized import StdAuthor
-from app.models.talent import Talent, RoleProfile
-from app.models.school import School
 from app.models.enums import VisibilityStatus
-from app.services.role_identifier import RoleIdentifier
+from app.models.school import School
+from app.models.standardized import StdAuthor
+from app.models.talent import RoleProfile, Talent
 from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
+from app.services.role_identifier import RoleIdentifier
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +35,7 @@ class AuthorSyncService:
         self,
         std_author: StdAuthor,
         update_existing: bool = True
-    ) -> Tuple[Optional[Talent], bool]:
+    ) -> tuple[Talent | None, bool]:
         """
         Sync standardized author to serving layer Talent table
 
@@ -91,7 +95,7 @@ class AuthorSyncService:
 
         return new_talent, True
 
-    async def _get_school_id(self, std_author: StdAuthor) -> Optional[int]:
+    async def _get_school_id(self, std_author: StdAuthor) -> int | None:
         """Get school ID for author"""
         if not std_author.std_school_id:
             return None
@@ -114,7 +118,7 @@ class AuthorSyncService:
         talent: Talent,
         std_author: StdAuthor,
         role_result,
-        school_id: Optional[int]
+        school_id: int | None
     ):
         """Update existing talent record"""
         talent.name = std_author.name_normalized
@@ -138,7 +142,7 @@ class AuthorSyncService:
         self,
         std_author: StdAuthor,
         role_result,
-        school_id: Optional[int]
+        school_id: int | None
     ) -> Talent:
         """Create new talent record"""
         new_talent = Talent(
@@ -181,7 +185,7 @@ class AuthorSyncService:
         await self.session.flush()
         return profile
 
-    async def _update_role_profile(self, talent: Talent, role_result) -> Optional[RoleProfile]:
+    async def _update_role_profile(self, talent: Talent, role_result) -> RoleProfile | None:
         """Update role profile"""
         result = await self.session.execute(
             select(RoleProfile).where(RoleProfile.talent_id == talent.talent_id)

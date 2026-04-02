@@ -2,8 +2,11 @@
 Common API schemas.
 Shared models for request/response handling.
 """
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Generic, TypeVar, Optional, List, Any
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel, Field
 
 T = TypeVar("T")
@@ -24,7 +27,7 @@ class PaginationParams(BaseModel):
 class PaginatedResponse(BaseModel, Generic[T]):
     """Paginated response wrapper."""
 
-    items: List[T]
+    items: list[T]
     total: int = Field(description="Total number of items")
     page: int = Field(description="Current page number")
     page_size: int = Field(description="Items per page")
@@ -32,8 +35,8 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
     @classmethod
     def create(
-        cls, items: List[T], total: int, page: int, page_size: int
-    ) -> "PaginatedResponse[T]":
+        cls, items: list[T], total: int, page: int, page_size: int
+    ) -> PaginatedResponse[T]:
         """Create a paginated response."""
         total_pages = (total + page_size - 1) // page_size if page_size > 0 else 0
         return cls(
@@ -50,7 +53,7 @@ class ErrorResponse(BaseModel):
 
     error: str = Field(description="Error type")
     message: str = Field(description="Error message")
-    detail: Optional[str] = Field(default=None, description="Detailed error info")
+    detail: str | None = Field(default=None, description="Detailed error info")
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
 
 

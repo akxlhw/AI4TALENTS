@@ -2,13 +2,13 @@
 Health check endpoint.
 """
 from datetime import datetime
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from fastapi import APIRouter, Depends
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_async_session
 from app.core.config import settings
-
+from app.core.database import get_async_session
 
 router = APIRouter(tags=["Health"])
 

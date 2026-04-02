@@ -3,15 +3,17 @@ Collaboration service for extracting and managing co-author relationships.
 
 优化版本：从本地 RawWork 表提取合作关系，不再重复调用 OpenAlex API
 """
+from __future__ import annotations
+
 import json
 import logging
-from typing import List, Dict, Optional, Set, Tuple
-from sqlalchemy import select, and_, or_, func
+
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.talent import Talent
 from app.models.collaboration import Collaboration
 from app.models.raw_data import RawWork
+from app.models.talent import Talent
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ class CollaborationService:
         """No-op for compatibility with old code."""
         pass
 
-    def _extract_author_ids_from_raw_json(self, raw_json: str) -> List[str]:
+    def _extract_author_ids_from_raw_json(self, raw_json: str) -> list[str]:
         """从 RawWork.raw_json 提取作者 ID 列表。
 
         Args:
@@ -56,7 +58,7 @@ class CollaborationService:
             logger.warning(f"Failed to parse raw_json: {e}")
             return []
 
-    def _extract_publication_year(self, raw_json: str) -> Optional[int]:
+    def _extract_publication_year(self, raw_json: str) -> int | None:
         """从 RawWork.raw_json 提取发表年份。"""
         try:
             work_data = json.loads(raw_json)
@@ -67,8 +69,8 @@ class CollaborationService:
     async def sync_all_collaborations(
         self,
         batch_size: int = 500,
-        progress_callback: Optional[callable] = None
-    ) -> Dict:
+        progress_callback: callable | None = None
+    ) -> dict:
         """
         从本地 RawWork 表提取所有合作关系。
 
@@ -106,7 +108,7 @@ class CollaborationService:
         offset = 0
 
         # 内存缓存：记录已处理的合作关系，避免重复插入
-        collab_cache: Set[Tuple[int, int]] = set()
+        collab_cache: set[tuple[int, int]] = set()
 
         logger.info(f"开始处理 {total_works} 篇论文...")
 
@@ -169,7 +171,7 @@ class CollaborationService:
             "collaborations_created": collaborations_created
         }
 
-    async def _build_talent_id_map(self) -> Dict[str, int]:
+    async def _build_talent_id_map(self) -> dict[str, int]:
         """构建 OpenAlex 作者 ID -> talent_id 的映射。"""
         stmt = select(Talent.talent_id, Talent.source_record_id)
         result = await self.session.execute(stmt)
@@ -186,8 +188,8 @@ class CollaborationService:
 
     async def _create_collaborations(
         self,
-        talent_ids: List[int],
-        publication_year: Optional[int]
+        talent_ids: list[int],
+        publication_year: int | None
     ) -> int:
         """为给定的学者列表创建两两合作关系。"""
         if len(talent_ids) < 2:
@@ -238,9 +240,9 @@ class CollaborationService:
 
     async def _create_collaborations_with_cache(
         self,
-        talent_ids: List[int],
-        publication_year: Optional[int],
-        cache: Set[Tuple[int, int]]
+        talent_ids: list[int],
+        publication_year: int | None,
+        cache: set[tuple[int, int]]
     ) -> int:
         """为给定的学者列表创建两两合作关系（使用内存缓存避免重复查询）。"""
         if len(talent_ids) < 2:
@@ -378,7 +380,7 @@ class CollaborationService:
         self,
         talent_id: int,
         limit: int = 20
-    ) -> Dict:
+    ) -> dict:
         """
         获取学者的合作网络数据。
 
@@ -519,7 +521,7 @@ class CollaborationService:
         await self.session.commit()
         return collaborations_created
 
-    async def get_sync_status(self) -> Dict:
+    async def get_sync_status(self) -> dict:
         """
         获取当前合作网络同步状态。
         """

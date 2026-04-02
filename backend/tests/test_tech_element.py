@@ -254,13 +254,13 @@ class TestOverallTalents:
 
     @pytest.mark.asyncio
     async def test_get_overall_talents_with_filters(
-        self, client: AsyncClient, sample_country
+        self, client: AsyncClient
     ):
         """Test getting talent list with filters."""
         response = await client.get(
             "/api/v1/tech-elements/overall-talents",
             params={
-                "country_id": sample_country.country_id,
+                "country_code": "US",
                 "role_type": "professor",
             },
         )
@@ -356,14 +356,14 @@ class TestElementSchools:
 
     @pytest.mark.asyncio
     async def test_get_element_schools_with_filters(
-        self, client: AsyncClient, test_tech_element, sample_country
+        self, client: AsyncClient, test_tech_element
     ):
         """Test getting schools with country filter."""
         element_id = test_tech_element["element"].tech_element_id
 
         response = await client.get(
             f"/api/v1/tech-elements/{element_id}/schools",
-            params={"country_id": sample_country.country_id},
+            params={"country_code": "US"},
         )
 
         assert response.status_code == 200
@@ -390,7 +390,7 @@ class TestElementTalents:
 
     @pytest.mark.asyncio
     async def test_get_element_talents_with_filters(
-        self, client: AsyncClient, test_tech_element, sample_country
+        self, client: AsyncClient, test_tech_element
     ):
         """Test getting talents with filters."""
         element_id = test_tech_element["element"].tech_element_id
@@ -398,7 +398,7 @@ class TestElementTalents:
         response = await client.get(
             f"/api/v1/tech-elements/{element_id}/talents",
             params={
-                "country_id": sample_country.country_id,
+                "country_code": "US",
                 "role_type": "professor",
                 "keyword": "AI",
             },

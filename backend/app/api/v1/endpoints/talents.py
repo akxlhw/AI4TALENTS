@@ -4,18 +4,20 @@ Provides talent list, detail, and filtering.
 
 Architecture: Endpoint -> Service -> Repository
 """
-import io
-import csv
+from __future__ import annotations
+
 import asyncio
-from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+import csv
+import io
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.services.talent_service import TalentService
 from app.schemas.common import PaginatedResponse
-from app.schemas.overview import TalentSummary, TalentDetail, SelectedWorkResponse, TechTagItem
+from app.schemas.overview import SelectedWorkResponse, TalentDetail, TalentSummary, TechTagItem
+from app.services.talent_service import TalentService
 
 router = APIRouter(prefix="/talents", tags=["Talents"])
 
@@ -27,12 +29,12 @@ router = APIRouter(prefix="/talents", tags=["Talents"])
     description="分页查询人才列表，支持多种筛选条件",
 )
 async def list_talents(
-    school_id: Optional[int] = Query(None, description="按学校ID筛选"),
-    country_id: Optional[int] = Query(None, description="按国家ID筛选"),
-    role_type: Optional[str] = Query(None, description="按角色类型筛选 (professor/student/graduated/unknown)"),
-    min_works: Optional[int] = Query(None, description="最小论文数"),
-    min_citations: Optional[int] = Query(None, description="最小引用数"),
-    keyword: Optional[str] = Query(None, description="搜索关键词"),
+    school_id: int | None = Query(None, description="按学校ID筛选"),
+    country_code: str | None = Query(None, description="按国家代码筛选 (如 US, CN)"),
+    role_type: str | None = Query(None, description="按角色类型筛选 (professor/student/graduated/unknown)"),
+    min_works: int | None = Query(None, description="最小论文数"),
+    min_citations: int | None = Query(None, description="最小引用数"),
+    keyword: str | None = Query(None, description="搜索关键词"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     session: AsyncSession = Depends(get_async_session),
@@ -42,7 +44,7 @@ async def list_talents(
 
     Supports filtering by:
     - school_id: Filter by school
-    - country_id: Filter by country (via school)
+    - country_code: Filter by country code (via school)
     - role_type: Filter by role type
     - min_works: Minimum works count
     - min_citations: Minimum citation count
@@ -51,7 +53,7 @@ async def list_talents(
     service = TalentService(session)
     talents, total = await service.get_talent_list(
         school_id=school_id,
-        country_id=country_id,
+        country_code=country_code,
         role_type=role_type,
         min_works=min_works,
         min_citations=min_citations,
@@ -110,7 +112,8 @@ async def get_talent(
     - Tech tags
     """
     from sqlalchemy import select
-    from app.models.tech_element import TalentTechTag, TechElement, TechDirection
+
+    from app.models.tech_element import TalentTechTag, TechDirection, TechElement
 
     service = TalentService(session)
     talent = await service.get_talent_by_id(talent_id)
@@ -139,7 +142,7 @@ async def get_talent(
         .outerjoin(TechDirection, TalentTechTag.tech_direction_id == TechDirection.tech_direction_id)
         .where(TalentTechTag.talent_id == talent_id)
     )
-    for tag, element, direction in result.fetchall():
+    for _tag, element, direction in result.fetchall():
         tech_tags.append(TechTagItem(
             tech_element_id=element.tech_element_id,
             tech_element_name=element.element_name,
@@ -218,7 +221,7 @@ async def get_talent_works(
 )
 async def export_talents(
     format: str = Query("csv", description="导出格式: csv 或 xlsx"),
-    talent_ids: List[int] = Query(..., description="要导出的人才ID列表"),
+    talent_ids: list[int] = Query(..., description="要导出的人才ID列表"),
     session: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -275,7 +278,7 @@ async def export_talents(
                 try:
                     if len(str(cell.value)) > max_length:
                         max_length = len(str(cell.value))
-                except:
+                except Exception:
                     pass
             ws.column_dimensions[column].width = min(max_length + 2, 50)
 
@@ -310,7 +313,7 @@ async def export_talents(
     description="获取多个候选人的对比数据",
 )
 async def compare_talents(
-    talent_ids: List[int] = Query(..., description="要对比的人才ID列表 (2-4个)"),
+    talent_ids: list[int] = Query(..., description="要对比的人才ID列表 (2-4个)"),
     session: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -425,9 +428,8 @@ async def get_talent_collaborations(
 _sync_progress = {"status": "idle", "processed": 0, "total": 0, "collaborations": 0}
 
 
-def run_sync_in_thread(talent_id: Optional[int] = None):
+def run_sync_in_thread(talent_id: int | None = None):
     """Run sync in a separate thread to avoid blocking."""
-    import asyncio
     global _sync_progress
 
     # Create new event loop for the thread
@@ -479,7 +481,7 @@ def run_sync_in_thread(talent_id: Optional[int] = None):
     description="从已采集的论文数据中提取学者合作关系，无需重复调用 OpenAlex API",
 )
 async def sync_collaborations(
-    talent_id: Optional[int] = Query(None, description="单个学者ID，为空则同步全部"),
+    talent_id: int | None = Query(None, description="单个学者ID，为空则同步全部"),
     session: AsyncSession = Depends(get_async_session),
 ):
     """

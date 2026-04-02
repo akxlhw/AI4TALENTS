@@ -2,7 +2,9 @@
 Search API endpoint.
 Provides talent search functionality.
 """
-from typing import Optional
+
+from __future__ import annotations
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +23,7 @@ router = APIRouter(prefix="/search", tags=["Search"])
 )
 async def search_talents(
     q: str = Query(..., min_length=1, description="搜索关键词"),
-    role_type: Optional[str] = Query(None, description="按角色类型筛选"),
+    role_type: str | None = Query(None, description="按角色类型筛选"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     session: AsyncSession = Depends(get_async_session),

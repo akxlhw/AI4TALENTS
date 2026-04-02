@@ -297,7 +297,7 @@ const CollectPage: React.FC = () => {
       setCollabSyncStatus({ status: 'pending', processed: 0, total: 0, collaborations: 0 })
       message.info('正在启动同步任务...')
 
-      const response = await api.talents.syncCollaborations()
+      void api.talents.syncCollaborations()
       message.success('同步任务已启动')
 
       // 立即更新状态为 running
@@ -665,11 +665,6 @@ const CollectPage: React.FC = () => {
                             已处理 <Text strong>{collabSyncStatus.processed?.toLocaleString()}</Text> 篇论文，
                             新增 <Text strong type="success">{collabSyncStatus.collaborations?.toLocaleString()}</Text> 条合作关系
                           </Text>
-                          {collabSyncStatus.total_works && (
-                            <Text type="secondary">
-                              共 {collabSyncStatus.total_works.toLocaleString()} 篇论文数据
-                            </Text>
-                          )}
                         </Space>
                       }
                     />

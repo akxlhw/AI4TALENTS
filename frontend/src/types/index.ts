@@ -159,7 +159,7 @@ export interface SearchTalent {
 export interface SearchFilterParams {
   role_type?: string
   school_id?: number
-  country_id?: number
+  country_code?: string
   tech_element_id?: number
   tech_direction_id?: number
   min_works?: number

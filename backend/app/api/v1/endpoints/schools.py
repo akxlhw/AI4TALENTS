@@ -2,17 +2,19 @@
 Schools API endpoints.
 Provides school list, detail, and statistics.
 """
-from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
 
 from app.core.database import get_async_session
+from app.models.school import School
 from app.repositories.school_repository import SchoolRepository
 from app.repositories.talent_repository import TalentRepository
 from app.schemas.common import PaginatedResponse
-from app.schemas.overview import SchoolSummary, SchoolDetail, SchoolStats, TalentSummary
-from app.models.school import School
+from app.schemas.overview import SchoolDetail, SchoolStats, SchoolSummary, TalentSummary
 
 router = APIRouter(prefix="/schools", tags=["Schools"])
 
@@ -24,9 +26,9 @@ router = APIRouter(prefix="/schools", tags=["Schools"])
     description="分页查询学校列表，支持按国家和关键词筛选",
 )
 async def list_schools(
-    country_id: Optional[int] = Query(None, description="按国家ID筛选"),
-    keyword: Optional[str] = Query(None, description="搜索关键词"),
-    is_top_school: Optional[bool] = Query(None, description="按Top院校筛选"),
+    country_code: str | None = Query(None, description="按国家代码筛选 (ISO 3166-1 alpha-2)"),
+    keyword: str | None = Query(None, description="搜索关键词"),
+    is_top_school: bool | None = Query(None, description="按Top院校筛选"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=5000, description="每页数量"),
     session: AsyncSession = Depends(get_async_session),
@@ -35,13 +37,13 @@ async def list_schools(
     Get paginated list of schools.
 
     Supports filtering by:
-    - country_id: Filter schools by country
+    - country_code: Filter schools by country code (ISO 3166-1 alpha-2)
     - keyword: Search in school name and alias
     - is_top_school: Filter by top school status
     """
     repo = SchoolRepository(session)
     schools, total = await repo.get_list(
-        country_id=country_id,
+        country_code=country_code,
         keyword=keyword,
         is_top_school=is_top_school,
         page=page,
@@ -53,9 +55,8 @@ async def list_schools(
             school_id=school.school_id,
             school_name=school.school_name,
             school_alias=school.school_alias,
-            country_id=school.country_id,
-            country_name=school.country.country_name_cn if school.country else None,
-            country_code=school.country.country_code if school.country else None,
+            country_code=school.country_code,
+            country_name=school.country_name,
             professor_count=school.professor_count,
             student_count=school.student_count,
             homepage_url=school.homepage_url,
@@ -83,8 +84,8 @@ async def list_schools(
     description="获取管理员配置的Top院校列表",
 )
 async def list_top_schools(
-    country_id: Optional[int] = Query(None, description="按国家ID筛选"),
-    keyword: Optional[str] = Query(None, description="搜索关键词"),
+    country_code: str | None = Query(None, description="按国家代码筛选 (ISO 3166-1 alpha-2)"),
+    keyword: str | None = Query(None, description="搜索关键词"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=5000, description="每页数量"),
     session: AsyncSession = Depends(get_async_session),
@@ -94,7 +95,7 @@ async def list_top_schools(
 
     # Query with is_top_school filter
     schools, total = await repo.get_list(
-        country_id=country_id,
+        country_code=country_code,
         keyword=keyword,
         is_top_school=True,
         page=page,
@@ -106,9 +107,8 @@ async def list_top_schools(
             school_id=school.school_id,
             school_name=school.school_name,
             school_alias=school.school_alias,
-            country_id=school.country_id,
-            country_name=school.country.country_name_cn if school.country else None,
-            country_code=school.country.country_code if school.country else None,
+            country_code=school.country_code,
+            country_name=school.country_name,
             professor_count=school.professor_count,
             student_count=school.student_count,
             homepage_url=school.homepage_url,
@@ -133,7 +133,7 @@ async def list_top_schools(
 )
 async def get_school_talents(
     school_id: int,
-    role_type: Optional[str] = Query(None, description="按角色类型筛选 (professor/student/graduated/unknown)"),
+    role_type: str | None = Query(None, description="按角色类型筛选 (professor/student/graduated/unknown)"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=5000, description="每页数量"),
     session: AsyncSession = Depends(get_async_session),
@@ -251,9 +251,8 @@ async def get_school(
         school_id=school.school_id,
         school_name=school.school_name,
         school_alias=school.school_alias,
-        country_id=school.country_id,
-        country_name=school.country.country_name_cn if school.country else None,
-        country_code=school.country.country_code if school.country else None,
+        country_code=school.country_code,
+        country_name=school.country_name,
         school_intro=school.school_intro,
         homepage_url=school.homepage_url,
         professor_count=talent_counts["professor"],
@@ -317,7 +316,7 @@ async def unset_top_school(
     description="批量将多个学校设置为Top院校",
 )
 async def batch_set_top_schools(
-    school_ids: List[int] = Body(..., description="学校ID列表"),
+    school_ids: list[int] = Body(..., description="学校ID列表"),
     session: AsyncSession = Depends(get_async_session),
 ):
     """批量设置Top院校"""
@@ -343,7 +342,7 @@ async def batch_set_top_schools(
     description="批量取消多个学校的Top院校标记",
 )
 async def batch_unset_top_schools(
-    school_ids: List[int] = Body(..., description="学校ID列表"),
+    school_ids: list[int] = Body(..., description="学校ID列表"),
     session: AsyncSession = Depends(get_async_session),
 ):
     """批量取消Top院校"""

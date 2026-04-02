@@ -2,19 +2,18 @@
 Search document builder.
 Builds search projection documents for full-text search.
 """
-from typing import Dict, Any, List, Optional
-from datetime import datetime
+from __future__ import annotations
+
 import logging
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.builders.base import BaseBuilder, BuildResult
-from app.models.talent import Talent
 from app.models.school import School
-from app.models.country import Country
 from app.models.search import SearchTalentDocument
-
+from app.models.talent import Talent
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,7 @@ class SearchBuilder(BaseBuilder):
         result = await self.session.execute(
             select(Talent, School)
             .join(School, Talent.school_id == School.school_id, isouter=True)
-            .where(Talent.is_visible == True)
+            .where(Talent.is_visible.is_(True))
         )
         talents_with_schools = result.all()
 
@@ -89,8 +88,8 @@ class SearchBuilder(BaseBuilder):
     async def _build_search_document(
         self,
         talent: Talent,
-        school: Optional[School],
-    ) -> Optional[SearchTalentDocument]:
+        school: School | None,
+    ) -> SearchTalentDocument | None:
         """
         Build a search document for a talent.
 
@@ -111,14 +110,8 @@ class SearchBuilder(BaseBuilder):
         # Build search text
         search_text = self._build_search_text(talent, school)
 
-        # Get country code
-        country_code = None
-        if school and school.country_id:
-            country_result = await self.session.execute(
-                select(Country.country_code)
-                .where(Country.country_id == school.country_id)
-            )
-            country_code = country_result.scalar_one_or_none()
+        # Get country code directly from school
+        country_code = school.country_code if school else None
 
         now = datetime.now()
 
@@ -169,7 +162,7 @@ class SearchBuilder(BaseBuilder):
     def _build_search_text(
         self,
         talent: Talent,
-        school: Optional[School],
+        school: School | None,
     ) -> str:
         """
         Build searchable text from talent and school data.

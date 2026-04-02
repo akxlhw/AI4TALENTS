@@ -2,40 +2,38 @@
 Data version management API endpoints.
 数据版本管理相关接口
 """
-from typing import Optional
-from datetime import datetime
-import uuid
+
+from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.endpoints.auth import require_admin, require_user
 from app.core.database import get_async_session
 from app.models.iam import UserAccount
 from app.repositories.data_version_repository import (
-    DataVersionRepository,
-    DataPublishRecordRepository,
     DataCorrectionRepository,
+    DataPublishRecordRepository,
     DataQualityRepository,
+    DataVersionRepository,
 )
 from app.schemas.data_version import (
-    CreateVersionRequest,
-    PublishVersionRequest,
-    DataVersionResponse,
-    DataVersionListResponse,
-    PublishRecordResponse,
-    PublishRecordListResponse,
-    CreateCorrectionRequest,
-    CorrectionResponse,
-    CorrectionListResponse,
-    QualitySummaryResponse,
-    QualityMetricsResponse,
-    VERSION_TYPE_OPTIONS,
     ACTION_TYPE_OPTIONS,
     CORRECTION_TYPE_OPTIONS,
-    CORRECTION_STATUS_OPTIONS,
     TARGET_TYPE_OPTIONS,
+    VERSION_TYPE_OPTIONS,
+    CorrectionListResponse,
+    CorrectionResponse,
+    CreateCorrectionRequest,
+    CreateVersionRequest,
+    DataVersionListResponse,
+    DataVersionResponse,
+    PublishRecordListResponse,
+    PublishRecordResponse,
+    PublishVersionRequest,
+    QualityMetricsResponse,
+    QualitySummaryResponse,
 )
-from app.api.v1.endpoints.auth import require_user, require_admin
 
 router = APIRouter(prefix="/data-version", tags=["Data Version Management"])
 
@@ -49,7 +47,7 @@ router = APIRouter(prefix="/data-version", tags=["Data Version Management"])
     description="获取所有数据版本（分页）"
 )
 async def list_versions(
-    is_published: Optional[bool] = Query(None, description="按发布状态筛选"),
+    is_published: bool | None = Query(None, description="按发布状态筛选"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
@@ -188,7 +186,7 @@ async def publish_version(
     description="获取数据发布操作记录"
 )
 async def list_publish_records(
-    version_id: Optional[int] = Query(None, description="按版本筛选"),
+    version_id: int | None = Query(None, description="按版本筛选"),
     session: AsyncSession = Depends(get_async_session),
     current_user: UserAccount = Depends(require_admin),
 ):
@@ -209,8 +207,8 @@ async def list_publish_records(
     description="获取数据纠偏记录（分页）"
 )
 async def list_corrections(
-    target_type: Optional[str] = Query(None, description="按目标类型筛选"),
-    status: Optional[str] = Query(None, description="按状态筛选"),
+    target_type: str | None = Query(None, description="按目标类型筛选"),
+    status: str | None = Query(None, description="按状态筛选"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
@@ -290,7 +288,7 @@ async def revert_correction(
     description="获取最新的数据质量摘要"
 )
 async def get_quality_summary(
-    version_id: Optional[int] = Query(None, description="指定版本ID"),
+    version_id: int | None = Query(None, description="指定版本ID"),
     session: AsyncSession = Depends(get_async_session),
     current_user: UserAccount = Depends(require_admin),
 ):

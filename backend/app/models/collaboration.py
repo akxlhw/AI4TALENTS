@@ -1,8 +1,7 @@
 """
 Collaboration model for co-author relationships.
 """
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, UniqueConstraint
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, ForeignKey, Integer, String, UniqueConstraint
 
 from app.core.database import Base
 from app.models.base import TimestampMixin

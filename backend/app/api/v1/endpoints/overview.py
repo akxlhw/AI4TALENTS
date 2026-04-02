@@ -3,16 +3,15 @@ Overview API endpoint.
 Returns homepage statistics.
 """
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.repositories.stat_repository import StatisticsRepository
-from app.schemas.overview import OverviewResponse, OverviewStats
 from app.models.school import School
 from app.models.talent import Talent
-from app.models.tech_element import TechElement, TechDirection
-from app.models.country import Country
+from app.models.tech_element import TechDirection, TechElement
+from app.repositories.stat_repository import StatisticsRepository
+from app.schemas.overview import OverviewResponse, OverviewStats
 
 router = APIRouter(tags=["Overview"])
 
@@ -49,23 +48,24 @@ async def get_overview(
 
     # 实时计算国家数（有人才的国家）
     country_result = await session.execute(
-        select(func.count(func.distinct(School.country_id)))
+        select(func.count(func.distinct(School.country_code)))
         .join(Talent, Talent.school_id == School.school_id)
-        .where(Talent.is_visible == True)
+        .where(Talent.is_visible.is_(True))
+        .where(School.country_code.isnot(None))
     )
     country_count = country_result.scalar() or 0
 
     # 实时计算技术要素数
     tech_element_result = await session.execute(
         select(func.count(TechElement.tech_element_id))
-        .where(TechElement.is_enabled == True)
+        .where(TechElement.is_enabled.is_(True))
     )
     tech_element_count = tech_element_result.scalar() or 0
 
     # 实时计算技术方向数
     tech_direction_result = await session.execute(
         select(func.count(TechDirection.tech_direction_id))
-        .where(TechDirection.is_enabled == True)
+        .where(TechDirection.is_enabled.is_(True))
     )
     tech_direction_count = tech_direction_result.scalar() or 0
 

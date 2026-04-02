@@ -62,7 +62,6 @@ const REGIONS: Record<string, { name: string; countries: string[] }> = {
 
 // 国家数据类型
 interface Country {
-  country_id: number
   country_code: string
   country_name_cn: string
   school_count: number
@@ -84,8 +83,8 @@ const CountrySchoolPage: React.FC = () => {
   const [searchParams] = useSearchParams()
 
   // 筛选状态
-  const [countryId, setCountryId] = useState<number | undefined>(
-    searchParams.get('country_id') ? Number(searchParams.get('country_id')) : undefined
+  const [countryCode, setCountryCode] = useState<string | undefined>(
+    searchParams.get('country_code') || undefined
   )
   const [schoolId, setSchoolId] = useState<number | undefined>(
     searchParams.get('school_id') ? Number(searchParams.get('school_id')) : undefined
@@ -148,11 +147,8 @@ const CountrySchoolPage: React.FC = () => {
     }
 
     // 按国家筛选
-    if (countryId) {
-      const country = countries.find(c => c.country_id === countryId)
-      if (country) {
-        filtered = filtered.filter(s => s.country_code === country.country_code)
-      }
+    if (countryCode) {
+      filtered = filtered.filter(s => s.country_code === countryCode)
     }
 
     // 按关键词筛选
@@ -164,7 +160,7 @@ const CountrySchoolPage: React.FC = () => {
 
     // 按人才数排序
     return filtered.sort((a, b) => (b.professor_count + b.student_count) - (a.professor_count + a.student_count))
-  }, [schools, activeRegion, countryId, keyword, countries, otherRegionCountryCodes])
+  }, [schools, activeRegion, countryCode, keyword, otherRegionCountryCodes])
 
   // 加载国家列表
   const fetchCountries = useCallback(async () => {
@@ -215,24 +211,21 @@ const CountrySchoolPage: React.FC = () => {
     fetchSchools()
   }, [])
 
-  // CR-01: 根据URL中的country_id自动切换区域标签
+  // CR-01: 根据URL中的country_code自动切换区域标签
   useEffect(() => {
-    if (countryId && countries.length > 0) {
-      const country = countries.find(c => c.country_id === countryId)
-      if (country) {
-        // 查找国家所属区域
-        if (NORTH_AMERICA_CODES.has(country.country_code)) {
-          setActiveRegion('north_america')
-        } else if (ASIA_PACIFIC_CODES.has(country.country_code)) {
-          setActiveRegion('asia_pacific')
-        } else if (EUROPE_CODES.has(country.country_code)) {
-          setActiveRegion('europe')
-        } else if (otherRegionCountryCodes.has(country.country_code)) {
-          setActiveRegion('other')
-        }
+    if (countryCode) {
+      // 查找国家所属区域
+      if (NORTH_AMERICA_CODES.has(countryCode)) {
+        setActiveRegion('north_america')
+      } else if (ASIA_PACIFIC_CODES.has(countryCode)) {
+        setActiveRegion('asia_pacific')
+      } else if (EUROPE_CODES.has(countryCode)) {
+        setActiveRegion('europe')
+      } else if (otherRegionCountryCodes.has(countryCode)) {
+        setActiveRegion('other')
       }
     }
-  }, [countryId, countries, otherRegionCountryCodes])
+  }, [countryCode, otherRegionCountryCodes])
 
   // 处理URL参数中的school_id - 自动跳转到学校详情页
   useEffect(() => {
@@ -244,19 +237,19 @@ const CountrySchoolPage: React.FC = () => {
   // 切换区域时重置国家筛选
   const handleRegionChange = (regionKey: string) => {
     setActiveRegion(regionKey)
-    setCountryId(undefined)
+    setCountryCode(undefined)
   }
 
   // 处理重置
   const handleReset = () => {
-    setCountryId(undefined)
+    setCountryCode(undefined)
     setSchoolId(undefined)
     setKeyword('')
   }
 
   // 国家选项
   const countryOptions = currentRegionCountries.map(c => ({
-    value: c.country_id,
+    value: c.country_code,
     label: c.country_name_cn,
   }))
 
@@ -367,8 +360,8 @@ const CountrySchoolPage: React.FC = () => {
             <Select
               style={{ width: '100%' }}
               placeholder="全部国家"
-              value={countryId}
-              onChange={setCountryId}
+              value={countryCode}
+              onChange={setCountryCode}
               options={countryOptions}
               allowClear
               showSearch

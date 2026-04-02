@@ -4,8 +4,24 @@ Aggregates all endpoint routers.
 """
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import health, overview, countries, schools, talents, search, auth, permissions, audit, favorites, tech_element, talent_pool, collect, data_version, venue, homepage
-
+from app.api.v1.endpoints import (
+    audit,
+    auth,
+    collect,
+    countries,
+    data_version,
+    favorites,
+    health,
+    homepage,
+    overview,
+    permissions,
+    schools,
+    search,
+    talent_pool,
+    talents,
+    tech_element,
+    venue,
+)
 
 api_router = APIRouter()
 

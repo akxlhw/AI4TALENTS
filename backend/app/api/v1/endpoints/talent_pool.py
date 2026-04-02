@@ -2,25 +2,24 @@
 Talent Pool API endpoints.
 人才池相关接口
 """
-from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
 from app.models.iam import UserAccount
-from app.repositories.talent_pool_repository import TalentPoolRepository, FavoriteRepository
-from app.schemas.talent_pool import (
-    CreatePoolRequest,
-    UpdatePoolRequest,
-    AddMemberRequest,
-    TalentPoolResponse,
-    PoolMemberResponse,
-    PoolListResponse,
-    UpdateFollowupRequest,
-    FOLLOWUP_STATUS_OPTIONS,
-)
+from app.repositories.talent_pool_repository import FavoriteRepository, TalentPoolRepository
 from app.schemas.common import PaginatedResponse
-from app.api.v1.endpoints.auth import require_user
+from app.schemas.talent_pool import (
+    FOLLOWUP_STATUS_OPTIONS,
+    AddMemberRequest,
+    CreatePoolRequest,
+    PoolListResponse,
+    PoolMemberResponse,
+    TalentPoolResponse,
+    UpdateFollowupRequest,
+    UpdatePoolRequest,
+)
 
 router = APIRouter(prefix="/talent-pools", tags=["Talent Pools"])
 

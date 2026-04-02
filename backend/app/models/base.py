@@ -1,8 +1,7 @@
 """
 Base model with common fields.
 """
-from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Boolean, Column, DateTime, Integer
 from sqlalchemy.orm import declared_attr
 from sqlalchemy.sql import func
 

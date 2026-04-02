@@ -2,9 +2,10 @@
 Tech Element Schemas.
 技术要素相关DTO
 """
-from typing import Optional, List
+
+from __future__ import annotations
+
 from pydantic import BaseModel
-from datetime import datetime
 
 
 class TechDirectionResponse(BaseModel):
@@ -12,7 +13,7 @@ class TechDirectionResponse(BaseModel):
     tech_direction_id: int
     direction_code: str
     direction_name: str
-    direction_name_en: Optional[str] = None
+    direction_name_en: str | None = None
     tech_element_id: int
     sort_order: int = 0
 
@@ -25,10 +26,10 @@ class TechElementResponse(BaseModel):
     tech_element_id: int
     element_code: str
     element_name: str
-    element_name_en: Optional[str] = None
-    element_desc: Optional[str] = None
+    element_name_en: str | None = None
+    element_desc: str | None = None
     sort_order: int = 0
-    directions: List[TechDirectionResponse] = []
+    directions: list[TechDirectionResponse] = []
 
     class Config:
         from_attributes = True
@@ -62,9 +63,8 @@ class OverallStatsResponse(BaseModel):
 
 class CountryDistributionItem(BaseModel):
     """国家分布项"""
-    country_id: int
+    country_code: str
     country_name: str
-    country_code: Optional[str] = None
     talent_count: int
 
 
@@ -72,24 +72,24 @@ class SchoolDistributionItem(BaseModel):
     """院校分布项"""
     school_id: int
     school_name: str
-    country_name: Optional[str] = None
+    country_name: str | None = None
     talent_count: int
 
 
 class TechElementListResponse(BaseModel):
     """技术要素列表响应"""
-    items: List[TechElementResponse]
+    items: list[TechElementResponse]
     total: int
 
 
 class CountryDistributionResponse(BaseModel):
     """国家分布响应"""
-    items: List[CountryDistributionItem]
+    items: list[CountryDistributionItem]
 
 
 class SchoolDistributionResponse(BaseModel):
     """院校分布响应"""
-    items: List[SchoolDistributionItem]
+    items: list[SchoolDistributionItem]
     total: int
 
 
@@ -98,14 +98,14 @@ class TalentInTechElement(BaseModel):
     """技术要素页的人才项"""
     talent_id: int
     name: str
-    name_en: Optional[str] = None
+    name_en: str | None = None
     role_type: str
-    school_name: Optional[str] = None
-    current_title: Optional[str] = None
+    school_name: str | None = None
+    current_title: str | None = None
     h_index: int = 0
     works_count: int = 0
-    topic_tags: List[str] = []
-    openalex_topics: List[str] = []  # OpenAlex研究主题
+    topic_tags: list[str] = []
+    openalex_topics: list[str] = []  # OpenAlex研究主题
 
     class Config:
         from_attributes = True

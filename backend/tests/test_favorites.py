@@ -38,11 +38,12 @@ async def test_user_token(client: AsyncClient, test_user):
 
 
 @pytest.fixture
-async def test_talent(test_session, sample_country):
+async def test_talent(test_session):
     """Create a test talent for favorites tests."""
     school = School(
         school_name="Test University",
-        country_id=sample_country.country_id,
+        country_code="US",
+        country_name="美国",
         is_visible=True,
     )
     test_session.add(school)
@@ -65,11 +66,12 @@ async def test_talent(test_session, sample_country):
 
 
 @pytest.fixture
-async def test_talent2(test_session, sample_country):
+async def test_talent2(test_session):
     """Create a second test talent for favorites tests."""
     school = School(
         school_name="Test University 2",
-        country_id=sample_country.country_id,
+        country_code="US",
+        country_name="美国",
         is_visible=True,
     )
     test_session.add(school)

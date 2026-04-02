@@ -2,13 +2,15 @@
 Raw data layer repository.
 原始数据层数据访问
 """
+from __future__ import annotations
+
 import json
 from datetime import datetime
-from typing import Optional, List, Set
-from sqlalchemy import select, update, delete, func
+
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.raw_data import RawWork, RawAuthor, RawInstitution, AuthorTechBelong
+from app.models.raw_data import AuthorTechBelong, RawAuthor, RawInstitution, RawWork
 
 
 class RawWorkRepository:
@@ -44,7 +46,7 @@ class RawWorkRepository:
         else:
             return await self.create(work)
 
-    async def get_by_openalex_id(self, openalex_id: str) -> Optional[RawWork]:
+    async def get_by_openalex_id(self, openalex_id: str) -> RawWork | None:
         """Get raw work by OpenAlex ID"""
         result = await self.session.execute(
             select(RawWork).where(RawWork.openalex_work_id == openalex_id)
@@ -54,10 +56,10 @@ class RawWorkRepository:
     async def get_by_source(
         self,
         source_id: str,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
         limit: int = 10000
-    ) -> List[RawWork]:
+    ) -> list[RawWork]:
         """Get works by source (venue) ID"""
         query = select(RawWork).where(RawWork.source_id == source_id)
         if year_from:
@@ -71,9 +73,9 @@ class RawWorkRepository:
     async def get_author_ids_by_source(
         self,
         source_id: str,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None
-    ) -> Set[str]:
+        year_from: int | None = None,
+        year_to: int | None = None
+    ) -> set[str]:
         """Extract unique author IDs from works of a source"""
         works = await self.get_by_source(source_id, year_from, year_to)
         author_ids = set()
@@ -82,11 +84,11 @@ class RawWorkRepository:
                 try:
                     ids = json.loads(work.author_ids)
                     author_ids.update(ids)
-                except:
+                except (json.JSONDecodeError, TypeError):
                     pass
         return author_ids
 
-    async def get_author_ids_by_task(self, task_id: int) -> Set[str]:
+    async def get_author_ids_by_task(self, task_id: int) -> set[str]:
         """Extract unique author IDs from works collected in a specific task.
 
         Args:
@@ -104,11 +106,11 @@ class RawWorkRepository:
                 try:
                     ids = json.loads(row[0])
                     author_ids.update(ids)
-                except:
+                except (json.JSONDecodeError, TypeError):
                     pass
         return author_ids
 
-    async def get_all_author_ids(self, limit: int = 10000) -> Set[str]:
+    async def get_all_author_ids(self, limit: int = 10000) -> set[str]:
         """Extract unique author IDs from all works.
 
         Args:
@@ -126,11 +128,11 @@ class RawWorkRepository:
                 try:
                     ids = json.loads(row[0])
                     author_ids.update(ids)
-                except:
+                except (json.JSONDecodeError, TypeError):
                     pass
         return author_ids
 
-    async def get_pending(self, limit: int = 100) -> List[RawWork]:
+    async def get_pending(self, limit: int = 100) -> list[RawWork]:
         """Get pending works for processing"""
         result = await self.session.execute(
             select(RawWork)
@@ -139,7 +141,7 @@ class RawWorkRepository:
         )
         return list(result.scalars().all())
 
-    async def mark_processed(self, work_id: int, status: str = "processed", error: Optional[str] = None) -> None:
+    async def mark_processed(self, work_id: int, status: str = "processed", error: str | None = None) -> None:
         """Mark work as processed"""
         values = {
             "processed_status": status,
@@ -187,7 +189,7 @@ class RawAuthorRepository:
         else:
             return await self.create(author)
 
-    async def batch_upsert(self, authors: List[RawAuthor]) -> int:
+    async def batch_upsert(self, authors: list[RawAuthor]) -> int:
         """Batch create or update authors"""
         count = 0
         for author in authors:
@@ -195,14 +197,14 @@ class RawAuthorRepository:
             count += 1
         return count
 
-    async def get_by_openalex_id(self, openalex_id: str) -> Optional[RawAuthor]:
+    async def get_by_openalex_id(self, openalex_id: str) -> RawAuthor | None:
         """Get raw author by OpenAlex ID"""
         result = await self.session.execute(
             select(RawAuthor).where(RawAuthor.openalex_author_id == openalex_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_openalex_ids(self, openalex_ids: List[str], batch_size: int = 500) -> List[RawAuthor]:
+    async def get_by_openalex_ids(self, openalex_ids: list[str], batch_size: int = 500) -> list[RawAuthor]:
         """Get raw authors by multiple OpenAlex IDs.
 
         Args:
@@ -223,7 +225,7 @@ class RawAuthorRepository:
 
         return results
 
-    async def get_missing_author_ids(self, author_ids: List[str], batch_size: int = 500) -> List[str]:
+    async def get_missing_author_ids(self, author_ids: list[str], batch_size: int = 500) -> list[str]:
         """Find author IDs that are not yet in the database.
 
         Args:
@@ -245,7 +247,7 @@ class RawAuthorRepository:
 
         return [aid for aid in author_ids if aid not in existing_ids]
 
-    async def get_pending(self, task_id: Optional[int] = None) -> List[RawAuthor]:
+    async def get_pending(self, task_id: int | None = None) -> list[RawAuthor]:
         """Get pending authors for processing.
 
         Args:
@@ -258,7 +260,7 @@ class RawAuthorRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def mark_processed(self, author_id: int, status: str = "processed", std_author_id: Optional[int] = None) -> None:
+    async def mark_processed(self, author_id: int, status: str = "processed", std_author_id: int | None = None) -> None:
         """Mark author as processed"""
         values = {
             "processed_status": status,
@@ -311,14 +313,14 @@ class RawInstitutionRepository:
         else:
             return await self.create(institution)
 
-    async def get_by_openalex_id(self, openalex_id: str) -> Optional[RawInstitution]:
+    async def get_by_openalex_id(self, openalex_id: str) -> RawInstitution | None:
         """Get raw institution by OpenAlex ID"""
         result = await self.session.execute(
             select(RawInstitution).where(RawInstitution.openalex_institution_id == openalex_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_openalex_ids(self, openalex_ids: List[str], batch_size: int = 500) -> List[RawInstitution]:
+    async def get_by_openalex_ids(self, openalex_ids: list[str], batch_size: int = 500) -> list[RawInstitution]:
         """Get raw institutions by multiple OpenAlex IDs.
 
         Args:
@@ -339,7 +341,7 @@ class RawInstitutionRepository:
 
         return results
 
-    async def get_missing_ids(self, institution_ids: List[str], batch_size: int = 500) -> List[str]:
+    async def get_missing_ids(self, institution_ids: list[str], batch_size: int = 500) -> list[str]:
         """Find institution IDs that are not yet in the database.
 
         Args:
@@ -361,7 +363,7 @@ class RawInstitutionRepository:
 
         return [iid for iid in institution_ids if iid not in existing_ids]
 
-    async def get_pending(self, task_id: Optional[int] = None) -> List[RawInstitution]:
+    async def get_pending(self, task_id: int | None = None) -> list[RawInstitution]:
         """Get pending institutions for processing.
 
         Args:
@@ -374,7 +376,7 @@ class RawInstitutionRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def mark_processed(self, inst_id: int, status: str = "processed", std_school_id: Optional[int] = None) -> None:
+    async def mark_processed(self, inst_id: int, status: str = "processed", std_school_id: int | None = None) -> None:
         """Mark institution as processed"""
         values = {
             "processed_status": status,
@@ -416,7 +418,7 @@ class AuthorTechBelongRepository:
         else:
             return await self.create(belong)
 
-    async def get_by_author_and_tech(self, openalex_author_id: str, tech_element_id: int) -> Optional[AuthorTechBelong]:
+    async def get_by_author_and_tech(self, openalex_author_id: str, tech_element_id: int) -> AuthorTechBelong | None:
         """Get relationship by author and tech element"""
         result = await self.session.execute(
             select(AuthorTechBelong).where(
@@ -426,14 +428,14 @@ class AuthorTechBelongRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_tech_element(self, tech_element_id: int) -> List[AuthorTechBelong]:
+    async def get_by_tech_element(self, tech_element_id: int) -> list[AuthorTechBelong]:
         """Get all relationships for a tech element"""
         result = await self.session.execute(
             select(AuthorTechBelong).where(AuthorTechBelong.tech_element_id == tech_element_id)
         )
         return list(result.scalars().all())
 
-    async def get_by_author(self, openalex_author_id: str) -> List[AuthorTechBelong]:
+    async def get_by_author(self, openalex_author_id: str) -> list[AuthorTechBelong]:
         """Get all tech elements for an author"""
         result = await self.session.execute(
             select(AuthorTechBelong).where(AuthorTechBelong.openalex_author_id == openalex_author_id)
@@ -448,7 +450,7 @@ class AuthorTechBelongRepository:
         )
         return result.scalar() or 0
 
-    async def batch_create(self, belongs: List[AuthorTechBelong]) -> int:
+    async def batch_create(self, belongs: list[AuthorTechBelong]) -> int:
         """Batch create relationships"""
         count = 0
         for belong in belongs:

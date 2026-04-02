@@ -1,14 +1,13 @@
 """
 Repository for school operations.
 """
-from typing import List, Optional
 
-from sqlalchemy import select, func, or_
+from __future__ import annotations
+
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models.school import School, SchoolAlias
-from app.models.country import Country
 from app.models.talent import Talent
 
 
@@ -20,18 +19,18 @@ class SchoolRepository:
 
     async def get_list(
         self,
-        country_id: Optional[int] = None,
-        keyword: Optional[str] = None,
+        country_code: str | None = None,
+        keyword: str | None = None,
         page: int = 1,
         page_size: int = 20,
         visible_only: bool = True,
-        is_top_school: Optional[bool] = None,
-    ) -> tuple[List[School], int]:
+        is_top_school: bool | None = None,
+    ) -> tuple[list[School], int]:
         """
         Get paginated list of schools with filters.
 
         Args:
-            country_id: Filter by country ID
+            country_code: Filter by country code (ISO 3166-1 alpha-2)
             keyword: Search keyword for school name/alias
             page: Page number (1-based)
             page_size: Items per page
@@ -41,18 +40,14 @@ class SchoolRepository:
         Returns:
             Tuple of (list of schools, total count)
         """
-        query = (
-            select(School)
-            .options(selectinload(School.country))
-            .order_by(School.school_id)
-        )
+        query = select(School).order_by(School.school_id)
 
         # Apply filters
         if visible_only:
-            query = query.where(School.is_visible == True)
+            query = query.where(School.is_visible.is_(True))
 
-        if country_id:
-            query = query.where(School.country_id == country_id)
+        if country_code:
+            query = query.where(School.country_code == country_code.upper())
 
         if is_top_school is not None:
             query = query.where(School.is_top_school == is_top_school)
@@ -80,28 +75,22 @@ class SchoolRepository:
 
         return schools, total
 
-    async def get_by_id(
-        self, school_id: int, include_country: bool = True
-    ) -> Optional[School]:
+    async def get_by_id(self, school_id: int) -> School | None:
         """
         Get school by ID.
 
         Args:
             school_id: School ID
-            include_country: If True, load country relationship
 
         Returns:
             School instance or None
         """
-        query = select(School).where(School.school_id == school_id)
-
-        if include_country:
-            query = query.options(selectinload(School.country))
-
-        result = await self.session.execute(query)
+        result = await self.session.execute(
+            select(School).where(School.school_id == school_id)
+        )
         return result.scalar_one_or_none()
 
-    async def get_by_source_id(self, source_record_id: str) -> Optional[School]:
+    async def get_by_source_id(self, source_record_id: str) -> School | None:
         """
         Get school by source record ID (e.g., OpenAlex ID).
 
@@ -116,7 +105,7 @@ class SchoolRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_aliases(self, school_id: int) -> List[SchoolAlias]:
+    async def get_aliases(self, school_id: int) -> list[SchoolAlias]:
         """
         Get all aliases for a school.
 
@@ -137,7 +126,7 @@ class SchoolRepository:
         self,
         keyword: str,
         limit: int = 10,
-    ) -> List[School]:
+    ) -> list[School]:
         """
         Search schools by keyword.
 
@@ -152,9 +141,8 @@ class SchoolRepository:
 
         query = (
             select(School)
-            .options(selectinload(School.country))
             .where(
-                School.is_visible == True,
+                School.is_visible.is_(True),
                 or_(
                     School.school_name.ilike(keyword_pattern),
                     School.school_alias.ilike(keyword_pattern),
@@ -167,30 +155,23 @@ class SchoolRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def get_count_by_country(
-        self, country_id: Optional[int] = None
-    ) -> dict[int, int]:
+    async def get_count_by_country(self) -> dict[str, int]:
         """
-        Get school counts grouped by country.
-
-        Args:
-            country_id: Optional specific country to get count for
+        Get school counts grouped by country code.
 
         Returns:
-            Dictionary mapping country_id to count
+            Dictionary mapping country_code to count
         """
         query = select(
-            School.country_id,
+            School.country_code,
             func.count(School.school_id).label("count")
-        ).where(School.is_visible == True)
-
-        if country_id:
-            query = query.where(School.country_id == country_id)
-
-        query = query.group_by(School.country_id)
+        ).where(
+            School.is_visible.is_(True),
+            School.country_code.isnot(None),
+        ).group_by(School.country_code)
 
         result = await self.session.execute(query)
-        return {row.country_id: row.count for row in result.all()}
+        return {row.country_code: row.count for row in result.all()}
 
     async def get_talent_counts(
         self, school_id: int
@@ -211,7 +192,7 @@ class SchoolRepository:
             )
             .where(
                 Talent.school_id == school_id,
-                Talent.is_visible == True,
+                Talent.is_visible.is_(True),
             )
             .group_by(Talent.role_type)
         )

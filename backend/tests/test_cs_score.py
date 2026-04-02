@@ -23,8 +23,8 @@ class TestCSCoreCalculation:
         """AI background author should get high score."""
         raw_json = '''{
             "x_concepts": [
-                {"id": "https://openalex.org/C154945302", "display_name": "Artificial intelligence", "score": 0.8},
-                {"id": "https://openalex.org/C119857082", "display_name": "Machine learning", "score": 0.6}
+                {"id": "154945302", "display_name": "Artificial intelligence", "score": 0.8},
+                {"id": "119857082", "display_name": "Machine learning", "score": 0.6}
             ]
         }'''
         score = normalizer._calculate_cs_score(raw_json)
@@ -35,7 +35,7 @@ class TestCSCoreCalculation:
         """Computer science background author should get high score."""
         raw_json = '''{
             "x_concepts": [
-                {"id": "https://openalex.org/C41008148", "display_name": "Computer science", "score": 0.9}
+                {"id": "41008148", "display_name": "Computer science", "score": 0.9}
             ]
         }'''
         score = normalizer._calculate_cs_score(raw_json)
@@ -45,8 +45,8 @@ class TestCSCoreCalculation:
         """Non-CS background author should get low score."""
         raw_json = '''{
             "x_concepts": [
-                {"id": "https://openalex.org/C86803240", "display_name": "Biology", "score": 0.9},
-                {"id": "https://openalex.org/C54427621", "display_name": "Chemistry", "score": 0.8}
+                {"id": "86803240", "display_name": "Biology", "score": 0.9},
+                {"id": "54427621", "display_name": "Chemistry", "score": 0.8}
             ]
         }'''
         score = normalizer._calculate_cs_score(raw_json)
@@ -56,8 +56,8 @@ class TestCSCoreCalculation:
         """Mixed background author should get moderate score."""
         raw_json = '''{
             "x_concepts": [
-                {"id": "https://openalex.org/C41008148", "display_name": "Computer science", "score": 0.3},
-                {"id": "https://openalex.org/C86803240", "display_name": "Biology", "score": 0.5}
+                {"id": "41008148", "display_name": "Computer science", "score": 0.3},
+                {"id": "86803240", "display_name": "Biology", "score": 0.5}
             ]
         }'''
         score = normalizer._calculate_cs_score(raw_json)
@@ -79,9 +79,9 @@ class TestCSCoreCalculation:
         """Score should be capped at 1.0."""
         raw_json = '''{
             "x_concepts": [
-                {"id": "https://openalex.org/C41008148", "display_name": "Computer science", "score": 0.9},
-                {"id": "https://openalex.org/C154945302", "display_name": "Artificial intelligence", "score": 0.8},
-                {"id": "https://openalex.org/C119857082", "display_name": "Machine learning", "score": 0.7}
+                {"id": "41008148", "display_name": "Computer science", "score": 0.9},
+                {"id": "154945302", "display_name": "Artificial intelligence", "score": 0.8},
+                {"id": "119857082", "display_name": "Machine learning", "score": 0.7}
             ]
         }'''
         score = normalizer._calculate_cs_score(raw_json)

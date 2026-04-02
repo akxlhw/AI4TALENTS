@@ -2,30 +2,34 @@
 OpenAlex data fetchers for the raw data layer.
 OpenAlex 数据采集器 - 负责从 API 获取数据并存入原始数据层
 """
-import json
+from __future__ import annotations
+
 import asyncio
-import aiohttp
+import json
 import logging
 from datetime import datetime, timezone
-from typing import Optional, List
 
+# Python 3.10 compatibility
+UTC = timezone.utc
+
+import aiohttp
 from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import (
+    before_sleep_log,
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log
 )
 
-from app.models.raw_data import RawWork, RawAuthor, RawInstitution
+from app.models.raw_data import RawAuthor, RawInstitution, RawWork
 from app.models.venue import Venue
 from app.repositories.raw_data_repository import (
-    RawWorkRepository, RawAuthorRepository, RawInstitutionRepository
+    RawAuthorRepository,
+    RawInstitutionRepository,
+    RawWorkRepository,
 )
-from app.services.common.openalex_utils import (
-    extract_short_id, OPENALEX_API_BASE, REQUEST_DELAY
-)
+from app.services.common.openalex_utils import OPENALEX_API_BASE, REQUEST_DELAY, extract_short_id
 from app.services.common.progress import FetchProgress
 
 logger = logging.getLogger(__name__)
@@ -74,7 +78,7 @@ class OpenAlexClient:
     directly by the Fetcher classes using aiohttp for better async control.
     """
 
-    def __init__(self, email: Optional[str] = None):
+    def __init__(self, email: str | None = None):
         self.email = email
         self.base_url = OPENALEX_API_BASE
 
@@ -82,7 +86,7 @@ class OpenAlexClient:
 class WorkFetcher:
     """Fetcher for works from OpenAlex"""
 
-    def __init__(self, session: AsyncSession, client: Optional[OpenAlexClient] = None):
+    def __init__(self, session: AsyncSession, client: OpenAlexClient | None = None):
         self.session = session
         self.client = client or OpenAlexClient()
         self.repo = RawWorkRepository(session)
@@ -112,7 +116,7 @@ class WorkFetcher:
         async with http_session.get(url, params=params, headers=headers) as response:
             if response.status == 429:
                 # 速率限制，触发重试
-                raise RetryableError(f"Rate limited (HTTP 429)")
+                raise RetryableError("Rate limited (HTTP 429)")
             if response.status != 200:
                 raise Exception(f"HTTP {response.status}")
             return await response.json()
@@ -120,8 +124,8 @@ class WorkFetcher:
     async def get_work_count_from_venue(
         self,
         venue: Venue,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None
+        year_from: int | None = None,
+        year_to: int | None = None
     ) -> int:
         """获取 Venue 的预计论文总数（不获取实际数据）
 
@@ -168,11 +172,11 @@ class WorkFetcher:
     async def fetch_works_from_venue(
         self,
         venue: Venue,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
-        task_id: Optional[int] = None,
-        sub_task_id: Optional[int] = None,
-        progress_callback: Optional[callable] = None
+        year_from: int | None = None,
+        year_to: int | None = None,
+        task_id: int | None = None,
+        sub_task_id: int | None = None,
+        progress_callback: callable | None = None
     ) -> FetchProgress:
         """Fetch all works from a venue with retry support"""
         progress = FetchProgress()
@@ -255,7 +259,7 @@ class WorkFetcher:
                         # Commit every batch_size records to avoid losing data on timeout
                         if total_fetched % batch_size == 0:
                             await self.session.commit()
-                    except Exception as e:
+                    except Exception:
                         progress.failed += 1
 
                 if progress_callback:
@@ -272,7 +276,7 @@ class WorkFetcher:
         self,
         openalex_author_id: str,
         max_works: int = 10
-    ) -> List[dict]:
+    ) -> list[dict]:
         """获取作者的代表作品（按引用数排序）
 
         Args:
@@ -329,16 +333,16 @@ class WorkFetcher:
 class AuthorFetcher:
     """Fetcher for authors from OpenAlex"""
 
-    def __init__(self, session: AsyncSession, client: Optional[OpenAlexClient] = None):
+    def __init__(self, session: AsyncSession, client: OpenAlexClient | None = None):
         self.session = session
         self.client = client or OpenAlexClient()
         self.repo = RawAuthorRepository(session)
 
     async def fetch_authors_by_ids(
         self,
-        author_ids: List[str],
-        task_id: Optional[int] = None,
-        progress_callback: Optional[callable] = None
+        author_ids: list[str],
+        task_id: int | None = None,
+        progress_callback: callable | None = None
     ) -> FetchProgress:
         """Fetch authors by their OpenAlex IDs"""
         progress = FetchProgress()
@@ -431,16 +435,16 @@ class AuthorFetcher:
 class InstitutionFetcher:
     """Fetcher for institutions from OpenAlex"""
 
-    def __init__(self, session: AsyncSession, client: Optional[OpenAlexClient] = None):
+    def __init__(self, session: AsyncSession, client: OpenAlexClient | None = None):
         self.session = session
         self.client = client or OpenAlexClient()
         self.repo = RawInstitutionRepository(session)
 
     async def fetch_institutions_by_ids(
         self,
-        institution_ids: List[str],
-        task_id: Optional[int] = None,
-        progress_callback: Optional[callable] = None
+        institution_ids: list[str],
+        task_id: int | None = None,
+        progress_callback: callable | None = None
     ) -> FetchProgress:
         """Fetch institutions by their OpenAlex IDs"""
         progress = FetchProgress()

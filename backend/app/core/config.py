@@ -2,9 +2,11 @@
 Application configuration module.
 Loads settings from environment variables.
 """
-from typing import Optional
-from pydantic_settings import BaseSettings
+from __future__ import annotations
+
 from functools import lru_cache
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -25,7 +27,7 @@ class Settings(BaseSettings):
 
     # OpenAlex API
     OPENALEX_BASE_URL: str = "https://api.openalex.org"
-    OPENALEX_EMAIL: Optional[str] = None  # For polite API access
+    OPENALEX_EMAIL: str | None = None  # For polite API access
     OPENALEX_RATE_LIMIT: int = 10  # Requests per second
 
     # JWT Authentication
@@ -54,7 +56,7 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """Get cached settings instance."""
     return Settings()

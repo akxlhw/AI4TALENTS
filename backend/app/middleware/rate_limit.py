@@ -7,8 +7,8 @@ For production, consider using Redis-backed rate limiting.
 
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from threading import Lock
-from typing import Callable
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse

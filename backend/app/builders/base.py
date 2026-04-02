@@ -1,12 +1,13 @@
 """
 Base builder class for object construction.
 """
+from __future__ import annotations
+
+import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
-import logging
-
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +20,9 @@ class BuildResult:
     records_created: int
     records_updated: int
     records_failed: int
-    errors: List[str]
+    errors: list[str]
     started_at: datetime
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
 
 
 class BaseBuilder(ABC):
@@ -39,7 +40,7 @@ class BaseBuilder(ABC):
             batch_id: The sync batch ID being processed
         """
         self.batch_id = batch_id
-        self.errors: List[str] = []
+        self.errors: list[str] = []
 
     @abstractmethod
     async def build(self) -> BuildResult:
@@ -51,7 +52,7 @@ class BaseBuilder(ABC):
         """
         pass
 
-    def log_error(self, message: str, record_id: Optional[str] = None):
+    def log_error(self, message: str, record_id: str | None = None):
         """Log an error during building."""
         error_msg = f"[Batch {self.batch_id}] {message}"
         if record_id:
@@ -98,7 +99,7 @@ def extract_openalex_id(url_or_id: str) -> str:
     return url_or_id
 
 
-def calculate_quality_score(data: Dict[str, Any], required_fields: List[str]) -> float:
+def calculate_quality_score(data: dict[str, Any], required_fields: list[str]) -> float:
     """
     Calculate a quality score for a data record.
 

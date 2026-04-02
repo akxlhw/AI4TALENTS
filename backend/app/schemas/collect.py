@@ -7,9 +7,12 @@ Collect configuration schemas - MVP v1.2
 - 数据类型：固定为学者+论文+机构
 - 时间范围：用户可配置年份范围（2015年至今）
 """
-from typing import Optional, List, Any
-from pydantic import BaseModel, Field
+from __future__ import annotations
+
 from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 
 def get_current_year() -> int:
@@ -39,11 +42,11 @@ class TechElementCollectResponse(BaseModel):
     tech_element_id: int
     element_code: str
     element_name: str
-    element_name_en: Optional[str] = None
+    element_name_en: str | None = None
     # collect_sources is computed from VenueTechBinding table
     # This field is kept for backward compatibility with frontend
-    collect_sources: Optional[List[VenueItem]] = None
-    last_collect_at: Optional[datetime] = None
+    collect_sources: list[VenueItem] | None = None
+    last_collect_at: datetime | None = None
     is_enabled: bool
     venue_count: int = Field(default=0, description="关联顶会顶刊数量")
 
@@ -53,13 +56,13 @@ class TechElementCollectResponse(BaseModel):
 
 class TechElementCollectListResponse(BaseModel):
     """技术要素采集配置列表响应"""
-    items: List[TechElementCollectResponse]
+    items: list[TechElementCollectResponse]
     total: int
 
 
 class UpdateCollectSourcesRequest(BaseModel):
     """更新技术要素的采集源配置"""
-    collect_sources: List[VenueItem] = Field(..., min_items=1, description="关联的顶会顶刊列表")
+    collect_sources: list[VenueItem] = Field(..., min_items=1, description="关联的顶会顶刊列表")
 
 
 # ============ Collect Task Schemas ============
@@ -72,7 +75,7 @@ class TriggerCollectTaskRequest(BaseModel):
         ge=MIN_START_YEAR,
         description=f"起始年份，最小{MIN_START_YEAR}年"
     )
-    end_year: Optional[int] = Field(
+    end_year: int | None = Field(
         default=None,
         description="截止年份，None表示至今"
     )
@@ -82,26 +85,26 @@ class CollectTaskResponse(BaseModel):
     """采集任务响应"""
     task_id: int
     task_code: str
-    tech_element_id: Optional[int] = None
-    tech_element_name: Optional[str] = None
+    tech_element_id: int | None = None
+    tech_element_name: str | None = None
     start_year: int = Field(default=DEFAULT_START_YEAR, description="起始年份")
-    end_year: Optional[int] = Field(default=None, description="截止年份，None表示至今")
-    triggered_by: Optional[Any] = None  # Can be user ID (int) or username (str)
+    end_year: int | None = Field(default=None, description="截止年份，None表示至今")
+    triggered_by: Any | None = None  # Can be user ID (int) or username (str)
     triggered_at: datetime
     status: str
     progress_percent: int = 0
-    current_step: Optional[str] = None
+    current_step: str | None = None
     total_records: int = 0
     processed_records: int = 0
     success_records: int = 0
     failed_records: int = 0
     skipped_records: int = 0
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    error_message: Optional[str] = None
-    error_details: Optional[dict] = None
-    result_summary: Optional[dict] = None
-    execution_logs: Optional[List[dict]] = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    error_message: str | None = None
+    error_details: dict | None = None
+    result_summary: dict | None = None
+    execution_logs: list[dict] | None = None
     created_at: datetime
 
     class Config:
@@ -110,7 +113,7 @@ class CollectTaskResponse(BaseModel):
 
 class CollectTaskListResponse(BaseModel):
     """采集任务列表响应"""
-    items: List[CollectTaskResponse]
+    items: list[CollectTaskResponse]
     total: int
     page: int
     page_size: int
@@ -129,7 +132,7 @@ TASK_STATUS_OPTIONS = [
 
 # ============ Year Options ============
 
-def get_year_options() -> List[dict]:
+def get_year_options() -> list[dict]:
     """获取年份选项列表"""
     current_year = get_current_year()
     return [
@@ -138,7 +141,7 @@ def get_year_options() -> List[dict]:
     ]
 
 
-def get_end_year_options(start_year: int) -> List[dict]:
+def get_end_year_options(start_year: int) -> list[dict]:
     """获取截止年份选项列表（包含"至今"选项）"""
     current_year = get_current_year()
     options = [

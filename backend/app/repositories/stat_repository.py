@@ -1,7 +1,8 @@
 """
 Repository for statistics operations.
 """
-from typing import Optional
+
+from __future__ import annotations
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +16,7 @@ class StatisticsRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_active_overview_stats(self) -> Optional[OverviewStatSnapshot]:
+    async def get_active_overview_stats(self) -> OverviewStatSnapshot | None:
         """
         Get the active overview statistics snapshot.
 
@@ -32,7 +33,7 @@ class StatisticsRepository:
 
     async def get_overview_stats_by_version(
         self, version: str
-    ) -> Optional[OverviewStatSnapshot]:
+    ) -> OverviewStatSnapshot | None:
         """
         Get overview statistics by version.
 
@@ -51,7 +52,7 @@ class StatisticsRepository:
 
     async def get_school_stats(
         self, school_id: int
-    ) -> Optional[SchoolStatSnapshot]:
+    ) -> SchoolStatSnapshot | None:
         """
         Get the active statistics snapshot for a school.
 

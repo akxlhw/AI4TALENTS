@@ -21,54 +21,52 @@ For new code, prefer using the specialized services directly:
 - ServingLayerOrchestrator for sync operations
 """
 # Legacy exports (backward compatible)
-from app.services.unified_collect_service import UnifiedCollectService, CollectMode
-from app.services.serving_layer_sync import ServingLayerSync
-from app.services.role_identifier import RoleIdentifier, RoleIdentificationResult
+# Collection services
+from app.services.collect import (
+    CollectionOrchestrator,
+    ProgressTracker,
+    TaskCreationService,
+    VenueSubTaskExecutor,
+)
 
 # Common utilities
 from app.services.common import (
-    extract_short_id,
     OPENALEX_API_BASE,
-    CollectionProgress,
     BaseProgress,
+    CollectionProgress,
     FetchProgress,
+    extract_short_id,
+)
+
+# Data fetchers (kept for backward compatibility)
+from app.services.data_fetchers import (
+    AuthorFetcher,
+    InstitutionFetcher,
+    OpenAlexClient,
+    WorkFetcher,
 )
 
 # Normalizers
 from app.services.normalizers import (
+    AuthorNormalizer,
     NormalizationResult,
     SchoolNormalizer,
-    AuthorNormalizer,
     TechBelongCalculator,
 )
-
-# Collection services
-from app.services.collect import (
-    ProgressTracker,
-    TaskCreationService,
-    VenueSubTaskExecutor,
-    CollectionOrchestrator,
-)
+from app.services.role_identifier import RoleIdentificationResult, RoleIdentifier
+from app.services.serving_layer_sync import ServingLayerSync
 
 # Sync services
 from app.services.sync import (
     AuthorSyncService,
     SchoolSyncService,
-    TechTagSyncService,
     ServingLayerOrchestrator,
-)
-
-# Data fetchers (kept for backward compatibility)
-from app.services.data_fetchers import (
-    WorkFetcher,
-    AuthorFetcher,
-    InstitutionFetcher,
-    OpenAlexClient,
-    FetchProgress,
+    TechTagSyncService,
 )
 
 # Talent service
 from app.services.talent_service import TalentService
+from app.services.unified_collect_service import CollectMode, UnifiedCollectService
 
 __all__ = [
     # Legacy (deprecated)

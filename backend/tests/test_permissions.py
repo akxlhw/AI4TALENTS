@@ -91,11 +91,12 @@ async def normal_user_token(client: AsyncClient, test_normal_user):
 
 
 @pytest.fixture
-async def test_school(test_session, sample_country):
+async def test_school(test_session):
     """Create a test school."""
     school = School(
         school_name="Test University",
-        country_id=sample_country.country_id,
+        country_code="US",
+        country_name="美国",
         is_visible=True,
     )
     test_session.add(school)

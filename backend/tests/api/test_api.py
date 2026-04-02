@@ -5,7 +5,6 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.country import Country
 from app.models.school import School
 from app.models.talent import Talent, RoleProfile
 from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
@@ -71,21 +70,21 @@ class TestCountriesEndpoint:
     async def test_list_countries_with_data(
         self, client: AsyncClient, test_session: AsyncSession
     ):
-        """Test countries list with data."""
-        # Create test countries
-        country1 = Country(
+        """Test countries list with data (aggregated from schools)."""
+        # Create test schools with different countries
+        school1 = School(
+            school_name="MIT",
             country_code="US",
-            country_name_cn="美国",
-            country_name_en="United States",
-            sort_order=1,
+            country_name="美国",
+            professor_count=500,
         )
-        country2 = Country(
+        school2 = School(
+            school_name="Tsinghua",
             country_code="CN",
-            country_name_cn="中国",
-            country_name_en="China",
-            sort_order=2,
+            country_name="中国",
+            professor_count=400,
         )
-        test_session.add_all([country1, country2])
+        test_session.add_all([school1, school2])
         await test_session.commit()
 
         response = await client.get("/api/v1/countries")
@@ -93,9 +92,12 @@ class TestCountriesEndpoint:
         assert response.status_code == 200
         data = response.json()
 
+        # Countries are aggregated from schools
         assert data["total"] == 2
         assert len(data["items"]) == 2
-        assert data["items"][0]["country_code"] == "US"
+        country_codes = [item["country_code"] for item in data["items"]]
+        assert "US" in country_codes
+        assert "CN" in country_codes
 
 
 class TestSchoolsEndpoint:
@@ -117,25 +119,18 @@ class TestSchoolsEndpoint:
         self, client: AsyncClient, test_session: AsyncSession
     ):
         """Test schools list with data."""
-        # Create test country
-        country = Country(
-            country_code="US",
-            country_name_cn="美国",
-            country_name_en="United States",
-        )
-        test_session.add(country)
-        await test_session.flush()
-
         # Create test schools
         school1 = School(
             school_name="MIT",
-            country_id=country.country_id,
+            country_code="US",
+            country_name="美国",
             professor_count=500,
             student_count=2000,
         )
         school2 = School(
             school_name="Stanford University",
-            country_id=country.country_id,
+            country_code="US",
+            country_name="美国",
             professor_count=400,
             student_count=1500,
         )
@@ -156,17 +151,10 @@ class TestSchoolsEndpoint:
     ):
         """Test get school detail."""
         # Create test data
-        country = Country(
-            country_code="US",
-            country_name_cn="美国",
-            country_name_en="United States",
-        )
-        test_session.add(country)
-        await test_session.flush()
-
         school = School(
             school_name="MIT",
-            country_id=country.country_id,
+            country_code="US",
+            country_name="美国",
             school_intro="MIT is a research university",
             homepage_url="https://mit.edu",
         )
@@ -193,21 +181,15 @@ class TestSchoolsEndpoint:
     async def test_list_schools_filter_by_country(
         self, client: AsyncClient, test_session: AsyncSession
     ):
-        """Test filtering schools by country."""
-        # Create test countries
-        us = Country(country_code="US", country_name_cn="美国")
-        cn = Country(country_code="CN", country_name_cn="中国")
-        test_session.add_all([us, cn])
-        await test_session.flush()
-
+        """Test filtering schools by country code."""
         # Create test schools
-        school1 = School(school_name="MIT", country_id=us.country_id)
-        school2 = School(school_name="Tsinghua", country_id=cn.country_id)
+        school1 = School(school_name="MIT", country_code="US", country_name="美国")
+        school2 = School(school_name="Tsinghua", country_code="CN", country_name="中国")
         test_session.add_all([school1, school2])
         await test_session.commit()
 
         # Filter by US
-        response = await client.get(f"/api/v1/schools?country_id={us.country_id}")
+        response = await client.get("/api/v1/schools?country_code=US")
 
         assert response.status_code == 200
         data = response.json()
@@ -236,11 +218,7 @@ class TestTalentsEndpoint:
     ):
         """Test talents list with data."""
         # Create test data
-        country = Country(country_code="US", country_name_cn="美国")
-        test_session.add(country)
-        await test_session.flush()
-
-        school = School(school_name="MIT", country_id=country.country_id)
+        school = School(school_name="MIT", country_code="US", country_name="美国")
         test_session.add(school)
         await test_session.flush()
 
@@ -278,11 +256,7 @@ class TestTalentsEndpoint:
     ):
         """Test get talent detail."""
         # Create test data
-        country = Country(country_code="US", country_name_cn="美国")
-        test_session.add(country)
-        await test_session.flush()
-
-        school = School(school_name="MIT", country_id=country.country_id)
+        school = School(school_name="MIT", country_code="US", country_name="美国")
         test_session.add(school)
         await test_session.flush()
 
@@ -332,11 +306,7 @@ class TestTalentsEndpoint:
     ):
         """Test filtering talents by role type."""
         # Create test data
-        country = Country(country_code="US", country_name_cn="美国")
-        test_session.add(country)
-        await test_session.flush()
-
-        school = School(school_name="MIT", country_id=country.country_id)
+        school = School(school_name="MIT", country_code="US", country_name="美国")
         test_session.add(school)
         await test_session.flush()
 
@@ -385,11 +355,7 @@ class TestSearchEndpoint:
     ):
         """Test search with results."""
         # Create test data
-        country = Country(country_code="US", country_name_cn="美国")
-        test_session.add(country)
-        await test_session.flush()
-
-        school = School(school_name="MIT", country_id=country.country_id)
+        school = School(school_name="MIT", country_code="US", country_name="美国")
         test_session.add(school)
         await test_session.flush()
 
@@ -422,11 +388,7 @@ class TestSearchEndpoint:
     ):
         """Test search with role filter."""
         # Create test data
-        country = Country(country_code="US", country_name_cn="美国")
-        test_session.add(country)
-        await test_session.flush()
-
-        school = School(school_name="MIT", country_id=country.country_id)
+        school = School(school_name="MIT", country_code="US", country_name="美国")
         test_session.add(school)
         await test_session.flush()
 

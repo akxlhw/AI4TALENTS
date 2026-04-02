@@ -1,15 +1,16 @@
 """
 Tech tag sync service for creating TalentTechTag records.
 """
+from __future__ import annotations
+
 import logging
-from typing import Optional, List
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.raw_data import AuthorTechBelong
 from app.models.talent import Talent
 from app.models.tech_element import TalentTechTag, TechDirection
-from app.models.raw_data import AuthorTechBelong
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +24,8 @@ class TechTagSyncService:
     async def sync_talent_tech_tags(
         self,
         talent: Talent,
-        belongs: List[AuthorTechBelong],
-        default_tech_direction_id: Optional[int] = None
+        belongs: list[AuthorTechBelong],
+        default_tech_direction_id: int | None = None
     ) -> int:
         """
         Create TalentTechTag records based on AuthorTechBelong
@@ -87,8 +88,8 @@ class TechTagSyncService:
     async def _get_tech_direction_id(
         self,
         tech_element_id: int,
-        default_id: Optional[int] = None
-    ) -> Optional[int]:
+        default_id: int | None = None
+    ) -> int | None:
         """Get tech direction ID for a tech element"""
         if default_id:
             return default_id
@@ -97,7 +98,7 @@ class TechTagSyncService:
         result = await self.session.execute(
             select(TechDirection).where(
                 TechDirection.tech_element_id == tech_element_id,
-                TechDirection.is_enabled == True
+                TechDirection.is_enabled.is_(True)
             ).order_by(TechDirection.sort_order)
         )
         direction = result.scalar_one_or_none()

@@ -24,7 +24,6 @@ from app.models.raw_data import AuthorTechBelong
 from app.models.standardized import StdAuthor, StdSchool
 from app.models.talent import Talent, RoleProfile
 from app.models.school import School
-from app.models.country import Country
 from app.models.enums import RoleType, VisibilityStatus
 
 from app.repositories.tech_element_repository import TechElementRepository
@@ -37,15 +36,6 @@ from app.services.role_identifier import RoleIdentifier
 @pytest.fixture
 async def e2e_setup(test_session: AsyncSession):
     """创建端到端测试所需的基础数据"""
-    # 创建国家
-    country = Country(
-        country_code="US",
-        country_name_cn="美国",
-        country_name_en="United States",
-        is_active=True,
-    )
-    test_session.add(country)
-
     # 创建技术要素
     tech_element = TechElement(
         element_code="E2E-AI",
@@ -87,7 +77,6 @@ async def e2e_setup(test_session: AsyncSession):
     await test_session.commit()
 
     return {
-        "country": country,
         "tech_element": tech_element,
         "tech_direction": tech_direction,
         "venue": venue,

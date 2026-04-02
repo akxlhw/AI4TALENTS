@@ -1,25 +1,26 @@
 """
 Authentication API endpoints.
 """
-from datetime import datetime
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, EmailStr, Field
+from __future__ import annotations
 
-from app.core.database import get_async_session
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.auth import (
-    hash_password,
-    verify_password,
     create_access_token,
     create_refresh_token,
+    hash_password,
     verify_access_token,
+    verify_password,
     verify_refresh_token,
 )
-from app.repositories.user_repository import UserRepository
+from app.core.database import get_async_session
 from app.models.enums import UserRoleType
-
+from app.repositories.user_repository import UserRepository
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer(auto_error=False)
@@ -38,7 +39,7 @@ class LoginResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int = 8 * 3600  # 8 hours in seconds
-    user: "UserInfo"
+    user: UserInfo
 
 
 class RefreshRequest(BaseModel):
@@ -52,8 +53,8 @@ class UserInfo(BaseModel):
     username: str
     email: str
     role: str
-    display_name: Optional[str] = None
-    department: Optional[str] = None
+    display_name: str | None = None
+    department: str | None = None
 
 
 class ChangePasswordRequest(BaseModel):
@@ -68,16 +69,16 @@ class CurrentUser(BaseModel):
     username: str
     email: str
     role: str
-    display_name: Optional[str] = None
-    department: Optional[str] = None
+    display_name: str | None = None
+    department: str | None = None
     is_active: bool
-    last_login_at: Optional[datetime] = None
+    last_login_at: datetime | None = None
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     session: AsyncSession = Depends(get_async_session),
-) -> Optional[dict]:
+) -> dict | None:
     """
     Get current user from JWT token.
     Returns None if no valid token provided.
@@ -110,7 +111,7 @@ async def get_current_user(
 
 
 async def require_user(
-    current_user: Optional[dict] = Depends(get_current_user),
+    current_user: dict | None = Depends(get_current_user),
 ) -> dict:
     """
     Require a valid authenticated user.

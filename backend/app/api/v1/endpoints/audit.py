@@ -1,17 +1,18 @@
 """
 Audit log API endpoints.
 """
-from typing import List, Optional
+from __future__ import annotations
+
 from datetime import datetime
+
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
 from pydantic import BaseModel
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_async_session
 from app.api.v1.endpoints.auth import require_admin
+from app.core.database import get_async_session
 from app.models.audit import AuditOperationLog
-
 
 router = APIRouter(prefix="/audit", tags=["Audit Logs"])
 
@@ -21,20 +22,20 @@ class AuditLogResponse(BaseModel):
     """Audit log response."""
     log_id: int
     event_time: datetime
-    user_id: Optional[int]
-    user_ip: Optional[str]
+    user_id: int | None
+    user_ip: str | None
     event_type: str
-    event_subtype: Optional[str]
-    resource_type: Optional[str]
-    resource_id: Optional[str]
+    event_subtype: str | None
+    resource_type: str | None
+    resource_id: str | None
     operation: str
     status: str
-    error_message: Optional[str]
+    error_message: str | None
 
 
 class AuditLogListResponse(BaseModel):
     """Audit log list response."""
-    items: List[AuditLogResponse]
+    items: list[AuditLogResponse]
     total: int
     page: int
     page_size: int
@@ -47,11 +48,11 @@ class AuditLogListResponse(BaseModel):
     description="管理员查看系统操作日志",
 )
 async def get_audit_logs(
-    start_time: Optional[datetime] = Query(None, description="开始时间"),
-    end_time: Optional[datetime] = Query(None, description="结束时间"),
-    user_id: Optional[int] = Query(None, description="用户ID"),
-    event_type: Optional[str] = Query(None, description="事件类型"),
-    resource_type: Optional[str] = Query(None, description="资源类型"),
+    start_time: datetime | None = Query(None, description="开始时间"),
+    end_time: datetime | None = Query(None, description="结束时间"),
+    user_id: int | None = Query(None, description="用户ID"),
+    event_type: str | None = Query(None, description="事件类型"),
+    resource_type: str | None = Query(None, description="资源类型"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     session: AsyncSession = Depends(get_async_session),

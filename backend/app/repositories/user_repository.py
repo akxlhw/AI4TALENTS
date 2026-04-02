@@ -1,15 +1,16 @@
 """
 Repository for user operations.
 """
-from typing import List, Optional
+from __future__ import annotations
+
 from datetime import datetime
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.iam import UserAccount, UserSchoolScope
 from app.models.enums import UserRoleType
+from app.models.iam import UserAccount, UserSchoolScope
 
 
 class UserRepository:
@@ -18,7 +19,7 @@ class UserRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_by_id(self, user_id: int) -> Optional[UserAccount]:
+    async def get_by_id(self, user_id: int) -> UserAccount | None:
         """
         Get user by ID.
 
@@ -33,7 +34,7 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_username(self, username: str) -> Optional[UserAccount]:
+    async def get_by_username(self, username: str) -> UserAccount | None:
         """
         Get user by username.
 
@@ -48,7 +49,7 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_email(self, email: str) -> Optional[UserAccount]:
+    async def get_by_email(self, email: str) -> UserAccount | None:
         """
         Get user by email.
 
@@ -63,7 +64,7 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_with_scopes(self, user_id: int) -> Optional[UserAccount]:
+    async def get_with_scopes(self, user_id: int) -> UserAccount | None:
         """
         Get user with school scopes loaded.
 
@@ -86,7 +87,7 @@ class UserRepository:
         email: str,
         password_hash: str,
         role: str = UserRoleType.USER.value,
-        display_name: Optional[str] = None,
+        display_name: str | None = None,
     ) -> UserAccount:
         """
         Create a new user.
@@ -117,7 +118,7 @@ class UserRepository:
     async def update_last_login(
         self,
         user_id: int,
-        ip_address: Optional[str] = None,
+        ip_address: str | None = None,
     ) -> None:
         """
         Update user's last login time and IP.
@@ -154,11 +155,11 @@ class UserRepository:
 
     async def list_users(
         self,
-        role: Optional[str] = None,
-        is_active: Optional[bool] = None,
+        role: str | None = None,
+        is_active: bool | None = None,
         page: int = 1,
         page_size: int = 20,
-    ) -> tuple[List[UserAccount], int]:
+    ) -> tuple[list[UserAccount], int]:
         """
         List users with optional filters.
 
@@ -241,8 +242,8 @@ class UserScopeRepository:
         self,
         user_id: int,
         active_only: bool = True,
-        scope_type: Optional[str] = None,
-    ) -> List[UserSchoolScope]:
+        scope_type: str | None = None,
+    ) -> list[UserSchoolScope]:
         """
         Get all scopes for a user.
 
@@ -257,7 +258,7 @@ class UserScopeRepository:
         query = select(UserSchoolScope).where(UserSchoolScope.user_id == user_id)
 
         if active_only:
-            query = query.where(UserSchoolScope.is_active == True)
+            query = query.where(UserSchoolScope.is_active.is_(True))
 
         if scope_type:
             query = query.where(UserSchoolScope.scope_type == scope_type)
@@ -271,8 +272,8 @@ class UserScopeRepository:
         scope_type: str,
         scope_value: str,
         granted_by: int,
-        expires_at: Optional[datetime] = None,
-        notes: Optional[str] = None,
+        expires_at: datetime | None = None,
+        notes: str | None = None,
     ) -> UserSchoolScope:
         """
         Add a scope to a user.
@@ -368,7 +369,7 @@ class UserScopeRepository:
             select(UserSchoolScope).where(
                 and_(
                     UserSchoolScope.user_id == user_id,
-                    UserSchoolScope.is_active == True,
+                    UserSchoolScope.is_active.is_(True),
                 )
             )
         )
@@ -384,7 +385,7 @@ class UserScopeRepository:
 
             if scope.scope_type == "country":
                 # Check if school is in the country
-                country_code = school.country.country_code if school.country else None
+                country_code = school.country_code
                 if country_code and scope.scope_value == country_code:
                     return True
 
@@ -394,7 +395,7 @@ class UserScopeRepository:
 
         return False
 
-    async def get_accessible_school_ids(self, user_id: int) -> List[int]:
+    async def get_accessible_school_ids(self, user_id: int) -> list[int]:
         """
         Get list of school IDs the user can access.
 
@@ -425,7 +426,7 @@ class UserScopeRepository:
             select(UserSchoolScope).where(
                 and_(
                     UserSchoolScope.user_id == user_id,
-                    UserSchoolScope.is_active == True,
+                    UserSchoolScope.is_active.is_(True),
                 )
             )
         )
@@ -445,7 +446,7 @@ class UserScopeRepository:
             if scope.scope_type == "country":
                 result = await self.session.execute(
                     select(School.school_id).where(
-                        School.country.has(country_code=scope.scope_value)
+                        School.country_code == scope.scope_value
                     )
                 )
                 for row in result.fetchall():
@@ -474,7 +475,6 @@ class UserScopeRepository:
         Returns:
             True if user has access, False otherwise
         """
-        from app.models.tech_element import TechElement
 
         # Get user to check role
         user_result = await self.session.execute(
@@ -494,7 +494,7 @@ class UserScopeRepository:
             select(UserSchoolScope).where(
                 and_(
                     UserSchoolScope.user_id == user_id,
-                    UserSchoolScope.is_active == True,
+                    UserSchoolScope.is_active.is_(True),
                 )
             )
         )
@@ -514,7 +514,7 @@ class UserScopeRepository:
 
         return False
 
-    async def get_accessible_tech_element_ids(self, user_id: int) -> List[int]:
+    async def get_accessible_tech_element_ids(self, user_id: int) -> list[int]:
         """
         Get list of tech element IDs the user can access.
 
@@ -545,7 +545,7 @@ class UserScopeRepository:
             select(UserSchoolScope).where(
                 and_(
                     UserSchoolScope.user_id == user_id,
-                    UserSchoolScope.is_active == True,
+                    UserSchoolScope.is_active.is_(True),
                 )
             )
         )
@@ -570,7 +570,7 @@ class UserScopeRepository:
 
         return list(accessible_ids)
 
-    async def get_accessible_country_codes(self, user_id: int) -> List[str]:
+    async def get_accessible_country_codes(self, user_id: int) -> list[str]:
         """
         Get list of country codes the user can access.
 
@@ -580,8 +580,6 @@ class UserScopeRepository:
         Returns:
             List of accessible country codes
         """
-        from app.models.country import Country
-
         # Get user to check role
         user_result = await self.session.execute(
             select(UserAccount).where(UserAccount.user_id == user_id)
@@ -591,9 +589,11 @@ class UserScopeRepository:
         if not user:
             return []
 
-        # Super admin has access to all
+        # Super admin has access to all - get distinct country_codes from School
         if user.role_type == UserRoleType.SUPER_ADMIN.value:
-            result = await self.session.execute(select(Country.country_code))
+            result = await self.session.execute(
+                select(School.country_code).where(School.country_code.isnot(None)).distinct()
+            )
             return [row[0] for row in result.fetchall() if row[0]]
 
         # Get scopes
@@ -601,7 +601,7 @@ class UserScopeRepository:
             select(UserSchoolScope).where(
                 and_(
                     UserSchoolScope.user_id == user_id,
-                    UserSchoolScope.is_active == True,
+                    UserSchoolScope.is_active.is_(True),
                 )
             )
         )
@@ -615,7 +615,9 @@ class UserScopeRepository:
                 continue
 
             if scope.scope_type == "all":
-                result = await self.session.execute(select(Country.country_code))
+                result = await self.session.execute(
+                    select(School.country_code).where(School.country_code.isnot(None)).distinct()
+                )
                 return [row[0] for row in result.fetchall() if row[0]]
 
             if scope.scope_type == "country":

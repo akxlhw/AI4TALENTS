@@ -2,15 +2,16 @@
 Technology Element Repository.
 技术要素数据访问层
 """
-from typing import Optional, List, Tuple
-from sqlalchemy import select, func, and_
+
+from __future__ import annotations
+
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.tech_element import TechElement, TechDirection, TalentTechTag
-from app.models.talent import Talent
 from app.models.school import School
-from app.models.country import Country
+from app.models.talent import Talent
+from app.models.tech_element import TalentTechTag, TechDirection, TechElement
 
 
 class TechElementRepository:
@@ -19,17 +20,17 @@ class TechElementRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_all_elements(self) -> List[TechElement]:
+    async def get_all_elements(self) -> list[TechElement]:
         """Get all enabled tech elements with directions."""
         result = await self.session.execute(
             select(TechElement)
-            .where(TechElement.is_enabled == True)
+            .where(TechElement.is_enabled.is_(True))
             .options(selectinload(TechElement.directions))
             .order_by(TechElement.sort_order, TechElement.tech_element_id)
         )
         return list(result.scalars().all())
 
-    async def get_element_by_id(self, element_id: int) -> Optional[TechElement]:
+    async def get_element_by_id(self, element_id: int) -> TechElement | None:
         """Get tech element by ID."""
         result = await self.session.execute(
             select(TechElement)
@@ -38,19 +39,19 @@ class TechElementRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_directions_by_element(self, element_id: int) -> List[TechDirection]:
+    async def get_directions_by_element(self, element_id: int) -> list[TechDirection]:
         """Get all directions for a tech element."""
         result = await self.session.execute(
             select(TechDirection)
             .where(and_(
                 TechDirection.tech_element_id == element_id,
-                TechDirection.is_enabled == True
+                TechDirection.is_enabled.is_(True)
             ))
             .order_by(TechDirection.sort_order, TechDirection.tech_direction_id)
         )
         return list(result.scalars().all())
 
-    async def get_element_stats(self, element_id: Optional[int] = None) -> dict:
+    async def get_element_stats(self, element_id: int | None = None) -> dict:
         """Get statistics for tech element(s)."""
         if element_id:
             # Stats for specific element
@@ -61,14 +62,15 @@ class TechElementRepository:
 
             # Country and school counts
             country_count_query = select(
-                func.count(func.distinct(Country.country_id))
+                func.count(func.distinct(School.country_code))
             ).select_from(TalentTechTag).join(
                 Talent, TalentTechTag.talent_id == Talent.talent_id
             ).join(
                 School, Talent.school_id == School.school_id
-            ).join(
-                Country, School.country_id == Country.country_id
-            ).where(TalentTechTag.tech_element_id == element_id)
+            ).where(
+                TalentTechTag.tech_element_id == element_id,
+                School.country_code.isnot(None),
+            )
 
             school_count_query = select(
                 func.count(func.distinct(School.school_id))
@@ -93,10 +95,10 @@ class TechElementRepository:
         else:
             # Global stats
             elements_count = await self.session.execute(
-                select(func.count(TechElement.tech_element_id)).where(TechElement.is_enabled == True)
+                select(func.count(TechElement.tech_element_id)).where(TechElement.is_enabled.is_(True))
             )
             directions_count = await self.session.execute(
-                select(func.count(TechDirection.tech_direction_id)).where(TechDirection.is_enabled == True)
+                select(func.count(TechDirection.tech_direction_id)).where(TechDirection.is_enabled.is_(True))
             )
             talents_count = await self.session.execute(
                 select(func.count(func.distinct(TalentTechTag.talent_id)))
@@ -115,7 +117,7 @@ class TechElementRepository:
             func.count(func.distinct(Talent.talent_id))
         ).select_from(TalentTechTag).join(
             Talent, TalentTechTag.talent_id == Talent.talent_id
-        ).where(TalentTechTag.is_enabled == True)
+        ).where(TalentTechTag.is_enabled.is_(True))
 
         # Professor count
         professor_count_query = select(
@@ -123,7 +125,7 @@ class TechElementRepository:
         ).select_from(TalentTechTag).join(
             Talent, TalentTechTag.talent_id == Talent.talent_id
         ).where(and_(
-            TalentTechTag.is_enabled == True,
+            TalentTechTag.is_enabled.is_(True),
             Talent.role_type == 'professor'
         ))
 
@@ -133,20 +135,21 @@ class TechElementRepository:
         ).select_from(TalentTechTag).join(
             Talent, TalentTechTag.talent_id == Talent.talent_id
         ).where(and_(
-            TalentTechTag.is_enabled == True,
+            TalentTechTag.is_enabled.is_(True),
             Talent.role_type.in_(['student', 'graduated'])
         ))
 
         # Country count
         country_count_query = select(
-            func.count(func.distinct(Country.country_id))
+            func.count(func.distinct(School.country_code))
         ).select_from(TalentTechTag).join(
             Talent, TalentTechTag.talent_id == Talent.talent_id
         ).join(
             School, Talent.school_id == School.school_id
-        ).join(
-            Country, School.country_id == Country.country_id
-        ).where(TalentTechTag.is_enabled == True)
+        ).where(
+            TalentTechTag.is_enabled.is_(True),
+            School.country_code.isnot(None),
+        )
 
         # School count
         school_count_query = select(
@@ -155,19 +158,19 @@ class TechElementRepository:
             Talent, TalentTechTag.talent_id == Talent.talent_id
         ).join(
             School, Talent.school_id == School.school_id
-        ).where(TalentTechTag.is_enabled == True)
+        ).where(TalentTechTag.is_enabled.is_(True))
 
         # Tech element count
         element_count_query = select(
             func.count(func.distinct(TechElement.tech_element_id))
         ).select_from(TalentTechTag).join(
             TechElement, TalentTechTag.tech_element_id == TechElement.tech_element_id
-        ).where(TalentTechTag.is_enabled == True)
+        ).where(TalentTechTag.is_enabled.is_(True))
 
         # Tech direction count
         direction_count_query = select(
             func.count(func.distinct(TalentTechTag.tech_direction_id))
-        ).where(TalentTechTag.is_enabled == True)
+        ).where(TalentTechTag.is_enabled.is_(True))
 
         # Execute all queries
         talent_count = await self.session.execute(talent_count_query)
@@ -189,25 +192,24 @@ class TechElementRepository:
         }
 
     async def get_country_distribution(
-        self, element_id: Optional[int] = None, direction_id: Optional[int] = None
-    ) -> List[dict]:
+        self, element_id: int | None = None, direction_id: int | None = None
+    ) -> list[dict]:
         """Get talent distribution by country."""
         query = select(
-            Country.country_id,
-            Country.country_name_cn,
-            Country.country_code,
+            School.country_code,
+            School.country_name,
             func.count(func.distinct(Talent.talent_id)).label('talent_count'),
         ).select_from(TalentTechTag).join(
             Talent, TalentTechTag.talent_id == Talent.talent_id
         ).join(
             School, Talent.school_id == School.school_id
-        ).join(
-            Country, School.country_id == Country.country_id
+        ).where(
+            School.country_code.isnot(None),
         ).group_by(
-            Country.country_id, Country.country_name_cn, Country.country_code
+            School.country_code, School.country_name
         ).order_by(func.count(func.distinct(Talent.talent_id)).desc())
 
-        conditions = [TalentTechTag.is_enabled == True]
+        conditions = [TalentTechTag.is_enabled.is_(True)]
         if element_id:
             conditions.append(TalentTechTag.tech_element_id == element_id)
         if direction_id:
@@ -218,18 +220,17 @@ class TechElementRepository:
         result = await self.session.execute(query)
         return [
             {
-                'country_id': row.country_id,
-                'country_name': row.country_name_cn or row.country_code,
                 'country_code': row.country_code,
+                'country_name': row.country_name or row.country_code,
                 'talent_count': row.talent_count,
             }
             for row in result.all()
         ]
 
     async def get_school_distribution(
-        self, element_id: Optional[int] = None, direction_id: Optional[int] = None,
-        country_id: Optional[int] = None, page: int = 1, page_size: int = 20
-    ) -> Tuple[List[dict], int]:
+        self, element_id: int | None = None, direction_id: int | None = None,
+        country_code: str | None = None, page: int = 1, page_size: int = 20
+    ) -> tuple[list[dict], int]:
         """Get talent distribution by school."""
         # Base query for counting
         count_query = select(
@@ -244,25 +245,23 @@ class TechElementRepository:
         query = select(
             School.school_id,
             School.school_name,
-            Country.country_name_cn.label('country_name'),
+            School.country_name.label('country_name'),
             func.count(func.distinct(Talent.talent_id)).label('talent_count'),
         ).select_from(TalentTechTag).join(
             Talent, TalentTechTag.talent_id == Talent.talent_id
         ).join(
             School, Talent.school_id == School.school_id
-        ).join(
-            Country, School.country_id == Country.country_id
         ).group_by(
-            School.school_id, School.school_name, Country.country_name_cn
+            School.school_id, School.school_name, School.country_name
         ).order_by(func.count(func.distinct(Talent.talent_id)).desc())
 
-        conditions = [TalentTechTag.is_enabled == True]
+        conditions = [TalentTechTag.is_enabled.is_(True)]
         if element_id:
             conditions.append(TalentTechTag.tech_element_id == element_id)
         if direction_id:
             conditions.append(TalentTechTag.tech_direction_id == direction_id)
-        if country_id:
-            conditions.append(School.country_id == country_id)
+        if country_code:
+            conditions.append(School.country_code == country_code.upper())
 
         if conditions:
             query = query.where(and_(*conditions))
@@ -289,11 +288,11 @@ class TechElementRepository:
         return items, total
 
     async def get_talent_list(
-        self, element_id: Optional[int] = None, direction_id: Optional[int] = None,
-        country_id: Optional[int] = None, school_id: Optional[int] = None,
-        role_type: Optional[str] = None, keyword: Optional[str] = None,
+        self, element_id: int | None = None, direction_id: int | None = None,
+        country_code: str | None = None, school_id: int | None = None,
+        role_type: str | None = None, keyword: str | None = None,
         page: int = 1, page_size: int = 20
-    ) -> Tuple[List[Talent], int]:
+    ) -> tuple[list[Talent], int]:
         """Get talent list with filters - optimized with raw SQL for speed."""
         from sqlalchemy import text
 
@@ -310,9 +309,9 @@ class TechElementRepository:
         if school_id:
             conditions.append("t.school_id = :school_id")
             params['school_id'] = school_id
-        if country_id:
-            conditions.append("s.country_id = :country_id")
-            params['country_id'] = country_id
+        if country_code:
+            conditions.append("s.country_code = :country_code")
+            params['country_code'] = country_code.upper()
         if role_type:
             conditions.append("t.role_type = :role_type")
             params['role_type'] = role_type
@@ -361,7 +360,7 @@ class TechElementRepository:
                 try:
                     import json
                     topic_tags = json.loads(topic_tags)
-                except:
+                except (json.JSONDecodeError, TypeError):
                     topic_tags = []
 
             # Parse openalex_topics if it's a string (access by attribute name)
@@ -372,7 +371,7 @@ class TechElementRepository:
                 try:
                     import json
                     openalex_topics = json.loads(openalex_topics)
-                except:
+                except (json.JSONDecodeError, TypeError):
                     openalex_topics = []
 
             talent = Talent(

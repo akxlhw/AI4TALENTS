@@ -1,12 +1,12 @@
 """
 Sync and data pipeline models.
 """
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, JSON, ForeignKey
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 from app.models.base import TimestampMixin
-from app.models.enums import SyncJobStatus, SourceType
+from app.models.enums import SourceType, SyncJobStatus
 
 
 class SyncBatch(Base, TimestampMixin):

@@ -8,9 +8,11 @@ Repository for collect configuration operations - Simplified for MVP v1.1
 - 数据类型固定：学者+论文+机构
 - 时间范围固定：2010.1.1至今
 """
-from typing import List, Optional
+from __future__ import annotations
+
 from datetime import datetime
-from sqlalchemy import select, func
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -26,11 +28,11 @@ class CollectTaskRepository:
 
     async def list_tasks(
         self,
-        status: Optional[str] = None,
-        tech_element_id: Optional[int] = None,
+        status: str | None = None,
+        tech_element_id: int | None = None,
         page: int = 1,
         page_size: int = 20,
-    ) -> tuple[List[CollectTask], int]:
+    ) -> tuple[list[CollectTask], int]:
         """List collect tasks with pagination."""
         query = select(CollectTask).options(selectinload(CollectTask.tech_element))
 
@@ -53,7 +55,7 @@ class CollectTaskRepository:
 
         return tasks, total
 
-    async def get_by_id(self, task_id: int) -> Optional[CollectTask]:
+    async def get_by_id(self, task_id: int) -> CollectTask | None:
         """Get collect task by ID."""
         result = await self.session.execute(
             select(CollectTask)
@@ -62,7 +64,7 @@ class CollectTaskRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_code(self, task_code: str) -> Optional[CollectTask]:
+    async def get_by_code(self, task_code: str) -> CollectTask | None:
         """Get collect task by code."""
         result = await self.session.execute(
             select(CollectTask).where(CollectTask.task_code == task_code)
@@ -74,9 +76,9 @@ class CollectTaskRepository:
         task_code: str,
         tech_element_id: int,
         collect_mode: str,
-        triggered_by: Optional[int] = None,
-        time_window_start: Optional[datetime] = None,
-        time_window_end: Optional[datetime] = None,
+        triggered_by: int | None = None,
+        time_window_start: datetime | None = None,
+        time_window_end: datetime | None = None,
     ) -> CollectTask:
         """Create a new collect task."""
         task = CollectTask(
@@ -98,13 +100,13 @@ class CollectTaskRepository:
         self,
         task_id: int,
         status: str,
-        progress_percent: Optional[int] = None,
-        current_step: Optional[str] = None,
-        started_at: Optional[datetime] = None,
-        completed_at: Optional[datetime] = None,
-        error_message: Optional[str] = None,
-        error_details: Optional[dict] = None,
-    ) -> Optional[CollectTask]:
+        progress_percent: int | None = None,
+        current_step: str | None = None,
+        started_at: datetime | None = None,
+        completed_at: datetime | None = None,
+        error_message: str | None = None,
+        error_details: dict | None = None,
+    ) -> CollectTask | None:
         """Update task status and progress."""
         task = await self.get_by_id(task_id)
         if not task:
@@ -129,12 +131,12 @@ class CollectTaskRepository:
     async def update_task_counts(
         self,
         task_id: int,
-        total_records: Optional[int] = None,
-        processed_records: Optional[int] = None,
-        success_records: Optional[int] = None,
-        failed_records: Optional[int] = None,
-        skipped_records: Optional[int] = None,
-    ) -> Optional[CollectTask]:
+        total_records: int | None = None,
+        processed_records: int | None = None,
+        success_records: int | None = None,
+        failed_records: int | None = None,
+        skipped_records: int | None = None,
+    ) -> CollectTask | None:
         """Update task record counts."""
         task = await self.get_by_id(task_id)
         if not task:
@@ -157,9 +159,9 @@ class CollectTaskRepository:
         self,
         task_id: int,
         success: bool,
-        result_summary: Optional[dict] = None,
-        error_message: Optional[str] = None,
-    ) -> Optional[CollectTask]:
+        result_summary: dict | None = None,
+        error_message: str | None = None,
+    ) -> CollectTask | None:
         """Mark task as completed."""
         task = await self.get_by_id(task_id)
         if not task:
@@ -176,7 +178,7 @@ class CollectTaskRepository:
 
         return task
 
-    async def get_active_tasks(self) -> List[CollectTask]:
+    async def get_active_tasks(self) -> list[CollectTask]:
         """Get all currently active (pending or running) tasks."""
         result = await self.session.execute(
             select(CollectTask).where(
@@ -192,16 +194,16 @@ class TechElementCollectRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def list_with_collect_config(self) -> List[TechElement]:
+    async def list_with_collect_config(self) -> list[TechElement]:
         """List all tech elements with their collect configuration."""
         result = await self.session.execute(
             select(TechElement)
-            .where(TechElement.is_enabled == True)
+            .where(TechElement.is_enabled.is_(True))
             .order_by(TechElement.sort_order)
         )
         return list(result.scalars().all())
 
-    async def get_by_id(self, tech_element_id: int) -> Optional[TechElement]:
+    async def get_by_id(self, tech_element_id: int) -> TechElement | None:
         """Get tech element by ID."""
         result = await self.session.execute(
             select(TechElement).where(TechElement.tech_element_id == tech_element_id)
@@ -211,8 +213,8 @@ class TechElementCollectRepository:
     async def update_last_collect_time(
         self,
         tech_element_id: int,
-        collect_at: Optional[datetime] = None,
-    ) -> Optional[TechElement]:
+        collect_at: datetime | None = None,
+    ) -> TechElement | None:
         """Update last collect time for a tech element."""
         element = await self.get_by_id(tech_element_id)
         if not element:

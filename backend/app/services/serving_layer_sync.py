@@ -5,27 +5,21 @@ Serving Layer Synchronization Service.
 DEPRECATED: This class is a facade that delegates to specialized services.
 For new code, use ServingLayerOrchestrator directly.
 """
-import warnings
+from __future__ import annotations
+
 import logging
-from datetime import datetime
-from typing import Optional, List, Tuple
+import warnings
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from app.models.standardized import StdAuthor, StdSchool
-from app.models.talent import Talent, RoleProfile
-from app.models.school import School, SchoolAlias
-from app.models.tech_element import TalentTechTag, TechDirection
 from app.models.raw_data import AuthorTechBelong
-from app.models.country import Country
-from app.models.enums import RoleType, VisibilityStatus
-from app.services.role_identifier import RoleIdentifier
+from app.models.school import School
+from app.models.standardized import StdAuthor, StdSchool
+from app.models.talent import Talent
 from app.services.sync.author_sync import AuthorSyncService
+from app.services.sync.orchestrator import ServingLayerOrchestrator
 from app.services.sync.school_sync import SchoolSyncService
 from app.services.sync.tech_tag_sync import TechTagSyncService
-from app.services.sync.orchestrator import ServingLayerOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +55,7 @@ class ServingLayerSync:
         self,
         std_author: StdAuthor,
         update_existing: bool = True
-    ) -> Tuple[Talent, bool]:
+    ) -> tuple[Talent, bool]:
         """Sync standardized author to serving layer Talent table"""
         return await self._author_sync.sync_author_to_talent(std_author, update_existing)
 
@@ -69,15 +63,15 @@ class ServingLayerSync:
         self,
         std_school: StdSchool,
         update_existing: bool = True
-    ) -> Tuple[School, bool]:
+    ) -> tuple[School, bool]:
         """Sync standardized school to serving layer School table"""
         return await self._school_sync.sync_school_to_school(std_school, update_existing)
 
     async def sync_talent_tech_tags(
         self,
         talent: Talent,
-        belongs: List[AuthorTechBelong],
-        default_tech_direction_id: Optional[int] = None
+        belongs: list[AuthorTechBelong],
+        default_tech_direction_id: int | None = None
     ) -> int:
         """Create TalentTechTag records based on AuthorTechBelong"""
         return await self._tech_tag_sync.sync_talent_tech_tags(talent, belongs, default_tech_direction_id)
@@ -86,7 +80,7 @@ class ServingLayerSync:
         self,
         task_id: int,
         tech_element_id: int,
-        default_tech_direction_id: Optional[int] = None
+        default_tech_direction_id: int | None = None
     ) -> dict:
         """Sync all standardized data for a task to serving layer"""
         return await self._orchestrator.sync_all_for_task(task_id, tech_element_id, default_tech_direction_id)

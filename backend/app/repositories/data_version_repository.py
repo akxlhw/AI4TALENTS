@@ -2,14 +2,14 @@
 Repository for data version operations.
 数据版本管理数据访问层
 """
-from typing import List, Optional
+from __future__ import annotations
+
 from datetime import datetime
-from sqlalchemy import select, and_, func
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.sync import (
-    DataVersion, DataPublishRecord, DataCorrectionRecord, DataQualitySummary
-)
+from app.models.sync import DataCorrectionRecord, DataPublishRecord, DataQualitySummary, DataVersion
 
 
 class DataVersionRepository:
@@ -20,10 +20,10 @@ class DataVersionRepository:
 
     async def list_versions(
         self,
-        is_published: Optional[bool] = None,
+        is_published: bool | None = None,
         page: int = 1,
         page_size: int = 20,
-    ) -> tuple[List[DataVersion], int]:
+    ) -> tuple[list[DataVersion], int]:
         """List data versions with pagination."""
         query = select(DataVersion)
 
@@ -44,24 +44,24 @@ class DataVersionRepository:
 
         return versions, total
 
-    async def get_by_id(self, version_id: int) -> Optional[DataVersion]:
+    async def get_by_id(self, version_id: int) -> DataVersion | None:
         """Get data version by ID."""
         result = await self.session.execute(
             select(DataVersion).where(DataVersion.version_id == version_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_code(self, version_code: str) -> Optional[DataVersion]:
+    async def get_by_code(self, version_code: str) -> DataVersion | None:
         """Get data version by code."""
         result = await self.session.execute(
             select(DataVersion).where(DataVersion.version_code == version_code)
         )
         return result.scalar_one_or_none()
 
-    async def get_active_version(self) -> Optional[DataVersion]:
+    async def get_active_version(self) -> DataVersion | None:
         """Get the currently active version."""
         result = await self.session.execute(
-            select(DataVersion).where(DataVersion.is_active == True)
+            select(DataVersion).where(DataVersion.is_active.is_(True))
         )
         return result.scalar_one_or_none()
 
@@ -70,9 +70,9 @@ class DataVersionRepository:
         version_code: str,
         version_name: str,
         version_type: str = "snapshot",
-        base_version_id: Optional[int] = None,
-        source_task_id: Optional[int] = None,
-        description: Optional[str] = None,
+        base_version_id: int | None = None,
+        source_task_id: int | None = None,
+        description: str | None = None,
     ) -> DataVersion:
         """Create a new data version."""
         version = DataVersion(
@@ -95,7 +95,7 @@ class DataVersionRepository:
         total_talents: int,
         total_schools: int,
         total_works: int,
-    ) -> Optional[DataVersion]:
+    ) -> DataVersion | None:
         """Update version statistics."""
         version = await self.get_by_id(version_id)
         if not version:
@@ -110,15 +110,13 @@ class DataVersionRepository:
         self,
         version_id: int,
         published_by: int,
-    ) -> Optional[DataVersion]:
+    ) -> DataVersion | None:
         """Publish a version (make it active)."""
         # Deactivate current active version
         active_version = await self.get_active_version()
-        previous_version_id = None
 
         if active_version:
             active_version.is_active = False
-            previous_version_id = active_version.version_id
 
         # Activate new version
         version = await self.get_by_id(version_id)
@@ -141,10 +139,10 @@ class DataPublishRecordRepository:
 
     async def list_records(
         self,
-        version_id: Optional[int] = None,
+        version_id: int | None = None,
         page: int = 1,
         page_size: int = 20,
-    ) -> tuple[List[DataPublishRecord], int]:
+    ) -> tuple[list[DataPublishRecord], int]:
         """List publish records with pagination."""
         query = select(DataPublishRecord)
 
@@ -170,8 +168,8 @@ class DataPublishRecordRepository:
         version_id: int,
         action: str,
         operated_by: int,
-        previous_version_id: Optional[int] = None,
-        notes: Optional[str] = None,
+        previous_version_id: int | None = None,
+        notes: str | None = None,
     ) -> DataPublishRecord:
         """Create a publish record."""
         record = DataPublishRecord(
@@ -195,11 +193,11 @@ class DataCorrectionRepository:
 
     async def list_corrections(
         self,
-        target_type: Optional[str] = None,
-        status: Optional[str] = None,
+        target_type: str | None = None,
+        status: str | None = None,
         page: int = 1,
         page_size: int = 20,
-    ) -> tuple[List[DataCorrectionRecord], int]:
+    ) -> tuple[list[DataCorrectionRecord], int]:
         """List corrections with pagination."""
         query = select(DataCorrectionRecord)
 
@@ -222,7 +220,7 @@ class DataCorrectionRepository:
 
         return corrections, total
 
-    async def get_by_id(self, correction_id: int) -> Optional[DataCorrectionRecord]:
+    async def get_by_id(self, correction_id: int) -> DataCorrectionRecord | None:
         """Get correction by ID."""
         result = await self.session.execute(
             select(DataCorrectionRecord).where(DataCorrectionRecord.correction_id == correction_id)
@@ -234,12 +232,12 @@ class DataCorrectionRepository:
         target_type: str,
         target_id: int,
         field_name: str,
-        original_value: Optional[str],
-        corrected_value: Optional[str],
+        original_value: str | None,
+        corrected_value: str | None,
         correction_type: str,
         corrected_by: int,
-        reason: Optional[str] = None,
-        source: Optional[str] = None,
+        reason: str | None = None,
+        source: str | None = None,
     ) -> DataCorrectionRecord:
         """Create a correction record."""
         correction = DataCorrectionRecord(
@@ -258,7 +256,7 @@ class DataCorrectionRepository:
         await self.session.flush()
         return correction
 
-    async def revert_correction(self, correction_id: int) -> Optional[DataCorrectionRecord]:
+    async def revert_correction(self, correction_id: int) -> DataCorrectionRecord | None:
         """Revert a correction."""
         correction = await self.get_by_id(correction_id)
         if not correction:
@@ -274,7 +272,7 @@ class DataQualityRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_latest_summary(self, version_id: Optional[int] = None) -> Optional[DataQualitySummary]:
+    async def get_latest_summary(self, version_id: int | None = None) -> DataQualitySummary | None:
         """Get the latest quality summary."""
         query = select(DataQualitySummary)
 
@@ -288,10 +286,10 @@ class DataQualityRepository:
 
     async def list_summaries(
         self,
-        version_id: Optional[int] = None,
+        version_id: int | None = None,
         page: int = 1,
         page_size: int = 20,
-    ) -> tuple[List[DataQualitySummary], int]:
+    ) -> tuple[list[DataQualitySummary], int]:
         """List quality summaries with pagination."""
         query = select(DataQualitySummary)
 
@@ -333,7 +331,7 @@ class DataQualityRepository:
         issues_critical: int = 0,
         issues_warning: int = 0,
         issues_info: int = 0,
-        details: Optional[dict] = None,
+        details: dict | None = None,
     ) -> DataQualitySummary:
         """Create a quality summary."""
         summary = DataQualitySummary(

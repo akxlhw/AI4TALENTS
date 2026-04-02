@@ -4,96 +4,13 @@ Tests for repository classes.
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.repositories.country_repository import CountryRepository
 from app.repositories.school_repository import SchoolRepository
 from app.repositories.talent_repository import TalentRepository
 from app.repositories.stat_repository import StatisticsRepository
-from app.models.country import Country
 from app.models.school import School
 from app.models.talent import Talent, RoleProfile
 from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
 from app.models.enums import RoleType
-
-
-class TestCountryRepository:
-    """Tests for CountryRepository."""
-
-    @pytest.fixture
-    async def setup_data(self, test_session: AsyncSession):
-        """Setup test data."""
-        country1 = Country(
-            country_code="US",
-            country_name_cn="美国",
-            country_name_en="United States",
-            sort_order=1,
-        )
-        country2 = Country(
-            country_code="CN",
-            country_name_cn="中国",
-            country_name_en="China",
-            sort_order=2,
-        )
-        test_session.add_all([country1, country2])
-        await test_session.flush()
-
-        school1 = School(
-            school_name="MIT",
-            country_id=country1.country_id,
-            professor_count=500,
-        )
-        school2 = School(
-            school_name="Stanford",
-            country_id=country1.school_id if hasattr(country1, 'school_id') else country1.country_id,
-            professor_count=400,
-        )
-        school3 = School(
-            school_name="Tsinghua",
-            country_id=country2.country_id,
-            professor_count=600,
-        )
-        test_session.add_all([school1, school2, school3])
-        await test_session.commit()
-
-        return country1, country2
-
-    @pytest.mark.asyncio
-    async def test_get_all(self, test_session: AsyncSession, setup_data):
-        """Test get all countries."""
-        repo = CountryRepository(test_session)
-        countries = await repo.get_all()
-
-        assert len(countries) == 2
-        assert countries[0].country_code == "US"
-
-    @pytest.mark.asyncio
-    async def test_get_by_id(self, test_session: AsyncSession, setup_data):
-        """Test get country by ID."""
-        repo = CountryRepository(test_session)
-        country = await repo.get_by_id(1)
-
-        assert country is not None
-        assert country.country_code == "US"
-
-    @pytest.mark.asyncio
-    async def test_get_by_code(self, test_session: AsyncSession, setup_data):
-        """Test get country by code."""
-        repo = CountryRepository(test_session)
-        country = await repo.get_by_code("us")  # lowercase should work
-
-        assert country is not None
-        assert country.country_code == "US"
-
-    @pytest.mark.asyncio
-    async def test_get_with_school_counts(self, test_session: AsyncSession, setup_data):
-        """Test get countries with school counts."""
-        repo = CountryRepository(test_session)
-        result = await repo.get_with_school_counts()
-
-        assert len(result) == 2
-        # Check that school counts are included
-        us_data = next((r for r in result if r["country_code"] == "US"), None)
-        assert us_data is not None
-        assert us_data["school_count"] >= 1
 
 
 class TestSchoolRepository:
@@ -102,30 +19,30 @@ class TestSchoolRepository:
     @pytest.fixture
     async def setup_data(self, test_session: AsyncSession):
         """Setup test data."""
-        country = Country(
-            country_code="US",
-            country_name_cn="美国",
-            country_name_en="United States",
-        )
-        test_session.add(country)
-        await test_session.flush()
-
         school1 = School(
             school_name="MIT",
-            country_id=country.country_id,
+            country_code="US",
+            country_name="美国",
             professor_count=500,
             student_count=2000,
         )
         school2 = School(
             school_name="Stanford University",
-            country_id=country.school_id if hasattr(country, 'school_id') else country.country_id,
+            country_code="US",
+            country_name="美国",
             professor_count=400,
             student_count=1500,
         )
-        test_session.add_all([school1, school2])
+        school3 = School(
+            school_name="Tsinghua",
+            country_code="CN",
+            country_name="中国",
+            professor_count=600,
+        )
+        test_session.add_all([school1, school2, school3])
         await test_session.commit()
 
-        return country, school1, school2
+        return school1, school2, school3
 
     @pytest.mark.asyncio
     async def test_get_list(self, test_session: AsyncSession, setup_data):
@@ -133,17 +50,16 @@ class TestSchoolRepository:
         repo = SchoolRepository(test_session)
         schools, total = await repo.get_list()
 
-        assert total == 2
-        assert len(schools) == 2
+        assert total == 3
+        assert len(schools) == 3
 
     @pytest.mark.asyncio
     async def test_get_list_with_country_filter(
         self, test_session: AsyncSession, setup_data
     ):
         """Test get school list with country filter."""
-        country, _, _ = setup_data
         repo = SchoolRepository(test_session)
-        schools, total = await repo.get_list(country_id=country.country_id)
+        schools, total = await repo.get_list(country_code="US")
 
         assert total == 2
 
@@ -159,7 +75,7 @@ class TestSchoolRepository:
     @pytest.mark.asyncio
     async def test_get_by_id(self, test_session: AsyncSession, setup_data):
         """Test get school by ID."""
-        _, school1, _ = setup_data
+        school1, _, _ = setup_data
         repo = SchoolRepository(test_session)
         school = await repo.get_by_id(school1.school_id)
 
@@ -182,11 +98,11 @@ class TestTalentRepository:
     @pytest.fixture
     async def setup_data(self, test_session: AsyncSession):
         """Setup test data."""
-        country = Country(country_code="US", country_name_cn="美国")
-        test_session.add(country)
-        await test_session.flush()
-
-        school = School(school_name="MIT", country_id=country.country_id)
+        school = School(
+            school_name="MIT",
+            country_code="US",
+            country_name="美国",
+        )
         test_session.add(school)
         await test_session.flush()
 
@@ -217,7 +133,7 @@ class TestTalentRepository:
         test_session.add(profile)
         await test_session.commit()
 
-        return country, school, talent1, talent2
+        return school, talent1, talent2
 
     @pytest.mark.asyncio
     async def test_get_list(self, test_session: AsyncSession, setup_data):
@@ -242,7 +158,7 @@ class TestTalentRepository:
     @pytest.mark.asyncio
     async def test_get_by_id(self, test_session: AsyncSession, setup_data):
         """Test get talent by ID."""
-        _, _, talent1, _ = setup_data
+        _, talent1, _ = setup_data
         repo = TalentRepository(test_session)
         talent = await repo.get_by_id(talent1.talent_id)
 
@@ -261,7 +177,7 @@ class TestTalentRepository:
     @pytest.mark.asyncio
     async def test_get_role_profile(self, test_session: AsyncSession, setup_data):
         """Test get role profile."""
-        _, _, talent1, _ = setup_data
+        _, talent1, _ = setup_data
         repo = TalentRepository(test_session)
         profile = await repo.get_role_profile(talent1.talent_id)
 
@@ -313,11 +229,11 @@ class TestStatisticsRepository:
     ):
         """Test get school statistics."""
         # Create test data
-        country = Country(country_code="US", country_name_cn="美国")
-        test_session.add(country)
-        await test_session.flush()
-
-        school = School(school_name="MIT", country_id=country.country_id)
+        school = School(
+            school_name="MIT",
+            country_code="US",
+            country_name="美国",
+        )
         test_session.add(school)
         await test_session.flush()
 

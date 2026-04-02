@@ -2,7 +2,17 @@
 Technology Element and Direction models.
 技术要素与技术方向模型
 """
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, Float, UniqueConstraint, JSON, DateTime
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base

@@ -1,8 +1,8 @@
 """
 Common utilities for services.
 """
-from app.services.common.openalex_utils import extract_short_id, OPENALEX_API_BASE
-from app.services.common.progress import CollectionProgress, BaseProgress, FetchProgress
+from app.services.common.openalex_utils import OPENALEX_API_BASE, extract_short_id
+from app.services.common.progress import BaseProgress, CollectionProgress, FetchProgress
 
 __all__ = [
     "extract_short_id",

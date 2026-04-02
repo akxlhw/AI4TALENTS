@@ -1,17 +1,18 @@
 """
 User and permission management API endpoints.
 """
-from typing import List, Optional
+from __future__ import annotations
+
 from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.endpoints.auth import require_admin, require_user
 from app.core.database import get_async_session
-from app.api.v1.endpoints.auth import require_user, require_admin, require_super_admin
-from app.repositories.user_repository import UserRepository, UserScopeRepository
 from app.models.enums import UserRoleType
-
+from app.repositories.user_repository import UserRepository, UserScopeRepository
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
@@ -23,16 +24,16 @@ class UserResponse(BaseModel):
     username: str
     email: str
     role: str
-    display_name: Optional[str] = None
-    department: Optional[str] = None
+    display_name: str | None = None
+    department: str | None = None
     is_active: bool
     default_view: str = "tech_element"
-    last_login_at: Optional[datetime] = None
+    last_login_at: datetime | None = None
 
 
 class UserListResponse(BaseModel):
     """User list response."""
-    items: List[UserResponse]
+    items: list[UserResponse]
     total: int
     page: int
     page_size: int
@@ -44,15 +45,15 @@ class UserCreateRequest(BaseModel):
     email: str = Field(..., max_length=255)
     password: str = Field(..., min_length=8, max_length=100)
     role: str = Field(default="user")
-    display_name: Optional[str] = None
+    display_name: str | None = None
 
 
 class UserUpdateRequest(BaseModel):
     """Update user request."""
-    display_name: Optional[str] = None
-    department: Optional[str] = None
-    role: Optional[str] = None
-    is_active: Optional[bool] = None
+    display_name: str | None = None
+    department: str | None = None
+    role: str | None = None
+    is_active: bool | None = None
 
 
 class ScopeResponse(BaseModel):
@@ -63,9 +64,9 @@ class ScopeResponse(BaseModel):
     scope_value: str
     granted_by: int
     granted_at: datetime
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
     is_active: bool
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class ScopeCreateRequest(BaseModel):
@@ -73,8 +74,8 @@ class ScopeCreateRequest(BaseModel):
     user_id: int
     scope_type: str = Field(..., pattern="^(school|country|tech_element|all)$")
     scope_value: str
-    expires_at: Optional[datetime] = None
-    notes: Optional[str] = None
+    expires_at: datetime | None = None
+    notes: str | None = None
 
 
 class DefaultViewRequest(BaseModel):
@@ -84,7 +85,7 @@ class DefaultViewRequest(BaseModel):
 
 class ScopeListResponse(BaseModel):
     """Scope list response."""
-    items: List[ScopeResponse]
+    items: list[ScopeResponse]
     total: int
 
 
@@ -95,8 +96,8 @@ class ScopeListResponse(BaseModel):
     description="管理员查看所有用户列表",
 )
 async def list_users(
-    role: Optional[str] = Query(None, description="按角色筛选"),
-    is_active: Optional[bool] = Query(None, description="按状态筛选"),
+    role: str | None = Query(None, description="按角色筛选"),
+    is_active: bool | None = Query(None, description="按状态筛选"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
@@ -411,7 +412,7 @@ async def remove_user_scope(
 
 @router.get(
     "/me/scopes/schools",
-    response_model=List[int],
+    response_model=list[int],
     summary="获取当前用户可访问的学校",
     description="返回当前用户有权访问的学校ID列表",
 )
@@ -450,7 +451,7 @@ async def check_school_access(
 
 @router.get(
     "/me/scopes/tech-elements",
-    response_model=List[int],
+    response_model=list[int],
     summary="获取当前用户可访问的技术要素",
     description="返回当前用户有权访问的技术要素ID列表",
 )
@@ -466,7 +467,7 @@ async def get_my_accessible_tech_elements(
 
 @router.get(
     "/me/scopes/countries",
-    response_model=List[str],
+    response_model=list[str],
     summary="获取当前用户可访问的国家",
     description="返回当前用户有权访问的国家代码列表",
 )

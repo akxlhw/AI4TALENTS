@@ -52,7 +52,6 @@ interface School {
 }
 
 interface Country {
-  country_id: number
   country_code: string
   country_name_cn: string
 }
@@ -78,7 +77,7 @@ const SearchPage: React.FC = () => {
   const [minCitations, setMinCitations] = useState<number | undefined>()
 
   // Filter state - New for v1.1
-  const [countryFilter, setCountryFilter] = useState<number | undefined>()
+  const [countryFilter, setCountryFilter] = useState<string | undefined>()
   const [techElementFilter, setTechElementFilter] = useState<number | undefined>()
   const [isGraduatedFilter, setIsGraduatedFilter] = useState<string | undefined>()
   const [confirmStatusFilter, setConfirmStatusFilter] = useState<string | undefined>()
@@ -165,7 +164,7 @@ const SearchPage: React.FC = () => {
     try {
       const response = await api.talents.list({
         school_id: schoolFilter,
-        country_id: countryFilter,
+        country_code: countryFilter,
         role_type: roleFilter,
         keyword: searchQuery.trim() || undefined,
         page: pageNum,
@@ -382,7 +381,7 @@ const SearchPage: React.FC = () => {
   )
 
   // Options for dropdowns
-  const countryOptions = countries.map(c => ({ value: c.country_id, label: c.country_name_cn }))
+  const countryOptions = countries.map(c => ({ value: c.country_code, label: c.country_name_cn }))
   const schoolOptions = schools.map(s => ({ value: s.school_id, label: s.school_name }))
   const techElementOptions = techElements.map(e => ({ value: e.tech_element_id, label: e.element_name }))
 
@@ -475,7 +474,7 @@ const SearchPage: React.FC = () => {
       dataIndex: 'openalex_topics',
       key: 'openalex_topics',
       width: 200,
-      render: (topics: string[], record) => {
+      render: (topics: string[], record: SearchTalent) => {
         // 优先显示 openalex_topics，没有则回退到 topic_tags
         const displayTopics = topics && topics.length > 0 ? topics : record.topic_tags
         return <TopicTags tags={displayTopics} maxVisible={2} />

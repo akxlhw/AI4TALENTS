@@ -2,29 +2,31 @@
 Talent Pool Schemas.
 人才池相关DTO
 """
-from typing import Optional, List
-from pydantic import BaseModel
+from __future__ import annotations
+
 from datetime import datetime
+
+from pydantic import BaseModel
 
 
 class CreatePoolRequest(BaseModel):
     """创建人才池请求"""
     pool_name: str
     pool_type: str = "custom"
-    scope_desc: Optional[str] = None
+    scope_desc: str | None = None
 
 
 class UpdatePoolRequest(BaseModel):
     """更新人才池请求"""
-    pool_name: Optional[str] = None
-    scope_desc: Optional[str] = None
-    pool_status: Optional[str] = None
+    pool_name: str | None = None
+    scope_desc: str | None = None
+    pool_status: str | None = None
 
 
 class AddMemberRequest(BaseModel):
     """添加成员请求"""
     talent_id: int
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class TalentPoolResponse(BaseModel):
@@ -33,7 +35,7 @@ class TalentPoolResponse(BaseModel):
     pool_name: str
     pool_type: str
     owner_user_id: int
-    scope_desc: Optional[str] = None
+    scope_desc: str | None = None
     pool_status: str
     member_count: int = 0
     created_at: datetime
@@ -48,21 +50,21 @@ class PoolMemberResponse(BaseModel):
     pool_id: int
     talent_id: int
     name: str
-    name_en: Optional[str] = None
+    name_en: str | None = None
     role_type: str
-    school_id: Optional[int] = None
-    school_name: Optional[str] = None
-    current_title: Optional[str] = None
+    school_id: int | None = None
+    school_name: str | None = None
+    current_title: str | None = None
     works_count: int = 0
     cited_by_count: int = 0
     h_index: int = 0
-    notes: Optional[str] = None
-    added_at: Optional[str] = None
+    notes: str | None = None
+    added_at: str | None = None
 
 
 class PoolListResponse(BaseModel):
     """人才池列表响应"""
-    items: List[TalentPoolResponse]
+    items: list[TalentPoolResponse]
     total: int
 
 

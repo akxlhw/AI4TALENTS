@@ -3,6 +3,7 @@ Homepage API endpoint.
 首页聚合数据接口
 """
 from datetime import datetime
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 

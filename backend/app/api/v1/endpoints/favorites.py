@@ -2,16 +2,17 @@
 Favorites API endpoints.
 Provides favorite talent management.
 """
-from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, Field
 
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
 from app.repositories.favorite_repository import FavoriteRepository
 from app.schemas.common import PaginatedResponse
-from app.api.v1.endpoints.auth import require_user
-
 
 router = APIRouter(prefix="/favorites", tags=["Favorites"])
 
@@ -20,12 +21,12 @@ router = APIRouter(prefix="/favorites", tags=["Favorites"])
 class AddFavoriteRequest(BaseModel):
     """Request to add a talent to favorites."""
     talent_id: int = Field(..., description="Talent ID to favorite")
-    notes: Optional[str] = Field(None, description="Optional notes about the talent")
+    notes: str | None = Field(None, description="Optional notes about the talent")
 
 
 class UpdateFavoriteRequest(BaseModel):
     """Request to update favorite notes."""
-    notes: Optional[str] = Field(None, description="Updated notes")
+    notes: str | None = Field(None, description="Updated notes")
 
 
 class FavoriteTalentResponse(BaseModel):
@@ -33,15 +34,15 @@ class FavoriteTalentResponse(BaseModel):
     favorite_id: int
     talent_id: int
     name: str
-    name_en: Optional[str] = None
+    name_en: str | None = None
     role_type: str
-    school_id: Optional[int] = None
-    school_name: Optional[str] = None
-    current_title: Optional[str] = None
+    school_id: int | None = None
+    school_name: str | None = None
+    current_title: str | None = None
     works_count: int
     cited_by_count: int
     h_index: int
-    notes: Optional[str] = None
+    notes: str | None = None
     created_at: str
 
     class Config:
@@ -51,8 +52,8 @@ class FavoriteTalentResponse(BaseModel):
 class CheckFavoriteResponse(BaseModel):
     """Response for checking if a talent is favorited."""
     is_favorited: bool
-    favorite_id: Optional[int] = None
-    notes: Optional[str] = None
+    favorite_id: int | None = None
+    notes: str | None = None
 
 
 @router.post(
@@ -87,8 +88,9 @@ async def add_favorite(
     )
 
     # Load talent relationship
-    from sqlalchemy.orm import selectinload
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
     from app.models.iam import FavoriteTalent
     from app.models.talent import Talent
 
@@ -115,8 +117,8 @@ async def add_favorite(
 async def list_favorites(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
-    role_type: Optional[str] = Query(None, description="按角色类型筛选"),
-    keyword: Optional[str] = Query(None, description="搜索关键词"),
+    role_type: str | None = Query(None, description="按角色类型筛选"),
+    keyword: str | None = Query(None, description="搜索关键词"),
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_user),
 ):
@@ -147,7 +149,7 @@ async def list_favorites(
 
 @router.get(
     "/ids",
-    response_model=List[int],
+    response_model=list[int],
     summary="获取已收藏的人才ID列表",
     description="获取用户已收藏的所有人才ID，用于前端标记收藏状态",
 )
@@ -217,8 +219,9 @@ async def update_favorite(
     updated = await repo.update_favorite(favorite.favorite_id, request.notes)
 
     # Reload with relationships
-    from sqlalchemy.orm import selectinload
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
     from app.models.iam import FavoriteTalent
     from app.models.talent import Talent
 

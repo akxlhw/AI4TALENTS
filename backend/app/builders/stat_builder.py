@@ -2,19 +2,17 @@
 Statistics builder.
 Generates statistics snapshots for overview and school-level metrics.
 """
-from typing import Dict, Any, List, Optional
-from datetime import datetime
 import logging
+from datetime import datetime
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.builders.base import BaseBuilder, BuildResult
-from app.models.school import School
-from app.models.talent import Talent
-from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
 from app.models.enums import RoleType
-
+from app.models.school import School
+from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
+from app.models.talent import Talent
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +76,7 @@ class StatBuilder(BaseBuilder):
                 completed_at=datetime.now(),
             )
 
-    async def _build_overview_stats(self) -> Dict[str, int]:
+    async def _build_overview_stats(self) -> dict[str, int]:
         """
         Build overview statistics snapshot.
 
@@ -90,7 +88,7 @@ class StatBuilder(BaseBuilder):
         # Count schools with visible talents
         school_result = await self.session.execute(
             select(func.count(func.distinct(Talent.school_id)))
-            .where(Talent.is_visible == True)
+            .where(Talent.is_visible.is_(True))
         )
         school_count = school_result.scalar() or 0
 
@@ -98,7 +96,7 @@ class StatBuilder(BaseBuilder):
         professor_result = await self.session.execute(
             select(func.count(Talent.talent_id))
             .where(
-                Talent.is_visible == True,
+                Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.PROFESSOR.value,
             )
         )
@@ -108,7 +106,7 @@ class StatBuilder(BaseBuilder):
         student_result = await self.session.execute(
             select(func.count(Talent.talent_id))
             .where(
-                Talent.is_visible == True,
+                Talent.is_visible.is_(True),
                 Talent.role_type.in_([
                     RoleType.STUDENT.value,
                     RoleType.GRADUATE.value,
@@ -120,7 +118,7 @@ class StatBuilder(BaseBuilder):
         # Total talents
         total_result = await self.session.execute(
             select(func.count(Talent.talent_id))
-            .where(Talent.is_visible == True)
+            .where(Talent.is_visible.is_(True))
         )
         total_count = total_result.scalar() or 0
 
@@ -156,7 +154,7 @@ class StatBuilder(BaseBuilder):
             "total_talents": total_count,
         }
 
-    async def _build_school_stats(self) -> Dict[str, int]:
+    async def _build_school_stats(self) -> dict[str, int]:
         """
         Build per-school statistics snapshots.
 
@@ -169,14 +167,14 @@ class StatBuilder(BaseBuilder):
         result = await self.session.execute(
             select(School.school_id, School.school_name)
             .join(Talent, Talent.school_id == School.school_id)
-            .where(Talent.is_visible == True)
+            .where(Talent.is_visible.is_(True))
             .distinct()
         )
         schools = result.all()
 
         schools_processed = 0
 
-        for school_id, school_name in schools:
+        for school_id, _school_name in schools:
             try:
                 await self._build_single_school_stats(school_id)
                 schools_processed += 1
@@ -192,7 +190,7 @@ class StatBuilder(BaseBuilder):
             select(func.count(Talent.talent_id))
             .where(
                 Talent.school_id == school_id,
-                Talent.is_visible == True,
+                Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.PROFESSOR.value,
             )
         )
@@ -203,7 +201,7 @@ class StatBuilder(BaseBuilder):
             select(func.count(Talent.talent_id))
             .where(
                 Talent.school_id == school_id,
-                Talent.is_visible == True,
+                Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.STUDENT.value,
             )
         )
@@ -214,7 +212,7 @@ class StatBuilder(BaseBuilder):
             select(func.count(Talent.talent_id))
             .where(
                 Talent.school_id == school_id,
-                Talent.is_visible == True,
+                Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.GRADUATE.value,
             )
         )
@@ -225,7 +223,7 @@ class StatBuilder(BaseBuilder):
             select(func.count(Talent.talent_id))
             .where(
                 Talent.school_id == school_id,
-                Talent.is_visible == True,
+                Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.UNKNOWN.value,
             )
         )

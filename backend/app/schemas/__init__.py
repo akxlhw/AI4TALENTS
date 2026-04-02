@@ -3,26 +3,26 @@ Schemas module.
 Pydantic models for API request/response handling.
 """
 from app.schemas.common import (
-    PaginationParams,
-    PaginatedResponse,
     ErrorResponse,
-    SuccessResponse,
     HealthResponse,
+    PaginatedResponse,
+    PaginationParams,
+    SuccessResponse,
 )
 from app.schemas.overview import (
-    OverviewStats,
-    OverviewResponse,
-    CountrySummary,
     CountryListResponse,
-    SchoolSummary,
+    CountrySummary,
+    OverviewResponse,
+    OverviewStats,
     SchoolDetail,
     SchoolStats,
-    TalentSummary,
-    TalentDetail,
-    SelectedWorkResponse,
-    TalentFilterParams,
-    SearchTalentResult,
+    SchoolSummary,
     SearchResponse,
+    SearchTalentResult,
+    SelectedWorkResponse,
+    TalentDetail,
+    TalentFilterParams,
+    TalentSummary,
 )
 
 __all__ = [

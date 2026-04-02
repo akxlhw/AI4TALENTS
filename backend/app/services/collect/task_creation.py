@@ -1,9 +1,13 @@
 """
 Task creation service for collection tasks.
 """
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+
+# Python 3.10 compatibility
+UTC = timezone.utc
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.sync import CollectTask
 from app.models.tech_element import TechElement
 from app.models.venue import VenueSubTask
-from app.repositories.venue_repository import VenueTechBindingRepository, VenueSubTaskRepository
+from app.repositories.venue_repository import VenueSubTaskRepository, VenueTechBindingRepository
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +35,7 @@ class TaskCreationService:
     def get_time_window(
         self,
         mode: str,
-        last_collect_at: Optional[datetime] = None
+        last_collect_at: datetime | None = None
     ) -> tuple[datetime, datetime]:
         """Calculate time window for collection"""
         end_date = datetime.now(timezone.utc)
@@ -49,7 +53,7 @@ class TaskCreationService:
         self,
         tech_element_id: int,
         mode: str = "full",
-        triggered_by: Optional[int] = None
+        triggered_by: int | None = None
     ) -> CollectTask:
         """Create a new collection task"""
         # Generate task code
@@ -100,7 +104,7 @@ class TaskCreationService:
 
         return task
 
-    async def get_task(self, task_id: int) -> Optional[CollectTask]:
+    async def get_task(self, task_id: int) -> CollectTask | None:
         """Get a task by ID"""
         result = await self.session.execute(
             select(CollectTask).where(CollectTask.task_id == task_id)

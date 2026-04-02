@@ -131,7 +131,7 @@ export const api = {
 
   // Schools
   schools: {
-    list: (params?: { country_id?: number; keyword?: string; page?: number; page_size?: number }) =>
+    list: (params?: { country_code?: string; keyword?: string; page?: number; page_size?: number }) =>
       apiClient.get('/schools', { params }),
     get: (id: number) => apiClient.get(`/schools/${id}`),
     getTalents: (id: number, params?: { role_type?: string; page?: number }) =>
@@ -140,7 +140,7 @@ export const api = {
 
   // Talents
   talents: {
-    list: (params?: { school_id?: number; country_id?: number; role_type?: string; keyword?: string; page?: number; page_size?: number }) =>
+    list: (params?: { school_id?: number; country_code?: string; role_type?: string; keyword?: string; page?: number; page_size?: number }) =>
       apiClient.get('/talents', { params }),
     get: (id: number) => apiClient.get(`/talents/${id}`),
     getWorks: (id: number, limit?: number) =>
@@ -231,15 +231,15 @@ export const api = {
       apiClient.get('/tech-elements/overall-countries'),
     getOverallSchools: (params?: { page?: number; page_size?: number }) =>
       apiClient.get('/tech-elements/overall-schools', { params }),
-    getOverallTalents: (params?: { country_id?: number; school_id?: number; role_type?: string; keyword?: string; page?: number; page_size?: number }) =>
+    getOverallTalents: (params?: { country_code?: string; school_id?: number; role_type?: string; keyword?: string; page?: number; page_size?: number }) =>
       apiClient.get('/tech-elements/overall-talents', { params }),
     getStats: (id: number) =>
       apiClient.get(`/tech-elements/${id}/stats`),
     getCountries: (id: number, directionId?: number) =>
       apiClient.get(`/tech-elements/${id}/countries`, { params: { direction_id: directionId } }),
-    getSchools: (id: number, params?: { direction_id?: number; country_id?: number; page?: number; page_size?: number }) =>
+    getSchools: (id: number, params?: { direction_id?: number; country_code?: string; page?: number; page_size?: number }) =>
       apiClient.get(`/tech-elements/${id}/schools`, { params }),
-    getTalents: (id: number, params?: { direction_id?: number; country_id?: number; school_id?: number; role_type?: string; keyword?: string; page?: number; page_size?: number }) =>
+    getTalents: (id: number, params?: { direction_id?: number; country_code?: string; school_id?: number; role_type?: string; keyword?: string; page?: number; page_size?: number }) =>
       apiClient.get(`/tech-elements/${id}/talents`, { params }),
   },
 

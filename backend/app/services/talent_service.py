@@ -4,18 +4,22 @@ Talent Service - 统一的人才服务入口
 提供人才相关的业务逻辑操作，封装 Repository 调用。
 遵循架构规范：Endpoint -> Service -> Repository
 """
-from typing import Optional, List, Tuple
+from __future__ import annotations
+
 from datetime import datetime, timezone
 
-from sqlalchemy import select, func, or_
+# Python 3.10 compatibility
+UTC = timezone.utc
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.talent import Talent
 from app.models.school import School
-from app.models.tech_element import TalentTechTag, TechElement
-from app.repositories.talent_repository import TalentRepository
+from app.models.talent import Talent
+from app.models.tech_element import TalentTechTag
 from app.repositories.school_repository import SchoolRepository
+from app.repositories.talent_repository import TalentRepository
 
 
 class TalentService:
@@ -36,21 +40,21 @@ class TalentService:
 
     async def get_talent_list(
         self,
-        school_id: Optional[int] = None,
-        country_id: Optional[int] = None,
-        role_type: Optional[str] = None,
-        min_works: Optional[int] = None,
-        min_citations: Optional[int] = None,
-        keyword: Optional[str] = None,
+        school_id: int | None = None,
+        country_code: str | None = None,
+        role_type: str | None = None,
+        min_works: int | None = None,
+        min_citations: int | None = None,
+        keyword: str | None = None,
         page: int = 1,
         page_size: int = 20
-    ) -> Tuple[List[Talent], int]:
+    ) -> tuple[list[Talent], int]:
         """
         获取人才列表（带筛选）
 
         Args:
             school_id: 学校ID筛选
-            country_id: 国家ID筛选
+            country_code: 国家代码筛选
             role_type: 角色类型筛选
             min_works: 最小论文数
             min_citations: 最小引用数
@@ -63,7 +67,7 @@ class TalentService:
         """
         return await self.talent_repo.get_list(
             school_id=school_id,
-            country_id=country_id,
+            country_code=country_code,
             role_type=role_type,
             min_works=min_works,
             min_citations=min_citations,
@@ -74,7 +78,7 @@ class TalentService:
 
     async def get_talent_by_id(
         self, talent_id: int, include_relations: bool = True
-    ) -> Optional[Talent]:
+    ) -> Talent | None:
         """
         获取人才详情
 
@@ -87,7 +91,7 @@ class TalentService:
         """
         return await self.talent_repo.get_by_id(talent_id, include_relations)
 
-    async def get_talent_with_relations(self, talent_id: int) -> Optional[Talent]:
+    async def get_talent_with_relations(self, talent_id: int) -> Talent | None:
         """
         获取人才详情（包含关联数据）
 
@@ -107,7 +111,7 @@ class TalentService:
         )
         return result.scalar_one_or_none()
 
-    async def get_talents_by_ids(self, talent_ids: List[int]) -> List[Talent]:
+    async def get_talents_by_ids(self, talent_ids: list[int]) -> list[Talent]:
         """
         批量获取人才
 
@@ -160,7 +164,7 @@ class TalentService:
         self,
         talent_id: int,
         limit: int = 10
-    ) -> List[dict]:
+    ) -> list[dict]:
         """
         获取人才的合作者
 
@@ -211,7 +215,7 @@ class TalentService:
         query: str,
         page: int = 1,
         page_size: int = 20
-    ) -> Tuple[List[Talent], int]:
+    ) -> tuple[list[Talent], int]:
         """
         搜索人才（关键词搜索）
 
@@ -229,7 +233,7 @@ class TalentService:
         self,
         talent_id: int,
         updates: dict
-    ) -> Optional[Talent]:
+    ) -> Talent | None:
         """
         更新人才信息
 

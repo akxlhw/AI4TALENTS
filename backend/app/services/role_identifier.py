@@ -10,12 +10,13 @@ Role Types:
 - graduate: Early-career researchers who have recently graduated
 - unknown: Insufficient data to determine role
 """
-from dataclasses import dataclass
-from typing import Dict, Any, Optional, Tuple
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass
+from typing import Any
 
 from app.models.enums import RoleType
-
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +143,7 @@ class RoleIdentifier:
         )
 
     @classmethod
-    def identify_from_author_data(cls, author_data: Dict[str, Any]) -> RoleIdentificationResult:
+    def identify_from_author_data(cls, author_data: dict[str, Any]) -> RoleIdentificationResult:
         """
         Identify role type from OpenAlex author data.
 
@@ -182,7 +183,7 @@ class RoleIdentifier:
 
 
 # Convenience functions for backward compatibility
-def determine_role(works_count: int, cited_by_count: int, h_index: int = 0) -> Tuple[str, float]:
+def determine_role(works_count: int, cited_by_count: int, h_index: int = 0) -> tuple[str, float]:
     """
     Convenience function for backward compatibility.
 
@@ -198,7 +199,7 @@ def determine_role(works_count: int, cited_by_count: int, h_index: int = 0) -> T
     return result.role_type, result.confidence
 
 
-def determine_role_from_author(author_data: Dict[str, Any]) -> Tuple[str, float]:
+def determine_role_from_author(author_data: dict[str, Any]) -> tuple[str, float]:
     """
     Convenience function for backward compatibility.
 

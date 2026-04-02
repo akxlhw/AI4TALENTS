@@ -2,14 +2,15 @@
 Authentication utilities.
 Password hashing and JWT token handling.
 """
-from datetime import datetime, timedelta
-from typing import Optional
+from __future__ import annotations
+
 import secrets
+from datetime import datetime, timedelta
+
 import bcrypt
 import jwt
 
 from app.core.config import settings
-
 
 # JWT Configuration
 JWT_SECRET_KEY = settings.SECRET_KEY or "your-secret-key-change-in-production"
@@ -57,7 +58,7 @@ def create_access_token(
     user_id: int,
     username: str,
     role: str,
-    expires_delta: Optional[timedelta] = None,
+    expires_delta: timedelta | None = None,
 ) -> str:
     """
     Create a JWT access token.
@@ -111,7 +112,7 @@ def create_refresh_token(user_id: int) -> str:
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 
-def decode_token(token: str) -> Optional[dict]:
+def decode_token(token: str) -> dict | None:
     """
     Decode and validate a JWT token.
 
@@ -130,7 +131,7 @@ def decode_token(token: str) -> Optional[dict]:
         return None
 
 
-def verify_access_token(token: str) -> Optional[dict]:
+def verify_access_token(token: str) -> dict | None:
     """
     Verify an access token.
 
@@ -146,7 +147,7 @@ def verify_access_token(token: str) -> Optional[dict]:
     return None
 
 
-def verify_refresh_token(token: str) -> Optional[dict]:
+def verify_refresh_token(token: str) -> dict | None:
     """
     Verify a refresh token.
 

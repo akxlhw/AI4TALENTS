@@ -4,17 +4,16 @@ Coordinates the complete build process from raw data to domain objects.
 
 NOTE: Talent building is now handled by ServingLayerSync from app.services.serving_layer_sync
 """
-from datetime import datetime
-from typing import Dict, Any
 import logging
+from datetime import datetime
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.builders.base import BuildResult
 from app.builders.school_builder import SchoolBuilder
-from app.builders.stat_builder import StatBuilder
 from app.builders.search_builder import SearchBuilder
-
+from app.builders.stat_builder import StatBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ class BuildOrchestrator:
         self.batch_id = batch_id
         self.version = f"v{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
-    async def run_full_build(self) -> Dict[str, Any]:
+    async def run_full_build(self) -> dict[str, Any]:
         """
         Run the complete build process.
 

@@ -1,8 +1,8 @@
 """
 Overview API schemas.
 """
-from datetime import datetime
-from typing import Optional
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 
@@ -29,10 +29,9 @@ class OverviewResponse(BaseModel):
 class CountrySummary(BaseModel):
     """Country summary for list response."""
 
-    country_id: int
-    country_code: str
+    country_code: str = Field(description="ISO 3166-1 alpha-2 country code")
     country_name_cn: str
-    country_name_en: Optional[str] = None
+    country_name_en: str | None = None
     school_count: int = Field(default=0, description="Number of schools in this country")
     professor_count: int = Field(default=0, description="Number of professors in this country")
 
@@ -49,13 +48,12 @@ class SchoolSummary(BaseModel):
 
     school_id: int
     school_name: str
-    school_alias: Optional[str] = None
-    country_id: int
-    country_name: Optional[str] = None
-    country_code: Optional[str] = None
+    school_alias: str | None = None
+    country_code: str | None = None
+    country_name: str | None = None
     professor_count: int = Field(default=0)
     student_count: int = Field(default=0)
-    homepage_url: Optional[str] = None
+    homepage_url: str | None = None
     is_top_school: bool = Field(default=False, description="是否为Top院校")
 
 
@@ -64,12 +62,11 @@ class SchoolDetail(BaseModel):
 
     school_id: int
     school_name: str
-    school_alias: Optional[str] = None
-    country_id: int
-    country_name: Optional[str] = None
-    country_code: Optional[str] = None
-    school_intro: Optional[str] = None
-    homepage_url: Optional[str] = None
+    school_alias: str | None = None
+    country_code: str | None = None
+    country_name: str | None = None
+    school_intro: str | None = None
+    homepage_url: str | None = None
     professor_count: int = Field(default=0)
     student_count: int = Field(default=0)
     talent_count: int = Field(default=0)
@@ -93,13 +90,13 @@ class TalentSummary(BaseModel):
 
     talent_id: int
     name: str
-    name_en: Optional[str] = None
-    orcid: Optional[str] = None
+    name_en: str | None = None
+    orcid: str | None = None
     role_type: str
     role_confidence: float = 0.0
-    school_id: Optional[int] = None
-    school_name: Optional[str] = None
-    current_title: Optional[str] = None
+    school_id: int | None = None
+    school_name: str | None = None
+    current_title: str | None = None
     works_count: int = 0
     cited_by_count: int = 0
     h_index: int = 0
@@ -112,8 +109,8 @@ class TechTagItem(BaseModel):
 
     tech_element_id: int
     tech_element_name: str
-    tech_direction_id: Optional[int] = None
-    tech_direction_name: Optional[str] = None
+    tech_direction_id: int | None = None
+    tech_direction_name: str | None = None
 
 
 class TalentDetail(BaseModel):
@@ -121,31 +118,31 @@ class TalentDetail(BaseModel):
 
     talent_id: int
     name: str
-    name_en: Optional[str] = None
-    orcid: Optional[str] = None
+    name_en: str | None = None
+    orcid: str | None = None
     role_type: str
     role_confidence: float = 0.0
-    school_id: Optional[int] = None
-    school_name: Optional[str] = None
-    current_title: Optional[str] = None
+    school_id: int | None = None
+    school_name: str | None = None
+    current_title: str | None = None
     works_count: int = 0
     cited_by_count: int = 0
     h_index: int = 0
-    latest_active_year: Optional[int] = None
+    latest_active_year: int | None = None
     topic_tags: list[str] = Field(default_factory=list)
     openalex_topics: list[str] = Field(default_factory=list, description="OpenAlex研究主题")
     tech_tags: list[TechTagItem] = Field(default_factory=list, description="技术要素标签")
-    research_interests: Optional[str] = None
-    summary: Optional[str] = None
-    department_name: Optional[str] = None
-    lab_name: Optional[str] = None
+    research_interests: str | None = None
+    summary: str | None = None
+    department_name: str | None = None
+    lab_name: str | None = None
 
     # Role profile details
-    role_reason: Optional[str] = None
-    academic_age: Optional[int] = None
+    role_reason: str | None = None
+    academic_age: int | None = None
 
     # Representative works
-    selected_works: list["SelectedWorkResponse"] = Field(default_factory=list)
+    selected_works: list[SelectedWorkResponse] = Field(default_factory=list)
 
 
 class SelectedWorkResponse(BaseModel):
@@ -153,21 +150,21 @@ class SelectedWorkResponse(BaseModel):
 
     work_id: int
     title: str
-    publication_year: Optional[int] = None
-    venue_name: Optional[str] = None
+    publication_year: int | None = None
+    venue_name: str | None = None
     citation_count: int = 0
-    doi: Optional[str] = None
+    doi: str | None = None
 
 
 class TalentFilterParams(BaseModel):
     """Talent filter parameters."""
 
-    school_id: Optional[int] = None
-    country_id: Optional[int] = None
-    role_type: Optional[str] = None
-    min_works: Optional[int] = None
-    min_citations: Optional[int] = None
-    keyword: Optional[str] = None
+    school_id: int | None = None
+    country_code: str | None = None
+    role_type: str | None = None
+    min_works: int | None = None
+    min_citations: int | None = None
+    keyword: str | None = None
 
 
 class SearchTalentResult(BaseModel):
@@ -175,16 +172,16 @@ class SearchTalentResult(BaseModel):
 
     talent_id: int
     name: str
-    name_en: Optional[str] = None
+    name_en: str | None = None
     role_type: str
-    school_name: Optional[str] = None
-    current_title: Optional[str] = None
+    school_name: str | None = None
+    current_title: str | None = None
     works_count: int = 0
     cited_by_count: int = 0
     h_index: int = 0
     topic_tags: list[str] = Field(default_factory=list)
     openalex_topics: list[str] = Field(default_factory=list, description="OpenAlex研究主题")
-    highlight: Optional[str] = None
+    highlight: str | None = None
 
 
 class SearchResponse(BaseModel):

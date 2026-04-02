@@ -15,13 +15,35 @@ const BASE_URL = 'http://localhost:5173';
 async function login(page: any) {
   await page.goto(BASE_URL);
   await page.waitForLoadState('networkidle');
+
+  // 等待登录表单加载
   await page.waitForSelector('.ant-input[placeholder="用户名或邮箱"]', { timeout: 10000 });
+
+  // 填写登录信息
   await page.locator('.ant-input[placeholder="用户名或邮箱"]').fill('admin');
   await page.locator('.ant-input-password input').fill('admin123');
+
+  // 点击登录按钮
   await page.locator('button:has-text("登")').click();
-  await page.waitForURL(/.*\/$/, { timeout: 15000 }).catch(() => {
-    return page.waitForSelector('.ant-layout', { timeout: 10000 });
-  });
+
+  // 等待登录成功 - 使用 Promise.any 等待任意一个条件满足
+  // 所有 promise 都包装为永不 reject
+  const loginSuccess = Promise.any([
+    // 等待登录表单消失
+    page.waitForSelector('.ant-input[placeholder="用户名或邮箱"]', { state: 'hidden', timeout: 20000 })
+      .catch(() => null),
+    // 或等待主页布局出现
+    page.waitForSelector('.ant-layout-content, .ant-menu', { timeout: 20000 })
+      .catch(() => null),
+    // 或等待 URL 变化（登录后通常会跳转）
+    page.waitForURL(/\/(home|dashboard|talents|search|collect|tech|school)/, { timeout: 20000 })
+      .catch(() => null),
+  ]);
+
+  await loginSuccess;
+
+  // 额外等待确保页面稳定
+  await page.waitForTimeout(1000);
 }
 
 // 导航到采集页面

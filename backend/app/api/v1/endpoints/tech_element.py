@@ -2,25 +2,25 @@
 Tech Element API endpoints.
 技术要素相关接口
 """
-from typing import Optional, List
-from fastapi import APIRouter, Depends, Query, HTTPException
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.repositories.tech_element_repository import TechElementRepository
-from app.repositories.talent_repository import TalentRepository
 from app.schemas.common import PaginatedResponse
 from app.schemas.tech_element import (
-    TechElementResponse,
-    TechElementListResponse,
-    TechElementStatsResponse,
-    TechElementSummary,
     CountryDistributionItem,
     CountryDistributionResponse,
+    OverallStatsResponse,
     SchoolDistributionItem,
     SchoolDistributionResponse,
     TalentInTechElement,
-    OverallStatsResponse,
+    TechElementListResponse,
+    TechElementResponse,
+    TechElementStatsResponse,
+    TechElementSummary,
 )
 
 router = APIRouter(prefix="/tech-elements", tags=["Tech Elements"])
@@ -137,10 +137,10 @@ async def get_overall_school_distribution(
     description="返回用户权限范围内所有人才列表",
 )
 async def get_overall_talents(
-    country_id: Optional[int] = Query(None, description="按国家筛选"),
-    school_id: Optional[int] = Query(None, description="按院校筛选"),
-    role_type: Optional[str] = Query(None, description="按角色类型筛选"),
-    keyword: Optional[str] = Query(None, description="搜索关键词"),
+    country_code: str | None = Query(None, description="按国家代码筛选 (ISO 3166-1 alpha-2)"),
+    school_id: int | None = Query(None, description="按院校筛选"),
+    role_type: str | None = Query(None, description="按角色类型筛选"),
+    keyword: str | None = Query(None, description="搜索关键词"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
@@ -148,7 +148,7 @@ async def get_overall_talents(
     """Get overall talent list."""
     repo = TechElementRepository(session)
     talents, total = await repo.get_talent_list(
-        country_id=country_id,
+        country_code=country_code,
         school_id=school_id,
         role_type=role_type,
         keyword=keyword,
@@ -248,7 +248,7 @@ async def get_element_stats(
 )
 async def get_element_country_distribution(
     element_id: int,
-    direction_id: Optional[int] = Query(None, description="按技术方向筛选"),
+    direction_id: int | None = Query(None, description="按技术方向筛选"),
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get country distribution for a tech element."""
@@ -271,8 +271,8 @@ async def get_element_country_distribution(
 )
 async def get_element_school_distribution(
     element_id: int,
-    direction_id: Optional[int] = Query(None, description="按技术方向筛选"),
-    country_id: Optional[int] = Query(None, description="按国家筛选"),
+    direction_id: int | None = Query(None, description="按技术方向筛选"),
+    country_code: str | None = Query(None, description="按国家代码筛选 (ISO 3166-1 alpha-2)"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
@@ -288,7 +288,7 @@ async def get_element_school_distribution(
     items, total = await repo.get_school_distribution(
         element_id=element_id,
         direction_id=direction_id,
-        country_id=country_id,
+        country_code=country_code,
         page=page,
         page_size=page_size,
     )
@@ -306,11 +306,11 @@ async def get_element_school_distribution(
 )
 async def get_element_talents(
     element_id: int,
-    direction_id: Optional[int] = Query(None, description="按技术方向筛选"),
-    country_id: Optional[int] = Query(None, description="按国家筛选"),
-    school_id: Optional[int] = Query(None, description="按院校筛选"),
-    role_type: Optional[str] = Query(None, description="按角色类型筛选"),
-    keyword: Optional[str] = Query(None, description="搜索关键词"),
+    direction_id: int | None = Query(None, description="按技术方向筛选"),
+    country_code: str | None = Query(None, description="按国家代码筛选 (ISO 3166-1 alpha-2)"),
+    school_id: int | None = Query(None, description="按院校筛选"),
+    role_type: str | None = Query(None, description="按角色类型筛选"),
+    keyword: str | None = Query(None, description="搜索关键词"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
@@ -326,7 +326,7 @@ async def get_element_talents(
     talents, total = await repo.get_talent_list(
         element_id=element_id,
         direction_id=direction_id,
-        country_id=country_id,
+        country_code=country_code,
         school_id=school_id,
         role_type=role_type,
         keyword=keyword,

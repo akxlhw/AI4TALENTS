@@ -2,12 +2,14 @@
 Talent Pool Repository.
 人才池数据访问层
 """
-from typing import Optional, List, Tuple
-from sqlalchemy import select, and_
+
+from __future__ import annotations
+
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.iam import TalentPool, TalentPoolMember, FavoriteTalent
+from app.models.iam import FavoriteTalent, TalentPool, TalentPoolMember
 from app.models.talent import Talent
 
 
@@ -29,14 +31,14 @@ class TalentPoolRepository:
         await self.session.flush()
         return pool
 
-    async def get_pool_by_id(self, pool_id: int) -> Optional[TalentPool]:
+    async def get_pool_by_id(self, pool_id: int) -> TalentPool | None:
         """Get talent pool by ID."""
         result = await self.session.execute(
             select(TalentPool).where(TalentPool.pool_id == pool_id)
         )
         return result.scalar_one_or_none()
 
-    async def list_user_pools(self, user_id: int) -> List[TalentPool]:
+    async def list_user_pools(self, user_id: int) -> list[TalentPool]:
         """List all talent pools for a user."""
         result = await self.session.execute(
             select(TalentPool)
@@ -48,7 +50,7 @@ class TalentPoolRepository:
         )
         return list(result.scalars().all())
 
-    async def update_pool(self, pool_id: int, name: str = None, desc: str = None, status: str = None) -> Optional[TalentPool]:
+    async def update_pool(self, pool_id: int, name: str = None, desc: str = None, status: str = None) -> TalentPool | None:
         """Update talent pool."""
         pool = await self.get_pool_by_id(pool_id)
         if not pool:
@@ -98,7 +100,7 @@ class TalentPoolRepository:
             return True
         return False
 
-    async def get_pool_members(self, pool_id: int, page: int = 1, page_size: int = 20) -> Tuple[List[dict], int]:
+    async def get_pool_members(self, pool_id: int, page: int = 1, page_size: int = 20) -> tuple[list[dict], int]:
         """Get members of a talent pool with pagination."""
         # Count query
         count_result = await self.session.execute(
@@ -157,13 +159,13 @@ class FavoriteRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def update_followup_status(self, user_id: int, talent_id: int, status: str) -> Optional[FavoriteTalent]:
+    async def update_followup_status(self, user_id: int, talent_id: int, status: str) -> FavoriteTalent | None:
         """Update followup status for a favorite."""
         result = await self.session.execute(
             select(FavoriteTalent).where(and_(
                 FavoriteTalent.user_id == user_id,
                 FavoriteTalent.talent_id == talent_id,
-                FavoriteTalent.is_active == True
+                FavoriteTalent.is_active.is_(True)
             ))
         )
         favorite = result.scalar_one_or_none()
@@ -172,13 +174,13 @@ class FavoriteRepository:
             await self.session.flush()
         return favorite
 
-    async def get_favorites_by_status(self, user_id: int, status: str) -> List[FavoriteTalent]:
+    async def get_favorites_by_status(self, user_id: int, status: str) -> list[FavoriteTalent]:
         """Get favorites filtered by followup status."""
         result = await self.session.execute(
             select(FavoriteTalent).where(and_(
                 FavoriteTalent.user_id == user_id,
                 FavoriteTalent.followup_status == status,
-                FavoriteTalent.is_active == True
+                FavoriteTalent.is_active.is_(True)
             ))
         )
         return list(result.scalars().all())

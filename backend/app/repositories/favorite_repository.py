@@ -1,15 +1,15 @@
 """
 Repository for favorite talent operations.
 """
-from typing import List, Optional, Tuple
 
-from sqlalchemy import select, func, and_
+from __future__ import annotations
+
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.iam import FavoriteTalent
 from app.models.talent import Talent
-from app.models.school import School
 
 
 class FavoriteRepository:
@@ -19,7 +19,7 @@ class FavoriteRepository:
         self.session = session
 
     async def add_favorite(
-        self, user_id: int, talent_id: int, notes: Optional[str] = None
+        self, user_id: int, talent_id: int, notes: str | None = None
     ) -> FavoriteTalent:
         """
         Add a talent to user's favorites.
@@ -45,7 +45,7 @@ class FavoriteRepository:
 
     async def get_by_user_and_talent(
         self, user_id: int, talent_id: int
-    ) -> Optional[FavoriteTalent]:
+    ) -> FavoriteTalent | None:
         """
         Get a favorite by user and talent IDs.
 
@@ -61,13 +61,13 @@ class FavoriteRepository:
                 and_(
                     FavoriteTalent.user_id == user_id,
                     FavoriteTalent.talent_id == talent_id,
-                    FavoriteTalent.is_active == True,
+                    FavoriteTalent.is_active.is_(True),
                 )
             )
         )
         return result.scalar_one_or_none()
 
-    async def get_by_id(self, favorite_id: int) -> Optional[FavoriteTalent]:
+    async def get_by_id(self, favorite_id: int) -> FavoriteTalent | None:
         """
         Get a favorite by ID.
 
@@ -87,9 +87,9 @@ class FavoriteRepository:
         user_id: int,
         page: int = 1,
         page_size: int = 20,
-        role_type: Optional[str] = None,
-        keyword: Optional[str] = None,
-    ) -> Tuple[List[FavoriteTalent], int]:
+        role_type: str | None = None,
+        keyword: str | None = None,
+    ) -> tuple[list[FavoriteTalent], int]:
         """
         Get paginated list of user's favorite talents.
 
@@ -112,7 +112,7 @@ class FavoriteRepository:
             .where(
                 and_(
                     FavoriteTalent.user_id == user_id,
-                    FavoriteTalent.is_active == True,
+                    FavoriteTalent.is_active.is_(True),
                 )
             )
             .order_by(FavoriteTalent.created_at.desc())
@@ -143,7 +143,7 @@ class FavoriteRepository:
 
         return favorites, total
 
-    async def get_user_favorite_ids(self, user_id: int) -> List[int]:
+    async def get_user_favorite_ids(self, user_id: int) -> list[int]:
         """
         Get all talent IDs favorited by a user.
 
@@ -157,15 +157,15 @@ class FavoriteRepository:
             select(FavoriteTalent.talent_id).where(
                 and_(
                     FavoriteTalent.user_id == user_id,
-                    FavoriteTalent.is_active == True,
+                    FavoriteTalent.is_active.is_(True),
                 )
             )
         )
         return [row[0] for row in result.all()]
 
     async def update_favorite(
-        self, favorite_id: int, notes: Optional[str] = None
-    ) -> Optional[FavoriteTalent]:
+        self, favorite_id: int, notes: str | None = None
+    ) -> FavoriteTalent | None:
         """
         Update a favorite's notes.
 

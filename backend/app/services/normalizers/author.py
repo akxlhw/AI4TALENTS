@@ -1,10 +1,14 @@
 """
 Author normalizer for the standardized layer.
 """
+from __future__ import annotations
+
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Optional, List
+
+# Python 3.10 compatibility
+UTC = timezone.utc
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,9 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.raw_data import RawAuthor
 from app.models.standardized import StdAuthor, StdSchool
 from app.repositories.raw_data_repository import RawAuthorRepository
+from app.services.common.cs_concepts import CORE_CS_CONCEPTS, CS_SCORE_THRESHOLD
 from app.services.normalizers.base import NormalizationResult
 from app.services.normalizers.school import SchoolNormalizer
-from app.services.common.cs_concepts import CORE_CS_CONCEPTS, CS_SCORE_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +33,7 @@ class AuthorNormalizer:
         self.session = session
         self.school_normalizer = SchoolNormalizer(session)
 
-    def _parse_raw_json(self, raw_json: str) -> tuple[List[str], float]:
+    def _parse_raw_json(self, raw_json: str) -> tuple[list[str], float]:
         """
         Parse raw_json once to extract both topics and CS score.
 
@@ -74,7 +78,7 @@ class AuthorNormalizer:
 
         return topics, cs_score
 
-    def _extract_topics(self, raw_json: str) -> List[str]:
+    def _extract_topics(self, raw_json: str) -> list[str]:
         """Extract research topics from OpenAlex raw_json."""
         topics, _ = self._parse_raw_json(raw_json)
         return topics
@@ -103,7 +107,7 @@ class AuthorNormalizer:
 
         return " ".join(normalized)
 
-    async def find_std_author(self, openalex_id: str) -> Optional[StdAuthor]:
+    async def find_std_author(self, openalex_id: str) -> StdAuthor | None:
         """Find StdAuthor by OpenAlex ID"""
         result = await self.session.execute(
             select(StdAuthor).where(StdAuthor.openalex_author_id == openalex_id)
@@ -113,8 +117,8 @@ class AuthorNormalizer:
     async def create_std_author(
         self,
         raw_author: RawAuthor,
-        std_school_id: Optional[int] = None,
-        task_id: Optional[int] = None
+        std_school_id: int | None = None,
+        task_id: int | None = None
     ) -> StdAuthor:
         """Create a new StdAuthor from RawAuthor"""
         # Parse raw_json once to extract both topics and CS score
@@ -146,7 +150,7 @@ class AuthorNormalizer:
     async def normalize_author(
         self,
         raw_author: RawAuthor,
-        task_id: Optional[int] = None
+        task_id: int | None = None
     ) -> StdAuthor:
         """Normalize a raw author to StdAuthor"""
         # Find or create school linkage first
@@ -189,7 +193,7 @@ class AuthorNormalizer:
 
     async def normalize_all_authors(
         self,
-        task_id: Optional[int] = None
+        task_id: int | None = None
     ) -> NormalizationResult:
         """Normalize all pending authors for a specific task.
 
@@ -226,7 +230,7 @@ class AuthorNormalizer:
                     await self.session.commit()
                     logger.debug(f"Author normalization progress: {result.processed}/{result.total}")
 
-            except Exception as e:
+            except Exception:
                 result.failed += 1
 
         return result

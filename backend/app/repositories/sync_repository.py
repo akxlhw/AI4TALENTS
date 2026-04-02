@@ -1,14 +1,15 @@
 """
 Repository for sync batch operations.
 """
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Optional, List, Dict, Any
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.enums import SourceType, SyncJobStatus
 from app.models.sync import SyncBatch
-from app.models.enums import SyncJobStatus, SourceType
 
 
 class SyncBatchRepository:
@@ -21,7 +22,7 @@ class SyncBatchRepository:
         self,
         batch_type: str,
         source_type: str = SourceType.OPENALEX.value,
-        config_snapshot: Optional[Dict] = None,
+        config_snapshot: dict | None = None,
         created_by: str = "system",
     ) -> SyncBatch:
         """
@@ -72,7 +73,7 @@ class SyncBatchRepository:
         total_records: int,
         success_records: int,
         failed_records: int,
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ) -> None:
         """Mark batch as completed."""
         status = SyncJobStatus.SUCCESS.value
@@ -106,14 +107,14 @@ class SyncBatchRepository:
             )
         )
 
-    async def get_batch(self, batch_id: int) -> Optional[SyncBatch]:
+    async def get_batch(self, batch_id: int) -> SyncBatch | None:
         """Get batch by ID."""
         result = await self.session.execute(
             select(SyncBatch).where(SyncBatch.batch_id == batch_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_batch_by_code(self, batch_code: str) -> Optional[SyncBatch]:
+    async def get_batch_by_code(self, batch_code: str) -> SyncBatch | None:
         """Get batch by code."""
         result = await self.session.execute(
             select(SyncBatch).where(SyncBatch.batch_code == batch_code)
@@ -123,8 +124,8 @@ class SyncBatchRepository:
     async def get_recent_batches(
         self,
         limit: int = 10,
-        source_type: Optional[str] = None,
-    ) -> List[SyncBatch]:
+        source_type: str | None = None,
+    ) -> list[SyncBatch]:
         """Get recent batches."""
         query = select(SyncBatch).order_by(SyncBatch.batch_id.desc()).limit(limit)
 

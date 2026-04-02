@@ -103,22 +103,6 @@ async def client(test_session: AsyncSession) -> AsyncGenerator[AsyncClient, None
 # ============ Test Data Fixtures ============
 
 @pytest.fixture
-async def sample_country(test_session: AsyncSession):
-    """Create sample country for testing."""
-    from app.models.country import Country
-
-    country = Country(
-        country_code="US",
-        country_name_cn="美国",
-        country_name_en="United States",
-        is_active=True,
-    )
-    test_session.add(country)
-    await test_session.commit()
-    return country
-
-
-@pytest.fixture
 async def sample_tech_element(test_session: AsyncSession):
     """Create sample tech element for testing."""
     from app.models.tech_element import TechElement, TechDirection
@@ -162,7 +146,7 @@ async def sample_venue(test_session: AsyncSession):
 
 
 @pytest.fixture
-async def sample_talent(test_session: AsyncSession, sample_country):
+async def sample_talent(test_session: AsyncSession):
     """Create sample talent for testing."""
     from app.models.talent import Talent
     from app.models.school import School
@@ -170,7 +154,8 @@ async def sample_talent(test_session: AsyncSession, sample_country):
 
     school = School(
         school_name="Test University",
-        country_id=sample_country.country_id,
+        country_code="US",
+        country_name="美国",
         is_visible=True,
     )
     test_session.add(school)
@@ -241,7 +226,7 @@ def count_records(test_session: AsyncSession):
 # ============ Collection Test Fixtures ============
 
 @pytest.fixture
-async def full_setup(test_session: AsyncSession, sample_country):
+async def full_setup(test_session: AsyncSession):
     """
     Create full test setup for collection tests.
 
@@ -294,7 +279,6 @@ async def full_setup(test_session: AsyncSession, sample_country):
     await test_session.commit()
 
     return {
-        "country": sample_country,
         "tech_element": tech_element,
         "tech_direction": tech_direction,
         "venue": venue,

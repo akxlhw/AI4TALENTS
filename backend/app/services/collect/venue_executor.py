@@ -3,13 +3,19 @@ Venue sub-task executor for collection tasks.
 """
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+
+# Python 3.10 compatibility
+UTC = timezone.utc
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sync import CollectTask
-from app.models.venue import Venue, VenueSubTask
-from app.repositories.venue_repository import VenueRepository, VenueSubTaskRepository, VenueTechBindingRepository
+from app.models.venue import VenueSubTask
+from app.repositories.venue_repository import (
+    VenueRepository,
+    VenueSubTaskRepository,
+    VenueTechBindingRepository,
+)
 from app.services.common.progress import CollectionProgress
 
 logger = logging.getLogger(__name__)

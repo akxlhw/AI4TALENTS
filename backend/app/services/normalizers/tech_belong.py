@@ -1,13 +1,14 @@
 """
 Tech belong calculator for author-tech element relationships.
 """
+from __future__ import annotations
+
 import json
-from typing import Optional, Dict
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.raw_data import RawWork, AuthorTechBelong
+from app.models.raw_data import AuthorTechBelong, RawWork
 from app.models.venue import Venue
 
 
@@ -21,7 +22,7 @@ class TechBelongCalculator:
         self,
         venue_id: int,
         tech_element_id: int,
-        task_id: Optional[int] = None
+        task_id: int | None = None
     ) -> int:
         """Calculate author-tech relationships for a venue
 
@@ -42,7 +43,7 @@ class TechBelongCalculator:
         works = result.scalars().all()
 
         # Group by author
-        author_stats: Dict[str, Dict] = {}
+        author_stats: dict[str, dict] = {}
 
         for work in works:
             if work.author_ids:
@@ -67,7 +68,7 @@ class TechBelongCalculator:
                                     author_stats[author_id]["last_year"],
                                     work.publication_year
                                 )
-                except:
+                except (KeyError, TypeError):
                     pass
 
         # Create or update relationships (upsert to handle duplicates)

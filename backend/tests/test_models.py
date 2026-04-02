@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
 from app.models import (
-    Country, School, SchoolAlias, Talent, RoleProfile, SelectedWork,
+    School, SchoolAlias, Talent, RoleProfile, SelectedWork,
     OverviewStatSnapshot, SchoolStatSnapshot, UserAccount, UserSchoolScope,
     SyncBatch, SearchTalentDocument, AuditOperationLog
 )
@@ -35,49 +35,15 @@ def db_session():
     Base.metadata.drop_all(bind=engine)
 
 
-class TestCountryModel:
-    """Tests for Country model."""
-
-    def test_create_country(self, db_session):
-        """Test creating a country."""
-        country = Country(
-            country_code="US",
-            country_name_cn="美国",
-            country_name_en="United States",
-            sort_order=1,
-        )
-        db_session.add(country)
-        db_session.commit()
-
-        assert country.country_id is not None
-        assert country.country_code == "US"
-        assert country.country_name_cn == "美国"
-        assert country.is_active is True
-
-    def test_country_unique_code(self, db_session):
-        """Test that country code must be unique."""
-        country1 = Country(country_code="CN", country_name_cn="中国")
-        country2 = Country(country_code="CN", country_name_cn="中国2")
-
-        db_session.add(country1)
-        db_session.commit()
-
-        # This should work as SQLite doesn't enforce unique at ORM level
-        # but would fail at database level with real constraints
-
-
 class TestSchoolModel:
     """Tests for School model."""
 
     def test_create_school(self, db_session):
         """Test creating a school."""
-        country = Country(country_code="US", country_name_cn="美国")
-        db_session.add(country)
-        db_session.commit()
-
         school = School(
             school_name="MIT",
-            country_id=country.country_id,
+            country_code="US",
+            country_name="美国",
             school_intro="Massachusetts Institute of Technology",
         )
         db_session.add(school)
@@ -85,6 +51,7 @@ class TestSchoolModel:
 
         assert school.school_id is not None
         assert school.school_name == "MIT"
+        assert school.country_code == "US"
         assert school.is_visible is True
         assert school.status == "active"
 
@@ -94,11 +61,11 @@ class TestTalentModel:
 
     def test_create_talent(self, db_session):
         """Test creating a talent."""
-        country = Country(country_code="US", country_name_cn="美国")
-        db_session.add(country)
-        db_session.commit()
-
-        school = School(school_name="MIT", country_id=country.country_id)
+        school = School(
+            school_name="MIT",
+            country_code="US",
+            country_name="美国",
+        )
         db_session.add(school)
         db_session.commit()
 

@@ -1,15 +1,16 @@
 """
 Serving layer orchestrator for coordinating sync operations.
 """
+from __future__ import annotations
+
 import logging
-from typing import Optional, Dict, List
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.standardized import StdAuthor, StdSchool
 from app.models.raw_data import AuthorTechBelong
+from app.models.standardized import StdAuthor
 from app.services.sync.author_sync import AuthorSyncService
 from app.services.sync.school_sync import SchoolSyncService
 from app.services.sync.tech_tag_sync import TechTagSyncService
@@ -32,7 +33,7 @@ class ServingLayerOrchestrator:
         self.school_sync = SchoolSyncService(session)
         self.tech_tag_sync = TechTagSyncService(session)
 
-    async def _batch_get_std_authors(self, author_ids: List[str]) -> List[StdAuthor]:
+    async def _batch_get_std_authors(self, author_ids: list[str]) -> list[StdAuthor]:
         """Get StdAuthors by IDs in batches to avoid SQLite variable limit."""
         if not author_ids:
             return []
@@ -53,7 +54,7 @@ class ServingLayerOrchestrator:
         self,
         task_id: int,
         tech_element_id: int,
-        default_tech_direction_id: Optional[int] = None
+        default_tech_direction_id: int | None = None
     ) -> dict:
         """
         Sync all standardized data for a task to serving layer
@@ -100,7 +101,7 @@ class ServingLayerOrchestrator:
         self,
         task_id: int,
         tech_element_id: int,
-        default_tech_direction_id: Optional[int],
+        default_tech_direction_id: int | None,
         stats: dict
     ):
         """Sync all authors for a task"""
@@ -120,7 +121,7 @@ class ServingLayerOrchestrator:
             return
 
         # Get unique openalex_author_ids
-        author_ids = list(set(b.openalex_author_id for b in belongs))
+        author_ids = list({b.openalex_author_id for b in belongs})
         logger.info(f"[SYNC] Found {len(belongs)} tech belong records, {len(author_ids)} unique authors")
 
         # Get StdAuthors by openalex_author_id (batched to avoid SQLite limit)
@@ -195,7 +196,7 @@ class ServingLayerOrchestrator:
             return
 
         # Get unique openalex_author_ids
-        author_ids = list(set(b.openalex_author_id for b in belongs))
+        author_ids = list({b.openalex_author_id for b in belongs})
 
         # Get StdAuthors with their schools (batched to avoid SQLite limit)
         std_authors = await self._batch_get_std_authors(author_ids)

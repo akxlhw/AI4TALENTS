@@ -2,10 +2,11 @@
 Data version schemas.
 数据版本相关 DTO
 """
-from typing import Optional, List, Any
-from pydantic import BaseModel, Field
+from __future__ import annotations
+
 from datetime import datetime
 
+from pydantic import BaseModel, Field
 
 # ============ Data Version Schemas ============
 
@@ -15,16 +16,16 @@ class DataVersionResponse(BaseModel):
     version_code: str
     version_name: str
     version_type: str
-    base_version_id: Optional[int] = None
-    source_task_id: Optional[int] = None
+    base_version_id: int | None = None
+    source_task_id: int | None = None
     total_talents: int
     total_schools: int
     total_works: int
     is_active: bool
     is_published: bool
-    published_at: Optional[datetime] = None
-    published_by: Optional[int] = None
-    description: Optional[str] = None
+    published_at: datetime | None = None
+    published_by: int | None = None
+    description: str | None = None
     created_at: datetime
 
     class Config:
@@ -33,7 +34,7 @@ class DataVersionResponse(BaseModel):
 
 class DataVersionListResponse(BaseModel):
     """Data version list response."""
-    items: List[DataVersionResponse]
+    items: list[DataVersionResponse]
     total: int
     page: int
     page_size: int
@@ -44,14 +45,14 @@ class CreateVersionRequest(BaseModel):
     version_code: str = Field(..., min_length=1, max_length=50)
     version_name: str = Field(..., min_length=1, max_length=100)
     version_type: str = Field(default="snapshot", pattern="^(snapshot|release)$")
-    base_version_id: Optional[int] = None
-    source_task_id: Optional[int] = None
-    description: Optional[str] = None
+    base_version_id: int | None = None
+    source_task_id: int | None = None
+    description: str | None = None
 
 
 class PublishVersionRequest(BaseModel):
     """Publish version request."""
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 # ============ Publish Record Schemas ============
@@ -61,10 +62,10 @@ class PublishRecordResponse(BaseModel):
     publish_id: int
     version_id: int
     action: str
-    previous_version_id: Optional[int] = None
+    previous_version_id: int | None = None
     operated_by: int
     operated_at: datetime
-    notes: Optional[str] = None
+    notes: str | None = None
 
     class Config:
         from_attributes = True
@@ -72,7 +73,7 @@ class PublishRecordResponse(BaseModel):
 
 class PublishRecordListResponse(BaseModel):
     """Publish record list response."""
-    items: List[PublishRecordResponse]
+    items: list[PublishRecordResponse]
     total: int
 
 
@@ -83,11 +84,11 @@ class CreateCorrectionRequest(BaseModel):
     target_type: str = Field(..., pattern="^(talent|school|tech_tag)$")
     target_id: int
     field_name: str = Field(..., min_length=1, max_length=50)
-    original_value: Optional[str] = None
-    corrected_value: Optional[str] = None
+    original_value: str | None = None
+    corrected_value: str | None = None
     correction_type: str = Field(default="manual", pattern="^(manual|system|import)$")
-    reason: Optional[str] = None
-    source: Optional[str] = None
+    reason: str | None = None
+    source: str | None = None
 
 
 class CorrectionResponse(BaseModel):
@@ -96,11 +97,11 @@ class CorrectionResponse(BaseModel):
     target_type: str
     target_id: int
     field_name: str
-    original_value: Optional[str] = None
-    corrected_value: Optional[str] = None
+    original_value: str | None = None
+    corrected_value: str | None = None
     correction_type: str
-    reason: Optional[str] = None
-    source: Optional[str] = None
+    reason: str | None = None
+    source: str | None = None
     corrected_by: int
     status: str
     created_at: datetime
@@ -111,7 +112,7 @@ class CorrectionResponse(BaseModel):
 
 class CorrectionListResponse(BaseModel):
     """Correction list response."""
-    items: List[CorrectionResponse]
+    items: list[CorrectionResponse]
     total: int
     page: int
     page_size: int
@@ -152,7 +153,7 @@ class QualitySummaryResponse(BaseModel):
     issues_warning: int
     issues_info: int
 
-    details: Optional[dict] = None
+    details: dict | None = None
     created_at: datetime
 
     class Config:

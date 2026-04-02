@@ -2,9 +2,8 @@
 Standardized data layer models.
 标准化层模型 - 经过清洗和归一的数据
 """
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, Float, Index, JSON
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
 
 from app.core.database import Base
 from app.models.base import TimestampMixin
@@ -83,8 +82,7 @@ class StdSchool(Base, TimestampMixin):
     # Alternative names/aliases (JSON array)
     name_aliases = Column(Text, nullable=True)
 
-    # Country
-    country_id = Column(Integer, ForeignKey("core_country.country_id"), nullable=True, index=True)
+    # Country (country_id removed - use country_code directly)
     country_code = Column(String(10), nullable=True, index=True)
     country_name = Column(String(100), nullable=True)
 

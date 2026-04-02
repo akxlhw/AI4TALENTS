@@ -1,14 +1,15 @@
 """
 Repository for talent operations.
 """
-from typing import List, Optional
 
-from sqlalchemy import select, func, or_
+from __future__ import annotations
+
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.talent import Talent, RoleProfile, SelectedWork
 from app.models.school import School
+from app.models.talent import RoleProfile, SelectedWork, Talent
 
 
 class TalentRepository:
@@ -19,22 +20,22 @@ class TalentRepository:
 
     async def get_list(
         self,
-        school_id: Optional[int] = None,
-        country_id: Optional[int] = None,
-        role_type: Optional[str] = None,
-        min_works: Optional[int] = None,
-        min_citations: Optional[int] = None,
-        keyword: Optional[str] = None,
+        school_id: int | None = None,
+        country_code: str | None = None,
+        role_type: str | None = None,
+        min_works: int | None = None,
+        min_citations: int | None = None,
+        keyword: str | None = None,
         page: int = 1,
         page_size: int = 20,
         visible_only: bool = True,
-    ) -> tuple[List[Talent], int]:
+    ) -> tuple[list[Talent], int]:
         """
         Get paginated list of talents with filters.
 
         Args:
             school_id: Filter by school ID
-            country_id: Filter by country ID (via school)
+            country_code: Filter by country code (via school)
             role_type: Filter by role type
             min_works: Minimum works count
             min_citations: Minimum citation count
@@ -54,14 +55,14 @@ class TalentRepository:
 
         # Apply filters
         if visible_only:
-            query = query.where(Talent.is_visible == True)
+            query = query.where(Talent.is_visible.is_(True))
 
         if school_id:
             query = query.where(Talent.school_id == school_id)
 
-        if country_id:
-            # Join with school to filter by country
-            query = query.join(School).where(School.country_id == country_id)
+        if country_code:
+            # Join with school to filter by country_code
+            query = query.join(School).where(School.country_code == country_code.upper())
 
         if role_type:
             query = query.where(Talent.role_type == role_type)
@@ -98,7 +99,7 @@ class TalentRepository:
 
     async def get_by_id(
         self, talent_id: int, include_relations: bool = True
-    ) -> Optional[Talent]:
+    ) -> Talent | None:
         """
         Get talent by ID.
 
@@ -121,7 +122,7 @@ class TalentRepository:
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_by_source_id(self, source_record_id: str) -> Optional[Talent]:
+    async def get_by_source_id(self, source_record_id: str) -> Talent | None:
         """
         Get talent by source record ID (e.g., OpenAlex ID).
 
@@ -136,7 +137,7 @@ class TalentRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_orcid(self, orcid: str) -> Optional[Talent]:
+    async def get_by_orcid(self, orcid: str) -> Talent | None:
         """
         Get talent by ORCID.
 
@@ -151,7 +152,7 @@ class TalentRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_role_profile(self, talent_id: int) -> Optional[RoleProfile]:
+    async def get_role_profile(self, talent_id: int) -> RoleProfile | None:
         """
         Get role profile for a talent.
 
@@ -168,7 +169,7 @@ class TalentRepository:
 
     async def get_selected_works(
         self, talent_id: int, limit: int = 10
-    ) -> List[SelectedWork]:
+    ) -> list[SelectedWork]:
         """
         Get selected works for a talent.
 
@@ -191,8 +192,8 @@ class TalentRepository:
         self,
         keyword: str,
         limit: int = 20,
-        role_type: Optional[str] = None,
-    ) -> List[Talent]:
+        role_type: str | None = None,
+    ) -> list[Talent]:
         """
         Search talents by keyword.
 
@@ -210,7 +211,7 @@ class TalentRepository:
             select(Talent)
             .options(selectinload(Talent.school))
             .where(
-                Talent.is_visible == True,
+                Talent.is_visible.is_(True),
                 or_(
                     Talent.name.ilike(keyword_pattern),
                     Talent.name_en.ilike(keyword_pattern),
@@ -228,7 +229,7 @@ class TalentRepository:
         return list(result.scalars().all())
 
     async def get_count_by_role(
-        self, school_id: Optional[int] = None
+        self, school_id: int | None = None
     ) -> dict[str, int]:
         """
         Get talent counts grouped by role type.
@@ -242,7 +243,7 @@ class TalentRepository:
         query = select(
             Talent.role_type,
             func.count(Talent.talent_id).label("count")
-        ).where(Talent.is_visible == True)
+        ).where(Talent.is_visible.is_(True))
 
         if school_id:
             query = query.where(Talent.school_id == school_id)
@@ -259,13 +260,13 @@ class TalentRepository:
         return counts
 
     async def get_count_by_school(
-        self, country_id: Optional[int] = None
+        self, country_code: str | None = None
     ) -> dict[int, int]:
         """
         Get talent counts grouped by school.
 
         Args:
-            country_id: Optional country to filter schools by
+            country_code: Optional country code to filter schools by
 
         Returns:
             Dictionary mapping school_id to count
@@ -274,12 +275,12 @@ class TalentRepository:
             Talent.school_id,
             func.count(Talent.talent_id).label("count")
         ).where(
-            Talent.is_visible == True,
+            Talent.is_visible.is_(True),
             Talent.school_id.isnot(None),
         )
 
-        if country_id:
-            query = query.join(School).where(School.country_id == country_id)
+        if country_code:
+            query = query.join(School).where(School.country_code == country_code.upper())
 
         query = query.group_by(Talent.school_id)
 

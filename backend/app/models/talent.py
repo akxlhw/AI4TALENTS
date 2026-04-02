@@ -1,7 +1,7 @@
 """
 Talent model.
 """
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, Float, JSON
+from sqlalchemy import JSON, Boolean, Column, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -83,12 +83,11 @@ class Talent(Base, TimestampMixin):
         """
         if self.tech_tags:
             # Get unique tech element names from tech_tags
-            from app.models.tech_element import TechElement
             element_names = set()
             for tag in self.tech_tags:
                 if tag.is_enabled and tag.tech_element:
                     element_names.add(tag.tech_element.element_name)
-            self.topic_tags = sorted(list(element_names))
+            self.topic_tags = sorted(element_names)
         else:
             self.topic_tags = []
 

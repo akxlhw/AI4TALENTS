@@ -1,13 +1,15 @@
 """
 Countries API endpoint.
 Returns list of countries with school counts.
+Aggregated from core_school table using country_code.
 """
-from typing import List
 from fastapi import APIRouter, Depends
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.constants.countries import COUNTRY_NAMES_CN, COUNTRY_NAMES_EN
 from app.core.database import get_async_session
-from app.repositories.country_repository import CountryRepository
+from app.models.school import School
 from app.schemas.overview import CountryListResponse, CountrySummary
 
 router = APIRouter(prefix="/countries", tags=["Countries"])
@@ -17,7 +19,7 @@ router = APIRouter(prefix="/countries", tags=["Countries"])
     "",
     response_model=CountryListResponse,
     summary="获取国家列表",
-    description="返回所有国家及其学校数量统计",
+    description="返回所有国家及其学校数量统计（从院校数据聚合）",
 )
 async def list_countries(
     session: AsyncSession = Depends(get_async_session),
@@ -25,29 +27,42 @@ async def list_countries(
     """
     Get list of all countries with school counts.
 
-    Returns countries ordered by sort_order, including:
-    - Country ID and code
-    - Country name (CN and EN)
+    Countries are aggregated from core_school table by country_code.
+    Returns countries ordered by school count (descending), including:
+    - Country code (ISO 3166-1 alpha-2)
+    - Country name (CN and EN) from constants
     - Number of schools in each country
     - Number of professors in each country
     """
-    repo = CountryRepository(session)
-    countries_data = await repo.get_with_school_counts()
-
-    # Build response with professor counts
-    items = []
-    for country_data in countries_data:
-        professor_count = await repo.get_professor_count_by_country(
-            country_data["country_id"]
+    # Query schools grouped by country_code
+    query = (
+        select(
+            School.country_code,
+            func.count(School.school_id).label("school_count"),
+            func.sum(School.professor_count).label("professor_count"),
         )
+        .where(
+            School.is_visible.is_(True),
+            School.country_code.isnot(None),
+        )
+        .group_by(School.country_code)
+        .order_by(func.sum(School.professor_count).desc())
+    )
+
+    result = await session.execute(query)
+    rows = result.all()
+
+    # Build response with country names from constants
+    items = []
+    for row in rows:
+        country_code = row.country_code
         items.append(
             CountrySummary(
-                country_id=country_data["country_id"],
-                country_code=country_data["country_code"],
-                country_name_cn=country_data["country_name_cn"],
-                country_name_en=country_data["country_name_en"],
-                school_count=country_data["school_count"],
-                professor_count=professor_count,
+                country_code=country_code,
+                country_name_cn=COUNTRY_NAMES_CN.get(country_code, country_code),
+                country_name_en=COUNTRY_NAMES_EN.get(country_code, country_code),
+                school_count=row.school_count,
+                professor_count=int(row.professor_count or 0),
             )
         )
 

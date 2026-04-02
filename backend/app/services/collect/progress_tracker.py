@@ -1,10 +1,14 @@
 """
 Progress tracking for collection tasks.
 """
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timezone
+
+# Python 3.10 compatibility
+UTC = timezone.utc
 from enum import Enum
-from typing import Dict, List, Optional, Union
 
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,10 +40,10 @@ class ProgressTracker:
 
     def __init__(self, session: AsyncSession):
         self.session = session
-        self._logs: List[Dict] = []
-        self._task_id: Optional[int] = None
+        self._logs: list[dict] = []
+        self._task_id: int | None = None
 
-    def add_log(self, level: Union[LogLevel, str], message: str, details: Optional[Dict] = None):
+    def add_log(self, level: LogLevel | str, message: str, details: dict | None = None):
         """Add a log entry
 
         Args:
@@ -71,7 +75,7 @@ class ProgressTracker:
         """Reset logs for a new task"""
         self._logs = []
 
-    def get_logs(self) -> List[Dict]:
+    def get_logs(self) -> list[dict]:
         """Get all logs"""
         return self._logs.copy()
 
@@ -89,7 +93,7 @@ class ProgressTracker:
         self,
         task: CollectTask,
         status: str,
-        error_message: Optional[str] = None
+        error_message: str | None = None
     ):
         """Update task status"""
         task.status = status
@@ -108,8 +112,8 @@ class ProgressTracker:
     async def update_progress(
         self,
         task: CollectTask,
-        current_step: Optional[str] = None,
-        progress_percent: Optional[int] = None
+        current_step: str | None = None,
+        progress_percent: int | None = None
     ):
         """Update task progress using independent database connection.
 

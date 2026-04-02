@@ -10,7 +10,7 @@ Tests for UnifiedCollectService - 统一采集服务测试
 5. 完整任务执行流程
 """
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 import json
 
@@ -33,7 +33,6 @@ from app.models.raw_data import RawWork, RawAuthor, RawInstitution, AuthorTechBe
 from app.models.standardized import StdAuthor, StdSchool
 from app.models.talent import Talent
 from app.models.school import School
-from app.models.country import Country
 from app.models.enums import RoleType
 
 
@@ -148,13 +147,13 @@ class TestUnifiedCollectServiceUnit:
         start, end = service._get_time_window("full")
 
         assert start.year == 2020  # FULL_COLLECTION_START_YEAR
-        assert end <= datetime.utcnow()
+        assert end <= datetime.now(timezone.utc)
 
     def test_time_window_incremental_mode(self, mock_session):
         """测试增量采集时间窗口"""
         service = UnifiedCollectService(mock_session)
 
-        last_collect = datetime.utcnow() - timedelta(days=7)
+        last_collect = datetime.now(timezone.utc) - timedelta(days=7)
         start, end = service._get_time_window("incremental", last_collect)
 
         # 增量模式应该从上次采集时间往前推30天
@@ -182,15 +181,6 @@ class TestUnifiedCollectServiceIntegration:
     @pytest.fixture
     async def setup_data(self, test_session: AsyncSession):
         """Setup test data"""
-        # 创建国家
-        country = Country(
-            country_code="US",
-            country_name_cn="美国",
-            country_name_en="United States",
-            is_active=True,
-        )
-        test_session.add(country)
-
         # 创建技术要素
         tech_element = TechElement(
             element_code="AI",
@@ -232,7 +222,6 @@ class TestUnifiedCollectServiceIntegration:
         await test_session.commit()
 
         return {
-            "country": country,
             "tech_element": tech_element,
             "tech_direction": tech_direction,
             "venue": venue,
@@ -379,16 +368,6 @@ class TestServingLayerSync:
     @pytest.fixture
     async def setup_sync_data(self, test_session: AsyncSession):
         """Setup data for sync tests"""
-        # 创建国家
-        country = Country(
-            country_code="US",
-            country_name_cn="美国",
-            country_name_en="United States",
-            is_active=True,
-        )
-        test_session.add(country)
-        await test_session.flush()
-
         # 创建技术要素和方向
         tech_element = TechElement(
             element_code="SYNC-TEST",
@@ -434,7 +413,6 @@ class TestServingLayerSync:
         await test_session.commit()
 
         return {
-            "country": country,
             "tech_element": tech_element,
             "tech_direction": tech_direction,
             "std_school": std_school,
@@ -640,15 +618,6 @@ class TestEndToEndFlow:
     @pytest.fixture
     async def full_setup(self, test_session: AsyncSession):
         """Complete setup for end-to-end tests"""
-        # 国家
-        country = Country(
-            country_code="US",
-            country_name_cn="美国",
-            is_active=True,
-        )
-        test_session.add(country)
-        await test_session.flush()
-
         # 技术要素
         tech_element = TechElement(
             element_code="E2E",
@@ -689,7 +658,6 @@ class TestEndToEndFlow:
         await test_session.commit()
 
         return {
-            "country": country,
             "tech_element": tech_element,
             "tech_direction": tech_direction,
             "venue": venue,

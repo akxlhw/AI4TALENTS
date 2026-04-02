@@ -8,34 +8,38 @@ Collect configuration API endpoints - MVP v1.2
 - 固定参数：数据类型（学者+论文+机构）
 - 可配置参数：时间范围（起始年份~截止年份/至今）
 """
-import logging
-from typing import Optional, List
-from datetime import datetime
-import uuid
+from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+import asyncio
+import logging
+import uuid
+from datetime import datetime, timezone
+
+# Python 3.10 compatibility
+UTC = timezone.utc
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
 from app.repositories.collect_repository import CollectTaskRepository, TechElementCollectRepository
 from app.repositories.venue_repository import VenueSubTaskRepository
 from app.schemas.collect import (
-    TechElementCollectResponse,
-    TechElementCollectListResponse,
-    UpdateCollectSourcesRequest,
-    TriggerCollectTaskRequest,
-    CollectTaskResponse,
-    CollectTaskListResponse,
-    TASK_STATUS_OPTIONS,
-    get_year_options,
-    get_end_year_options,
-    get_current_year,
-    MIN_START_YEAR,
     DEFAULT_START_YEAR,
+    MIN_START_YEAR,
+    TASK_STATUS_OPTIONS,
+    CollectTaskListResponse,
+    CollectTaskResponse,
+    TechElementCollectListResponse,
+    TechElementCollectResponse,
+    TriggerCollectTaskRequest,
+    UpdateCollectSourcesRequest,
+    get_current_year,
+    get_year_options,
 )
-from app.schemas.venue import VenueSubTaskResponse, VenueSubTaskListResponse
-from app.api.v1.endpoints.auth import require_user
+from app.schemas.venue import VenueSubTaskListResponse, VenueSubTaskResponse
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +54,6 @@ def require_admin_user(current_user: dict = Depends(require_user)) -> dict:
 
 
 # Background task runner
-import asyncio
 
 
 async def run_collect_task_background(task_id: int):
@@ -59,9 +62,10 @@ async def run_collect_task_background(task_id: int):
     Runs the collection task in-process using async/await.
     This avoids SQLite database locking issues with separate processes.
     """
+    from datetime import datetime
+
     from app.core.database import AsyncSessionLocal
     from app.models.sync import CollectTask
-    from datetime import datetime, timezone
 
     # First, update task status to running immediately
     async with AsyncSessionLocal() as session:
@@ -99,7 +103,7 @@ async def _run_unified_collect(task_id: int):
     """异步执行统一采集任务"""
     from app.core.database import AsyncSessionLocal
     from app.services.collect.orchestrator import CollectionOrchestrator
-    from app.services.data_fetchers import WorkFetcher, AuthorFetcher, InstitutionFetcher
+    from app.services.data_fetchers import AuthorFetcher, InstitutionFetcher, WorkFetcher
 
     async with AsyncSessionLocal() as session:
         # Initialize fetchers
@@ -204,8 +208,8 @@ async def update_tech_element_sources(
     description="获取采集任务列表（分页）"
 )
 async def list_tasks(
-    status: Optional[str] = Query(None, description="按状态筛选"),
-    tech_element_id: Optional[int] = Query(None, description="按技术要素筛选"),
+    status: str | None = Query(None, description="按状态筛选"),
+    tech_element_id: int | None = Query(None, description="按技术要素筛选"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
@@ -366,8 +370,8 @@ async def trigger_task(
     task.current_step = "等待执行"
 
     # Create VenueSubTask records for each venue binding
-    from app.repositories.venue_repository import VenueTechBindingRepository, VenueSubTaskRepository
     from app.models.venue import VenueSubTask
+    from app.repositories.venue_repository import VenueSubTaskRepository, VenueTechBindingRepository
 
     binding_repo = VenueTechBindingRepository(session)
     sub_task_repo = VenueSubTaskRepository(session)
@@ -581,7 +585,7 @@ async def delete_task(
 
 @router.get(
     "/tasks/active",
-    response_model=List[CollectTaskResponse],
+    response_model=list[CollectTaskResponse],
     summary="获取活动任务",
     description="获取当前正在执行或待执行的任务"
 )
@@ -681,7 +685,7 @@ async def get_task_detailed_progress(
 ):
     """Get detailed progress for a task."""
     from app.services.collect.orchestrator import CollectionOrchestrator
-    from app.services.data_fetchers import WorkFetcher, AuthorFetcher, InstitutionFetcher
+    from app.services.data_fetchers import AuthorFetcher, InstitutionFetcher, WorkFetcher
 
     # Initialize fetchers
     work_fetcher = WorkFetcher(session)

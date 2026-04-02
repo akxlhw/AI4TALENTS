@@ -2,8 +2,8 @@
 Homepage API schemas.
 首页数据响应模型
 """
-from datetime import datetime
-from typing import Optional, List
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 
@@ -22,7 +22,7 @@ class TopCountryItem(BaseModel):
     country_id: int = Field(description="国家ID")
     country_code: str = Field(description="国家代码")
     country_name: str = Field(description="国家名称")
-    country_name_en: Optional[str] = Field(default=None, description="国家英文名")
+    country_name_en: str | None = Field(default=None, description="国家英文名")
     talent_count: int = Field(description="人才数", default=0)
 
 
@@ -31,23 +31,23 @@ class TopSchoolItem(BaseModel):
 
     school_id: int = Field(description="院校ID")
     school_name: str = Field(description="院校名称")
-    country_name: Optional[str] = Field(default=None, description="所在国家")
-    country_code: Optional[str] = Field(default=None, description="国家代码")
+    country_name: str | None = Field(default=None, description="所在国家")
+    country_code: str | None = Field(default=None, description="国家代码")
     talent_count: int = Field(description="人才数", default=0)
 
 
 class HomepageHighlightsResponse(BaseModel):
     """首页聚合数据响应"""
 
-    hot_tech_elements: List[HotTechElementItem] = Field(
+    hot_tech_elements: list[HotTechElementItem] = Field(
         default_factory=list,
         description="热门技术要素列表"
     )
-    top_countries: List[TopCountryItem] = Field(
+    top_countries: list[TopCountryItem] = Field(
         default_factory=list,
         description="主要国家列表"
     )
-    top_schools: List[TopSchoolItem] = Field(
+    top_schools: list[TopSchoolItem] = Field(
         default_factory=list,
         description="Top院校列表"
     )

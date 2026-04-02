@@ -1,29 +1,35 @@
 """
 Collection orchestrator for managing the complete collection pipeline.
 """
+from __future__ import annotations
+
 import asyncio
-import json
 import logging
 import traceback
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List, TypedDict
 
-from sqlalchemy import select, func, case
+# Python 3.10 compatibility
+UTC = timezone.utc
+from typing import Any, TypedDict
+
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.raw_data import RawAuthor
 from app.models.sync import CollectTask
-from app.models.raw_data import RawWork, RawAuthor, RawInstitution, AuthorTechBelong
+from app.models.talent import SelectedWork
 from app.models.tech_element import TechDirection, TechElement
-from app.repositories.venue_repository import VenueRepository, VenueSubTaskRepository
 from app.repositories.raw_data_repository import (
-    RawWorkRepository, RawAuthorRepository, RawInstitutionRepository, AuthorTechBelongRepository
+    RawAuthorRepository,
+    RawInstitutionRepository,
+    RawWorkRepository,
 )
-from app.services.common.progress import CollectionProgress
+from app.repositories.venue_repository import VenueRepository, VenueSubTaskRepository
 from app.services.collect.progress_tracker import ProgressTracker
 from app.services.collect.venue_executor import VenueSubTaskExecutor
+from app.services.common.progress import CollectionProgress
+from app.services.data_fetchers import AuthorFetcher, InstitutionFetcher, WorkFetcher
 from app.services.normalizers import AuthorNormalizer, SchoolNormalizer, TechBelongCalculator
-from app.services.data_fetchers import WorkFetcher, AuthorFetcher, InstitutionFetcher
-from app.models.talent import SelectedWork
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +111,7 @@ class CollectionOrchestrator:
     Phase 11: 构建统计数据
     """
 
-    def __init__(self, session: AsyncSession, work_fetcher=None, author_fetcher=None, institution_fetcher=None, email: Optional[str] = None):
+    def __init__(self, session: AsyncSession, work_fetcher=None, author_fetcher=None, institution_fetcher=None, email: str | None = None):
         self.session = session
 
         # Repositories
@@ -573,7 +579,7 @@ class CollectionOrchestrator:
         task_id: int,
         tech_element_id: int,
         progress: CollectionProgress
-    ) -> List[dict]:
+    ) -> list[dict]:
         """Phase 7: Sync to serving layer (calls external sync service)
 
         Returns:
@@ -614,7 +620,7 @@ class CollectionOrchestrator:
 
     async def _fetch_selected_works(
         self,
-        new_talents: List[NewTalentInfo],
+        new_talents: list[NewTalentInfo],
         progress: CollectionProgress
     ):
         """Phase 8: Fetch selected works for newly created talents
@@ -704,9 +710,10 @@ class CollectionOrchestrator:
 
         只更新与当前任务相关的人才（通过 tech_tag 关联），避免全表查询。
         """
+        from sqlalchemy.orm import selectinload
+
         from app.models.talent import Talent
         from app.models.tech_element import TalentTechTag
-        from sqlalchemy.orm import selectinload
 
         progress.current_step = "Updating topic tags"
         self.progress_tracker.add_log("info", "开始更新人才技术标签")
@@ -736,11 +743,11 @@ class CollectionOrchestrator:
         for i, talent in enumerate(talents):
             if talent.tech_tags:
                 # Get unique tech element names
-                tech_names = list(set(
+                tech_names = list({
                     tag.tech_element.element_name
                     for tag in talent.tech_tags
                     if tag.tech_element and tag.is_enabled
-                ))
+                })
                 if tech_names:
                     talent.topic_tags = tech_names
                     updated_count += 1
@@ -756,7 +763,6 @@ class CollectionOrchestrator:
         """Phase 9: Update school professor_count and student_count"""
         from app.models.school import School
         from app.models.talent import Talent
-        from sqlalchemy import func
 
         progress.current_step = "Updating school statistics"
         self.progress_tracker.add_log("info", "开始更新学校统计")
@@ -774,7 +780,7 @@ class CollectionOrchestrator:
                 func.count(case((Talent.role_type.in_(['student', 'graduate']), 1))).label('student_count')
             ).where(
                 Talent.school_id.isnot(None),
-                Talent.is_visible == True
+                Talent.is_visible.is_(True)
             ).group_by(Talent.school_id)
         )
 
@@ -808,7 +814,7 @@ class CollectionOrchestrator:
             result = await builder.build()
 
             if result.success:
-                self.progress_tracker.add_log("info", f"统计数据生成完成", {
+                self.progress_tracker.add_log("info", "统计数据生成完成", {
                     "records_created": result.records_created
                 })
             else:
@@ -816,7 +822,7 @@ class CollectionOrchestrator:
         except Exception as e:
             self.progress_tracker.add_log("warning", f"统计数据生成异常: {str(e)}")
 
-    async def _get_default_tech_direction(self, tech_element_id: int) -> Optional[int]:
+    async def _get_default_tech_direction(self, tech_element_id: int) -> int | None:
         """获取默认技术方向ID（只获取，不创建）
 
         Args:
@@ -828,12 +834,12 @@ class CollectionOrchestrator:
         result = await self.session.execute(
             select(TechDirection.tech_direction_id).where(
                 TechDirection.tech_element_id == tech_element_id,
-                TechDirection.is_enabled == True
+                TechDirection.is_enabled.is_(True)
             ).order_by(TechDirection.sort_order).limit(1)
         )
         return result.scalar_one_or_none()
 
-    async def _create_default_tech_direction(self, tech_element_id: int) -> Optional[int]:
+    async def _create_default_tech_direction(self, tech_element_id: int) -> int | None:
         """创建默认技术方向
 
         Args:
@@ -864,7 +870,7 @@ class CollectionOrchestrator:
         logger.info(f"Created default tech direction for {tech_element.element_name}")
         return new_direction.tech_direction_id
 
-    async def _get_or_create_default_tech_direction(self, tech_element_id: int) -> Optional[int]:
+    async def _get_or_create_default_tech_direction(self, tech_element_id: int) -> int | None:
         """获取或创建默认技术方向ID
 
         先尝试获取已存在的默认方向，不存在则创建新的。
@@ -883,7 +889,7 @@ class CollectionOrchestrator:
         # 不存在则创建
         return await self._create_default_tech_direction(tech_element_id)
 
-    async def get_task_progress(self, task_id: int) -> Dict[str, Any]:
+    async def get_task_progress(self, task_id: int) -> dict[str, Any]:
         """Get progress for a task"""
         task = await self.session.execute(
             select(CollectTask).where(CollectTask.task_id == task_id)

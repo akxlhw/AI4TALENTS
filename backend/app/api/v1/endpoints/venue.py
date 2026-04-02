@@ -2,20 +2,29 @@
 Venue configuration API endpoints.
 顶会顶刊配置管理接口
 """
-from typing import Optional
+
+from __future__ import annotations
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.models.venue import Venue, VenueTechBinding
 from app.models.tech_element import TechElement
+from app.models.venue import Venue, VenueTechBinding
 from app.repositories.venue_repository import VenueRepository, VenueTechBindingRepository
 from app.schemas.venue import (
-    VenueCreate, VenueUpdate, VenueResponse, VenueListResponse,
-    VenueTechBindingCreate, VenueTechBindingBatchCreate,
-    VenueTechBindingUpdate, VenueTechBindingResponse, VenueTechBindingListResponse,
-    MigrateCollectSourcesRequest, MigrateCollectSourcesResponse
+    MigrateCollectSourcesRequest,
+    MigrateCollectSourcesResponse,
+    VenueCreate,
+    VenueListResponse,
+    VenueResponse,
+    VenueTechBindingBatchCreate,
+    VenueTechBindingCreate,
+    VenueTechBindingListResponse,
+    VenueTechBindingResponse,
+    VenueTechBindingUpdate,
+    VenueUpdate,
 )
 
 router = APIRouter(prefix="/venues", tags=["Venue Configuration"])
@@ -88,7 +97,7 @@ async def batch_create_bindings(
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ============================================
@@ -97,9 +106,9 @@ async def batch_create_bindings(
 
 @router.get("", response_model=VenueListResponse)
 async def list_venues(
-    venue_type: Optional[str] = Query(None, description="Venue类型: conference/journal/workshop"),
-    is_enabled: Optional[bool] = Query(None, description="是否启用"),
-    keyword: Optional[str] = Query(None, description="搜索关键词"),
+    venue_type: str | None = Query(None, description="Venue类型: conference/journal/workshop"),
+    is_enabled: bool | None = Query(None, description="是否启用"),
+    keyword: str | None = Query(None, description="搜索关键词"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     session: AsyncSession = Depends(get_async_session)
@@ -213,7 +222,7 @@ async def delete_venue(
 @router.get("/{venue_id}/bindings", response_model=VenueTechBindingListResponse)
 async def get_venue_bindings(
     venue_id: int,
-    is_enabled: Optional[bool] = Query(None),
+    is_enabled: bool | None = Query(None),
     session: AsyncSession = Depends(get_async_session)
 ):
     """获取Venue的所有技术要素绑定"""
@@ -303,7 +312,7 @@ async def delete_binding(
 @router.get("/tech-elements/{tech_element_id}/bindings", response_model=VenueTechBindingListResponse)
 async def get_tech_element_bindings(
     tech_element_id: int,
-    is_enabled: Optional[bool] = Query(None),
+    is_enabled: bool | None = Query(None),
     session: AsyncSession = Depends(get_async_session)
 ):
     """获取技术要素的所有Venue绑定"""

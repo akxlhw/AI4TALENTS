@@ -2,13 +2,15 @@
 OpenAlex API Client.
 Handles communication with the OpenAlex API.
 """
+from __future__ import annotations
+
 import asyncio
 import time
-from typing import Optional, Dict, Any, List, AsyncGenerator
-from datetime import datetime
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from app.core.config import settings
 
@@ -40,7 +42,7 @@ class OpenAlexClient:
 
     def __init__(
         self,
-        email: Optional[str] = None,
+        email: str | None = None,
         rate_limit: int = 10,
         timeout: int = 30,
     ):
@@ -90,8 +92,8 @@ class OpenAlexClient:
         self,
         client: httpx.AsyncClient,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Make a rate-limited request to OpenAlex API.
 
@@ -129,12 +131,12 @@ class OpenAlexClient:
 
     async def get_institutions(
         self,
-        country_code: Optional[str] = None,
-        institution_type: Optional[str] = None,
+        country_code: str | None = None,
+        institution_type: str | None = None,
         per_page: int = 200,
-        cursor: Optional[str] = None,
-        mailto: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        cursor: str | None = None,
+        mailto: str | None = None,
+    ) -> dict[str, Any]:
         """
         Fetch institutions from OpenAlex.
 
@@ -173,12 +175,12 @@ class OpenAlexClient:
 
     async def get_authors(
         self,
-        institution_id: Optional[str] = None,
-        has_orcid: Optional[bool] = None,
+        institution_id: str | None = None,
+        has_orcid: bool | None = None,
         per_page: int = 200,
-        cursor: Optional[str] = None,
-        mailto: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        cursor: str | None = None,
+        mailto: str | None = None,
+    ) -> dict[str, Any]:
         """
         Fetch authors from OpenAlex.
 
@@ -216,11 +218,11 @@ class OpenAlexClient:
 
     async def get_works(
         self,
-        author_id: Optional[str] = None,
+        author_id: str | None = None,
         per_page: int = 200,
-        cursor: Optional[str] = None,
-        mailto: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        cursor: str | None = None,
+        mailto: str | None = None,
+    ) -> dict[str, Any]:
         """
         Fetch works from OpenAlex.
 
@@ -253,7 +255,7 @@ class OpenAlexClient:
         async with httpx.AsyncClient(headers=self.headers) as client:
             return await self._make_request(client, self.WORKS, params)
 
-    async def get_author_by_id(self, author_id: str) -> Dict[str, Any]:
+    async def get_author_by_id(self, author_id: str) -> dict[str, Any]:
         """
         Fetch a single author by OpenAlex ID.
 
@@ -266,7 +268,7 @@ class OpenAlexClient:
         async with httpx.AsyncClient(headers=self.headers) as client:
             return await self._make_request(client, f"{self.AUTHORS}/{author_id}")
 
-    async def get_institution_by_id(self, institution_id: str) -> Dict[str, Any]:
+    async def get_institution_by_id(self, institution_id: str) -> dict[str, Any]:
         """
         Fetch a single institution by OpenAlex ID.
 
@@ -281,10 +283,10 @@ class OpenAlexClient:
 
     async def iterate_institutions(
         self,
-        country_code: Optional[str] = None,
-        institution_type: Optional[str] = None,
-        max_records: Optional[int] = None,
-    ) -> AsyncGenerator[Dict[str, Any], None]:
+        country_code: str | None = None,
+        institution_type: str | None = None,
+        max_records: int | None = None,
+    ) -> AsyncGenerator[dict[str, Any], None]:
         """
         Iterate through all institutions with pagination.
 
@@ -324,9 +326,9 @@ class OpenAlexClient:
 
     async def iterate_authors(
         self,
-        institution_id: Optional[str] = None,
-        max_records: Optional[int] = None,
-    ) -> AsyncGenerator[Dict[str, Any], None]:
+        institution_id: str | None = None,
+        max_records: int | None = None,
+    ) -> AsyncGenerator[dict[str, Any], None]:
         """
         Iterate through all authors with pagination.
 

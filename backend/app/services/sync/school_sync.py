@@ -1,16 +1,17 @@
 """
 School sync service for synchronizing StdSchool to School.
 """
+from __future__ import annotations
+
 import json
 import logging
-from typing import Optional, Tuple
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.standardized import StdSchool
+from app.constants.countries import get_country_name_cn, normalize_country_code
 from app.models.school import School, SchoolAlias
-from app.models.country import Country
+from app.models.standardized import StdSchool
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class SchoolSyncService:
         self,
         std_school: StdSchool,
         update_existing: bool = True
-    ) -> Tuple[School, bool]:
+    ) -> tuple[School, bool]:
         """
         Sync standardized school to serving layer School table
 
@@ -44,8 +45,9 @@ class SchoolSyncService:
         )
         existing_school = result.scalar_one_or_none()
 
-        # 2. Find or create country
-        country_id = await self._get_country_id(std_school.country_code)
+        # 2. Normalize country code (TW -> CN)
+        country_code = normalize_country_code(std_school.country_code)
+        country_name = get_country_name_cn(country_code)
 
         if existing_school:
             # Update existing record
@@ -53,23 +55,19 @@ class SchoolSyncService:
                 existing_school.school_name = std_school.name_normalized
                 existing_school.source_type = "openalex"
                 existing_school.source_record_id = std_school.openalex_institution_id
-                if country_id:
-                    existing_school.country_id = country_id
+                existing_school.country_code = country_code
+                existing_school.country_name = country_name
                 if std_school.homepage_url:
                     existing_school.homepage_url = std_school.homepage_url
 
             await self.session.flush()
             return existing_school, False
 
-        # 3. Use default country if none found
-        if not country_id:
-            default_country = await self._get_or_create_default_country()
-            country_id = default_country.country_id
-
-        # 4. Create new School
+        # 3. Create new School
         new_school = School(
             school_name=std_school.name_normalized,
-            country_id=country_id,
+            country_code=country_code,
+            country_name=country_name,
             source_type="openalex",
             source_record_id=std_school.openalex_institution_id,
             homepage_url=std_school.homepage_url,
@@ -89,39 +87,6 @@ class SchoolSyncService:
         )
 
         return new_school, True
-
-    async def _get_country_id(self, country_code: Optional[str]) -> Optional[int]:
-        """Get country ID by country code"""
-        if not country_code:
-            return None
-
-        result = await self.session.execute(
-            select(Country).where(Country.country_code == country_code)
-        )
-        country = result.scalar_one_or_none()
-        return country.country_id if country else None
-
-    async def _get_or_create_default_country(self) -> Country:
-        """Get or create default country for unknown locations"""
-        # Try to find "Unknown" country
-        result = await self.session.execute(
-            select(Country).where(Country.country_code == "XX")
-        )
-        country = result.scalar_one_or_none()
-
-        if country:
-            return country
-
-        # Create default country
-        country = Country(
-            country_code="XX",
-            country_name_cn="未知",
-            country_name_en="Unknown",
-            is_active=True,
-        )
-        self.session.add(country)
-        await self.session.flush()
-        return country
 
     async def _create_school_aliases(self, school_id: int, std_school: StdSchool) -> int:
         """Create school aliases"""

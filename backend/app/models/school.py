@@ -1,7 +1,7 @@
 """
 School model.
 """
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -16,7 +16,9 @@ class School(Base, TimestampMixin):
     school_id = Column(Integer, primary_key=True, index=True)
     school_name = Column(String(255), nullable=False, index=True)
     school_alias = Column(String(255), nullable=True)
-    country_id = Column(Integer, ForeignKey("core_country.country_id"), nullable=False, index=True)
+    # Country info stored directly (was country_id FK to core_country)
+    country_code = Column(String(10), nullable=False, default="XX", index=True)
+    country_name = Column(String(100), nullable=True)
     school_intro = Column(Text, nullable=True)
     homepage_url = Column(String(500), nullable=True)
 
@@ -41,7 +43,6 @@ class School(Base, TimestampMixin):
     lab_name = Column(String(255), nullable=True)
 
     # Relationships
-    country = relationship("Country", back_populates="schools")
     talents = relationship("Talent", back_populates="school")
     aliases = relationship("SchoolAlias", back_populates="school")
 

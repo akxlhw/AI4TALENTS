@@ -6,7 +6,7 @@ Logs incoming requests with timing and status information.
 
 import time
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware

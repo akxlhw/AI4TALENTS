@@ -2,16 +2,12 @@
 Repository for homepage data operations.
 首页数据查询Repository
 """
-from typing import List
-from datetime import datetime
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tech_element import TechElement, TalentTechTag
 from app.models.school import School
-from app.models.country import Country
-from app.models.talent import Talent
+from app.models.tech_element import TalentTechTag, TechElement
 
 
 class HomepageRepository:
@@ -20,7 +16,7 @@ class HomepageRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_hot_tech_elements(self, limit: int = 6) -> List[dict]:
+    async def get_hot_tech_elements(self, limit: int = 6) -> list[dict]:
         """
         Get hot tech elements by talent count.
         按人才数获取热门技术要素
@@ -44,7 +40,7 @@ class HomepageRepository:
                 TalentTechTag,
                 TechElement.tech_element_id == TalentTechTag.tech_element_id
             )
-            .where(TechElement.is_enabled == True)
+            .where(TechElement.is_enabled.is_(True))
             .group_by(TechElement.tech_element_id)
             .order_by(func.count(func.distinct(TalentTechTag.talent_id)).desc())
             .limit(limit)
@@ -63,7 +59,7 @@ class HomepageRepository:
             for row in rows
         ]
 
-    async def get_top_countries(self, limit: int = 5) -> List[dict]:
+    async def get_top_countries(self, limit: int = 5) -> list[dict]:
         """
         Get top countries by talent count.
         按人才数获取主要国家
@@ -74,22 +70,20 @@ class HomepageRepository:
         Returns:
             List of dictionaries with country info and talent count
         """
-        # Sum talent counts from schools in each country
+        # Sum talent counts from schools grouped by country_code
         query = (
             select(
-                Country.country_id,
-                Country.country_code,
-                Country.country_name_cn,
-                Country.country_name_en,
+                School.country_code,
+                School.country_name,
                 func.sum(School.professor_count + School.student_count).label("talent_count"),
             )
-            .select_from(Country)
-            .outerjoin(School, Country.country_id == School.country_id)
+            .select_from(School)
             .where(
-                Country.is_active == True,
-                Country.country_code != "XX"  # 排除"未知"国家
+                School.is_visible.is_(True),
+                School.country_code != "XX",  # 排除"未知"国家
+                School.country_code.isnot(None),
             )
-            .group_by(Country.country_id)
+            .group_by(School.country_code, School.country_name)
             .having(func.sum(School.professor_count + School.student_count) > 0)
             .order_by(func.sum(School.professor_count + School.student_count).desc())
             .limit(limit)
@@ -100,16 +94,14 @@ class HomepageRepository:
 
         return [
             {
-                "country_id": row.country_id,
                 "country_code": row.country_code,
-                "country_name": row.country_name_cn,
-                "country_name_en": row.country_name_en,
+                "country_name": row.country_name,
                 "talent_count": int(row.talent_count or 0),
             }
             for row in rows
         ]
 
-    async def get_top_schools(self, limit: int = 5) -> List[dict]:
+    async def get_top_schools(self, limit: int = 5) -> list[dict]:
         """
         Get top schools by talent count.
         按人才数获取Top院校
@@ -124,13 +116,12 @@ class HomepageRepository:
             select(
                 School.school_id,
                 School.school_name,
-                Country.country_name_cn.label("country_name"),
-                Country.country_code,
+                School.country_name,
+                School.country_code,
                 (School.professor_count + School.student_count).label("talent_count"),
             )
             .select_from(School)
-            .join(Country, School.country_id == Country.country_id)
-            .where(School.is_visible == True)
+            .where(School.is_visible.is_(True))
             .order_by((School.professor_count + School.student_count).desc())
             .limit(limit)
         )

@@ -2,14 +2,15 @@
 Venue and VenueTechBinding repository.
 顶会顶刊配置数据访问层
 """
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Optional, List, Tuple
-from sqlalchemy import select, update, delete, func, or_
+
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.venue import Venue, VenueTechBinding, VenueSubTask
-from app.models.tech_element import TechElement
+from app.models.venue import Venue, VenueSubTask, VenueTechBinding
 
 
 class VenueRepository:
@@ -25,21 +26,21 @@ class VenueRepository:
         await self.session.refresh(venue)
         return venue
 
-    async def get_by_id(self, venue_id: int) -> Optional[Venue]:
+    async def get_by_id(self, venue_id: int) -> Venue | None:
         """Get venue by ID"""
         result = await self.session.execute(
             select(Venue).where(Venue.venue_id == venue_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_code(self, venue_code: str) -> Optional[Venue]:
+    async def get_by_code(self, venue_code: str) -> Venue | None:
         """Get venue by code"""
         result = await self.session.execute(
             select(Venue).where(Venue.venue_code == venue_code)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_openalex_id(self, openalex_source_id: str) -> Optional[Venue]:
+    async def get_by_openalex_id(self, openalex_source_id: str) -> Venue | None:
         """Get venue by OpenAlex source ID"""
         result = await self.session.execute(
             select(Venue).where(Venue.openalex_source_id == openalex_source_id)
@@ -48,12 +49,12 @@ class VenueRepository:
 
     async def get_list(
         self,
-        venue_type: Optional[str] = None,
-        is_enabled: Optional[bool] = None,
-        keyword: Optional[str] = None,
+        venue_type: str | None = None,
+        is_enabled: bool | None = None,
+        keyword: str | None = None,
         page: int = 1,
         page_size: int = 20
-    ) -> Tuple[List[Venue], int]:
+    ) -> tuple[list[Venue], int]:
         """Get venue list with filters and pagination"""
         query = select(Venue)
         count_query = select(func.count(Venue.venue_id))
@@ -122,14 +123,14 @@ class VenueTechBindingRepository:
         await self.session.refresh(binding)
         return binding
 
-    async def get_by_id(self, binding_id: int) -> Optional[VenueTechBinding]:
+    async def get_by_id(self, binding_id: int) -> VenueTechBinding | None:
         """Get binding by ID"""
         result = await self.session.execute(
             select(VenueTechBinding).where(VenueTechBinding.binding_id == binding_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_venue_and_tech(self, venue_id: int, tech_element_id: int) -> Optional[VenueTechBinding]:
+    async def get_by_venue_and_tech(self, venue_id: int, tech_element_id: int) -> VenueTechBinding | None:
         """Get binding by venue and tech element"""
         result = await self.session.execute(
             select(VenueTechBinding).where(
@@ -142,8 +143,8 @@ class VenueTechBindingRepository:
     async def get_by_tech_element(
         self,
         tech_element_id: int,
-        is_enabled: Optional[bool] = None
-    ) -> List[VenueTechBinding]:
+        is_enabled: bool | None = None
+    ) -> list[VenueTechBinding]:
         """Get all bindings for a tech element with venue eagerly loaded"""
         query = select(VenueTechBinding).options(
             selectinload(VenueTechBinding.venue)
@@ -160,8 +161,8 @@ class VenueTechBindingRepository:
     async def get_by_venue(
         self,
         venue_id: int,
-        is_enabled: Optional[bool] = None
-    ) -> List[VenueTechBinding]:
+        is_enabled: bool | None = None
+    ) -> list[VenueTechBinding]:
         """Get all bindings for a venue"""
         query = select(VenueTechBinding).where(
             VenueTechBinding.venue_id == venue_id
@@ -175,8 +176,8 @@ class VenueTechBindingRepository:
     async def get_list_with_venue(
         self,
         tech_element_id: int,
-        is_enabled: Optional[bool] = None
-    ) -> List[VenueTechBinding]:
+        is_enabled: bool | None = None
+    ) -> list[VenueTechBinding]:
         """Get bindings with venue info for a tech element (venue eagerly loaded)"""
         query = select(VenueTechBinding).options(
             selectinload(VenueTechBinding.venue)
@@ -217,8 +218,8 @@ class VenueTechBindingRepository:
         venue_id: int,
         tech_element_id: int,
         status: str,
-        author_count: Optional[int] = None,
-        work_count: Optional[int] = None
+        author_count: int | None = None,
+        work_count: int | None = None
     ) -> None:
         """Update collection status for a binding"""
         values = {
@@ -253,14 +254,14 @@ class VenueSubTaskRepository:
         await self.session.refresh(sub_task)
         return sub_task
 
-    async def get_by_id(self, sub_task_id: int) -> Optional[VenueSubTask]:
+    async def get_by_id(self, sub_task_id: int) -> VenueSubTask | None:
         """Get sub-task by ID"""
         result = await self.session.execute(
             select(VenueSubTask).where(VenueSubTask.sub_task_id == sub_task_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_task(self, task_id: int) -> List[VenueSubTask]:
+    async def get_by_task(self, task_id: int) -> list[VenueSubTask]:
         """Get all sub-tasks for a task"""
         result = await self.session.execute(
             select(VenueSubTask)
@@ -279,10 +280,10 @@ class VenueSubTaskRepository:
         self,
         sub_task_id: int,
         status: str,
-        works_fetched: Optional[int] = None,
-        authors_fetched: Optional[int] = None,
-        new_authors: Optional[int] = None,
-        error_message: Optional[str] = None
+        works_fetched: int | None = None,
+        authors_fetched: int | None = None,
+        new_authors: int | None = None,
+        error_message: str | None = None
     ) -> None:
         """Update sub-task status"""
         values = {"status": status}

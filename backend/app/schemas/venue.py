@@ -2,10 +2,11 @@
 Venue and VenueTechBinding Pydantic schemas.
 顶会顶刊配置相关DTO
 """
-from datetime import datetime
-from typing import Optional, List
-from pydantic import BaseModel, Field
+from __future__ import annotations
 
+from datetime import datetime
+
+from pydantic import BaseModel, Field
 
 # ============================================
 # Venue Schemas
@@ -15,12 +16,12 @@ class VenueBase(BaseModel):
     """Venue base schema"""
     venue_code: str = Field(..., max_length=50, description="Venue代码")
     venue_name: str = Field(..., max_length=255, description="Venue名称")
-    venue_name_en: Optional[str] = Field(None, max_length=255, description="英文名称")
-    openalex_source_id: Optional[str] = Field(None, max_length=50, description="OpenAlex Source ID")
+    venue_name_en: str | None = Field(None, max_length=255, description="英文名称")
+    openalex_source_id: str | None = Field(None, max_length=50, description="OpenAlex Source ID")
     venue_type: str = Field(default="conference", max_length=30, description="类型: conference/journal/workshop")
-    country_code: Optional[str] = Field(None, max_length=10, description="国家代码")
-    publisher: Optional[str] = Field(None, max_length=100, description="出版商")
-    description: Optional[str] = Field(None, description="描述")
+    country_code: str | None = Field(None, max_length=10, description="国家代码")
+    publisher: str | None = Field(None, max_length=100, description="出版商")
+    description: str | None = Field(None, description="描述")
     is_enabled: bool = Field(default=True, description="是否启用")
 
 
@@ -31,14 +32,14 @@ class VenueCreate(VenueBase):
 
 class VenueUpdate(BaseModel):
     """Venue update schema"""
-    venue_name: Optional[str] = Field(None, max_length=255)
-    venue_name_en: Optional[str] = Field(None, max_length=255)
-    openalex_source_id: Optional[str] = Field(None, max_length=50)
-    venue_type: Optional[str] = Field(None, max_length=30)
-    country_code: Optional[str] = Field(None, max_length=10)
-    publisher: Optional[str] = Field(None, max_length=100)
-    description: Optional[str] = None
-    is_enabled: Optional[bool] = None
+    venue_name: str | None = Field(None, max_length=255)
+    venue_name_en: str | None = Field(None, max_length=255)
+    openalex_source_id: str | None = Field(None, max_length=50)
+    venue_type: str | None = Field(None, max_length=30)
+    country_code: str | None = Field(None, max_length=10)
+    publisher: str | None = Field(None, max_length=100)
+    description: str | None = None
+    is_enabled: bool | None = None
 
 
 class VenueResponse(VenueBase):
@@ -47,7 +48,7 @@ class VenueResponse(VenueBase):
     h_index: int = Field(default=0, description="H-index")
     works_count: int = Field(default=0, description="作品数")
     cited_by_count: int = Field(default=0, description="被引次数")
-    last_collect_at: Optional[datetime] = None
+    last_collect_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -57,7 +58,7 @@ class VenueResponse(VenueBase):
 class VenueListResponse(BaseModel):
     """Venue list response with pagination"""
     total: int
-    items: List[VenueResponse]
+    items: list[VenueResponse]
 
 
 # ============================================
@@ -80,27 +81,27 @@ class VenueTechBindingCreate(VenueTechBindingBase):
 class VenueTechBindingBatchCreate(BaseModel):
     """Batch create bindings for a tech element"""
     tech_element_id: int = Field(..., description="技术要素ID")
-    venue_ids: List[int] = Field(..., description="Venue ID列表")
+    venue_ids: list[int] = Field(..., description="Venue ID列表")
 
 
 class VenueTechBindingUpdate(BaseModel):
     """Venue-TechElement binding update schema"""
-    priority: Optional[int] = None
-    is_enabled: Optional[bool] = None
+    priority: int | None = None
+    is_enabled: bool | None = None
 
 
 class VenueTechBindingResponse(VenueTechBindingBase):
     """Venue-TechElement binding response schema"""
     binding_id: int
     collect_status: str = Field(default="pending", description="采集状态")
-    last_collect_at: Optional[datetime] = None
+    last_collect_at: datetime | None = None
     author_count: int = Field(default=0, description="采集作者数")
     work_count: int = Field(default=0, description="采集作品数")
     created_at: datetime
     updated_at: datetime
 
     # Related info
-    venue: Optional[VenueResponse] = None
+    venue: VenueResponse | None = None
 
     model_config = {"from_attributes": True}
 
@@ -108,7 +109,7 @@ class VenueTechBindingResponse(VenueTechBindingBase):
 class VenueTechBindingListResponse(BaseModel):
     """Venue-TechElement binding list response"""
     total: int
-    items: List[VenueTechBindingResponse]
+    items: list[VenueTechBindingResponse]
 
 
 # ============================================
@@ -121,16 +122,16 @@ class VenueSubTaskResponse(BaseModel):
     task_id: int
     venue_id: int
     status: str
-    time_window_start: Optional[datetime] = None
-    time_window_end: Optional[datetime] = None
+    time_window_start: datetime | None = None
+    time_window_end: datetime | None = None
     estimated_works: int = 0  # 预估论文数（采集前获取）
     works_fetched: int = 0
     authors_fetched: int = 0
     new_authors: int = 0
     updated_authors: int = 0
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    error_message: Optional[str] = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    error_message: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -140,7 +141,7 @@ class VenueSubTaskResponse(BaseModel):
 class VenueSubTaskListResponse(BaseModel):
     """Venue sub-task list response"""
     total: int
-    items: List[VenueSubTaskResponse]
+    items: list[VenueSubTaskResponse]
 
 
 # ============================================
@@ -160,5 +161,5 @@ class MigrateCollectSourcesResponse(BaseModel):
     venues_found: int
     venues_created: int
     bindings_created: int
-    venues: List[dict]
+    venues: list[dict]
     message: str

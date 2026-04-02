@@ -2,7 +2,6 @@
 Progress tracking dataclasses for services.
 """
 from dataclasses import dataclass, field
-from typing import List, Optional
 
 
 @dataclass
@@ -39,4 +38,4 @@ class CollectionProgress(BaseProgress):
     updated_talents: int = 0
     created_tech_tags: int = 0
     created_schools: int = 0
-    errors: List[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
