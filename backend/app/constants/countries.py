@@ -29,7 +29,9 @@ COUNTRY_NAMES: dict[str, dict[str, str]] = {
     "IN": {"cn": "印度", "en": "India"},
     "RU": {"cn": "俄罗斯", "en": "Russia"},
     "BR": {"cn": "巴西", "en": "Brazil"},
-    "HK": {"cn": "香港", "en": "Hong Kong"},
+    "HK": {"cn": "中国香港", "en": "Hong Kong, China"},
+    "MO": {"cn": "中国澳门", "en": "Macao, China"},
+    "TW": {"cn": "中国台湾", "en": "Taiwan, China"},
     "PL": {"cn": "波兰", "en": "Poland"},
     "VN": {"cn": "越南", "en": "Vietnam"},
     "FI": {"cn": "芬兰", "en": "Finland"},
@@ -108,6 +110,16 @@ COUNTRY_NAMES: dict[str, dict[str, str]] = {
     "PA": {"cn": "巴拿马", "en": "Panama"},
     "DO": {"cn": "多米尼加", "en": "Dominican Republic"},
     "GT": {"cn": "危地马拉", "en": "Guatemala"},
+    # Additional countries
+    "QA": {"cn": "卡塔尔", "en": "Qatar"},
+    "KY": {"cn": "开曼群岛", "en": "Cayman Islands"},
+    "AM": {"cn": "亚美尼亚", "en": "Armenia"},
+    "CW": {"cn": "库拉索", "en": "Curaçao"},
+    "MD": {"cn": "摩尔多瓦", "en": "Moldova"},
+    "NI": {"cn": "尼加拉瓜", "en": "Nicaragua"},
+    "OM": {"cn": "阿曼", "en": "Oman"},
+    "RW": {"cn": "卢旺达", "en": "Rwanda"},
+    "SD": {"cn": "苏丹", "en": "Sudan"},
     # Unknown/Other
     "XX": {"cn": "未知", "en": "Unknown"},
 }
@@ -127,8 +139,7 @@ COUNTRY_NAMES_EN: dict[str, str] = {
 REGION_MAPPING: dict[str, set[str]] = {
     "north_america": {"US", "CA"},
     "asia_pacific": {
-        "CN", "JP", "KR", "SG", "AU", "NZ", "HK", "IN", "MY", "TH",
-        "TW",  # Taiwan is part of China but listed separately for UI grouping
+        "CN", "JP", "KR", "SG", "AU", "NZ", "HK", "MO", "TW", "IN", "MY", "TH",
     },
     "europe": {
         "GB", "DE", "FR", "CH", "NL", "IT", "ES", "SE", "AT", "BE",
@@ -153,11 +164,7 @@ def get_country_name_cn(country_code: str | None) -> str:
     if not country_code:
         return "未知"
 
-    # Taiwan is part of China - map TW to CN for display
     code = country_code.upper()
-    if code == "TW":
-        code = "CN"
-
     return COUNTRY_NAMES_CN.get(code, country_code)
 
 
@@ -174,11 +181,7 @@ def get_country_name_en(country_code: str | None) -> str:
     if not country_code:
         return "Unknown"
 
-    # Taiwan is part of China - map TW to CN for display
     code = country_code.upper()
-    if code == "TW":
-        code = "CN"
-
     return COUNTRY_NAMES_EN.get(code, country_code)
 
 

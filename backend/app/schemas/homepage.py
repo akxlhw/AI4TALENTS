@@ -19,10 +19,8 @@ class HotTechElementItem(BaseModel):
 class TopCountryItem(BaseModel):
     """主要国家项"""
 
-    country_id: int = Field(description="国家ID")
     country_code: str = Field(description="国家代码")
-    country_name: str = Field(description="国家名称")
-    country_name_en: str | None = Field(default=None, description="国家英文名")
+    country_name: str | None = Field(default=None, description="国家名称")
     talent_count: int = Field(description="人才数", default=0)
 
 

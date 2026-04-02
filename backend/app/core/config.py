@@ -38,8 +38,8 @@ class Settings(BaseSettings):
     # CORS - 前端固定使用 5173 端口
     CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
-    # Rate Limiting
-    RATE_LIMIT_ENABLED: bool = True
+    # Rate Limiting (disabled in development)
+    RATE_LIMIT_ENABLED: bool = False  # Enable in production
     RATE_LIMIT_PER_MINUTE: int = 100  # Requests per minute per user/IP
 
     # Pagination

@@ -37,9 +37,8 @@ interface HotTechElement {
 }
 
 interface TopCountry {
-  country_id: number
   country_code: string
-  country_name: string
+  country_name: string | null
   talent_count: number
 }
 
@@ -94,8 +93,8 @@ const HomePage: React.FC = () => {
     navigate(`/tech-element?tech_element_id=${techElementId}`)
   }
 
-  const handleCountryClick = (countryId: number) => {
-    navigate(`/country-school?country_id=${countryId}`)
+  const handleCountryClick = (countryCode: string) => {
+    navigate(`/country-school?country_code=${countryCode}`)
   }
 
   const handleSchoolClick = (schoolId: number) => {
@@ -313,12 +312,12 @@ const HomePage: React.FC = () => {
                 <div style={{ marginTop: 8 }}>
                   {topCountries.slice(0, 5).map((item) => (
                     <Tag
-                      key={item.country_id}
+                      key={item.country_code}
                       style={{ marginBottom: 4, cursor: 'pointer' }}
                       color="green"
-                      onClick={() => handleCountryClick(item.country_id)}
+                      onClick={() => handleCountryClick(item.country_code)}
                     >
-                      {item.country_name} ({item.talent_count})
+                      {item.country_name || item.country_code} ({item.talent_count})
                     </Tag>
                   ))}
                   {topCountries.length === 0 && (

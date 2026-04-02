@@ -37,7 +37,7 @@ const REGIONS_ORDER = ['north_america', 'asia_pacific', 'europe', 'other'] as co
 
 // 定义各区域的国家代码集合
 const NORTH_AMERICA_CODES = new Set(['US', 'CA'])
-const ASIA_PACIFIC_CODES = new Set(['CN', 'JP', 'KR', 'SG', 'AU', 'NZ', 'HK', 'TW', 'IN', 'MY', 'TH'])
+const ASIA_PACIFIC_CODES = new Set(['CN', 'JP', 'KR', 'SG', 'AU', 'NZ', 'HK', 'MO', 'TW', 'IN', 'MY', 'TH'])
 const EUROPE_CODES = new Set(['GB', 'DE', 'FR', 'CH', 'NL', 'IT', 'ES', 'SE', 'AT', 'BE', 'DK', 'FI', 'NO', 'IE', 'PT', 'PL'])
 
 // 区域配置 - countries 数组会在运行时动态填充
