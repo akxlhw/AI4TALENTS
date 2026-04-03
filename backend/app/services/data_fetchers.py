@@ -259,8 +259,15 @@ class WorkFetcher:
                         # Commit every batch_size records to avoid losing data on timeout
                         if total_fetched % batch_size == 0:
                             await self.session.commit()
-                    except Exception:
+                    except Exception as e:
+                        # Log the error and continue with next work
+                        error_str = str(e).lower()
+                        if "database is locked" in error_str or "locked" in error_str:
+                            logger.warning(f"Database locked while inserting work, will retry: {e}")
+                        else:
+                            logger.warning(f"Failed to insert work: {e}")
                         progress.failed += 1
+                        # Continue with next work instead of breaking
 
                 if progress_callback:
                     progress_callback(progress)

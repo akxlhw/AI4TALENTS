@@ -4,13 +4,17 @@ Raw data layer repository.
 """
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 from datetime import datetime
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.raw_data import AuthorTechBelong, RawAuthor, RawInstitution, RawWork
+
+logger = logging.getLogger(__name__)
 
 
 class RawWorkRepository:
@@ -26,25 +30,51 @@ class RawWorkRepository:
         await self.session.refresh(work)
         return work
 
-    async def upsert(self, work: RawWork) -> RawWork:
-        """Create or update a raw work record"""
-        existing = await self.get_by_openalex_id(work.openalex_work_id)
-        if existing:
-            existing.raw_json = work.raw_json
-            existing.title = work.title
-            existing.doi = work.doi
-            existing.publication_year = work.publication_year
-            existing.source_id = work.source_id
-            existing.source_name = work.source_name
-            existing.author_count = work.author_count
-            existing.author_ids = work.author_ids
-            existing.fetched_at = datetime.utcnow()
-            existing.fetch_task_id = work.fetch_task_id
-            existing.sub_task_id = work.sub_task_id
-            await self.session.flush()
-            return existing
-        else:
-            return await self.create(work)
+    async def upsert(self, work: RawWork, max_retries: int = 3) -> RawWork:
+        """Create or update a raw work record with retry support for SQLite locks"""
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                existing = await self.get_by_openalex_id(work.openalex_work_id)
+                if existing:
+                    existing.raw_json = work.raw_json
+                    existing.title = work.title
+                    existing.doi = work.doi
+                    existing.publication_year = work.publication_year
+                    existing.source_id = work.source_id
+                    existing.source_name = work.source_name
+                    existing.author_count = work.author_count
+                    existing.author_ids = work.author_ids
+                    existing.fetched_at = datetime.utcnow()
+                    existing.fetch_task_id = work.fetch_task_id
+                    existing.sub_task_id = work.sub_task_id
+                    await self.session.flush()
+                    return existing
+                else:
+                    return await self.create(work)
+            except Exception as e:
+                last_error = e
+                error_str = str(e).lower()
+                # Check if it's a database lock error
+                if "database is locked" in error_str or "locked" in error_str:
+                    # Rollback the current transaction state
+                    await self.session.rollback()
+                    # Wait before retrying (exponential backoff)
+                    wait_time = 0.5 * (2 ** attempt)
+                    logger.warning(f"Database locked, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(wait_time)
+                elif "transaction has been rolled back" in error_str:
+                    # Session state is invalid, need to start fresh
+                    logger.warning(f"Transaction was rolled back, starting fresh (attempt {attempt + 1}/{max_retries})")
+                    # The session should still be usable after rollback
+                    await self.session.rollback()
+                    await asyncio.sleep(0.1)
+                else:
+                    # Not a lock error, re-raise
+                    raise
+
+        # All retries exhausted
+        raise last_error or Exception("Upsert failed after retries")
 
     async def get_by_openalex_id(self, openalex_id: str) -> RawWork | None:
         """Get raw work by OpenAlex ID"""
@@ -169,25 +199,43 @@ class RawAuthorRepository:
         await self.session.refresh(author)
         return author
 
-    async def upsert(self, author: RawAuthor) -> RawAuthor:
-        """Create or update a raw author record"""
-        existing = await self.get_by_openalex_id(author.openalex_author_id)
-        if existing:
-            existing.raw_json = author.raw_json
-            existing.display_name = author.display_name
-            existing.orcid = author.orcid
-            existing.works_count = author.works_count
-            existing.cited_by_count = author.cited_by_count
-            existing.h_index = author.h_index
-            existing.i10_index = author.i10_index
-            existing.last_known_institution_id = author.last_known_institution_id
-            existing.last_known_institution_name = author.last_known_institution_name
-            existing.fetched_at = datetime.utcnow()
-            existing.fetch_task_id = author.fetch_task_id
-            await self.session.flush()
-            return existing
-        else:
-            return await self.create(author)
+    async def upsert(self, author: RawAuthor, max_retries: int = 3) -> RawAuthor:
+        """Create or update a raw author record with retry support for SQLite locks"""
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                existing = await self.get_by_openalex_id(author.openalex_author_id)
+                if existing:
+                    existing.raw_json = author.raw_json
+                    existing.display_name = author.display_name
+                    existing.orcid = author.orcid
+                    existing.works_count = author.works_count
+                    existing.cited_by_count = author.cited_by_count
+                    existing.h_index = author.h_index
+                    existing.i10_index = author.i10_index
+                    existing.last_known_institution_id = author.last_known_institution_id
+                    existing.last_known_institution_name = author.last_known_institution_name
+                    existing.fetched_at = datetime.utcnow()
+                    existing.fetch_task_id = author.fetch_task_id
+                    await self.session.flush()
+                    return existing
+                else:
+                    return await self.create(author)
+            except Exception as e:
+                last_error = e
+                error_str = str(e).lower()
+                if "database is locked" in error_str or "locked" in error_str:
+                    await self.session.rollback()
+                    wait_time = 0.5 * (2 ** attempt)
+                    logger.warning(f"Database locked, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(wait_time)
+                elif "transaction has been rolled back" in error_str:
+                    await self.session.rollback()
+                    await asyncio.sleep(0.1)
+                else:
+                    raise
+
+        raise last_error or Exception("Upsert failed after retries")
 
     async def batch_upsert(self, authors: list[RawAuthor]) -> int:
         """Batch create or update authors"""
@@ -296,22 +344,40 @@ class RawInstitutionRepository:
         await self.session.refresh(institution)
         return institution
 
-    async def upsert(self, institution: RawInstitution) -> RawInstitution:
-        """Create or update a raw institution record"""
-        existing = await self.get_by_openalex_id(institution.openalex_institution_id)
-        if existing:
-            existing.raw_json = institution.raw_json
-            existing.display_name = institution.display_name
-            existing.country_code = institution.country_code
-            existing.country_name = institution.country_name
-            existing.ror = institution.ror
-            existing.type = institution.type
-            existing.fetched_at = datetime.utcnow()
-            existing.fetch_task_id = institution.fetch_task_id
-            await self.session.flush()
-            return existing
-        else:
-            return await self.create(institution)
+    async def upsert(self, institution: RawInstitution, max_retries: int = 3) -> RawInstitution:
+        """Create or update a raw institution record with retry support for SQLite locks"""
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                existing = await self.get_by_openalex_id(institution.openalex_institution_id)
+                if existing:
+                    existing.raw_json = institution.raw_json
+                    existing.display_name = institution.display_name
+                    existing.country_code = institution.country_code
+                    existing.country_name = institution.country_name
+                    existing.ror = institution.ror
+                    existing.type = institution.type
+                    existing.fetched_at = datetime.utcnow()
+                    existing.fetch_task_id = institution.fetch_task_id
+                    await self.session.flush()
+                    return existing
+                else:
+                    return await self.create(institution)
+            except Exception as e:
+                last_error = e
+                error_str = str(e).lower()
+                if "database is locked" in error_str or "locked" in error_str:
+                    await self.session.rollback()
+                    wait_time = 0.5 * (2 ** attempt)
+                    logger.warning(f"Database locked, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(wait_time)
+                elif "transaction has been rolled back" in error_str:
+                    await self.session.rollback()
+                    await asyncio.sleep(0.1)
+                else:
+                    raise
+
+        raise last_error or Exception("Upsert failed after retries")
 
     async def get_by_openalex_id(self, openalex_id: str) -> RawInstitution | None:
         """Get raw institution by OpenAlex ID"""
