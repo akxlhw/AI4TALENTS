@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-04-03
+
+### Fixed
+- Fixed `AttributeError: 'dict' object has no attribute 'user_id'` in talent pool API
+  - `require_user` dependency returns `dict`, not `UserAccount` ORM object
+  - Updated `talent_pool.py` and `data_version.py` to use dict access `current_user["user_id"]`
+- Fixed tech element page stats not updating when filtering by tech element
+  - Added `professor_count` and `student_count` to `TechElementStatsResponse`
+  - Added role-based statistics query in `get_element_stats` repository method
+  - Frontend now updates all stats fields when tech element changes
+
 ## [1.2.0] - 2026-03-30
 
 ### Added
@@ -102,6 +113,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frontend: React 18 + TypeScript + Vite + Ant Design v5
 - Database: SQLite (dev) / PostgreSQL (prod)
 
-[1.2.0]: https://github.com/your-org/talent-platform/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/your-org/talent-platform/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/your-org/talent-platform/releases/tag/v1.0.0
+[1.2.1]: https://github.com/akxlhw/AI4TALENTS/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/akxlhw/AI4TALENTS/releases/tag/v1.0.0
