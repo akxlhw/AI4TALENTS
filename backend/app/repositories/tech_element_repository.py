@@ -60,6 +60,26 @@ class TechElementRepository:
                 func.count(func.distinct(TalentTechTag.tech_direction_id)).label('direction_count'),
             ).where(TalentTechTag.tech_element_id == element_id)
 
+            # Professor count for this element
+            professor_count_query = select(
+                func.count(func.distinct(Talent.talent_id))
+            ).select_from(TalentTechTag).join(
+                Talent, TalentTechTag.talent_id == Talent.talent_id
+            ).where(and_(
+                TalentTechTag.tech_element_id == element_id,
+                Talent.role_type == 'professor'
+            ))
+
+            # Student count for this element
+            student_count_query = select(
+                func.count(func.distinct(Talent.talent_id))
+            ).select_from(TalentTechTag).join(
+                Talent, TalentTechTag.talent_id == Talent.talent_id
+            ).where(and_(
+                TalentTechTag.tech_element_id == element_id,
+                Talent.role_type.in_(['student', 'graduated'])
+            ))
+
             # Country and school counts
             country_count_query = select(
                 func.count(func.distinct(School.country_code))
@@ -83,11 +103,15 @@ class TechElementRepository:
             result = await self.session.execute(base_query)
             row = result.one()
 
+            professor_result = await self.session.execute(professor_count_query)
+            student_result = await self.session.execute(student_count_query)
             country_result = await self.session.execute(country_count_query)
             school_result = await self.session.execute(school_count_query)
 
             return {
                 'talent_count': row.talent_count or 0,
+                'professor_count': professor_result.scalar() or 0,
+                'student_count': student_result.scalar() or 0,
                 'direction_count': row.direction_count or 0,
                 'country_count': country_result.scalar() or 0,
                 'school_count': school_result.scalar() or 0,

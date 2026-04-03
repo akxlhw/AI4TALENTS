@@ -183,6 +183,8 @@ const TechElementPage: React.FC = () => {
       setOverallStats(prev => ({
         ...prev,
         talent_count: response.data.talent_count,
+        professor_count: response.data.professor_count,
+        student_count: response.data.student_count,
         country_count: response.data.country_count,
         school_count: response.data.school_count,
       }))

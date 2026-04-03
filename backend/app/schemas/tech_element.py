@@ -45,6 +45,8 @@ class TechElementSummary(BaseModel):
 class TechElementStatsResponse(BaseModel):
     """技术要素统计响应"""
     talent_count: int
+    professor_count: int
+    student_count: int
     direction_count: int
     country_count: int
     school_count: int
