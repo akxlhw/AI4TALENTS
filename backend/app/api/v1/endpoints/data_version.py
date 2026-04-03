@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.endpoints.auth import require_admin, require_user
 from app.core.database import get_async_session
-from app.models.iam import UserAccount
 from app.repositories.data_version_repository import (
     DataCorrectionRepository,
     DataPublishRecordRepository,
@@ -51,7 +50,7 @@ async def list_versions(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_admin),
+    current_user: dict = Depends(require_admin),
 ):
     """List data versions."""
     repo = DataVersionRepository(session)
@@ -73,7 +72,7 @@ async def list_versions(
 )
 async def get_active_version(
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_user),
+    current_user: dict = Depends(require_user),
 ):
     """Get the currently active version."""
     repo = DataVersionRepository(session)
@@ -94,7 +93,7 @@ async def get_active_version(
 async def create_version(
     request: CreateVersionRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_admin),
+    current_user: dict = Depends(require_admin),
 ):
     """Create a new data version."""
     repo = DataVersionRepository(session)
@@ -126,7 +125,7 @@ async def create_version(
 async def get_version(
     version_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_admin),
+    current_user: dict = Depends(require_admin),
 ):
     """Get data version details."""
     repo = DataVersionRepository(session)
@@ -148,7 +147,7 @@ async def publish_version(
     version_id: int,
     request: PublishVersionRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_admin),
+    current_user: dict = Depends(require_admin),
 ):
     """Publish a version to make it active."""
     version_repo = DataVersionRepository(session)
@@ -159,7 +158,7 @@ async def publish_version(
     previous_version_id = active_version.version_id if active_version else None
 
     # Publish the version
-    version = await version_repo.publish_version(version_id, current_user.user_id)
+    version = await version_repo.publish_version(version_id, current_user["user_id"])
 
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
@@ -168,7 +167,7 @@ async def publish_version(
     await record_repo.create_record(
         version_id=version_id,
         action="publish",
-        operated_by=current_user.user_id,
+        operated_by=current_user["user_id"],
         previous_version_id=previous_version_id,
         notes=request.notes,
     )
@@ -188,7 +187,7 @@ async def publish_version(
 async def list_publish_records(
     version_id: int | None = Query(None, description="按版本筛选"),
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_admin),
+    current_user: dict = Depends(require_admin),
 ):
     """List publish records."""
     repo = DataPublishRecordRepository(session)
@@ -212,7 +211,7 @@ async def list_corrections(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_admin),
+    current_user: dict = Depends(require_admin),
 ):
     """List corrections."""
     repo = DataCorrectionRepository(session)
@@ -236,7 +235,7 @@ async def list_corrections(
 async def create_correction(
     request: CreateCorrectionRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_admin),
+    current_user: dict = Depends(require_admin),
 ):
     """Create a correction record."""
     repo = DataCorrectionRepository(session)
@@ -248,7 +247,7 @@ async def create_correction(
         original_value=request.original_value,
         corrected_value=request.corrected_value,
         correction_type=request.correction_type,
-        corrected_by=current_user.user_id,
+        corrected_by=current_user["user_id"],
         reason=request.reason,
         source=request.source,
     )
@@ -266,7 +265,7 @@ async def create_correction(
 async def revert_correction(
     correction_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_admin),
+    current_user: dict = Depends(require_admin),
 ):
     """Revert a correction."""
     repo = DataCorrectionRepository(session)
@@ -290,7 +289,7 @@ async def revert_correction(
 async def get_quality_summary(
     version_id: int | None = Query(None, description="指定版本ID"),
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_admin),
+    current_user: dict = Depends(require_admin),
 ):
     """Get the latest quality summary."""
     repo = DataQualityRepository(session)
@@ -318,7 +317,7 @@ async def get_quality_summary(
 )
 async def get_quality_metrics(
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_admin),
+    current_user: dict = Depends(require_admin),
 ):
     """Get quality metrics for dashboard."""
     repo = DataQualityRepository(session)

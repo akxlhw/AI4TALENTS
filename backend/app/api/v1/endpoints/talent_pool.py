@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
-from app.models.iam import UserAccount
 from app.repositories.talent_pool_repository import FavoriteRepository, TalentPoolRepository
 from app.schemas.common import PaginatedResponse
 from app.schemas.talent_pool import (
@@ -33,12 +32,12 @@ router = APIRouter(prefix="/talent-pools", tags=["Talent Pools"])
 async def create_pool(
     request: CreatePoolRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_user),
+    current_user: dict = Depends(require_user),
 ):
     """Create a new talent pool."""
     repo = TalentPoolRepository(session)
     pool = await repo.create_pool(
-        user_id=current_user.user_id,
+        user_id=current_user["user_id"],
         name=request.pool_name,
         pool_type=request.pool_type,
         desc=request.scope_desc,
@@ -65,11 +64,11 @@ async def create_pool(
 )
 async def list_pools(
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_user),
+    current_user: dict = Depends(require_user),
 ):
     """List all talent pools for current user."""
     repo = TalentPoolRepository(session)
-    pools = await repo.list_user_pools(current_user.user_id)
+    pools = await repo.list_user_pools(current_user["user_id"])
 
     items = []
     for pool in pools:
@@ -98,7 +97,7 @@ async def list_pools(
 async def get_pool(
     pool_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_user),
+    current_user: dict = Depends(require_user),
 ):
     """Get talent pool details."""
     repo = TalentPoolRepository(session)
@@ -107,7 +106,7 @@ async def get_pool(
     if not pool:
         raise HTTPException(status_code=404, detail="Talent pool not found")
 
-    if pool.owner_user_id != current_user.user_id:
+    if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
     members, total = await repo.get_pool_members(pool_id, page=1, page_size=1)
@@ -134,7 +133,7 @@ async def update_pool(
     pool_id: int,
     request: UpdatePoolRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_user),
+    current_user: dict = Depends(require_user),
 ):
     """Update talent pool."""
     repo = TalentPoolRepository(session)
@@ -143,7 +142,7 @@ async def update_pool(
     if not pool:
         raise HTTPException(status_code=404, detail="Talent pool not found")
 
-    if pool.owner_user_id != current_user.user_id:
+    if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
     updated_pool = await repo.update_pool(
@@ -176,7 +175,7 @@ async def update_pool(
 async def delete_pool(
     pool_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_user),
+    current_user: dict = Depends(require_user),
 ):
     """Delete talent pool (archive)."""
     repo = TalentPoolRepository(session)
@@ -185,7 +184,7 @@ async def delete_pool(
     if not pool:
         raise HTTPException(status_code=404, detail="Talent pool not found")
 
-    if pool.owner_user_id != current_user.user_id:
+    if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
     await repo.delete_pool(pool_id)
@@ -203,7 +202,7 @@ async def add_member(
     pool_id: int,
     request: AddMemberRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_user),
+    current_user: dict = Depends(require_user),
 ):
     """Add talent to pool."""
     repo = TalentPoolRepository(session)
@@ -212,7 +211,7 @@ async def add_member(
     if not pool:
         raise HTTPException(status_code=404, detail="Talent pool not found")
 
-    if pool.owner_user_id != current_user.user_id:
+    if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Check if already a member
@@ -222,7 +221,7 @@ async def add_member(
     await repo.add_member(
         pool_id=pool_id,
         talent_id=request.talent_id,
-        added_by=current_user.user_id,
+        added_by=current_user["user_id"],
         notes=request.notes,
     )
     await session.commit()
@@ -239,7 +238,7 @@ async def remove_member(
     pool_id: int,
     talent_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_user),
+    current_user: dict = Depends(require_user),
 ):
     """Remove talent from pool."""
     repo = TalentPoolRepository(session)
@@ -248,7 +247,7 @@ async def remove_member(
     if not pool:
         raise HTTPException(status_code=404, detail="Talent pool not found")
 
-    if pool.owner_user_id != current_user.user_id:
+    if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
     removed = await repo.remove_member(pool_id, talent_id)
@@ -271,7 +270,7 @@ async def list_members(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_user),
+    current_user: dict = Depends(require_user),
 ):
     """List members of a talent pool."""
     repo = TalentPoolRepository(session)
@@ -280,7 +279,7 @@ async def list_members(
     if not pool:
         raise HTTPException(status_code=404, detail="Talent pool not found")
 
-    if pool.owner_user_id != current_user.user_id:
+    if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
     items, total = await repo.get_pool_members(pool_id, page, page_size)
@@ -302,7 +301,7 @@ async def update_followup_status(
     talent_id: int,
     request: UpdateFollowupRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: UserAccount = Depends(require_user),
+    current_user: dict = Depends(require_user),
 ):
     """Update followup status for a favorite talent."""
     # Validate status
@@ -312,7 +311,7 @@ async def update_followup_status(
 
     repo = FavoriteRepository(session)
     favorite = await repo.update_followup_status(
-        user_id=current_user.user_id,
+        user_id=current_user["user_id"],
         talent_id=talent_id,
         status=request.followup_status,
     )
