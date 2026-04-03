@@ -3,17 +3,20 @@
 Revision ID: 022
 Revises: 021
 Create Date: 2026-04-02
+Updated: 2026-04-03 - Fix SQLite foreign key constraint issue
 
 This migration:
 1. Adds country_code and country_name columns to core_school
 2. Drops the country_id foreign key constraint
 3. Drops the core_country table
 
-Note: This migration assumes the database has been cleaned or data has been
-migrated separately. The country_id column is dropped without data migration.
+Note: For SQLite, we must recreate the table to drop a column with FK constraint.
+SQLite 3.35.0+ supports ALTER TABLE DROP COLUMN, but it fails when the column
+has a foreign key reference. The workaround is to recreate the table.
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import text
 
 
 # revision identifiers, used by Alembic.
@@ -21,6 +24,12 @@ revision = '022'
 down_revision = '021'
 branch_labels = None
 depends_on = None
+
+
+def _is_sqlite() -> bool:
+    """Check if the database is SQLite."""
+    conn = op.get_bind()
+    return conn.dialect.name == 'sqlite'
 
 
 def upgrade() -> None:
@@ -37,18 +46,64 @@ def upgrade() -> None:
     # Step 2: Create index on country_code
     op.create_index('ix_core_school_country_code', 'core_school', ['country_code'])
 
-    # Step 3: Drop foreign key constraint (if exists - SQLite may not have it)
-    # In SQLite, FK constraints are handled differently
-    try:
-        op.drop_constraint('fk_core_school_country_id_core_country', 'core_school', type_='foreignkey')
-    except Exception:
-        # SQLite might not have named FK constraints
-        pass
+    if _is_sqlite():
+        # SQLite: Recreate table without country_id to avoid FK constraint issue
+        conn = op.get_bind()
 
-    # Step 4: Drop country_id column from core_school
-    op.drop_column('core_school', 'country_id')
+        # Create new table without country_id and without FK
+        conn.execute(text('''
+            CREATE TABLE core_school_new (
+                school_id INTEGER PRIMARY KEY,
+                school_name VARCHAR(255) NOT NULL,
+                school_alias VARCHAR(255),
+                school_intro TEXT,
+                homepage_url VARCHAR(500),
+                professor_count INTEGER DEFAULT 0,
+                student_count INTEGER DEFAULT 0,
+                is_visible BOOLEAN DEFAULT 1 NOT NULL,
+                status VARCHAR(20) DEFAULT 'active' NOT NULL,
+                source_type VARCHAR(50),
+                source_record_id VARCHAR(100),
+                last_sync_batch_id INTEGER,
+                department_name VARCHAR(255),
+                lab_name VARCHAR(255),
+                created_at DATETIME,
+                updated_at DATETIME,
+                is_top_school BOOLEAN DEFAULT 0 NOT NULL,
+                country_code VARCHAR(10) DEFAULT 'XX' NOT NULL,
+                country_name VARCHAR(100)
+            )
+        '''))
 
-    # Step 5: Drop core_country table
+        # Copy data (excluding country_id)
+        conn.execute(text('''
+            INSERT INTO core_school_new
+            SELECT school_id, school_name, school_alias, school_intro, homepage_url,
+                   professor_count, student_count, is_visible, status, source_type,
+                   source_record_id, last_sync_batch_id, department_name, lab_name,
+                   created_at, updated_at, is_top_school, country_code, country_name
+            FROM core_school
+        '''))
+
+        # Drop old table and rename
+        conn.execute(text('DROP TABLE core_school'))
+        conn.execute(text('ALTER TABLE core_school_new RENAME TO core_school'))
+
+        # Recreate indexes
+        conn.execute(text('CREATE INDEX ix_core_school_school_id ON core_school (school_id)'))
+        conn.execute(text('CREATE INDEX ix_core_school_school_name ON core_school (school_name)'))
+        conn.execute(text('CREATE INDEX ix_core_school_source_record_id ON core_school (source_record_id)'))
+        conn.execute(text('CREATE INDEX ix_core_school_country_code ON core_school (country_code)'))
+        conn.execute(text('CREATE INDEX ix_core_school_is_top_school ON core_school (is_top_school)'))
+    else:
+        # PostgreSQL: Can use standard operations
+        try:
+            op.drop_constraint('fk_core_school_country_id_core_country', 'core_school', type_='foreignkey')
+        except Exception:
+            pass
+        op.drop_column('core_school', 'country_id')
+
+    # Step 3: Drop core_country table
     op.drop_table('core_country')
 
 
@@ -68,14 +123,58 @@ def downgrade() -> None:
     op.create_index('ix_core_country_country_id', 'core_country', ['country_id'])
     op.create_index('ix_core_country_country_code', 'core_country', ['country_code'])
 
-    # Step 2: Add country_id column back to core_school
-    op.add_column(
-        'core_school',
-        sa.Column('country_id', sa.Integer(), sa.ForeignKey('core_country.country_id'), nullable=True)
-    )
-    op.create_index('ix_core_school_country_id', 'core_school', ['country_id'])
+    if _is_sqlite():
+        # SQLite: Recreate table with country_id column
+        conn = op.get_bind()
 
-    # Step 3: Drop country_code and country_name columns
-    op.drop_index('ix_core_school_country_code', 'core_school')
-    op.drop_column('core_school', 'country_code')
-    op.drop_column('core_school', 'country_name')
+        conn.execute(text('''
+            CREATE TABLE core_school_new (
+                school_id INTEGER PRIMARY KEY,
+                school_name VARCHAR(255) NOT NULL,
+                school_alias VARCHAR(255),
+                country_id INTEGER REFERENCES core_country(country_id),
+                school_intro TEXT,
+                homepage_url VARCHAR(500),
+                professor_count INTEGER DEFAULT 0,
+                student_count INTEGER DEFAULT 0,
+                is_visible BOOLEAN DEFAULT 1 NOT NULL,
+                status VARCHAR(20) DEFAULT 'active' NOT NULL,
+                source_type VARCHAR(50),
+                source_record_id VARCHAR(100),
+                last_sync_batch_id INTEGER,
+                department_name VARCHAR(255),
+                lab_name VARCHAR(255),
+                created_at DATETIME,
+                updated_at DATETIME,
+                is_top_school BOOLEAN DEFAULT 0 NOT NULL
+            )
+        '''))
+
+        conn.execute(text('''
+            INSERT INTO core_school_new
+            SELECT school_id, school_name, school_alias, NULL as country_id,
+                   school_intro, homepage_url, professor_count, student_count,
+                   is_visible, status, source_type, source_record_id, last_sync_batch_id,
+                   department_name, lab_name, created_at, updated_at, is_top_school
+            FROM core_school
+        '''))
+
+        conn.execute(text('DROP TABLE core_school'))
+        conn.execute(text('ALTER TABLE core_school_new RENAME TO core_school'))
+
+        # Recreate indexes
+        conn.execute(text('CREATE INDEX ix_core_school_school_id ON core_school (school_id)'))
+        conn.execute(text('CREATE INDEX ix_core_school_school_name ON core_school (school_name)'))
+        conn.execute(text('CREATE INDEX ix_core_school_source_record_id ON core_school (source_record_id)'))
+        conn.execute(text('CREATE INDEX ix_core_school_country_id ON core_school (country_id)'))
+        conn.execute(text('CREATE INDEX ix_core_school_is_top_school ON core_school (is_top_school)'))
+    else:
+        # PostgreSQL: Standard operations
+        op.add_column(
+            'core_school',
+            sa.Column('country_id', sa.Integer(), sa.ForeignKey('core_country.country_id'), nullable=True)
+        )
+        op.create_index('ix_core_school_country_id', 'core_school', ['country_id'])
+        op.drop_index('ix_core_school_country_code', 'core_school')
+        op.drop_column('core_school', 'country_code')
+        op.drop_column('core_school', 'country_name')
