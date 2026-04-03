@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-04-03
+
+### Fixed
+- Fixed SQLite database lock error when starting new collection task after cancelling/deleting previous task
+  - Added retry mechanism with exponential backoff (0.5s, 1s, 2s) to repository upsert operations
+  - Improved error handling in WorkFetcher to continue on individual record failures
+  - Automatic transaction rollback and retry on "database is locked" errors
+
 ## [1.2.1] - 2026-04-03
 
 ### Fixed
@@ -113,6 +121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frontend: React 18 + TypeScript + Vite + Ant Design v5
 - Database: SQLite (dev) / PostgreSQL (prod)
 
+[1.2.2]: https://github.com/akxlhw/AI4TALENTS/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/akxlhw/AI4TALENTS/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.0.0...v1.1.0
