@@ -50,10 +50,10 @@ const CountriesPage: React.FC = () => {
     }
   }
 
-  const fetchSchools = async (countryId: number) => {
+  const fetchSchools = async (countryCode: string) => {
     setSchoolsLoading(true)
     try {
-      const response = await api.schools.list({ country_id: countryId })
+      const response = await api.schools.list({ country_code: countryCode })
       setSchools(response.data.items || [])
     } catch (error) {
       console.error('Failed to fetch schools:', error)
@@ -64,7 +64,7 @@ const CountriesPage: React.FC = () => {
 
   const handleCountryClick = (country: Country) => {
     setSelectedCountry(country)
-    fetchSchools(country.country_id)
+    fetchSchools(country.country_code)
   }
 
   const filteredCountries = countries.filter(c =>

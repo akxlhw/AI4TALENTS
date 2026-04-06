@@ -6,8 +6,10 @@
  * 1. 页面初始化时加载用户权限范围内的总体统计数据
  * 2. 默认显示所有权限范围内的人才列表
  * 3. 用户可通过筛选区选择特定技术要素/方向来缩小范围
+ *
+ * v1.3: 使用 React Query 实现前端缓存
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Card,
@@ -31,8 +33,13 @@ import {
   AppstoreOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import type { ColumnsType } from 'antd/es/table'
-import { api } from '../services/api'
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import {
+  useTechElements,
+  useTechElementStats,
+  useTechElementTalents,
+  useOverallTalents,
+} from '../hooks/useQueries'
 import TopicTags from '../components/TopicTags'
 
 const { Title, Text } = Typography
@@ -67,16 +74,6 @@ interface TalentItem {
   openalex_topics: string[]  // OpenAlex研究主题（具体研究方向）
 }
 
-// 总体统计类型
-interface OverallStats {
-  talent_count: number
-  professor_count: number
-  student_count: number
-  country_count: number
-  school_count: number
-  tech_element_count: number
-}
-
 const TechElementPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -89,24 +86,42 @@ const TechElementPage: React.FC = () => {
   const [countryId, setCountryId] = useState<number | undefined>()
   const [schoolId, setSchoolId] = useState<number | undefined>()
   const [roleType, setRoleType] = useState<string | undefined>()
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
-  // 页面状态
-  const [loading, setLoading] = useState(false)
-  const [summaryLoading, setSummaryLoading] = useState(false)
-  const [elementsLoading, setElementsLoading] = useState(false)
+  // React Query hooks
+  const { data: elementsData, isLoading: elementsLoading } = useTechElements()
+  const { data: statsData, isLoading: statsLoading } = useTechElementStats(techElementId)
 
-  // 数据
-  const [techElements, setTechElements] = useState<TechElement[]>([])
-  const [overallStats, setOverallStats] = useState<OverallStats>({
+  // Build talent query params
+  const talentParams = useMemo(() => ({
+    page,
+    page_size: pageSize,
+    country_code: countryId ? String(countryId) : undefined,
+    school_id: schoolId,
+    role_type: roleType,
+    keyword: keyword || undefined,
+  }), [page, pageSize, countryId, schoolId, roleType, keyword])
+
+  // Use different hooks based on whether tech element is selected
+  const overallTalentsQuery = useOverallTalents(talentParams)
+  const elementTalentsQuery = useTechElementTalents(techElementId!, talentParams)
+
+  // Select the appropriate query result
+  const talentsQuery = techElementId ? elementTalentsQuery : overallTalentsQuery
+  const { data: talentsData, isLoading: talentsLoading, refetch: refetchTalents } = talentsQuery
+
+  // Extract data from query results
+  const techElements: TechElement[] = elementsData?.items || []
+  const stats = statsData || {
     talent_count: 0,
     professor_count: 0,
     student_count: 0,
     country_count: 0,
     school_count: 0,
-    tech_element_count: 0,
-  })
-  const [talentData, setTalentData] = useState<TalentItem[]>([])
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
+  }
+  const talentData: TalentItem[] = talentsData?.items || []
+  const total = talentsData?.total || 0
 
   // 角色类型选项
   const roleTypeOptions = [
@@ -116,143 +131,22 @@ const TechElementPage: React.FC = () => {
     { value: 'unknown', label: '待确认' },
   ]
 
-  // 获取技术要素列表
-  const fetchTechElements = useCallback(async () => {
-    setElementsLoading(true)
-    try {
-      const response = await api.techElements.list()
-      setTechElements(response.data.items || [])
-    } catch (error) {
-      console.error('Failed to fetch tech elements:', error)
-    } finally {
-      setElementsLoading(false)
-    }
-  }, [])
-
-  // 获取总体统计
-  const fetchOverallStats = useCallback(async () => {
-    setSummaryLoading(true)
-    try {
-      const response = await api.techElements.getOverallStats()
-      setOverallStats(response.data)
-    } catch (error) {
-      console.error('Failed to fetch overall stats:', error)
-    } finally {
-      setSummaryLoading(false)
-    }
-  }, [])
-
-  // 获取总体人才列表
-  const fetchOverallTalents = useCallback(async (page = 1) => {
-    setLoading(true)
-    try {
-      // 只传递有值的参数，避免传递 undefined 字符串
-      const params: Record<string, any> = {
-        page,
-        page_size: pagination.pageSize,
-      }
-      if (countryId) params.country_id = countryId
-      if (schoolId) params.school_id = schoolId
-      if (roleType) params.role_type = roleType
-      if (keyword) params.keyword = keyword
-
-      const response = await api.techElements.getOverallTalents(params)
-      setTalentData(response.data.items || [])
-      setPagination({
-        current: response.data.page || page,
-        pageSize: response.data.page_size || pagination.pageSize,
-        total: response.data.total || 0,
-      })
-    } catch (error) {
-      console.error('Failed to fetch talents:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [countryId, schoolId, roleType, keyword, pagination.pageSize])
-
-  // 获取筛选后的统计数据
-  const fetchFilteredStats = useCallback(async () => {
-    if (!techElementId) {
-      fetchOverallStats()
-      return
-    }
-
-    setSummaryLoading(true)
-    try {
-      const response = await api.techElements.getStats(techElementId)
-      setOverallStats(prev => ({
-        ...prev,
-        talent_count: response.data.talent_count,
-        professor_count: response.data.professor_count,
-        student_count: response.data.student_count,
-        country_count: response.data.country_count,
-        school_count: response.data.school_count,
-      }))
-    } catch (error) {
-      console.error('Failed to fetch stats:', error)
-    } finally {
-      setSummaryLoading(false)
-    }
-  }, [techElementId, fetchOverallStats])
-
-  // 获取筛选后的人才列表
-  const fetchFilteredTalents = useCallback(async (page = 1) => {
-    if (!techElementId) {
-      fetchOverallTalents(page)
-      return
-    }
-
-    setLoading(true)
-    try {
-      // 只传递有值的参数
-      const params: Record<string, any> = {
-        page,
-        page_size: pagination.pageSize,
-      }
-      if (countryId) params.country_id = countryId
-      if (schoolId) params.school_id = schoolId
-      if (roleType) params.role_type = roleType
-      if (keyword) params.keyword = keyword
-
-      const response = await api.techElements.getTalents(techElementId, params)
-      setTalentData(response.data.items || [])
-      setPagination({
-        current: response.data.page || page,
-        pageSize: response.data.page_size || pagination.pageSize,
-        total: response.data.total || 0,
-      })
-    } catch (error) {
-      console.error('Failed to fetch talents:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [techElementId, countryId, schoolId, roleType, keyword, pagination.pageSize, fetchOverallTalents])
-
-  // 初始化加载
-  useEffect(() => {
-    fetchTechElements()
-    fetchOverallStats()
-  }, [])
-
-  // 当筛选条件变化时重新加载数据
-  useEffect(() => {
-    // 初始化时加载人才列表
-    fetchFilteredStats()
-    fetchFilteredTalents()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [techElementId])
+  // 技术要素选项
+  const elementOptions = techElements.map(e => ({
+    value: e.tech_element_id,
+    label: e.element_name,
+  }))
 
   // 处理技术要素变化
   const handleTechElementChange = (value: number | undefined) => {
     setTechElementId(value)
-    setPagination(prev => ({ ...prev, current: 1 }))
+    setPage(1)
   }
 
   // 处理搜索
   const handleSearch = () => {
-    setPagination(prev => ({ ...prev, current: 1 }))
-    fetchFilteredStats()
-    fetchFilteredTalents(1)
+    setPage(1)
+    refetchTalents()
   }
 
   // 处理重置
@@ -262,27 +156,14 @@ const TechElementPage: React.FC = () => {
     setCountryId(undefined)
     setSchoolId(undefined)
     setRoleType(undefined)
-    setPagination(prev => ({ ...prev, current: 1 }))
-    fetchOverallStats()
-    fetchOverallTalents()
+    setPage(1)
   }
 
   // 处理表格分页变化
-  const handleTableChange = (newPagination: any) => {
-    const newPage = newPagination.current
-    setPagination({
-      ...pagination,
-      current: newPage,
-      pageSize: newPagination.pageSize,
-    })
-    fetchFilteredTalents(newPage)
+  const handleTableChange = (newPagination: TablePaginationConfig) => {
+    setPage(newPagination.current || 1)
+    setPageSize(newPagination.pageSize || 10)
   }
-
-  // 技术要素选项
-  const elementOptions = techElements.map(e => ({
-    value: e.tech_element_id,
-    label: e.element_name,
-  }))
 
   // 人才明细表格列
   const talentColumns: ColumnsType<TalentItem> = [
@@ -349,40 +230,40 @@ const TechElementPage: React.FC = () => {
 
       {/* 概要统计区 */}
       <Card style={{ marginBottom: 16 }}>
-        <Spin spinning={summaryLoading}>
+        <Spin spinning={statsLoading}>
           <Row gutter={24}>
             <Col span={4}>
               <Statistic
                 title="人才总数"
-                value={overallStats.talent_count}
+                value={stats.talent_count}
                 prefix={<TeamOutlined />}
               />
             </Col>
             <Col span={4}>
               <Statistic
                 title="教授/研究员"
-                value={overallStats.professor_count}
+                value={stats.professor_count}
                 prefix={<UserOutlined />}
               />
             </Col>
             <Col span={4}>
               <Statistic
                 title="学生"
-                value={overallStats.student_count}
+                value={stats.student_count}
                 prefix={<UserOutlined />}
               />
             </Col>
             <Col span={4}>
               <Statistic
                 title="覆盖院校机构"
-                value={overallStats.school_count}
+                value={stats.school_count}
                 prefix={<AppstoreOutlined />}
               />
             </Col>
             <Col span={4}>
               <Statistic
                 title="覆盖国家"
-                value={overallStats.country_count}
+                value={stats.country_count}
                 prefix={<AppstoreOutlined />}
               />
             </Col>
@@ -471,8 +352,14 @@ const TechElementPage: React.FC = () => {
           columns={talentColumns}
           dataSource={talentData}
           rowKey="talent_id"
-          loading={loading}
-          pagination={pagination}
+          loading={talentsLoading}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 条`,
+          }}
           onChange={handleTableChange}
           locale={{
             emptyText: <Empty description="暂无数据" />,

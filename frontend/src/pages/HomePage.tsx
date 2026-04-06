@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Card, Row, Col, Statistic, Input, Typography, Tag, Space, Spin, Button, Divider } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -10,25 +9,11 @@ import {
   AppstoreOutlined,
   ArrowRightOutlined,
 } from '@ant-design/icons'
-import { api } from '../services/api'
+import { useHomepageHighlights, useOverviewStats } from '../hooks/useQueries'
 
 const { Title, Paragraph, Text } = Typography
 const { Search } = Input
 
-interface OverviewStats {
-  stats: {
-    school_count: number
-    professor_count: number
-    student_count: number
-    talent_count: number
-    tech_element_count?: number
-    country_count?: number
-  }
-  version: string
-  generated_at: string
-}
-
-// 首页热点数据类型
 interface HotTechElement {
   tech_element_id: number
   element_code: string
@@ -49,39 +34,14 @@ interface TopSchool {
   talent_count: number
 }
 
-interface HomepageHighlights {
-  hot_tech_elements: HotTechElement[]
-  top_countries: TopCountry[]
-  top_schools: TopSchool[]
-  version: string
-  generated_at: string
-}
-
 const HomePage: React.FC = () => {
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
-  const [overview, setOverview] = useState<OverviewStats | null>(null)
-  const [highlights, setHighlights] = useState<HomepageHighlights | null>(null)
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  // Use React Query hooks for automatic caching
+  const { data: overview, isLoading: overviewLoading } = useOverviewStats()
+  const { data: highlights, isLoading: highlightsLoading } = useHomepageHighlights()
 
-  const fetchData = async () => {
-    setLoading(true)
-    try {
-      const [overviewRes, highlightsRes] = await Promise.all([
-        api.overview.get(),
-        api.homepage.getHighlights(),
-      ])
-      setOverview(overviewRes.data)
-      setHighlights(highlightsRes.data)
-    } catch (error) {
-      console.error('Failed to fetch data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loading = overviewLoading || highlightsLoading
 
   const handleSearch = (value: string) => {
     if (value.trim()) {
@@ -110,9 +70,9 @@ const HomePage: React.FC = () => {
     country_count: 0,
   }
 
-  const hotTechElements = highlights?.hot_tech_elements || []
-  const topCountries = highlights?.top_countries || []
-  const topSchools = highlights?.top_schools || []
+  const hotTechElements: HotTechElement[] = highlights?.hot_tech_elements || []
+  const topCountries: TopCountry[] = highlights?.top_countries || []
+  const topSchools: TopSchool[] = highlights?.top_schools || []
 
   return (
     <Spin spinning={loading}>
