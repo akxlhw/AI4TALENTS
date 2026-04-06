@@ -199,10 +199,31 @@ async def truncate_tables(full_reset: bool = False):
         print(f"\n已清空 {truncated_count} 个表")
 
 
+async def clear_cache():
+    """清空 Redis 缓存"""
+    print("\n" + "="*60)
+    print("Step 2: 清空缓存")
+    print("="*60)
+
+    try:
+        from app.core.cache import get_cache_connection
+        from app.services.cache_service import CacheService
+
+        cache_conn = await get_cache_connection()
+        if cache_conn.is_available:
+            cache = CacheService(cache_conn)
+            deleted = await cache.delete_pattern("*")
+            print(f"  [OK] 已清空 {deleted} 个缓存键")
+        else:
+            print("  [SKIP] Redis 未启用或不可用")
+    except Exception as e:
+        print(f"  [WARN] 缓存清理失败: {e}")
+
+
 async def seed_admin_user():
     """初始化管理员用户"""
     print("\n" + "="*60)
-    print("Step 2: 初始化管理员用户")
+    print("Step 3: 初始化管理员用户")
     print("="*60)
 
     async with AsyncSessionLocal() as session:
@@ -260,7 +281,7 @@ async def seed_admin_user():
 async def seed_tech_elements():
     """初始化技术要素"""
     print("\n" + "="*60)
-    print("Step 3: 初始化技术要素")
+    print("Step 4: 初始化技术要素")
     print("="*60)
 
     async with AsyncSessionLocal() as session:
@@ -293,7 +314,7 @@ async def seed_tech_elements():
 async def seed_statistics_snapshot():
     """初始化统计快照"""
     print("\n" + "="*60)
-    print("Step 4: 初始化统计快照")
+    print("Step 5: 初始化统计快照")
     print("="*60)
 
     async with AsyncSessionLocal() as session:
@@ -328,15 +349,18 @@ async def init_system(full_reset: bool = False):
     # 1. 清空数据表
     await truncate_tables(full_reset)
 
+    # 2. 清空缓存
+    await clear_cache()
+
     # 以下步骤仅在全量重置时执行
     if full_reset:
-        # 2. 初始化用户
+        # 3. 初始化用户
         await seed_admin_user()
 
-        # 3. 初始化技术要素
+        # 4. 初始化技术要素
         await seed_tech_elements()
 
-    # 4. 初始化统计快照
+    # 5. 初始化统计快照
     await seed_statistics_snapshot()
 
     # 完成
