@@ -539,7 +539,7 @@ async def cancel_task(
         raise HTTPException(status_code=400, detail="Task cannot be cancelled")
 
     task.status = "cancelled"
-    task.completed_at = datetime.now()
+    task.completed_at = datetime.now(timezone.utc)
     task.current_step = "已取消"
 
     await session.commit()
