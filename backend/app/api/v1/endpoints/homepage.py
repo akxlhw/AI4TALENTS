@@ -7,6 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import get_cache_connection
 from app.core.database import get_async_session
 from app.repositories.homepage_repository import HomepageRepository
 from app.schemas.homepage import (
@@ -15,6 +16,8 @@ from app.schemas.homepage import (
     TopCountryItem,
     TopSchoolItem,
 )
+from app.services.cache_keys import CacheKeys, CacheTTL
+from app.services.cache_service import CacheService
 
 router = APIRouter(prefix="/homepage", tags=["Homepage"])
 
@@ -36,12 +39,42 @@ async def get_highlights(
     - top_countries: 主要国家列表 (按人才数Top5)
     - top_schools: Top院校列表 (按人才数Top5)
     """
-    repo = HomepageRepository(session)
+    # Initialize cache service
+    cache_conn = await get_cache_connection()
+    cache = CacheService(cache_conn)
 
-    # Fetch all data in parallel
-    hot_tech_elements = await repo.get_hot_tech_elements(limit=6)
-    top_countries = await repo.get_top_countries(limit=5)
-    top_schools = await repo.get_top_schools(limit=5)
+    async def fetch_highlights():
+        """Fetch highlights data from database."""
+        repo = HomepageRepository(session)
+
+        # Fetch all data in parallel
+        hot_tech_elements = await repo.get_hot_tech_elements(limit=6)
+        top_countries = await repo.get_top_countries(limit=5)
+        top_schools = await repo.get_top_schools(limit=5)
+
+        return {
+            "hot_tech_elements": hot_tech_elements,
+            "top_countries": top_countries,
+            "top_schools": top_schools,
+        }
+
+    # Try cache first, fallback to database
+    cached_data = await cache.get_or_set(
+        CacheKeys.STATS_HOME_HIGHLIGHTS,
+        factory=fetch_highlights,
+        ttl=CacheTTL.MEDIUM,
+    )
+
+    if cached_data:
+        hot_tech_elements = cached_data.get("hot_tech_elements", [])
+        top_countries = cached_data.get("top_countries", [])
+        top_schools = cached_data.get("top_schools", [])
+    else:
+        # Fallback to direct database query
+        repo = HomepageRepository(session)
+        hot_tech_elements = await repo.get_hot_tech_elements(limit=6)
+        top_countries = await repo.get_top_countries(limit=5)
+        top_schools = await repo.get_top_schools(limit=5)
 
     now = datetime.now()
     version = now.strftime("%Y%m%d-%H%M%S")
