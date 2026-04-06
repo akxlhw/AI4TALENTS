@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_router
+from app.core.cache import close_cache_connection, get_cache_connection
 from app.core.config import settings
 from app.core.database import async_engine
 from app.core.logging_config import get_logger, setup_logging
@@ -24,9 +25,19 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"Rate limiting enabled: {settings.RATE_LIMIT_ENABLED}")
+
+    # Initialize cache connection
+    cache_conn = await get_cache_connection()
+    if cache_conn.is_available:
+        logger.info("Cache layer enabled: Redis connected")
+    else:
+        logger.info("Cache layer disabled: running in direct database mode")
+
     yield
+
     # Shutdown
     logger.info(f"Shutting down {settings.APP_NAME}")
+    await close_cache_connection()
     await async_engine.dispose()
 
 
@@ -50,6 +61,10 @@ def create_application() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Metrics middleware (must be early to capture all requests)
+    from app.middleware.metrics import MetricsMiddleware
+    app.add_middleware(MetricsMiddleware)
 
     # Rate limiting middleware (must be added before request logging)
     if settings.RATE_LIMIT_ENABLED:

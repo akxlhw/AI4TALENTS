@@ -5,6 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-06
+
+### Added
+
+#### Architecture & Performance
+- **PostgreSQL Performance Indexes**: Added 12 optimized indexes for user-visible pages and collection tasks
+  - P0: `ix_core_talent_visible_school_role`, `ix_core_talent_visible_cited_desc` for talent list queries
+  - P0: `ix_talent_tech_enabled_element`, `ix_talent_tech_enabled_direction` for tech element pages
+  - P0: `ix_favorite_user_active_created` for user favorites
+  - P1: `ix_raw_work_source_year`, `ix_raw_author_status_task`, `ix_raw_inst_status_task` for collection pipeline
+- **Redis Cache Layer**: Full caching infrastructure with graceful degradation
+  - Cache connection management with connection pooling
+  - `CacheService` with get/set/delete/delete_pattern operations
+  - TTL with random jitter to prevent cache avalanche
+  - Cache invalidation on data changes
+  - Health check integration
+- **Cursor-Based Pagination**: Replaced OFFSET pagination for better deep-page performance
+  - `get_list_by_cursor` in talent repository
+  - Supports role_type, school_id filters
+  - Next cursor encoding for seamless pagination
+- **Bulk Sync Operations**: Optimized batch processing for data synchronization
+  - `bulk_sync_schools` with single transaction upsert
+  - `bulk_sync_authors` with CS score filtering
+  - Returns `new_talents` list for downstream work fetching
+- **Metrics Collection**: Prometheus-compatible metrics system
+  - Counter, Gauge, Histogram metric types
+  - `/api/v1/metrics` endpoint (Prometheus format)
+  - `/api/v1/metrics/json` endpoint (JSON format)
+  - HTTP request tracking with path normalization
+- **Enhanced Health Check**: Comprehensive health monitoring
+  - `/api/v1/health` - full health status with database and cache
+  - `/api/v1/health/ready` - readiness probe for K8s
+  - `/api/v1/health/live` - liveness probe
+
+#### Frontend
+- **React Query Integration**: Client-side caching and request deduplication
+  - QueryClient setup with 5-minute stale time
+  - API hooks using `useQuery` and `useMutation`
+  - Automatic background refetching
+  - Cache key management for tech elements
+- **Query Client Provider**: Root-level query client configuration
+
+#### Documentation
+- v1.3 version plan with architecture upgrade roadmap
+- Performance index verification script
+
+### Changed
+
+#### Backend
+- Database configuration supports both SQLite (dev) and PostgreSQL (prod)
+- Statistics endpoints utilize cache layer when available
+- Collection pipeline triggers cache invalidation on completion
+
+#### Frontend
+- API service layer refactored to use React Query hooks
+- Homepage data cached with automatic refresh
+
+### Technical Details
+- Backend tests: 320 passed (up from 249)
+- Frontend E2E tests: 38 tests
+- Cache hit latency: < 10ms
+- Query performance improvement: 3-5x on indexed queries
+
 ## [1.2.2] - 2026-04-03
 
 ### Fixed
@@ -121,6 +184,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frontend: React 18 + TypeScript + Vite + Ant Design v5
 - Database: SQLite (dev) / PostgreSQL (prod)
 
+[1.3.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/akxlhw/AI4TALENTS/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/akxlhw/AI4TALENTS/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.1.0...v1.2.0

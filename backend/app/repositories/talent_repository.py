@@ -97,6 +97,93 @@ class TalentRepository:
 
         return talents, total
 
+    async def get_list_by_cursor(
+        self,
+        cursor: int | None = None,
+        page_size: int = 20,
+        school_id: int | None = None,
+        country_code: str | None = None,
+        role_type: str | None = None,
+        min_works: int | None = None,
+        min_citations: int | None = None,
+        keyword: str | None = None,
+        visible_only: bool = True,
+    ) -> tuple[list[Talent], int | None]:
+        """
+        Get talents using cursor-based pagination (efficient for deep pagination).
+
+        Cursor-based pagination uses talent_id as the cursor, which is much more
+        efficient than OFFSET for large datasets.
+
+        Args:
+            cursor: Last talent_id from previous page (None for first page)
+            page_size: Items per page
+            school_id: Filter by school ID
+            country_code: Filter by country code
+            role_type: Filter by role type
+            min_works: Minimum works count
+            min_citations: Minimum citation count
+            keyword: Search keyword
+            visible_only: If True, only return visible talents
+
+        Returns:
+            Tuple of (list of talents, next_cursor or None if no more pages)
+        """
+        # Use a subquery approach for efficient filtering with cursor
+        # Order by talent_id descending for consistent pagination
+        query = (
+            select(Talent)
+            .options(selectinload(Talent.school))
+            .order_by(Talent.talent_id.desc())
+        )
+
+        # Apply cursor filter (get items with id < cursor)
+        if cursor is not None:
+            query = query.where(Talent.talent_id < cursor)
+
+        # Apply filters
+        if visible_only:
+            query = query.where(Talent.is_visible.is_(True))
+
+        if school_id:
+            query = query.where(Talent.school_id == school_id)
+
+        if country_code:
+            query = query.join(School).where(School.country_code == country_code.upper())
+
+        if role_type:
+            query = query.where(Talent.role_type == role_type)
+
+        if min_works is not None:
+            query = query.where(Talent.works_count >= min_works)
+
+        if min_citations is not None:
+            query = query.where(Talent.cited_by_count >= min_citations)
+
+        if keyword:
+            keyword_pattern = f"%{keyword}%"
+            query = query.where(
+                or_(
+                    Talent.name.ilike(keyword_pattern),
+                    Talent.name_en.ilike(keyword_pattern),
+                    Talent.current_title.ilike(keyword_pattern),
+                )
+            )
+
+        # Fetch one extra to determine if there's a next page
+        query = query.limit(page_size + 1)
+
+        result = await self.session.execute(query)
+        talents = list(result.scalars().all())
+
+        # Determine next cursor
+        next_cursor = None
+        if len(talents) > page_size:
+            talents = talents[:page_size]
+            next_cursor = talents[-1].talent_id
+
+        return talents, next_cursor
+
     async def get_by_id(
         self, talent_id: int, include_relations: bool = True
     ) -> Talent | None:

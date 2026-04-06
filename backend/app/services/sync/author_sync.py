@@ -10,8 +10,10 @@ from datetime import datetime, timezone
 UTC = timezone.utc
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import IS_SQLITE
 from app.models.enums import VisibilityStatus
 from app.models.school import School
 from app.models.standardized import StdAuthor
@@ -202,3 +204,260 @@ class AuthorSyncService:
             profile = await self._create_role_profile(talent, role_result)
 
         return profile
+
+    # ========================================
+    # Bulk Operations (PostgreSQL optimized)
+    # ========================================
+
+    async def bulk_sync_authors(
+        self,
+        std_authors: list[StdAuthor],
+        school_id_map: dict[str, int] | None = None,
+    ) -> dict:
+        """
+        Bulk sync standardized authors to serving layer Talent table.
+
+        Uses PostgreSQL INSERT ON CONFLICT for efficient bulk upsert.
+        Falls back to individual processing for SQLite.
+
+        Args:
+            std_authors: List of standardized author objects
+            school_id_map: Optional mapping from openalex_institution_id to school_id
+
+        Returns:
+            dict: {
+                "synced": int,      # Total processed (passed CS filter)
+                "created": int,     # New records created
+                "updated": int,     # Existing records updated
+                "filtered": int,    # Filtered due to low CS score
+                "new_talents": list # List of new talent dicts for work fetching
+            }
+        """
+        result = {
+            "synced": 0,
+            "created": 0,
+            "updated": 0,
+            "filtered": 0,
+            "new_talents": [],
+        }
+
+        if not std_authors:
+            return result
+
+        # Filter by CS score first
+        eligible_authors = [
+            a for a in std_authors
+            if (a.cs_concepts_score or 0.0) >= CS_SCORE_THRESHOLD
+        ]
+        result["filtered"] = len(std_authors) - len(eligible_authors)
+
+        if not eligible_authors:
+            logger.info(f"[BULK_SYNC] All {len(std_authors)} authors filtered by CS score")
+            return result
+
+        logger.info(
+            f"[BULK_SYNC] Processing {len(eligible_authors)} authors "
+            f"({result['filtered']} filtered)"
+        )
+
+        # Use PostgreSQL bulk upsert
+        if not IS_SQLITE:
+            return await self._bulk_upsert_postgres(eligible_authors, school_id_map, result)
+        else:
+            return await self._bulk_upsert_sqlite(eligible_authors, school_id_map, result)
+
+    async def _bulk_upsert_postgres(
+        self,
+        std_authors: list[StdAuthor],
+        school_id_map: dict[str, int] | None,
+        result: dict,
+    ) -> dict:
+        """PostgreSQL-optimized bulk upsert using ON CONFLICT."""
+
+        # Get existing talents to determine created vs updated
+        author_ids = [a.openalex_author_id for a in std_authors]
+        existing_result = await self.session.execute(
+            select(Talent.source_record_id, Talent.talent_id).where(
+                Talent.source_record_id.in_(author_ids)
+            )
+        )
+        existing_map = {row.source_record_id: row.talent_id for row in existing_result.all()}
+
+        # Prepare bulk data
+        now = datetime.now(timezone.utc).isoformat()
+        talent_data = []
+        profile_data = []
+
+        for std_author in std_authors:
+            # Get school ID
+            school_id = None
+            if school_id_map and std_author.school:
+                school_id = school_id_map.get(std_author.school.openalex_institution_id)
+
+            # Role identification
+            role_result = RoleIdentifier.identify(
+                works_count=std_author.works_count or 0,
+                cited_by_count=std_author.cited_by_count or 0,
+                h_index=std_author.h_index or 0
+            )
+
+            talent_dict = {
+                "std_author_id": std_author.std_author_id,
+                "source_type": "openalex",
+                "source_record_id": std_author.openalex_author_id,
+                "name": std_author.name_normalized,
+                "name_en": std_author.name_original,
+                "orcid": std_author.orcid,
+                "school_id": school_id,
+                "role_type": role_result.role_type,
+                "role_confidence": role_result.confidence,
+                "works_count": std_author.works_count or 0,
+                "cited_by_count": std_author.cited_by_count or 0,
+                "h_index": std_author.h_index or 0,
+                "openalex_topics": std_author.openalex_topics or [],
+                "visibility_status": VisibilityStatus.ACTIVE.value,
+                "is_visible": True,
+            }
+            talent_data.append(talent_dict)
+
+            # Track if this is a new talent
+            is_new = std_author.openalex_author_id not in existing_map
+            if is_new:
+                result["created"] += 1
+            else:
+                result["updated"] += 1
+
+        # Execute bulk upsert
+        if talent_data:
+            stmt = pg_insert(Talent).values(talent_data)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["source_record_id"],
+                set_={
+                    "name": stmt.excluded.name,
+                    "name_en": stmt.excluded.name_en,
+                    "orcid": stmt.excluded.orcid,
+                    "std_author_id": stmt.excluded.std_author_id,
+                    "school_id": stmt.excluded.school_id,
+                    "role_type": stmt.excluded.role_type,
+                    "role_confidence": stmt.excluded.role_confidence,
+                    "works_count": stmt.excluded.works_count,
+                    "cited_by_count": stmt.excluded.cited_by_count,
+                    "h_index": stmt.excluded.h_index,
+                    "openalex_topics": stmt.excluded.openalex_topics,
+                    "updated_at": stmt.excluded.updated_at,
+                }
+            )
+            await self.session.execute(stmt)
+
+        result["synced"] = len(std_authors)
+
+        # Bulk create role profiles (separate query for new talents)
+        if result["created"] > 0:
+            # Get newly created talent IDs
+            new_result = await self.session.execute(
+                select(Talent.talent_id, Talent.source_record_id, Talent.role_type,
+                       Talent.role_confidence).where(
+                    Talent.source_record_id.in_([
+                        a.openalex_author_id for a in std_authors
+                        if a.openalex_author_id not in existing_map
+                    ])
+                )
+            )
+
+            for row in new_result.all():
+                # Get role reason from original author
+                author = next(
+                    (a for a in std_authors if a.openalex_author_id == row.source_record_id),
+                    None
+                )
+                if author:
+                    role_result = RoleIdentifier.identify(
+                        works_count=author.works_count or 0,
+                        cited_by_count=author.cited_by_count or 0,
+                        h_index=author.h_index or 0
+                    )
+                    profile_data.append({
+                        "talent_id": row.talent_id,
+                        "role_type": row.role_type,
+                        "role_confidence": row.role_confidence,
+                        "role_reason": role_result.reason,
+                        "identification_method": "heuristic",
+                        "identified_at": now,
+                    })
+
+                    # Track new professors for work fetching
+                    if row.role_type == "professor":
+                        result["new_talents"].append({
+                            "talent_id": row.talent_id,
+                            "openalex_author_id": row.source_record_id,
+                            "works_count": author.works_count or 0 if author else 0,
+                        })
+
+            if profile_data:
+                profile_stmt = pg_insert(RoleProfile).values(profile_data)
+                profile_stmt = profile_stmt.on_conflict_do_update(
+                    index_elements=["talent_id"],
+                    set_={
+                        "role_type": profile_stmt.excluded.role_type,
+                        "role_confidence": profile_stmt.excluded.role_confidence,
+                        "role_reason": profile_stmt.excluded.role_reason,
+                        "identification_method": profile_stmt.excluded.identification_method,
+                        "identified_at": profile_stmt.excluded.identified_at,
+                    }
+                )
+                await self.session.execute(profile_stmt)
+
+        logger.info(
+            f"[BULK_SYNC] PostgreSQL upsert complete: "
+            f"{result['created']} created, {result['updated']} updated"
+        )
+
+        return result
+
+    async def _bulk_upsert_sqlite(
+        self,
+        std_authors: list[StdAuthor],
+        school_id_map: dict[str, int] | None,
+        result: dict,
+    ) -> dict:
+        """SQLite fallback: process in batches with periodic commits."""
+
+        batch_size = 100
+        for i in range(0, len(std_authors), batch_size):
+            batch = std_authors[i:i + batch_size]
+
+            for std_author in batch:
+                try:
+                    # Get school ID
+                    school_id = None
+                    if school_id_map and std_author.school:
+                        school_id = school_id_map.get(std_author.school.openalex_institution_id)
+
+                    # Sync individual author
+                    talent, is_new = await self.sync_author_to_talent(
+                        std_author, update_existing=True
+                    )
+
+                    if talent:
+                        result["synced"] += 1
+                        if is_new:
+                            result["created"] += 1
+                            if talent.role_type == "professor" and talent.works_count > 5:
+                                result["new_talents"].append({
+                                    "talent_id": talent.talent_id,
+                                    "openalex_author_id": std_author.openalex_author_id,
+                                    "works_count": talent.works_count,
+                                })
+                        else:
+                            result["updated"] += 1
+
+                except Exception as e:
+                    logger.error(
+                        f"[BULK_SYNC] Failed to sync {std_author.openalex_author_id}: {e}"
+                    )
+
+            # Commit batch
+            if (i + batch_size) % 500 == 0:
+                await self.session.commit()
+
+        return result

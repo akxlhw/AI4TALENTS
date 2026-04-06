@@ -9,8 +9,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.database import IS_SQLITE
 from app.models.raw_data import AuthorTechBelong
 from app.models.standardized import StdAuthor
+from app.models.talent import Talent
 from app.services.sync.author_sync import AuthorSyncService
 from app.services.sync.school_sync import SchoolSyncService
 from app.services.sync.tech_tag_sync import TechTagSyncService
@@ -79,6 +81,10 @@ class ServingLayerOrchestrator:
             "errors": []
         }
 
+        # Use bulk sync for PostgreSQL (much faster)
+        if not IS_SQLITE:
+            return await self._bulk_sync_all(task_id, tech_element_id, default_tech_direction_id, stats)
+
         # 1. First sync schools (so authors can reference them)
         await self._sync_schools(task_id, tech_element_id, stats)
 
@@ -97,6 +103,115 @@ class ServingLayerOrchestrator:
 
         return stats
 
+    async def _bulk_sync_all(
+        self,
+        task_id: int,
+        tech_element_id: int,
+        default_tech_direction_id: int | None,
+        stats: dict
+    ) -> dict:
+        """
+        PostgreSQL-optimized bulk sync using ON CONFLICT.
+
+        This method uses bulk operations for maximum performance.
+        """
+        from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
+
+        # Get AuthorTechBelong records for this task and tech element
+        belong_result = await self.session.execute(
+            select(AuthorTechBelong).where(
+                AuthorTechBelong.source_task_id == task_id,
+                AuthorTechBelong.tech_element_id == tech_element_id
+            )
+        )
+        belongs = belong_result.scalars().all()
+
+        if not belongs:
+            logger.warning(f"[BULK_SYNC] No AuthorTechBelong found for task_id={task_id}")
+            return stats
+
+        # Get unique openalex_author_ids
+        author_ids = list({b.openalex_author_id for b in belongs})
+        logger.info(f"[BULK_SYNC] Found {len(belongs)} tech belong records, {len(author_ids)} unique authors")
+
+        # Get StdAuthors with their schools
+        std_authors = await self._batch_get_std_authors(author_ids)
+        logger.info(f"[BULK_SYNC] Found {len(std_authors)} standardized authors")
+
+        # Log CS score distribution
+        cs_scores = [sa.cs_concepts_score for sa in std_authors if sa.cs_concepts_score is not None]
+        if cs_scores:
+            above_threshold = sum(1 for s in cs_scores if s >= CS_SCORE_THRESHOLD)
+            logger.info(f"[BULK_SYNC] CS score distribution: {len(cs_scores)} authors, {above_threshold} >= {CS_SCORE_THRESHOLD}")
+
+        # 1. Bulk sync schools first
+        schools_to_sync = {}
+        for std_author in std_authors:
+            if std_author.school and std_author.school.openalex_institution_id:
+                inst_id = std_author.school.openalex_institution_id
+                if inst_id not in schools_to_sync:
+                    schools_to_sync[inst_id] = std_author.school
+
+        if schools_to_sync:
+            school_result = await self.school_sync.bulk_sync_schools(list(schools_to_sync.values()))
+            stats["schools_synced"] = school_result["synced"]
+            stats["schools_created"] = school_result["created"]
+            school_id_map = school_result["school_id_map"]
+        else:
+            school_id_map = {}
+
+        # 2. Bulk sync authors
+        author_result = await self.author_sync.bulk_sync_authors(std_authors, school_id_map)
+        stats["authors_synced"] = author_result["synced"]
+        stats["authors_created"] = author_result["created"]
+        stats["authors_updated"] = author_result["updated"]
+        stats["authors_filtered"] = author_result["filtered"]
+        stats["new_talents_for_works"] = author_result.get("new_talents", [])
+
+        # 3. Sync tech tags (still individual, but batched)
+        # Get all talents that were synced
+        synced_author_ids = [
+            a.openalex_author_id for a in std_authors
+            if (a.cs_concepts_score or 0.0) >= CS_SCORE_THRESHOLD
+        ]
+
+        if synced_author_ids:
+            talent_result = await self.session.execute(
+                select(Talent.talent_id, Talent.source_record_id).where(
+                    Talent.source_record_id.in_(synced_author_ids)
+                )
+            )
+            talent_map = {row.source_record_id: row.talent_id for row in talent_result.all()}
+
+            # Build belongs map by author
+            belongs_by_author = {}
+            for b in belongs:
+                if b.openalex_author_id not in belongs_by_author:
+                    belongs_by_author[b.openalex_author_id] = []
+                belongs_by_author[b.openalex_author_id].append(b)
+
+            # Batch sync tech tags
+            for openalex_id, talent_id in talent_map.items():
+                author_belongs = belongs_by_author.get(openalex_id, [])
+                if author_belongs:
+                    # Create minimal talent object for tech_tag_sync
+                    talent = Talent(talent_id=talent_id)
+                    tag_count = await self.tech_tag_sync.sync_talent_tech_tags(
+                        talent, author_belongs, default_tech_direction_id
+                    )
+                    stats["tags_created"] += tag_count
+
+        await self.session.flush()
+
+        logger.info(
+            f"[BULK_SYNC] Completed: {stats['authors_synced']} authors "
+            f"({stats['authors_created']} created, {stats['authors_updated']} updated), "
+            f"{stats['authors_filtered']} filtered, "
+            f"{stats['schools_synced']} schools, {stats['tags_created']} tags"
+        )
+
+        return stats
+
     async def _sync_authors(
         self,
         task_id: int,
@@ -104,7 +219,7 @@ class ServingLayerOrchestrator:
         default_tech_direction_id: int | None,
         stats: dict
     ):
-        """Sync all authors for a task"""
+        """Sync all authors for a task (SQLite fallback)"""
         from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
 
         # Get AuthorTechBelong records for this task and tech element
@@ -182,7 +297,7 @@ class ServingLayerOrchestrator:
         logger.info(f"[SYNC] Author sync complete: created={stats['authors_created']}, updated={stats['authors_updated']}, filtered={stats['authors_filtered']}")
 
     async def _sync_schools(self, task_id: int, tech_element_id: int, stats: dict):
-        """Sync all schools for a task - called BEFORE author sync"""
+        """Sync all schools for a task - called BEFORE author sync (SQLite fallback)"""
         # Get AuthorTechBelong records for this task and tech element
         belong_result = await self.session.execute(
             select(AuthorTechBelong).where(

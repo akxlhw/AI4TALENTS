@@ -7,6 +7,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import get_cache_connection
 from app.core.database import get_async_session
 from app.repositories.tech_element_repository import TechElementRepository
 from app.schemas.common import PaginatedResponse
@@ -22,6 +23,8 @@ from app.schemas.tech_element import (
     TechElementStatsResponse,
     TechElementSummary,
 )
+from app.services.cache_keys import CacheKeys, CacheTTL
+from app.services.cache_service import CacheService
 
 router = APIRouter(prefix="/tech-elements", tags=["Tech Elements"])
 
@@ -90,8 +93,24 @@ async def get_overall_stats(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get overall statistics for user's permission scope."""
-    repo = TechElementRepository(session)
-    stats = await repo.get_overall_stats()
+    cache_conn = await get_cache_connection()
+    cache = CacheService(cache_conn)
+
+    async def fetch_stats():
+        repo = TechElementRepository(session)
+        return await repo.get_overall_stats()
+
+    stats = await cache.get_or_set(
+        CacheKeys.STATS_OVERALL,
+        factory=fetch_stats,
+        ttl=CacheTTL.MEDIUM,
+    )
+
+    if not stats:
+        # Fallback to direct query
+        repo = TechElementRepository(session)
+        stats = await repo.get_overall_stats()
+
     return OverallStatsResponse(**stats)
 
 
@@ -236,7 +255,23 @@ async def get_element_stats(
     if not element:
         raise HTTPException(status_code=404, detail="Tech element not found")
 
-    stats = await repo.get_element_stats(element_id)
+    cache_conn = await get_cache_connection()
+    cache = CacheService(cache_conn)
+    cache_key = CacheKeys.STATS_TECH_ELEMENT.format(element_id=element_id)
+
+    async def fetch_stats():
+        return await repo.get_element_stats(element_id)
+
+    stats = await cache.get_or_set(
+        cache_key,
+        factory=fetch_stats,
+        ttl=CacheTTL.MEDIUM,
+    )
+
+    if not stats:
+        # Fallback to direct query
+        stats = await repo.get_element_stats(element_id)
+
     return TechElementStatsResponse(**stats)
 
 

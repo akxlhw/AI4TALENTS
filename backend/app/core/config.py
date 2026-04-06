@@ -50,6 +50,14 @@ class Settings(BaseSettings):
     BATCH_SIZE: int = 1000
     SYNC_TIMEOUT: int = 3600  # 1 hour
 
+    # Redis / Cache
+    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_ENABLED: bool = False  # Default disabled for development
+    REDIS_PASSWORD: str | None = None
+    REDIS_MAX_CONNECTIONS: int = 10
+    CACHE_DEFAULT_TTL: int = 300  # 5 minutes
+    CACHE_KEY_PREFIX: str = "ai4talents"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

@@ -7,9 +7,11 @@ import json
 import logging
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.countries import get_country_name_cn, normalize_country_code
+from app.core.database import IS_SQLITE
 from app.models.school import School, SchoolAlias
 from app.models.standardized import StdSchool
 
@@ -117,3 +119,149 @@ class SchoolSyncService:
             await self.session.flush()
 
         return created
+
+    # ========================================
+    # Bulk Operations (PostgreSQL optimized)
+    # ========================================
+
+    async def bulk_sync_schools(
+        self,
+        std_schools: list[StdSchool],
+    ) -> dict:
+        """
+        Bulk sync standardized schools to serving layer School table.
+
+        Uses PostgreSQL INSERT ON CONFLICT for efficient bulk upsert.
+        Falls back to individual processing for SQLite.
+
+        Args:
+            std_schools: List of standardized school objects
+
+        Returns:
+            dict: {
+                "synced": int,      # Total processed
+                "created": int,     # New records created
+                "updated": int,     # Existing records updated
+                "school_id_map": dict  # Map of openalex_id -> school_id
+            }
+        """
+        result = {
+            "synced": 0,
+            "created": 0,
+            "updated": 0,
+            "school_id_map": {},
+        }
+
+        if not std_schools:
+            return result
+
+        logger.info(f"[BULK_SYNC] Processing {len(std_schools)} schools")
+
+        # Use PostgreSQL bulk upsert
+        if not IS_SQLITE:
+            return await self._bulk_upsert_postgres(std_schools, result)
+        else:
+            return await self._bulk_upsert_sqlite(std_schools, result)
+
+    async def _bulk_upsert_postgres(
+        self,
+        std_schools: list[StdSchool],
+        result: dict,
+    ) -> dict:
+        """PostgreSQL-optimized bulk upsert using ON CONFLICT."""
+
+        # Get existing schools
+        inst_ids = [s.openalex_institution_id for s in std_schools]
+        existing_result = await self.session.execute(
+            select(School.source_record_id, School.school_id).where(
+                School.source_record_id.in_(inst_ids)
+            )
+        )
+        existing_map = {row.source_record_id: row.school_id for row in existing_result.all()}
+
+        # Prepare bulk data
+        school_data = []
+        for std_school in std_schools:
+            country_code = normalize_country_code(std_school.country_code)
+            country_name = get_country_name_cn(country_code)
+
+            school_dict = {
+                "school_name": std_school.name_normalized,
+                "country_code": country_code,
+                "country_name": country_name,
+                "source_type": "openalex",
+                "source_record_id": std_school.openalex_institution_id,
+                "homepage_url": std_school.homepage_url,
+                "is_visible": True,
+                "status": "active",
+            }
+            school_data.append(school_dict)
+
+            # Track created vs updated
+            if std_school.openalex_institution_id not in existing_map:
+                result["created"] += 1
+            else:
+                result["updated"] += 1
+
+        # Execute bulk upsert
+        if school_data:
+            stmt = pg_insert(School).values(school_data)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["source_record_id"],
+                set_={
+                    "school_name": stmt.excluded.school_name,
+                    "country_code": stmt.excluded.country_code,
+                    "country_name": stmt.excluded.country_name,
+                    "homepage_url": stmt.excluded.homepage_url,
+                    "updated_at": stmt.excluded.updated_at,
+                }
+            )
+            await self.session.execute(stmt)
+
+        # Get all school IDs (both existing and newly created)
+        id_result = await self.session.execute(
+            select(School.source_record_id, School.school_id).where(
+                School.source_record_id.in_(inst_ids)
+            )
+        )
+        result["school_id_map"] = {row.source_record_id: row.school_id for row in id_result.all()}
+        result["synced"] = len(std_schools)
+
+        logger.info(
+            f"[BULK_SYNC] PostgreSQL school upsert complete: "
+            f"{result['created']} created, {result['updated']} updated"
+        )
+
+        return result
+
+    async def _bulk_upsert_sqlite(
+        self,
+        std_schools: list[StdSchool],
+        result: dict,
+    ) -> dict:
+        """SQLite fallback: process individually with periodic commits."""
+
+        for i, std_school in enumerate(std_schools):
+            try:
+                school, is_new = await self.sync_school_to_school(std_school)
+
+                result["synced"] += 1
+                if is_new:
+                    result["created"] += 1
+                else:
+                    result["updated"] += 1
+
+                # Build school_id_map
+                if school:
+                    result["school_id_map"][std_school.openalex_institution_id] = school.school_id
+
+            except Exception as e:
+                logger.error(
+                    f"[BULK_SYNC] Failed to sync {std_school.openalex_institution_id}: {e}"
+                )
+
+            # Commit every 50 schools
+            if (i + 1) % 50 == 0:
+                await self.session.commit()
+
+        return result

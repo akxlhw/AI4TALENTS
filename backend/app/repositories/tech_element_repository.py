@@ -52,15 +52,58 @@ class TechElementRepository:
         return list(result.scalars().all())
 
     async def get_element_stats(self, element_id: int | None = None) -> dict:
-        """Get statistics for tech element(s)."""
+        """Get statistics for tech element(s).
+
+        Optimized to use a single CTE query for PostgreSQL.
+        """
+        from sqlalchemy import text
+        from app.core.database import IS_SQLITE
+
         if element_id:
-            # Stats for specific element
+            if not IS_SQLITE:
+                # PostgreSQL: Single CTE query
+                cte_query = text("""
+                    WITH element_tags AS (
+                        SELECT DISTINCT ttt.talent_id, ttt.tech_direction_id,
+                               t.role_type, t.school_id
+                        FROM core_talent_tech_tag ttt
+                        INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
+                        WHERE ttt.tech_element_id = :element_id
+                    )
+                    SELECT
+                        (SELECT COUNT(DISTINCT talent_id) FROM element_tags) AS talent_count,
+                        (SELECT COUNT(DISTINCT talent_id) FROM element_tags
+                         WHERE role_type = 'professor') AS professor_count,
+                        (SELECT COUNT(DISTINCT talent_id) FROM element_tags
+                         WHERE role_type IN ('student', 'graduated')) AS student_count,
+                        (SELECT COUNT(DISTINCT tech_direction_id) FROM element_tags) AS direction_count,
+                        (SELECT COUNT(DISTINCT s.country_code)
+                         FROM element_tags et
+                         INNER JOIN core_school s ON et.school_id = s.school_id
+                         WHERE s.country_code IS NOT NULL) AS country_count,
+                        (SELECT COUNT(DISTINCT s.school_id)
+                         FROM element_tags et
+                         INNER JOIN core_school s ON et.school_id = s.school_id) AS school_count
+                """)
+
+                result = await self.session.execute(cte_query, {'element_id': element_id})
+                row = result.one()
+
+                return {
+                    'talent_count': row.talent_count or 0,
+                    'professor_count': row.professor_count or 0,
+                    'student_count': row.student_count or 0,
+                    'direction_count': row.direction_count or 0,
+                    'country_count': row.country_count or 0,
+                    'school_count': row.school_count or 0,
+                }
+
+            # SQLite fallback: Separate queries
             base_query = select(
                 func.count(func.distinct(TalentTechTag.talent_id)).label('talent_count'),
                 func.count(func.distinct(TalentTechTag.tech_direction_id)).label('direction_count'),
             ).where(TalentTechTag.tech_element_id == element_id)
 
-            # Professor count for this element
             professor_count_query = select(
                 func.count(func.distinct(Talent.talent_id))
             ).select_from(TalentTechTag).join(
@@ -70,7 +113,6 @@ class TechElementRepository:
                 Talent.role_type == 'professor'
             ))
 
-            # Student count for this element
             student_count_query = select(
                 func.count(func.distinct(Talent.talent_id))
             ).select_from(TalentTechTag).join(
@@ -80,7 +122,6 @@ class TechElementRepository:
                 Talent.role_type.in_(['student', 'graduated'])
             ))
 
-            # Country and school counts
             country_count_query = select(
                 func.count(func.distinct(School.country_code))
             ).select_from(TalentTechTag).join(
@@ -135,7 +176,56 @@ class TechElementRepository:
             }
 
     async def get_overall_stats(self) -> dict:
-        """Get overall statistics for the tech element page."""
+        """
+        Get overall statistics for the tech element page.
+
+        Optimized to use a single CTE query for PostgreSQL,
+        falls back to multiple queries for SQLite.
+        """
+        from sqlalchemy import text
+        from app.core.database import IS_SQLITE
+
+        if not IS_SQLITE:
+            # PostgreSQL: Use single CTE query for efficiency
+            cte_query = text("""
+                WITH enabled_tags AS (
+                    SELECT DISTINCT ttt.talent_id, ttt.tech_element_id,
+                           ttt.tech_direction_id, t.role_type, t.school_id
+                    FROM core_talent_tech_tag ttt
+                    INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
+                    WHERE ttt.is_enabled = true
+                )
+                SELECT
+                    (SELECT COUNT(DISTINCT talent_id) FROM enabled_tags) AS talent_count,
+                    (SELECT COUNT(DISTINCT talent_id) FROM enabled_tags
+                     WHERE role_type = 'professor') AS professor_count,
+                    (SELECT COUNT(DISTINCT talent_id) FROM enabled_tags
+                     WHERE role_type IN ('student', 'graduated')) AS student_count,
+                    (SELECT COUNT(DISTINCT tech_element_id) FROM enabled_tags) AS tech_element_count,
+                    (SELECT COUNT(DISTINCT tech_direction_id) FROM enabled_tags) AS tech_direction_count,
+                    (SELECT COUNT(DISTINCT s.country_code)
+                     FROM enabled_tags et
+                     INNER JOIN core_school s ON et.school_id = s.school_id
+                     WHERE s.country_code IS NOT NULL) AS country_count,
+                    (SELECT COUNT(DISTINCT s.school_id)
+                     FROM enabled_tags et
+                     INNER JOIN core_school s ON et.school_id = s.school_id) AS school_count
+            """)
+
+            result = await self.session.execute(cte_query)
+            row = result.one()
+
+            return {
+                'talent_count': row.talent_count or 0,
+                'professor_count': row.professor_count or 0,
+                'student_count': row.student_count or 0,
+                'country_count': row.country_count or 0,
+                'school_count': row.school_count or 0,
+                'tech_element_count': row.tech_element_count or 0,
+                'tech_direction_count': row.tech_direction_count or 0,
+            }
+
+        # SQLite fallback: Use separate queries
         # Total talent count with tech tags
         talent_count_query = select(
             func.count(func.distinct(Talent.talent_id))
@@ -310,6 +400,130 @@ class TechElementRepository:
         ]
 
         return items, total
+
+    async def get_talent_list_by_cursor(
+        self,
+        element_id: int | None = None,
+        direction_id: int | None = None,
+        country_code: str | None = None,
+        school_id: int | None = None,
+        role_type: str | None = None,
+        keyword: str | None = None,
+        cursor: int | None = None,
+        page_size: int = 20
+    ) -> tuple[list[Talent], int | None]:
+        """
+        Get talent list with cursor-based pagination (efficient for deep pagination).
+
+        Uses talent_id as cursor for consistent and efficient pagination.
+
+        Args:
+            element_id: Filter by tech element
+            direction_id: Filter by tech direction
+            country_code: Filter by country code
+            school_id: Filter by school
+            role_type: Filter by role type
+            keyword: Search keyword
+            cursor: Last talent_id from previous page
+            page_size: Items per page
+
+        Returns:
+            Tuple of (list of talents, next_cursor or None)
+        """
+        from sqlalchemy import text
+
+        # Build WHERE conditions
+        conditions = ["ttt.is_enabled = 1"]
+        params = {}
+
+        if cursor is not None:
+            conditions.append("t.talent_id < :cursor")
+            params['cursor'] = cursor
+
+        if element_id:
+            conditions.append("ttt.tech_element_id = :element_id")
+            params['element_id'] = element_id
+        if direction_id:
+            conditions.append("ttt.tech_direction_id = :direction_id")
+            params['direction_id'] = direction_id
+        if school_id:
+            conditions.append("t.school_id = :school_id")
+            params['school_id'] = school_id
+        if country_code:
+            conditions.append("s.country_code = :country_code")
+            params['country_code'] = country_code.upper()
+        if role_type:
+            conditions.append("t.role_type = :role_type")
+            params['role_type'] = role_type
+        if keyword:
+            conditions.append("t.name LIKE :keyword")
+            params['keyword'] = f'%{keyword}%'
+
+        where_clause = " AND ".join(conditions)
+
+        # Main query with cursor pagination (fetch one extra for next_cursor)
+        main_sql = text(f"""
+            SELECT DISTINCT t.talent_id, t.name, t.name_en, t.role_type,
+                   t.current_title, t.h_index, t.works_count, t.topic_tags,
+                   t.openalex_topics,
+                   s.school_id, s.school_name
+            FROM core_talent_tech_tag ttt
+            INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
+            LEFT JOIN core_school s ON t.school_id = s.school_id
+            WHERE {where_clause}
+            ORDER BY t.talent_id DESC
+            LIMIT :limit
+        """)
+        params['limit'] = page_size + 1
+
+        result = await self.session.execute(main_sql, params)
+
+        # Build Talent objects
+        talents = []
+        for row in result.fetchall():
+            import json
+
+            topic_tags = row.topic_tags or []
+            if isinstance(topic_tags, str):
+                try:
+                    topic_tags = json.loads(topic_tags)
+                except (json.JSONDecodeError, TypeError):
+                    topic_tags = []
+
+            openalex_topics = row.openalex_topics if hasattr(row, 'openalex_topics') else []
+            if openalex_topics is None:
+                openalex_topics = []
+            if isinstance(openalex_topics, str):
+                try:
+                    openalex_topics = json.loads(openalex_topics)
+                except (json.JSONDecodeError, TypeError):
+                    openalex_topics = []
+
+            talent = Talent(
+                talent_id=row.talent_id,
+                name=row.name,
+                name_en=row.name_en,
+                role_type=row.role_type,
+                current_title=row.current_title,
+                h_index=row.h_index,
+                works_count=row.works_count,
+                topic_tags=topic_tags,
+                openalex_topics=openalex_topics,
+            )
+            if row.school_id:
+                talent.school = School(
+                    school_id=row.school_id,
+                    school_name=row.school_name,
+                )
+            talents.append(talent)
+
+        # Determine next cursor
+        next_cursor = None
+        if len(talents) > page_size:
+            talents = talents[:page_size]
+            next_cursor = talents[-1].talent_id
+
+        return talents, next_cursor
 
     async def get_talent_list(
         self, element_id: int | None = None, direction_id: int | None = None,
