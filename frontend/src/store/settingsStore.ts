@@ -19,7 +19,7 @@ interface ColumnConfig {
 interface SearchTemplate {
   id: string
   name: string
-  filters: Record<string, any>
+  filters: Record<string, string | number | undefined>
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
   createdAt: string

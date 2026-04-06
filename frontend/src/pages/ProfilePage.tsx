@@ -51,7 +51,7 @@ const ProfilePage: React.FC = () => {
     try {
       const response = await api.auth.me()
       setUser(response.data)
-    } catch (error) {
+    } catch {
       message.error('获取用户信息失败')
     } finally {
       setLoading(false)
@@ -73,8 +73,9 @@ const ProfilePage: React.FC = () => {
       await api.auth.changePassword(values.currentPassword, values.newPassword)
       message.success('密码修改成功')
       form.resetFields()
-    } catch (error: any) {
-      message.error(error.response?.data?.detail || '密码修改失败')
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { detail?: string } } }
+      message.error(axiosError.response?.data?.detail || '密码修改失败')
     } finally {
       setPasswordLoading(false)
     }

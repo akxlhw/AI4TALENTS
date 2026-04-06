@@ -62,7 +62,7 @@ const CollaborationGraph: React.FC<CollaborationGraphProps> = ({
     return {
       tooltip: {
         trigger: 'item',
-        formatter: (params: any) => {
+        formatter: (params: { dataType: string; data: { name?: string; id?: string; source?: string; target?: string; value?: number } }) => {
           if (params.dataType === 'node') {
             return `${params.data.name}<br/>合作次数: ${nodes.find(n => n.id === params.data.id)?.collaborationCount || 0}`
           }
@@ -146,7 +146,7 @@ const CollaborationGraph: React.FC<CollaborationGraphProps> = ({
       option={option}
       style={{ height: 400, width: '100%' }}
       onEvents={{
-        click: (params: any) => {
+        click: (params: { dataType: string; data: { id: string } }) => {
           if (params.dataType === 'node' && onNodeClick) {
             onNodeClick(params.data.id)
           }

@@ -5,6 +5,7 @@ import {
   Input,
   InputRef,
   Table,
+  type TablePaginationConfig,
   Typography,
   Tag,
   Space,
@@ -139,8 +140,8 @@ const SearchPage: React.FC = () => {
       setSchools(schoolsRes.data.items || [])
       setCountries(countriesRes.data.items || [])
       setTechElements(techElementsRes.data.items || [])
-    } catch (error) {
-      console.error('Failed to load reference data:', error)
+    } catch (err) {
+      console.error('Failed to load reference data:', err)
     }
   }, [])
 
@@ -208,8 +209,8 @@ const SearchPage: React.FC = () => {
       setResults(filteredItems)
       setTotal(data.total || filteredItems.length)
       setPage(pageNum)
-    } catch (error) {
-      console.error('Search failed:', error)
+    } catch (err) {
+      console.error('Search failed:', err)
     } finally {
       setLoading(false)
     }
@@ -225,8 +226,8 @@ const SearchPage: React.FC = () => {
     performSearch(value, 1)
   }
 
-  const handleTableChange = (pagination: any) => {
-    performSearch(query, pagination.current)
+  const handleTableChange = (pagination: TablePaginationConfig) => {
+    performSearch(query, pagination.current || 1)
   }
 
   const handleFilterChange = () => {
@@ -270,7 +271,7 @@ const SearchPage: React.FC = () => {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
       message.success(`已导出 ${selectedRowKeys.length} 位候选人`)
-    } catch (error) {
+    } catch {
       message.error('导出失败')
     } finally {
       setExporting(false)

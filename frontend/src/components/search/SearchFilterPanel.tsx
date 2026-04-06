@@ -33,7 +33,7 @@ export interface SearchFilterPanelProps {
   techElementOptions: DropdownOption[]
   directionOptions: DropdownOption[]
   // 回调
-  onFilterChange: (key: keyof SearchFilterValues, value: any) => void
+  onFilterChange: (key: keyof SearchFilterValues, value: string | number | undefined) => void
   onResetFilters: () => void
   onOpenColumnSettings: () => void
   onOpenTemplateMenu: () => void

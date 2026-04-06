@@ -131,7 +131,7 @@ const DataVersionPage: React.FC = () => {
       const response = await api.dataVersion.listVersions({ page: versionPage, page_size: 10 })
       setVersions(response.data.items)
       setVersionTotal(response.data.total)
-    } catch (error) {
+    } catch {
       message.error('加载版本列表失败')
     }
   }
@@ -140,7 +140,7 @@ const DataVersionPage: React.FC = () => {
     try {
       const response = await api.dataVersion.getActiveVersion()
       setActiveVersion(response.data)
-    } catch (error) {
+    } catch {
       // No active version
     }
   }
@@ -149,7 +149,7 @@ const DataVersionPage: React.FC = () => {
     try {
       const response = await api.dataVersion.getQualityMetrics()
       setQualityMetrics(response.data)
-    } catch (error) {
+    } catch {
       // No metrics
     }
   }
@@ -159,7 +159,7 @@ const DataVersionPage: React.FC = () => {
       const response = await api.dataVersion.listCorrections({ page: correctionPage, page_size: 10 })
       setCorrections(response.data.items)
       setCorrectionTotal(response.data.total)
-    } catch (error) {
+    } catch {
       message.error('加载纠偏记录失败')
     }
   }

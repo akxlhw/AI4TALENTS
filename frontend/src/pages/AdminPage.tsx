@@ -94,7 +94,7 @@ const AdminPage: React.FC = () => {
       const response = await api.admin.listUsers({ page, page_size: pageSize })
       setUsers(response.data.items)
       setTotal(response.data.total)
-    } catch (error) {
+    } catch {
       message.error('加载用户列表失败')
     } finally {
       setLoading(false)
@@ -149,7 +149,7 @@ const AdminPage: React.FC = () => {
     try {
       const response = await api.admin.getUserScopes(userId)
       setUserScopes(response.data.items)
-    } catch (error) {
+    } catch {
       message.error('加载权限失败')
     }
     setScopeModalVisible(true)

@@ -7,12 +7,12 @@
  * 3. 任务状态显示
  * 4. 任务进度追踪
  */
-import { test, expect } from '@playwright/test';
+import { test, Page } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:5173';
 
 // 登录辅助函数
-async function login(page: any) {
+async function login(page: Page) {
   await page.goto(BASE_URL);
   await page.waitForLoadState('networkidle');
 
@@ -47,7 +47,7 @@ async function login(page: any) {
 }
 
 // 导航到采集页面
-async function gotoCollectPage(page: any) {
+async function gotoCollectPage(page: Page) {
   await login(page);
   await page.waitForTimeout(1000);
 

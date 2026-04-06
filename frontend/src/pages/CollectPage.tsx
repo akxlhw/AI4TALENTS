@@ -141,7 +141,7 @@ const CollectPage: React.FC = () => {
     try {
       const response = await api.collect.listTechElements()
       setTechElements(response.data.items || [])
-    } catch (error) {
+    } catch (_error) {
       message.error('加载技术要素失败')
     } finally {
       setLoading(false)
@@ -176,9 +176,9 @@ const CollectPage: React.FC = () => {
         .filter((b: VenueBinding) => b.is_enabled)
         .map((b: VenueBinding) => String(b.venue_id))
       setSelectedVenueIds(enabledIds)
-    } catch (error) {
-      console.error('[loadTechElementVenues] 加载失败', error)
-      message.error(`加载顶会顶刊列表失败: ${getErrorMessage(error, '未知错误')}`)
+    } catch (_error) {
+      console.error("[API Error]", _error)
+      message.error(`加载顶会顶刊列表失败: ${getErrorMessage(_error, '未知错误')}`)
       setAllVenues([])
       setSelectedVenueIds([])
     } finally {
@@ -206,9 +206,9 @@ const CollectPage: React.FC = () => {
       message.success('配置更新成功')
       setVenueModalVisible(false)
       loadTechElements()
-    } catch (error) {
-      console.error('[handleSaveVenues] 保存失败', error)
-      message.error(getErrorMessage(error, '更新失败'))
+    } catch (_error) {
+      console.error("[API Error]", _error)
+      message.error(getErrorMessage(_error, '更新失败'))
     }
   }
 
@@ -232,8 +232,8 @@ const CollectPage: React.FC = () => {
       setCollectModalVisible(false)
       setActiveTab('tasks')
       loadTasks()
-    } catch (error) {
-      message.error(getErrorMessage(error, '启动失败'))
+    } catch (_error) {
+      message.error(getErrorMessage(_error, '启动失败'))
     }
   }
 
@@ -244,7 +244,7 @@ const CollectPage: React.FC = () => {
       const response = await api.collect.listTasks({ page: taskPage, page_size: 10 })
       setTasks(response.data.items || [])
       setTaskTotal(response.data.total || 0)
-    } catch (error) {
+    } catch (_error) {
       message.error('加载任务列表失败')
     } finally {
       setLoading(false)
@@ -256,8 +256,8 @@ const CollectPage: React.FC = () => {
       await api.collect.cancelTask(taskId)
       message.success('任务已取消')
       loadTasks()
-    } catch (error) {
-      message.error(getErrorMessage(error, '取消失败'))
+    } catch (_error) {
+      message.error(getErrorMessage(_error, '取消失败'))
     }
   }
 
@@ -272,8 +272,8 @@ const CollectPage: React.FC = () => {
       message.success('任务已删除')
       setTaskDetailVisible(false)
       loadTasks()
-    } catch (error) {
-      message.error(getErrorMessage(error, '删除失败'))
+    } catch (_error) {
+      message.error(getErrorMessage(_error, '删除失败'))
     }
   }
 
@@ -284,7 +284,7 @@ const CollectPage: React.FC = () => {
       const response = await api.talents.getCollaborationSyncStatus()
       setCollabSyncStatus(response.data.sync_progress)
       setCollabDataStatus(response.data.data_status)
-    } catch (error) {
+    } catch (_error) {
       message.error('加载同步状态失败')
     } finally {
       setCollabSyncLoading(false)
@@ -318,15 +318,15 @@ const CollectPage: React.FC = () => {
               message.success(`同步完成！处理 ${progress.processed} 篇论文，创建 ${progress.collaborations} 条合作关系`)
             }
           }
-        } catch (err) {
-          console.error('轮询状态失败:', err)
+        } catch (_error) {
+          console.error("Operation failed")
         }
       }, 1000)
 
       // 60秒后停止轮询（防止无限轮询）
       setTimeout(() => clearInterval(pollInterval), 60000)
-    } catch (error) {
-      message.error(getErrorMessage(error, '启动同步失败'))
+    } catch (_error) {
+      message.error(getErrorMessage(_error, '启动同步失败'))
       setCollabSyncStatus(null)
     }
   }

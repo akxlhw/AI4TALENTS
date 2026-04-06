@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, Page } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:5173';
 
 // 登录辅助函数
-async function login(page: any) {
+async function login(page: Page) {
   await page.goto(BASE_URL);
   await page.waitForLoadState('networkidle');
 
@@ -38,7 +38,7 @@ async function login(page: any) {
 }
 
 // 导航到搜索页面
-async function goToSearchPage(page: any) {
+async function goToSearchPage(page: Page) {
   // 尝试点击导航菜单中的搜索项
   const searchMenuItem = page.locator('text=/人才搜索|搜索/i').first();
   if (await searchMenuItem.isVisible()) {

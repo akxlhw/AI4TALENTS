@@ -29,7 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const response = await api.auth.me()
           setUser(response.data)
-        } catch (error) {
+        } catch {
           // Token is invalid or expired
           localStorage.removeItem('token')
           localStorage.removeItem('refresh_token')
@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(async () => {
     try {
       await api.auth.logout()
-    } catch (error) {
+    } catch {
       // Ignore logout errors
     } finally {
       localStorage.removeItem('token')
@@ -72,8 +72,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await api.auth.me()
       setUser(response.data)
-    } catch (error) {
-      console.error('Failed to refresh user:', error)
+    } catch (err) {
+      console.error('Failed to refresh user:', err)
     }
   }, [])
 

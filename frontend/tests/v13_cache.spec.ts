@@ -4,12 +4,12 @@
  * - Tech Element page with filters
  * - Performance metrics
  */
-import { test, expect } from '@playwright/test';
+import { test, Page } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:5173';
 
 // Login helper
-async function login(page: any) {
+async function login(page: Page) {
   await page.goto(BASE_URL);
   await page.waitForLoadState('networkidle');
   await page.waitForSelector('.ant-input[placeholder="用户名或邮箱"]', { timeout: 10000 });

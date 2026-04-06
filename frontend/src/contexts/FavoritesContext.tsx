@@ -29,8 +29,8 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       ])
       setFavoriteIds(new Set(idsResponse.data))
       setFavorites(listResponse.data.items || [])
-    } catch (error) {
-      console.error('Failed to load favorites:', error)
+    } catch (err) {
+      console.error('Failed to load favorites:', err)
     } finally {
       setLoading(false)
     }
@@ -56,13 +56,14 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setFavoriteIds(prev => new Set(prev).add(talentId))
       setFavorites(prev => [response.data, ...prev])
       message.success('已添加到收藏')
-    } catch (error: any) {
-      if (error.response?.data?.detail) {
-        message.warning(error.response.data.detail)
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { detail?: string } } }
+      if (axiosError.response?.data?.detail) {
+        message.warning(axiosError.response.data.detail)
       } else {
         message.error('添加收藏失败')
       }
-      throw error
+      throw err
     }
   }, [])
 
@@ -76,9 +77,9 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       })
       setFavorites(prev => prev.filter(f => f.talent_id !== talentId))
       message.success('已取消收藏')
-    } catch (error) {
+    } catch {
       message.error('取消收藏失败')
-      throw error
+      throw new Error('取消收藏失败')
     }
   }, [])
 
@@ -89,9 +90,9 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         f.talent_id === talentId ? { ...f, notes } : f
       ))
       message.success('备注已更新')
-    } catch (error) {
+    } catch {
       message.error('更新备注失败')
-      throw error
+      throw new Error('更新备注失败')
     }
   }, [])
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Card,
   Table,
+  type TablePaginationConfig,
   Typography,
   Tag,
   Space,
@@ -100,8 +101,8 @@ const FavoritesPage: React.FC = () => {
       })
       setFavorites(response.data.items || [])
       setTotal(response.data.total || 0)
-    } catch (error) {
-      console.error('Failed to load favorites:', error)
+    } catch {
+      console.error("Operation failed")
     } finally {
       setLoading(false)
     }
@@ -112,8 +113,8 @@ const FavoritesPage: React.FC = () => {
     try {
       const response = await api.talentPools.list()
       setPools(response.data.items || [])
-    } catch (error) {
-      console.error('Failed to load pools:', error)
+    } catch {
+      console.error("Operation failed")
     } finally {
       setPoolsLoading(false)
     }
@@ -123,13 +124,13 @@ const FavoritesPage: React.FC = () => {
     try {
       const response = await api.talentPools.getFollowupStatuses()
       setFollowupStatuses(response.data || [])
-    } catch (error) {
-      console.error('Failed to load followup statuses:', error)
+    } catch {
+      console.error("Operation failed")
     }
   }
 
-  const handleTableChange = (pagination: any) => {
-    setPage(pagination.current)
+  const handleTableChange = (pagination: TablePaginationConfig) => {
+    setPage(pagination.current || 1)
   }
 
   const handleSearch = () => {
@@ -163,7 +164,7 @@ const FavoritesPage: React.FC = () => {
       ))
       setEditModalVisible(false)
       message.success('备注已更新')
-    } catch (error) {
+    } catch {
       message.error('更新备注失败')
     } finally {
       setEditLoading(false)
@@ -183,7 +184,7 @@ const FavoritesPage: React.FC = () => {
           setFavorites(prev => prev.filter(f => f.favorite_id !== record.favorite_id))
           setTotal(prev => prev - 1)
           message.success('已取消收藏')
-        } catch (error) {
+        } catch {
           message.error('取消收藏失败')
         }
       },
@@ -197,7 +198,7 @@ const FavoritesPage: React.FC = () => {
         f.talent_id === talentId ? { ...f, followup_status: status } : f
       ))
       message.success('跟进状态已更新')
-    } catch (error) {
+    } catch {
       message.error('更新失败')
     }
   }
@@ -219,7 +220,7 @@ const FavoritesPage: React.FC = () => {
       setNewPoolName('')
       setNewPoolDesc('')
       loadPools()
-    } catch (error) {
+    } catch {
       message.error('创建失败')
     } finally {
       setCreatePoolLoading(false)
@@ -235,9 +236,10 @@ const FavoritesPage: React.FC = () => {
       setAddToPoolModalVisible(false)
       setSelectedPoolId(undefined)
       setAddingToPoolFavorite(null)
-    } catch (error: any) {
-      if (error.response?.data?.detail) {
-        message.warning(error.response.data.detail)
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { detail?: string } } }
+      if (axiosError.response?.data?.detail) {
+        message.warning(axiosError.response.data.detail)
       } else {
         message.error('加入失败')
       }
@@ -271,7 +273,7 @@ const FavoritesPage: React.FC = () => {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
       message.success(`已导出 ${selectedRowKeys.length} 位候选人`)
-    } catch (error) {
+    } catch {
       message.error('导出失败')
     } finally {
       setExporting(false)
@@ -393,7 +395,7 @@ const FavoritesPage: React.FC = () => {
       key: 'actions',
       width: 140,
       fixed: 'right' as const,
-      render: (_: any, record: FavoriteTalent) => (
+      render: (_record: FavoriteTalent, record: FavoriteTalent) => (
         <Space size="small">
           <Tooltip title="加入人才池">
             <Button

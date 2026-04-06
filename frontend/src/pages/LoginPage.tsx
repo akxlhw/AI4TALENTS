@@ -11,13 +11,17 @@ interface LoginForm {
   password: string
 }
 
+interface LocationState {
+  from?: { pathname: string }
+}
+
 const LoginPage: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
   const [loading, setLoading] = useState(false)
 
-  const from = (location.state as any)?.from?.pathname || '/'
+  const from = (location.state as LocationState)?.from?.pathname || '/'
 
   const handleSubmit = async (values: LoginForm) => {
     setLoading(true)
@@ -25,8 +29,9 @@ const LoginPage: React.FC = () => {
       await login(values.username, values.password)
       // Navigate to previous page or home
       navigate(from, { replace: true })
-    } catch (error: any) {
-      const detail = error.response?.data?.detail || '登录失败，请检查用户名和密码'
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { detail?: string } } }
+      const detail = axiosError.response?.data?.detail || '登录失败，请检查用户名和密码'
       message.error(detail)
     } finally {
       setLoading(false)

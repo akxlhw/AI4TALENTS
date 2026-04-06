@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, Page } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:5173';
 
 // 登录辅助函数
-async function login(page: any) {
+async function login(page: Page) {
   await page.goto(BASE_URL);
   await page.waitForLoadState('networkidle');
   // 等待登录表单加载

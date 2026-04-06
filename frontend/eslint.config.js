@@ -23,6 +23,15 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // Allow explicit any for flexibility with third-party libraries
+      '@typescript-eslint/no-explicit-any': 'off',
+      // Allow lexical declarations in case blocks
+      'no-case-declarations': 'off',
+      // Allow unused vars that start with underscore
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
   },
 )
