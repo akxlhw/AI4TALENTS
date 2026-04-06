@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.enums import UserRoleType
 from app.models.iam import UserAccount, UserSchoolScope
+from app.models.school import School
 
 
 class UserRepository:

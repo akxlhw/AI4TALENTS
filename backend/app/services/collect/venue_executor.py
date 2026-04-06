@@ -4,9 +4,6 @@ Venue sub-task executor for collection tasks.
 import logging
 from datetime import datetime, timezone
 
-# Python 3.10 compatibility
-UTC = timezone.utc
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sync import CollectTask

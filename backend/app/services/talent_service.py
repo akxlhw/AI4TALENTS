@@ -8,9 +8,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-# Python 3.10 compatibility
-UTC = timezone.utc
-
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload

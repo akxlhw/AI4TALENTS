@@ -5,10 +5,11 @@ Technology Element Repository.
 
 from __future__ import annotations
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.database import IS_SQLITE
 from app.models.school import School
 from app.models.talent import Talent
 from app.models.tech_element import TalentTechTag, TechDirection, TechElement
@@ -56,9 +57,6 @@ class TechElementRepository:
 
         Optimized to use a single CTE query for PostgreSQL.
         """
-        from sqlalchemy import text
-        from app.core.database import IS_SQLITE
-
         if element_id:
             if not IS_SQLITE:
                 # PostgreSQL: Single CTE query
@@ -182,9 +180,6 @@ class TechElementRepository:
         Optimized to use a single CTE query for PostgreSQL,
         falls back to multiple queries for SQLite.
         """
-        from sqlalchemy import text
-        from app.core.database import IS_SQLITE
-
         if not IS_SQLITE:
             # PostgreSQL: Use single CTE query for efficiency
             cte_query = text("""

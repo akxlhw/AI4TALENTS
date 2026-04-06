@@ -15,9 +15,6 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-# Python 3.10 compatibility
-UTC = timezone.utc
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

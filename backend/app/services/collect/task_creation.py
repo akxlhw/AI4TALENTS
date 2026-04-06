@@ -6,9 +6,6 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
-# Python 3.10 compatibility
-UTC = timezone.utc
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

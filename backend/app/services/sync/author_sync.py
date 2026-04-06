@@ -6,9 +6,6 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-# Python 3.10 compatibility
-UTC = timezone.utc
-
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -429,9 +426,8 @@ class AuthorSyncService:
             for std_author in batch:
                 try:
                     # Get school ID
-                    school_id = None
                     if school_id_map and std_author.school:
-                        school_id = school_id_map.get(std_author.school.openalex_institution_id)
+                        school_id_map.get(std_author.school.openalex_institution_id)
 
                     # Sync individual author
                     talent, is_new = await self.sync_author_to_talent(

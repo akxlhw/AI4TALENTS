@@ -11,9 +11,7 @@ Provides Prometheus-compatible metrics for monitoring:
 from __future__ import annotations
 
 import time
-from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Callable
 
 # Metrics storage (in-memory for simplicity)
 # In production, use Prometheus client or similar

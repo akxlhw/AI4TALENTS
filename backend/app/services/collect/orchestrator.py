@@ -7,9 +7,6 @@ import asyncio
 import logging
 import traceback
 from datetime import datetime, timezone
-
-# Python 3.10 compatibility
-UTC = timezone.utc
 from typing import Any, TypedDict
 
 from sqlalchemy import case, func, select

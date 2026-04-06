@@ -5,9 +5,6 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-
-# Python 3.10 compatibility
-UTC = timezone.utc
 from enum import Enum
 
 from sqlalchemy import update

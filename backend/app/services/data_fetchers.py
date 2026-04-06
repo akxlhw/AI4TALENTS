@@ -9,9 +9,6 @@ import json
 import logging
 from datetime import datetime, timezone
 
-# Python 3.10 compatibility
-UTC = timezone.utc
-
 import aiohttp
 from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import (
