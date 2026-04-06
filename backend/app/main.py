@@ -62,6 +62,10 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Metrics middleware (must be early to capture all requests)
+    from app.middleware.metrics import MetricsMiddleware
+    app.add_middleware(MetricsMiddleware)
+
     # Rate limiting middleware (must be added before request logging)
     if settings.RATE_LIMIT_ENABLED:
         from app.middleware.rate_limit import RateLimitMiddleware

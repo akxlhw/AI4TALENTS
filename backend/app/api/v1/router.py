@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
     favorites,
     health,
     homepage,
+    metrics,
     overview,
     permissions,
     schools,
@@ -27,6 +28,9 @@ api_router = APIRouter()
 
 # Health endpoints
 api_router.include_router(health.router)
+
+# Metrics endpoint
+api_router.include_router(metrics.router)
 
 # Authentication endpoints
 api_router.include_router(auth.router)
