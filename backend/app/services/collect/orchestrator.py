@@ -211,7 +211,10 @@ class CollectionOrchestrator:
             # Phase 1: Execute venue sub-tasks
             await self.progress_tracker.update_progress(task, "采集论文数据", PhaseProgress.COLLECT_START)
             await self._execute_venue_sub_tasks(task, progress)
-            # Commit after venue collection to release database lock
+
+            # Update total_records immediately after Phase 1 completes
+            # This allows users to see the actual work count while task is running
+            task.total_records = progress.total_works
             await self.session.commit()
 
             # 检查取消
