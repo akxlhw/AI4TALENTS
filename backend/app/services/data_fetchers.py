@@ -37,9 +37,9 @@ MAX_WORKS_PER_VENUE = 0  # 0 means no limit
 
 # API 请求超时配置
 DEFAULT_TIMEOUT = aiohttp.ClientTimeout(
-    total=30,      # 总超时 30 秒
-    connect=10,    # 连接超时 10 秒
-    sock_read=30   # 读取超时 30 秒
+    total=120,      # 总超时 120 秒
+    connect=30,    # 连接超时 30 秒
+    sock_read=60   # 读取超时 60 秒
 )
 
 

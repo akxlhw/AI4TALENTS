@@ -29,7 +29,7 @@ from app.core.database import AsyncSessionLocal
 from app.core.auth import hash_password
 from app.models.enums import UserRoleType, ScopeType
 from app.models.iam import UserAccount, UserSchoolScope
-from app.models.tech_element import TechElement, TechDirection
+from app.models.tech_element import TechElement
 from app.models.statistics import OverviewStatSnapshot
 from app.models.venue import Venue, VenueTechBinding
 
@@ -79,12 +79,11 @@ BUSINESS_TABLES = [
 # 注意：期刊配置(config_venue, config_venue_tech_binding)永不清空，需要保留
 CONFIG_TABLES = [
     "iam_user_school_scope",
-    "core_tech_direction",
     "core_tech_element",
     "iam_user_account",
 ]
 
-# 初始技术要素数据
+# 初始技术要素数据（6大技术要素）
 TECH_ELEMENTS_DATA = [
     {
         "element_code": "ai",
@@ -92,13 +91,6 @@ TECH_ELEMENTS_DATA = [
         "element_name_en": "Artificial Intelligence",
         "element_desc": "人工智能相关技术",
         "sort_order": 1,
-        "directions": [
-            {"direction_code": "ml", "direction_name": "机器学习", "direction_name_en": "Machine Learning"},
-            {"direction_code": "dl", "direction_name": "深度学习", "direction_name_en": "Deep Learning"},
-            {"direction_code": "nlp", "direction_name": "自然语言处理", "direction_name_en": "Natural Language Processing"},
-            {"direction_code": "cv", "direction_name": "计算机视觉", "direction_name_en": "Computer Vision"},
-            {"direction_code": "rl", "direction_name": "强化学习", "direction_name_en": "Reinforcement Learning"},
-        ]
     },
     {
         "element_code": "robotics",
@@ -106,11 +98,6 @@ TECH_ELEMENTS_DATA = [
         "element_name_en": "Robotics",
         "element_desc": "机器人技术相关领域",
         "sort_order": 2,
-        "directions": [
-            {"direction_code": "robot_control", "direction_name": "机器人控制", "direction_name_en": "Robot Control"},
-            {"direction_code": "human_robot", "direction_name": "人机交互", "direction_name_en": "Human-Robot Interaction"},
-            {"direction_code": "autonomous", "direction_name": "自主系统", "direction_name_en": "Autonomous Systems"},
-        ]
     },
     {
         "element_code": "data_science",
@@ -118,11 +105,6 @@ TECH_ELEMENTS_DATA = [
         "element_name_en": "Data Science",
         "element_desc": "数据科学与分析",
         "sort_order": 3,
-        "directions": [
-            {"direction_code": "big_data", "direction_name": "大数据", "direction_name_en": "Big Data"},
-            {"direction_code": "data_mining", "direction_name": "数据挖掘", "direction_name_en": "Data Mining"},
-            {"direction_code": "visualization", "direction_name": "可视化", "direction_name_en": "Visualization"},
-        ]
     },
     {
         "element_code": "networks",
@@ -130,11 +112,6 @@ TECH_ELEMENTS_DATA = [
         "element_name_en": "Networks & Communications",
         "element_desc": "计算机网络与通信技术",
         "sort_order": 4,
-        "directions": [
-            {"direction_code": "iot", "direction_name": "物联网", "direction_name_en": "IoT"},
-            {"direction_code": "5g", "direction_name": "5G通信", "direction_name_en": "5G Communications"},
-            {"direction_code": "network_security", "direction_name": "网络安全", "direction_name_en": "Network Security"},
-        ]
     },
     {
         "element_code": "systems",
@@ -142,11 +119,6 @@ TECH_ELEMENTS_DATA = [
         "element_name_en": "Systems & Software",
         "element_desc": "计算机系统与软件工程",
         "sort_order": 5,
-        "directions": [
-            {"direction_code": "distributed", "direction_name": "分布式系统", "direction_name_en": "Distributed Systems"},
-            {"direction_code": "cloud", "direction_name": "云计算", "direction_name_en": "Cloud Computing"},
-            {"direction_code": "software_eng", "direction_name": "软件工程", "direction_name_en": "Software Engineering"},
-        ]
     },
     {
         "element_code": "security",
@@ -154,11 +126,6 @@ TECH_ELEMENTS_DATA = [
         "element_name_en": "Information Security",
         "element_desc": "信息安全与密码学",
         "sort_order": 6,
-        "directions": [
-            {"direction_code": "cryptography", "direction_name": "密码学", "direction_name_en": "Cryptography"},
-            {"direction_code": "privacy", "direction_name": "隐私保护", "direction_name_en": "Privacy"},
-            {"direction_code": "blockchain", "direction_name": "区块链", "direction_name_en": "Blockchain"},
-        ]
     },
 ]
 
@@ -346,22 +313,42 @@ async def truncate_tables(full_reset: bool = False):
             tables.extend(CONFIG_TABLES)
             print("  [模式: 全量重置]")
 
-        truncated_count = 0
-        for table in tables:
+        # 使用 TRUNCATE CASCADE 来强制清空，忽略外键约束
+        # 需要按依赖关系逆序处理，或者一次性 TRUNCATE 所有表
+        if tables:
             try:
-                await session.execute(text(f"DELETE FROM {table}"))
-                truncated_count += 1
-                print(f"  [OK] {table}")
+                # 构建单个 TRUNCATE 语句，CASCADE 会自动处理外键
+                table_list = ", ".join(tables)
+                await session.execute(text(f"TRUNCATE TABLE {table_list} CASCADE"))
+                await session.commit()
+                print(f"  [OK] 已清空 {len(tables)} 个表 (CASCADE)")
             except Exception as e:
                 error_msg = str(e)
-                if "no such table" in error_msg:
-                    print(f"  [SKIP] {table} (不存在)")
-                else:
-                    print(f"  [WARN] {table}: {error_msg[:50]}...")
-                continue
+                # 如果 TRUNCATE 失败，尝试逐个删除
+                print(f"  [WARN] TRUNCATE 失败: {error_msg[:100]}...")
+                print("  [INFO] 尝试逐个处理...")
 
-        await session.commit()
-        print(f"\n已清空 {truncated_count} 个表")
+                # 先禁用外键检查（PostgreSQL）
+                await session.execute(text("SET session_replication_role = 'replica'"))
+
+                truncated_count = 0
+                for table in tables:
+                    try:
+                        await session.execute(text(f"DELETE FROM {table}"))
+                        truncated_count += 1
+                        print(f"  [OK] {table}")
+                    except Exception as e2:
+                        error_msg = str(e2)
+                        if "does not exist" in error_msg or "不存在" in error_msg:
+                            print(f"  [SKIP] {table} (不存在)")
+                        else:
+                            print(f"  [WARN] {table}: {error_msg[:50]}...")
+                        continue
+
+                # 重新启用外键检查
+                await session.execute(text("SET session_replication_role = 'origin'"))
+                await session.commit()
+                print(f"\n已清空 {truncated_count} 个表")
 
 
 async def clear_cache():
@@ -459,19 +446,9 @@ async def seed_tech_elements():
             return
 
         for element_data in TECH_ELEMENTS_DATA:
-            directions_data = element_data.copy().pop("directions")
-            element = TechElement(**{k: v for k, v in element_data.items() if k != "directions"})
+            element = TechElement(**element_data)
             session.add(element)
-            await session.flush()
-
-            for dir_data in directions_data:
-                direction = TechDirection(
-                    **dir_data,
-                    tech_element_id=element.tech_element_id
-                )
-                session.add(direction)
-
-            print(f"  [OK] {element_data['element_name']} ({len(directions_data)} 个方向)")
+            print(f"  [OK] {element_data['element_name']}")
 
         await session.commit()
 
@@ -558,7 +535,21 @@ async def seed_statistics_snapshot():
     print("="*60)
 
     async with AsyncSessionLocal() as session:
+        from sqlalchemy import select
+
+        # 检查是否已存在活跃快照
+        result = await session.execute(
+            select(OverviewStatSnapshot).where(OverviewStatSnapshot.is_active == 1)
+        )
+        if result.scalar_one_or_none():
+            print("  统计快照已存在，跳过创建")
+            return
+
         version = f"v1.0_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+        # 获取技术要素数量
+        result = await session.execute(select(TechElement))
+        tech_element_count = len(result.scalars().all())
 
         snapshot = OverviewStatSnapshot(
             stat_version=version,
@@ -567,11 +558,15 @@ async def seed_statistics_snapshot():
             professor_count=0,
             student_count=0,
             talent_count=0,
+            country_count=0,
+            tech_element_count=tech_element_count,
+            tech_direction_count=0,
             is_active=1,
         )
         session.add(snapshot)
         await session.commit()
         print(f"  [OK] 初始快照: {version}")
+        print(f"  [OK] 技术要素数: {tech_element_count}")
 
 
 async def init_system(full_reset: bool = False):

@@ -30,9 +30,15 @@ class RawWorkRepository:
         return work
 
     async def upsert(self, work: RawWork) -> RawWork:
-        """Create or update a raw work record"""
+        """Create or update a raw work record.
+
+        First checks if the work exists, then updates or creates accordingly.
+        This approach avoids transaction state issues with exception handling.
+        """
+        # Check if work already exists
         existing = await self.get_by_openalex_id(work.openalex_work_id)
         if existing:
+            # Update existing record
             existing.raw_json = work.raw_json
             existing.title = work.title
             existing.doi = work.doi
@@ -47,6 +53,7 @@ class RawWorkRepository:
             await self.session.flush()
             return existing
         else:
+            # Create new record
             return await self.create(work)
 
     async def get_by_openalex_id(self, openalex_id: str) -> RawWork | None:
@@ -173,9 +180,15 @@ class RawAuthorRepository:
         return author
 
     async def upsert(self, author: RawAuthor) -> RawAuthor:
-        """Create or update a raw author record"""
+        """Create or update a raw author record.
+
+        First checks if the author exists, then updates or creates accordingly.
+        This approach avoids transaction state issues with exception handling.
+        """
+        # Check if author already exists
         existing = await self.get_by_openalex_id(author.openalex_author_id)
         if existing:
+            # Update existing record
             existing.raw_json = author.raw_json
             existing.display_name = author.display_name
             existing.orcid = author.orcid
@@ -190,6 +203,7 @@ class RawAuthorRepository:
             await self.session.flush()
             return existing
         else:
+            # Create new record
             return await self.create(author)
 
     async def batch_upsert(self, authors: list[RawAuthor]) -> int:
@@ -300,9 +314,15 @@ class RawInstitutionRepository:
         return institution
 
     async def upsert(self, institution: RawInstitution) -> RawInstitution:
-        """Create or update a raw institution record"""
+        """Create or update a raw institution record.
+
+        First checks if the institution exists, then updates or creates accordingly.
+        This approach avoids transaction state issues with exception handling.
+        """
+        # Check if institution already exists
         existing = await self.get_by_openalex_id(institution.openalex_institution_id)
         if existing:
+            # Update existing record
             existing.raw_json = institution.raw_json
             existing.display_name = institution.display_name
             existing.country_code = institution.country_code
@@ -314,6 +334,7 @@ class RawInstitutionRepository:
             await self.session.flush()
             return existing
         else:
+            # Create new record
             return await self.create(institution)
 
     async def get_by_openalex_id(self, openalex_id: str) -> RawInstitution | None:
