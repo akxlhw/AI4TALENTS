@@ -13,7 +13,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 - Python 3.11
 - FastAPI
 - SQLAlchemy 2.x + Alembic (async)
-- SQLite (development) / PostgreSQL (production)
+- PostgreSQL
 - Pydantic v2
 
 ### Frontend
@@ -148,6 +148,32 @@ Each element has multiple `TechDirection` subcategories. Venues (conferences/jou
 - Primary keys: `{entity}_id` (e.g., `talent_id`, `school_id`)
 - Timestamps: `created_at`, `updated_at` via TimestampMixin
 
+### Database Index Strategy (v1.3)
+
+Performance indexes are created via migration `023_add_performance_indexes.py`.
+
+**P0 Indexes (User-visible pages)**:
+| Table | Index | Query Pattern |
+|-------|-------|---------------|
+| `core_talent` | `ix_core_talent_visible_school_role` | Filter by school + role |
+| `core_talent` | `ix_core_talent_visible_cited_desc` | Sort by citations (PostgreSQL DESC) |
+| `core_talent_tech_tag` | `ix_talent_tech_enabled_element` | Tech element page query |
+| `core_talent_tech_tag` | `ix_talent_tech_enabled_direction` | Tech direction page query |
+| `iam_favorite_talent` | `ix_favorite_user_active_created` | User favorites list |
+
+**P1 Indexes (Collection tasks)**:
+| Table | Index | Query Pattern |
+|-------|-------|---------------|
+| `raw_work` | `ix_raw_work_source_year` | Get works by venue + year |
+| `raw_author` | `ix_raw_author_status_task` | Get pending authors by task |
+| `raw_institution` | `ix_raw_inst_status_task` | Get pending institutions by task |
+
+**PostgreSQL-specific features**:
+- Descending indexes: `CREATE INDEX ... (column DESC)`
+- Partial indexes: `CREATE INDEX ... WHERE condition`
+
+**Verify indexes**: `python scripts/verify_indexes.py`
+
 ## API Conventions
 
 - Base path: `/api/v1`
@@ -179,7 +205,7 @@ Each element has multiple `TechDirection` subcategories. Venues (conferences/jou
 
 ## Notes
 
-- Development uses SQLite; production uses PostgreSQL
+- Both development and production use PostgreSQL
 - Default admin: `admin` / `admin123`
 - Frontend port: 5173, Backend port: 8003
 - OpenAlex API: https://api.openalex.org
