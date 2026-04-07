@@ -35,7 +35,7 @@ class School(Base, TimestampMixin):
 
     # Source tracking
     source_type = Column(String(50), nullable=True)
-    source_record_id = Column(String(100), nullable=True, index=True)
+    source_record_id = Column(String(100), nullable=True, index=True, unique=True)
     last_sync_batch_id = Column(Integer, nullable=True)
 
     # Reserved fields for future expansion

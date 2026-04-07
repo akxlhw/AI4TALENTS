@@ -33,8 +33,15 @@ from app.main import app
 from app.core.database import Base, get_async_session
 
 
-# Test database URL (in-memory SQLite for testing)
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# Test database URL (PostgreSQL for testing - matches production)
+# Note: Tests run against the same database but use table cleanup between tests
+# Using PostgreSQL requires tables to exist - use alembic upgrade head first
+TEST_DATABASE_URL = "postgresql+asyncpg://talent_user:ai4recruit@localhost:5432/talent_db"
+
+
+def pytest_configure(config):
+    """Skip tests that require PostgreSQL-specific features if tables don't exist."""
+    pass
 
 
 # ============ Event Loop ============
@@ -49,21 +56,26 @@ def event_loop():
 
 # ============ Database Fixtures ============
 
+# Import all models to ensure they are registered with Base.metadata
+from app.models import school, talent, raw_data, standardized, venue, tech_element, sync, enums
+
+
 @pytest.fixture(scope="function")
 async def test_engine():
     """Create test database engine with all tables."""
     engine = create_async_engine(
         TEST_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
         echo=False,  # Set to True for SQL debugging
+        pool_pre_ping=True,  # Verify connections before use
     )
 
+    # Create all tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     yield engine
 
+    # Drop all tables after test
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 

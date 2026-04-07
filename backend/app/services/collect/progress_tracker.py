@@ -112,41 +112,17 @@ class ProgressTracker:
         current_step: str | None = None,
         progress_percent: int | None = None
     ):
-        """Update task progress using independent database connection.
+        """Update task progress using main session only.
 
-        This method uses a separate database session to update progress,
-        ensuring that the main collection transaction does not block
-        other database operations (like user login updates).
-
-        This is critical for SQLite which has limited write concurrency.
+        Uses the main session to avoid SQLAlchemy async state conflicts
+        that occur when multiple sessions try to update the same row concurrently.
         """
-        from app.core.database import AsyncSessionLocal
-
-        # Build update values
-        values = {}
+        # Build update values directly on the task object
         if current_step:
-            values["current_step"] = current_step
+            task.current_step = current_step
         if progress_percent is not None:
-            values["progress_percent"] = progress_percent
+            task.progress_percent = progress_percent
 
-        if not values:
-            return
-
-        # Use independent session to avoid blocking
-        async with AsyncSessionLocal() as independent_session:
-            try:
-                await independent_session.execute(
-                    update(CollectTask)
-                    .where(CollectTask.task_id == task.task_id)
-                    .values(**values)
-                )
-                await independent_session.commit()
-            except Exception as e:
-                logger.warning(f"Failed to update progress: {e}")
-                # Fallback to main session if independent update fails
-                if current_step:
-                    task.current_step = current_step
-                if progress_percent is not None:
-                    task.progress_percent = progress_percent
-                await self.session.flush()
+        # Flush to database - let the main transaction handle it
+        await self.session.flush()
 

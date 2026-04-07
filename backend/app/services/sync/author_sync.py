@@ -10,7 +10,6 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import IS_SQLITE
 from app.models.enums import VisibilityStatus
 from app.models.school import School
 from app.models.standardized import StdAuthor
@@ -215,7 +214,6 @@ class AuthorSyncService:
         Bulk sync standardized authors to serving layer Talent table.
 
         Uses PostgreSQL INSERT ON CONFLICT for efficient bulk upsert.
-        Falls back to individual processing for SQLite.
 
         Args:
             std_authors: List of standardized author objects
@@ -258,10 +256,7 @@ class AuthorSyncService:
         )
 
         # Use PostgreSQL bulk upsert
-        if not IS_SQLITE:
-            return await self._bulk_upsert_postgres(eligible_authors, school_id_map, result)
-        else:
-            return await self._bulk_upsert_sqlite(eligible_authors, school_id_map, result)
+        return await self._bulk_upsert_postgres(eligible_authors, school_id_map, result)
 
     async def _bulk_upsert_postgres(
         self,
@@ -408,52 +403,5 @@ class AuthorSyncService:
             f"[BULK_SYNC] PostgreSQL upsert complete: "
             f"{result['created']} created, {result['updated']} updated"
         )
-
-        return result
-
-    async def _bulk_upsert_sqlite(
-        self,
-        std_authors: list[StdAuthor],
-        school_id_map: dict[str, int] | None,
-        result: dict,
-    ) -> dict:
-        """SQLite fallback: process in batches with periodic commits."""
-
-        batch_size = 100
-        for i in range(0, len(std_authors), batch_size):
-            batch = std_authors[i:i + batch_size]
-
-            for std_author in batch:
-                try:
-                    # Get school ID
-                    if school_id_map and std_author.school:
-                        school_id_map.get(std_author.school.openalex_institution_id)
-
-                    # Sync individual author
-                    talent, is_new = await self.sync_author_to_talent(
-                        std_author, update_existing=True
-                    )
-
-                    if talent:
-                        result["synced"] += 1
-                        if is_new:
-                            result["created"] += 1
-                            if talent.role_type == "professor" and talent.works_count > 5:
-                                result["new_talents"].append({
-                                    "talent_id": talent.talent_id,
-                                    "openalex_author_id": std_author.openalex_author_id,
-                                    "works_count": talent.works_count,
-                                })
-                        else:
-                            result["updated"] += 1
-
-                except Exception as e:
-                    logger.error(
-                        f"[BULK_SYNC] Failed to sync {std_author.openalex_author_id}: {e}"
-                    )
-
-            # Commit batch
-            if (i + batch_size) % 500 == 0:
-                await self.session.commit()
 
         return result

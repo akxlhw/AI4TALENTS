@@ -44,10 +44,10 @@ async def test_data_setup(test_session: AsyncSession):
     """
     创建测试所需的基础数据。
     包括：技术要素、技术方向、Venue
+    注意：不使用显式 ID，让数据库自动生成，避免冲突
     """
-    # 创建技术要素
+    # 创建技术要素（不指定 ID）
     tech_element = TechElement(
-        tech_element_id=1,
         element_code="AI",
         element_name="人工智能",
         element_name_en="Artificial Intelligence",
@@ -55,11 +55,11 @@ async def test_data_setup(test_session: AsyncSession):
         sort_order=1,
     )
     test_session.add(tech_element)
+    await test_session.flush()  # Flush to get auto-generated ID
 
-    # 创建技术方向
+    # 创建技术方向（不指定 ID）
     tech_direction = TechDirection(
-        tech_direction_id=1,
-        tech_element_id=1,
+        tech_element_id=tech_element.tech_element_id,
         direction_code="ML",
         direction_name="机器学习",
         direction_name_en="Machine Learning",
@@ -67,10 +67,10 @@ async def test_data_setup(test_session: AsyncSession):
         sort_order=1,
     )
     test_session.add(tech_direction)
+    await test_session.flush()
 
     # 创建Venue（顶会顶刊）
     venue = Venue(
-        venue_id=1,
         venue_code="NEURIPS",
         venue_name="Neural Information Processing Systems",
         venue_type="conference",
@@ -78,12 +78,12 @@ async def test_data_setup(test_session: AsyncSession):
         is_enabled=True,
     )
     test_session.add(venue)
+    await test_session.flush()
 
-    # 创建Venue-技术要素绑定
+    # 创建Venue-技术要素绑定（不指定 ID）
     binding = VenueTechBinding(
-        binding_id=1,
-        venue_id=1,
-        tech_element_id=1,
+        venue_id=venue.venue_id,
+        tech_element_id=tech_element.tech_element_id,
         is_enabled=True,
     )
     test_session.add(binding)
@@ -117,7 +117,7 @@ class TestCollectTaskRepository:
             task_code="COLLECT-20260328001",
             tech_element_id=1,
             collect_mode="full",
-            triggered_by=1,
+            triggered_by=None,
         )
 
         assert task is not None
@@ -310,7 +310,7 @@ class TestCollectTaskIntegration:
             task_code="INTEGRATION-TEST-001",
             tech_element_id=test_data_setup["tech_element"].tech_element_id,
             collect_mode="incremental",
-            triggered_by=1,
+            triggered_by=None,
         )
         await test_session.commit()
 
@@ -420,7 +420,7 @@ class TestDataFlowIntegration:
             openalex_institution_id="I100",
             name_normalized="Massachusetts Institute of Technology",
             country_code="US",
-            source_task_id=1,
+            source_task_id=None,
         )
         test_session.add(std_school)
         await test_session.flush()
@@ -434,7 +434,7 @@ class TestDataFlowIntegration:
             cited_by_count=500,
             h_index=12,
             std_school_id=std_school.std_school_id,
-            source_task_id=1,
+            source_task_id=None,
         )
         test_session.add(std_author)
         await test_session.flush()
@@ -810,7 +810,7 @@ class TestDataValidation:
             name_normalized="Stanford University",
             name_aliases=json.dumps(["Stanford", "Leland Stanford Junior University"]),
             country_code="US",
-            source_task_id=1,
+            source_task_id=None,
         )
         test_session.add(std_school)
         await test_session.commit()
@@ -842,29 +842,26 @@ class TestTransactionManagement:
         return ProgressTracker(mock_session)
 
     @pytest.mark.asyncio
-    async def test_update_progress_uses_independent_session(self, progress_tracker, mock_session):
-        """验证 update_progress 使用独立 session 更新进度"""
+    async def test_update_progress_uses_main_session(self, progress_tracker, mock_session):
+        """验证 update_progress 使用主 session 进行更新"""
         # 创建测试任务
         mock_task = MagicMock(spec=CollectTask)
         mock_task.task_id = 1
         mock_task.current_step = None
         mock_task.progress_percent = 0
 
-        # Mock AsyncSessionLocal - patch 在 core.database 模块中
-        from unittest.mock import patch, AsyncMock
-        mock_independent_session = AsyncMock()
-        mock_independent_session.execute = AsyncMock()
-        mock_independent_session.commit = AsyncMock()
-        mock_independent_session.__aenter__ = AsyncMock(return_value=mock_independent_session)
-        mock_independent_session.__aexit__ = AsyncMock(return_value=None)
+        # Mock flush 方法
+        mock_session.flush = AsyncMock()
 
-        with patch('app.core.database.AsyncSessionLocal', return_value=mock_independent_session):
-            # 调用 update_progress
-            await progress_tracker.update_progress(mock_task, "测试步骤", 50)
+        # 调用 update_progress
+        await progress_tracker.update_progress(mock_task, "测试步骤", 50)
 
-            # 验证独立 session 执行了 update 和 commit
-            mock_independent_session.execute.assert_called_once()
-            mock_independent_session.commit.assert_called_once()
+        # 验证调用了 flush 方法
+        mock_session.flush.assert_called_once()
+
+        # 验证任务属性被更新
+        assert mock_task.current_step == "测试步骤"
+        assert mock_task.progress_percent == 50
 
     @pytest.mark.asyncio
     async def test_update_task_status_flushes_without_commit(self, progress_tracker, mock_session):
@@ -921,7 +918,7 @@ class TestTalentQueryOptimization:
             task_code="CR02-TEST-001",
             tech_element_id=tech_element_1.tech_element_id,
             collect_mode="full",
-            triggered_by=1,
+            triggered_by=None,
             triggered_at=datetime.utcnow(),  # 添加必填字段
             status="running",
         )
@@ -931,7 +928,7 @@ class TestTalentQueryOptimization:
             task_code="CR02-TEST-002",
             tech_element_id=tech_element_2.tech_element_id,
             collect_mode="full",
-            triggered_by=1,
+            triggered_by=None,
             triggered_at=datetime.utcnow(),  # 添加必填字段
             status="pending",
         )
@@ -1034,7 +1031,7 @@ class TestOrchestratorTransactionBoundary:
             task_code="TX-TEST-001",
             tech_element_id=test_data_setup["tech_element"].tech_element_id,
             collect_mode="full",
-            triggered_by=1,
+            triggered_by=None,
             triggered_at=datetime.utcnow(),  # 添加必填字段
             status="pending",
         )

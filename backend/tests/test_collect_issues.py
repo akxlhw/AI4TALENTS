@@ -45,7 +45,7 @@ class TestAuthorTechBelongSourceTask:
             task_code="TEST-TASK-001",
             tech_element_id=setup["tech_element"].tech_element_id,
             collect_mode="incremental",
-            triggered_by=1,
+            triggered_by=None,
             triggered_at=datetime.utcnow(),  # Required field
             status="completed"
         )
@@ -186,7 +186,7 @@ class TestNormalizationStatistics:
         task = CollectTask(
             task_code="TEST-NORM-001",
             collect_mode="incremental",
-            triggered_by=1,
+            triggered_by=None,
             triggered_at=datetime.utcnow(),
             status="running"
         )
@@ -227,7 +227,7 @@ class TestNormalizationStatistics:
         task = CollectTask(
             task_code="TEST-NORM-002",
             collect_mode="incremental",
-            triggered_by=1,
+            triggered_by=None,
             triggered_at=datetime.utcnow(),
             status="running"
         )
@@ -288,7 +288,7 @@ class TestCollectionProgressStatistics:
             task_code="TEST-PROGRESS-001",
             tech_element_id=setup["tech_element"].tech_element_id,
             collect_mode="incremental",
-            triggered_by=1,
+            triggered_by=None,
             triggered_at=datetime.utcnow(),  # Required field
             status="running"
         )

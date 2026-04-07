@@ -11,7 +11,6 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.countries import get_country_name_cn, normalize_country_code
-from app.core.database import IS_SQLITE
 from app.models.school import School, SchoolAlias
 from app.models.standardized import StdSchool
 
@@ -132,7 +131,6 @@ class SchoolSyncService:
         Bulk sync standardized schools to serving layer School table.
 
         Uses PostgreSQL INSERT ON CONFLICT for efficient bulk upsert.
-        Falls back to individual processing for SQLite.
 
         Args:
             std_schools: List of standardized school objects
@@ -158,10 +156,7 @@ class SchoolSyncService:
         logger.info(f"[BULK_SYNC] Processing {len(std_schools)} schools")
 
         # Use PostgreSQL bulk upsert
-        if not IS_SQLITE:
-            return await self._bulk_upsert_postgres(std_schools, result)
-        else:
-            return await self._bulk_upsert_sqlite(std_schools, result)
+        return await self._bulk_upsert_postgres(std_schools, result)
 
     async def _bulk_upsert_postgres(
         self,
@@ -231,37 +226,5 @@ class SchoolSyncService:
             f"[BULK_SYNC] PostgreSQL school upsert complete: "
             f"{result['created']} created, {result['updated']} updated"
         )
-
-        return result
-
-    async def _bulk_upsert_sqlite(
-        self,
-        std_schools: list[StdSchool],
-        result: dict,
-    ) -> dict:
-        """SQLite fallback: process individually with periodic commits."""
-
-        for i, std_school in enumerate(std_schools):
-            try:
-                school, is_new = await self.sync_school_to_school(std_school)
-
-                result["synced"] += 1
-                if is_new:
-                    result["created"] += 1
-                else:
-                    result["updated"] += 1
-
-                # Build school_id_map
-                if school:
-                    result["school_id_map"][std_school.openalex_institution_id] = school.school_id
-
-            except Exception as e:
-                logger.error(
-                    f"[BULK_SYNC] Failed to sync {std_school.openalex_institution_id}: {e}"
-                )
-
-            # Commit every 50 schools
-            if (i + 1) % 50 == 0:
-                await self.session.commit()
 
         return result

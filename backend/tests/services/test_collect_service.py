@@ -147,13 +147,13 @@ class TestUnifiedCollectServiceUnit:
         start, end = service._get_time_window("full")
 
         assert start.year == 2020  # FULL_COLLECTION_START_YEAR
-        assert end <= datetime.now(timezone.utc)
+        assert end <= datetime.utcnow()
 
     def test_time_window_incremental_mode(self, mock_session):
         """测试增量采集时间窗口"""
         service = UnifiedCollectService(mock_session)
 
-        last_collect = datetime.now(timezone.utc) - timedelta(days=7)
+        last_collect = datetime.utcnow() - timedelta(days=7)
         start, end = service._get_time_window("incremental", last_collect)
 
         # 增量模式应该从上次采集时间往前推30天
@@ -248,7 +248,7 @@ class TestUnifiedCollectServiceIntegration:
         task = await service.create_task(
             tech_element_id=setup_data["tech_element"].tech_element_id,
             mode="full",
-            triggered_by=1,
+            triggered_by=None,
         )
 
         assert task.task_id is not None
@@ -386,12 +386,12 @@ class TestServingLayerSync:
         test_session.add(tech_direction)
         await test_session.flush()
 
-        # 创建标准化学校
+        # 创建标准化学校（不关联 source_task_id 避免外键约束）
         std_school = StdSchool(
             openalex_institution_id="I-SYNC",
             name_normalized="Sync Test University",
             country_code="US",
-            source_task_id=1,
+            source_task_id=None,  # 不关联采集任务
         )
         test_session.add(std_school)
         await test_session.flush()
@@ -404,7 +404,7 @@ class TestServingLayerSync:
             cited_by_count=500,
             h_index=16,  # h_index >= 15 with works >= 30 triggers professor
             std_school_id=std_school.std_school_id,
-            source_task_id=1,
+            source_task_id=None,  # 不关联采集任务
             cs_concepts_score=0.8,  # CS background score
         )
         test_session.add(std_author)
@@ -509,12 +509,12 @@ class TestServingLayerSync:
         test_session.add(talent)
         await test_session.flush()
 
-        # 创建技术归属
+        # 创建技术归属（不关联 venue 避免外键约束）
         belong = AuthorTechBelong(
             openalex_author_id="A-SYNC",  # Required field
             std_author_id=setup_sync_data["std_author"].std_author_id,
             tech_element_id=setup_sync_data["tech_element"].tech_element_id,
-            source_venue_id=1,
+            source_venue_id=None,  # 不关联 Venue
             work_count_in_venue=5,
         )
         test_session.add(belong)
@@ -680,7 +680,7 @@ class TestEndToEndFlow:
         task = await service.create_task(
             tech_element_id=full_setup["tech_element"].tech_element_id,
             mode="incremental",
-            triggered_by=1,
+            triggered_by=None,
         )
         await test_session.commit()
 
@@ -796,7 +796,7 @@ class TestEndToEndFlow:
             openalex_institution_id="I-CONSIST",
             name_normalized="Consistency University",
             country_code="US",
-            source_task_id=1,
+            source_task_id=None,
         )
         test_session.add(std_school)
         await test_session.flush()
@@ -808,7 +808,7 @@ class TestEndToEndFlow:
             cited_by_count=300,
             h_index=10,
             std_school_id=std_school.std_school_id,
-            source_task_id=1,
+            source_task_id=None,
             cs_concepts_score=0.8,  # CS background score
         )
         test_session.add(std_author)

@@ -457,8 +457,9 @@ class TechElementRepository:
         where_clause = " AND ".join(conditions)
 
         # Main query with cursor pagination (fetch one extra for next_cursor)
+        # Use DISTINCT ON to avoid JSON equality comparison issues in PostgreSQL
         main_sql = text(f"""
-            SELECT DISTINCT t.talent_id, t.name, t.name_en, t.role_type,
+            SELECT DISTINCT ON (t.talent_id) t.talent_id, t.name, t.name_en, t.role_type,
                    t.current_title, t.h_index, t.works_count, t.topic_tags,
                    t.openalex_topics,
                    s.school_id, s.school_name
@@ -566,16 +567,20 @@ class TechElementRepository:
         total = total_result.scalar() or 0
 
         # Main query with pagination
+        # Use subquery to avoid JSON equality comparison issues in PostgreSQL
         offset = (page - 1) * page_size
         main_sql = text(f"""
-            SELECT DISTINCT t.talent_id, t.name, t.name_en, t.role_type,
+            SELECT t.talent_id, t.name, t.name_en, t.role_type,
                    t.current_title, t.h_index, t.works_count, t.topic_tags,
                    t.openalex_topics,
                    s.school_id, s.school_name
-            FROM core_talent_tech_tag ttt
-            INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
+            FROM core_talent t
             LEFT JOIN core_school s ON t.school_id = s.school_id
-            WHERE {where_clause}
+            WHERE t.talent_id IN (
+                SELECT DISTINCT ttt.talent_id
+                FROM core_talent_tech_tag ttt
+                WHERE {where_clause}
+            )
             ORDER BY t.h_index DESC NULLS LAST
             LIMIT :limit OFFSET :offset
         """)

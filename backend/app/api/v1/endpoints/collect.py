@@ -528,7 +528,7 @@ async def cancel_task(
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_admin_user),
 ):
-    """Cancel a running task with retry support for SQLite locks."""
+    """Cancel a running task."""
     repo = CollectTaskRepository(session)
     task = await repo.get_by_id(task_id)
 
@@ -543,22 +543,8 @@ async def cancel_task(
     task.completed_at = datetime.utcnow()
     task.current_step = "已取消"
 
-    # Retry commit on database lock (SQLite specific)
-    max_retries = 5
-    for attempt in range(max_retries):
-        try:
-            await session.commit()
-            return {"message": "Task cancelled"}
-        except Exception as e:
-            error_str = str(e).lower()
-            if "database is locked" in error_str or "locked" in error_str:
-                if attempt < max_retries - 1:
-                    import asyncio
-                    wait_time = 0.5 * (2 ** attempt)  # Exponential backoff: 0.5s, 1s, 2s, 4s
-                    logger.warning(f"Database locked during cancel, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
-                    await asyncio.sleep(wait_time)
-                    continue
-            raise
+    await session.commit()
+    return {"message": "Task cancelled"}
 
 
 @router.delete(

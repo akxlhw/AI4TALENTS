@@ -200,7 +200,7 @@ class CollectionOrchestrator:
                     self.progress_tracker.add_log("info", f"预估论文总数: {estimated_total}")
                     task.total_records = estimated_total  # 预存预计数
 
-            # Commit after estimation to release database lock
+            # Save estimation progress
             await self.session.commit()
 
             # 检查取消
@@ -225,8 +225,6 @@ class CollectionOrchestrator:
             # Phase 2: Fetch authors from collected author IDs
             await self.progress_tracker.update_progress(task, "获取作者数据", PhaseProgress.FETCH_AUTHORS)
             await self._fetch_all_authors(task_id, progress)
-            # Commit after author fetch to release database lock
-            await self.session.commit()
 
             # 检查取消
             if await self._should_cancel(task_id):
@@ -236,8 +234,6 @@ class CollectionOrchestrator:
             # Phase 3: Fetch institutions from collected institution IDs
             await self.progress_tracker.update_progress(task, "获取机构数据", PhaseProgress.FETCH_INSTITUTIONS)
             await self._fetch_all_institutions(task_id, progress)
-            # Commit after institution fetch to release database lock
-            await self.session.commit()
 
             # 检查取消
             if await self._should_cancel(task_id):
@@ -247,8 +243,6 @@ class CollectionOrchestrator:
             # Phase 4: Normalize schools
             await self.progress_tracker.update_progress(task, "标准化学校", PhaseProgress.NORMALIZE_SCHOOLS)
             await self._normalize_schools(task_id, progress)
-            # Commit after school normalization to release database lock
-            await self.session.commit()
 
             # 检查取消
             if await self._should_cancel(task_id):
@@ -258,8 +252,6 @@ class CollectionOrchestrator:
             # Phase 5: Normalize authors
             await self.progress_tracker.update_progress(task, "标准化作者", PhaseProgress.NORMALIZE_AUTHORS)
             await self._normalize_authors(task_id, progress)
-            # Commit after author normalization to release database lock
-            await self.session.commit()
 
             # 检查取消
             if await self._should_cancel(task_id):
@@ -269,8 +261,6 @@ class CollectionOrchestrator:
             # Phase 6: Calculate tech belong relationships
             await self.progress_tracker.update_progress(task, "计算技术归属", PhaseProgress.CALCULATE_TECH_BELONG)
             await self._calculate_tech_belong(task_id, task.tech_element_id)
-            # Commit after tech belong calculation to release database lock
-            await self.session.commit()
 
             # 检查取消
             if await self._should_cancel(task_id):
@@ -280,8 +270,6 @@ class CollectionOrchestrator:
             # Phase 7: Sync to serving layer (delegated to sync service)
             await self.progress_tracker.update_progress(task, "同步到服务层", PhaseProgress.SYNC_SERVING_LAYER)
             new_talents = await self._sync_to_serving_layer(task_id, task.tech_element_id, progress)
-            # Commit after serving layer sync to release database lock
-            await self.session.commit()
 
             # 检查取消
             if await self._should_cancel(task_id):
@@ -291,8 +279,6 @@ class CollectionOrchestrator:
             # Phase 8: Fetch selected works for NEW talents
             await self.progress_tracker.update_progress(task, "获取代表作品", PhaseProgress.FETCH_SELECTED_WORKS)
             await self._fetch_selected_works(new_talents, progress)
-            # Commit after fetching selected works to release database lock
-            await self.session.commit()
 
             # 检查取消
             if await self._should_cancel(task_id):
@@ -302,8 +288,6 @@ class CollectionOrchestrator:
             # Phase 9: Update talent topic_tags from tech tags
             await self.progress_tracker.update_progress(task, "更新技术标签", PhaseProgress.UPDATE_TOPIC_TAGS)
             await self._update_talent_topic_tags(task_id, progress)
-            # Commit after updating topic tags to release database lock
-            await self.session.commit()
 
             # 检查取消
             if await self._should_cancel(task_id):
@@ -313,8 +297,6 @@ class CollectionOrchestrator:
             # Phase 10: Update school statistics
             await self.progress_tracker.update_progress(task, "更新学校统计", PhaseProgress.UPDATE_SCHOOL_STATS)
             await self._update_school_statistics(task_id, progress)
-            # Commit after updating school statistics to release database lock
-            await self.session.commit()
 
             # 检查取消
             if await self._should_cancel(task_id):
@@ -324,8 +306,6 @@ class CollectionOrchestrator:
             # Phase 11: Build statistics for homepage
             await self.progress_tracker.update_progress(task, "构建统计数据", PhaseProgress.BUILD_STATISTICS)
             await self._build_statistics(task_id, progress)
-            # Commit after building statistics to release database lock
-            await self.session.commit()
 
             # Update task statistics
             # total_records: 采集论文数
@@ -459,8 +439,7 @@ class CollectionOrchestrator:
 
                 await self.progress_tracker.update_progress(task, step_msg, work_progress)
 
-                # Commit after each venue sub-task to release database lock
-                # This is critical for SQLite to allow concurrent access during long collection
+                # Commit after each venue sub-task to save progress
                 await self.session.commit()
 
                 # Log venue completion at debug level to reduce verbosity
@@ -471,7 +450,7 @@ class CollectionOrchestrator:
                 progress.errors.append(error_msg)
                 self.progress_tracker.add_log("error", f"采集失败: {venue_name}", {"error": str(e)})
                 await self.sub_task_repo.update_status(sub_task.sub_task_id, "failed", error_message=str(e))
-                # Also commit on error to release lock
+                # Commit on error to save status
                 await self.session.commit()
 
     async def _fetch_all_authors(self, task_id: int, progress: CollectionProgress):
@@ -729,13 +708,22 @@ class CollectionOrchestrator:
 
         tech_element_id = task.tech_element_id
 
-        # 只查询与当前 tech_element 相关的人才，避免全表扫描
+        # 先获取去重后的 talent_id 列表（避免 JSON 列的 DISTINCT 问题）
+        distinct_ids_result = await self.session.execute(
+            select(TalentTechTag.talent_id).where(
+                TalentTechTag.tech_element_id == tech_element_id
+            ).distinct()
+        )
+        talent_ids = [row[0] for row in distinct_ids_result.all()]
+
+        if not talent_ids:
+            return
+
+        # 然后加载 Talent 对象
         result = await self.session.execute(
             select(Talent).options(
                 selectinload(Talent.tech_tags).selectinload(TalentTechTag.tech_element)
-            ).join(TalentTechTag, Talent.talent_id == TalentTechTag.talent_id)
-            .where(TalentTechTag.tech_element_id == tech_element_id)
-            .distinct()
+            ).where(Talent.talent_id.in_(talent_ids))
         )
         talents = result.scalars().all()
 
@@ -752,7 +740,7 @@ class CollectionOrchestrator:
                     talent.topic_tags = tech_names
                     updated_count += 1
 
-                # Commit every 100 talents to release database lock
+                # Save progress periodically
                 if (i + 1) % 100 == 0:
                     await self.session.commit()
 
@@ -795,7 +783,7 @@ class CollectionOrchestrator:
                 )
                 updated_schools += 1
 
-                # Commit every 50 schools to release database lock
+                # Save progress periodically
                 if (i + 1) % 50 == 0:
                     await self.session.commit()
 
