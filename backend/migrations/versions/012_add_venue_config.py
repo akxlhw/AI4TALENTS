@@ -21,6 +21,23 @@ branch_labels = None
 depends_on = None
 
 
+def column_exists(conn, table_name, column_name):
+    """Check if a column exists in a table (PostgreSQL compatible)."""
+    result = conn.execute(sa.text("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = :table AND column_name = :column
+    """), {"table": table_name, "column": column_name})
+    return result.fetchone() is not None
+
+
+def index_exists(conn, index_name):
+    """Check if an index exists (PostgreSQL compatible)."""
+    result = conn.execute(sa.text("""
+        SELECT indexname FROM pg_indexes WHERE indexname = :index
+    """), {"index": index_name})
+    return result.fetchone() is not None
+
+
 def upgrade():
     # Get connection
     conn = op.get_bind()
@@ -28,30 +45,21 @@ def upgrade():
     # ============================================
     # Step 1: Add is_top_school to core_school (if not exists)
     # ============================================
-    # Check if column exists
-    result = conn.execute(sa.text("PRAGMA table_info(core_school)"))
-    columns = [row[1] for row in result.fetchall()]
-
-    if 'is_top_school' not in columns:
+    if not column_exists(conn, 'core_school', 'is_top_school'):
         with op.batch_alter_table('core_school', schema=None) as batch_op:
             batch_op.add_column(sa.Column('is_top_school', sa.Boolean, nullable=False, server_default='0'))
 
     # Create index if not exists
-    try:
+    if not index_exists(conn, 'ix_core_school_is_top'):
         op.create_index('ix_core_school_is_top', 'core_school', ['is_top_school'])
-    except:
-        pass  # Index might already exist
 
     # ============================================
     # Step 2: Add time_window to sync_collect_task (if not exists)
     # ============================================
-    result = conn.execute(sa.text("PRAGMA table_info(sync_collect_task)"))
-    task_columns = [row[1] for row in result.fetchall()]
-
     with op.batch_alter_table('sync_collect_task', schema=None) as batch_op:
-        if 'time_window_start' not in task_columns:
+        if not column_exists(conn, 'sync_collect_task', 'time_window_start'):
             batch_op.add_column(sa.Column('time_window_start', sa.DateTime, nullable=True))
-        if 'time_window_end' not in task_columns:
+        if not column_exists(conn, 'sync_collect_task', 'time_window_end'):
             batch_op.add_column(sa.Column('time_window_end', sa.DateTime, nullable=True))
 
     # ============================================

@@ -97,14 +97,59 @@ def upgrade() -> None:
         conn.execute(text('CREATE INDEX ix_core_school_is_top_school ON core_school (is_top_school)'))
     else:
         # PostgreSQL: Can use standard operations
-        try:
+        conn = op.get_bind()
+        # Check if foreign key exists before dropping
+        result = conn.execute(text("""
+            SELECT constraint_name FROM information_schema.table_constraints
+            WHERE table_name = 'core_school'
+            AND constraint_type = 'FOREIGN KEY'
+            AND constraint_name = 'fk_core_school_country_id_core_country'
+        """))
+        if result.fetchone():
             op.drop_constraint('fk_core_school_country_id_core_country', 'core_school', type_='foreignkey')
-        except Exception:
-            pass
-        op.drop_column('core_school', 'country_id')
 
-    # Step 3: Drop core_country table
-    op.drop_table('core_country')
+        # Check if column exists before dropping
+        result = conn.execute(text("""
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = 'core_school' AND column_name = 'country_id'
+        """))
+        if result.fetchone():
+            op.drop_column('core_school', 'country_id')
+
+    # Step 3: Drop core_country table (if exists)
+    conn = op.get_bind()
+
+    # First, drop any foreign keys referencing core_country
+    result = conn.execute(text("""
+        SELECT tc.table_name, tc.constraint_name
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu
+            ON tc.constraint_name = kcu.constraint_name
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND kcu.table_name != 'core_school'
+        AND kcu.column_name = 'country_id'
+    """))
+    for row in result.fetchall():
+        table_name, constraint_name = row
+        op.drop_constraint(constraint_name, table_name, type_='foreignkey')
+
+    # Also drop country_id columns from other tables
+    result = conn.execute(text("""
+        SELECT table_name FROM information_schema.columns
+        WHERE column_name = 'country_id' AND table_name != 'core_school'
+        AND table_schema = 'public'
+    """))
+    for row in result.fetchall():
+        table_name = row[0]
+        op.drop_column(table_name, 'country_id')
+
+    # Now check if core_country exists and drop it
+    result = conn.execute(text("""
+        SELECT table_name FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'core_country'
+    """))
+    if result.fetchone():
+        op.drop_table('core_country')
 
 
 def downgrade() -> None:
