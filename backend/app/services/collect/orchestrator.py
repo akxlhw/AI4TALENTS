@@ -354,7 +354,7 @@ class CollectionOrchestrator:
                 "error": str(e),
                 "type": type(e).__name__,
                 "traceback": traceback.format_exc(),
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.utcnow().isoformat()
             }
             await self.progress_tracker.update_task_status(task, "failed", str(e))
             progress.status = "failed"

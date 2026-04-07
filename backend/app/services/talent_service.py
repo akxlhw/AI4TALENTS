@@ -249,6 +249,6 @@ class TalentService:
             if hasattr(talent, key):
                 setattr(talent, key, value)
 
-        talent.updated_at = datetime.now(timezone.utc)
+        talent.updated_at = datetime.utcnow()
         await self.session.flush()
         return talent

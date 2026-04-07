@@ -74,7 +74,7 @@ class VenueSubTaskExecutor:
         )
 
         # Update venue last_collect_at
-        await self.venue_repo.update_last_collect_at(venue.venue_id, datetime.now(timezone.utc))
+        await self.venue_repo.update_last_collect_at(venue.venue_id, datetime.utcnow())
 
         return work_progress.fetched
 

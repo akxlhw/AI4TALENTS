@@ -72,7 +72,7 @@ async def run_collect_task_background(task_id: int):
         task = result.scalar_one_or_none()
         if task and task.status == "pending":
             task.status = "running"
-            task.started_at = datetime.now(timezone.utc)
+            task.started_at = datetime.utcnow()
             task.current_step = "正在初始化..."
             await session.commit()
             logger.info(f"Task {task_id} status updated to running")
@@ -90,7 +90,7 @@ async def run_collect_task_background(task_id: int):
             if task and task.status == "running":
                 task.status = "failed"
                 task.error_message = str(e)
-                task.completed_at = datetime.now(timezone.utc)
+                task.completed_at = datetime.utcnow()
                 task.current_step = "执行失败"
                 await session.commit()
             logger.error(f"Task {task_id} marked as failed: {e}")
@@ -343,7 +343,7 @@ async def trigger_task(
                 detail=f"截止年份不能晚于当前年份 ({current_year})"
             )
 
-    # Calculate time window
+    # Calculate time window (naive datetime for WITHOUT TIME ZONE columns)
     time_start = datetime(start_year, 1, 1)
     if end_year is None:
         time_end = datetime.utcnow()  # 至今
@@ -540,7 +540,7 @@ async def cancel_task(
 
     # Update task status
     task.status = "cancelled"
-    task.completed_at = datetime.now(timezone.utc)
+    task.completed_at = datetime.utcnow()
     task.current_step = "已取消"
 
     # Retry commit on database lock (SQLite specific)

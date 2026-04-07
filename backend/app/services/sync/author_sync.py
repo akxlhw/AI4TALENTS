@@ -178,7 +178,7 @@ class AuthorSyncService:
             role_confidence=role_result.confidence,
             role_reason=role_result.reason,
             identification_method="heuristic",
-            identified_at=datetime.now(timezone.utc).isoformat(),
+            identified_at=datetime.utcnow().isoformat(),
         )
         self.session.add(profile)
         await self.session.flush()
@@ -196,7 +196,7 @@ class AuthorSyncService:
             profile.role_confidence = role_result.confidence
             profile.role_reason = role_result.reason
             profile.identification_method = "heuristic"
-            profile.identified_at = datetime.now(timezone.utc).isoformat()
+            profile.identified_at = datetime.utcnow().isoformat()
         else:
             profile = await self._create_role_profile(talent, role_result)
 
@@ -281,7 +281,7 @@ class AuthorSyncService:
         existing_map = {row.source_record_id: row.talent_id for row in existing_result.all()}
 
         # Prepare bulk data
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.utcnow().isoformat()
         talent_data = []
         profile_data = []
 

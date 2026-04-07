@@ -428,7 +428,7 @@ class TechElementRepository:
         from sqlalchemy import text
 
         # Build WHERE conditions
-        conditions = ["ttt.is_enabled = 1"]
+        conditions = ["ttt.is_enabled IS TRUE"]
         params = {}
 
         if cursor is not None:
@@ -530,7 +530,7 @@ class TechElementRepository:
         from sqlalchemy import text
 
         # Build WHERE conditions
-        conditions = ["ttt.is_enabled = 1"]
+        conditions = ["ttt.is_enabled IS TRUE"]
         params = {}
 
         if element_id:

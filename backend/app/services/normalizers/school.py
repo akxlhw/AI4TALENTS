@@ -119,7 +119,7 @@ class SchoolNormalizer:
             inst_type=raw_inst.type,
             confirm_status="auto_identified",
             source_task_id=task_id,
-            normalized_at=datetime.now(timezone.utc)
+            normalized_at=datetime.utcnow()
         )
         self.session.add(std_school)
         await self.session.flush()
@@ -145,7 +145,7 @@ class SchoolNormalizer:
             matched.country_name = raw_inst.country_name
             matched.ror = raw_inst.ror
             matched.inst_type = raw_inst.type
-            matched.normalized_at = datetime.now(timezone.utc)
+            matched.normalized_at = datetime.utcnow()
             await self.session.flush()
             return matched
         else:

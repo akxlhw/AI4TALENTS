@@ -87,7 +87,7 @@ class CollectTaskRepository:
             collect_mode=collect_mode,
             task_type="manual",  # 兼容旧字段
             triggered_by=triggered_by,
-            triggered_at=datetime.now(timezone.utc),
+            triggered_at=datetime.utcnow(),
             status="pending",
             time_window_start=time_window_start,
             time_window_end=time_window_end,
@@ -168,7 +168,7 @@ class CollectTaskRepository:
             return None
 
         task.status = "completed" if success else "failed"
-        task.completed_at = datetime.now(timezone.utc)
+        task.completed_at = datetime.utcnow()
         task.progress_percent = 100
 
         if result_summary:
@@ -220,5 +220,5 @@ class TechElementCollectRepository:
         if not element:
             return None
 
-        element.last_collect_at = collect_at or datetime.now(timezone.utc)
+        element.last_collect_at = collect_at or datetime.utcnow()
         return element

@@ -138,7 +138,7 @@ class AuthorNormalizer:
             openalex_topics=topics,
             cs_concepts_score=cs_score,
             source_task_id=task_id,
-            normalized_at=datetime.now(timezone.utc)
+            normalized_at=datetime.utcnow()
         )
         self.session.add(std_author)
         await self.session.flush()
@@ -181,7 +181,7 @@ class AuthorNormalizer:
             existing.std_school_id = std_school_id
             existing.openalex_topics = topics
             existing.cs_concepts_score = cs_score
-            existing.normalized_at = datetime.now(timezone.utc)
+            existing.normalized_at = datetime.utcnow()
             await self.session.flush()
             return existing
 

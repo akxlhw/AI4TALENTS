@@ -247,7 +247,7 @@ class WorkFetcher:
                             author_ids=json.dumps(author_ids),
                             fetch_task_id=task_id,
                             sub_task_id=sub_task_id,
-                            fetched_at=datetime.now(timezone.utc)
+                            fetched_at=datetime.utcnow()
                         )
                         await self.repo.upsert(raw_work)
                         total_fetched += 1
@@ -409,7 +409,7 @@ class AuthorFetcher:
                                 last_known_institution_id=extract_short_id(inst_info.get("id", "")),
                                 last_known_institution_name=inst_info.get("display_name"),
                                 fetch_task_id=task_id,
-                                fetched_at=datetime.now(timezone.utc)
+                                fetched_at=datetime.utcnow()
                             )
                             await self.repo.upsert(raw_author)
                             progress.fetched += 1
@@ -502,7 +502,7 @@ class InstitutionFetcher:
                                 ror=inst_data.get("ror"),
                                 type=inst_data.get("type"),
                                 fetch_task_id=task_id,
-                                fetched_at=datetime.now(timezone.utc)
+                                fetched_at=datetime.utcnow()
                             )
                             await self.repo.upsert(raw_inst)
                             progress.fetched += 1

@@ -52,7 +52,7 @@ class ProgressTracker:
         level_value = level.value if isinstance(level, LogLevel) else level
 
         entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.utcnow().isoformat(),
             "level": level_value,
             "message": message,
         }
@@ -95,13 +95,13 @@ class ProgressTracker:
         """Update task status"""
         task.status = status
         if status == "running":
-            task.started_at = datetime.now(timezone.utc)
+            task.started_at = datetime.utcnow()
             task.progress_percent = 0
         elif status == "completed":
-            task.completed_at = datetime.now(timezone.utc)
+            task.completed_at = datetime.utcnow()
             task.progress_percent = 100
         elif status == "failed":
-            task.completed_at = datetime.now(timezone.utc)
+            task.completed_at = datetime.utcnow()
         if error_message:
             task.error_message = error_message
         await self.session.flush()
