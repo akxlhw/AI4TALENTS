@@ -432,10 +432,6 @@ def run_sync_in_thread(talent_id: int | None = None):
     """Run sync in a separate thread to avoid blocking."""
     global _sync_progress
 
-    # Create new event loop for the thread
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
     async def do_sync():
         global _sync_progress
         from app.core.database import AsyncSessionLocal
@@ -469,10 +465,8 @@ def run_sync_in_thread(talent_id: int | None = None):
                 traceback.print_exc()
                 _sync_progress["status"] = f"error: {str(e)}"
 
-    try:
-        loop.run_until_complete(do_sync())
-    finally:
-        loop.close()
+    # Use asyncio.run() to properly create and manage the event loop
+    asyncio.run(do_sync())
 
 
 @router.post(
