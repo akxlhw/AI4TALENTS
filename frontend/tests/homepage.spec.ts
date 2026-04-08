@@ -13,11 +13,8 @@ async function login(page: Page) {
   await page.locator('.ant-input-password input').fill('admin123');
   // 点击登录按钮
   await page.locator('button:has-text("登")').click();
-  // 等待跳转或URL变化
-  await page.waitForURL(/.*\/$/, { timeout: 15000 }).catch(() => {
-    // 如果URL没有变化，等待页面内容变化
-    return page.waitForSelector('.ant-layout', { timeout: 10000 });
-  });
+  // 等待登录成功 - 检查侧边栏菜单或用户名显示
+  await page.waitForSelector('.ant-menu, .ant-avatar, text=/admin/i', { timeout: 15000 });
 }
 
 test.describe('首页功能测试', () => {

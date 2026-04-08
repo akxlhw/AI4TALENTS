@@ -16,9 +16,10 @@ async function login(page: Page) {
   await page.locator('.ant-input[placeholder="用户名或邮箱"]').fill('admin');
   await page.locator('.ant-input-password input').fill('admin123');
   await page.locator('button:has-text("登")').click();
-  await page.waitForURL(/.*\/$/, { timeout: 15000 }).catch(() => {
-    return page.waitForSelector('.ant-layout', { timeout: 10000 });
-  });
+  // 等待登录成功 - 检查侧边栏菜单或用户名显示
+  await page.waitForSelector('.ant-menu, .ant-avatar, text=/admin/i', { timeout: 15000 });
+  // 额外等待确保页面稳定
+  await page.waitForTimeout(1000);
 }
 
 test.describe('v1.3 React Query 缓存测试', () => {
