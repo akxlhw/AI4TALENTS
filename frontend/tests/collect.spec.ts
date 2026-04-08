@@ -7,7 +7,7 @@
  * 3. 任务状态显示
  * 4. 任务进度追踪
  */
-import { test, Page } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:5173';
 

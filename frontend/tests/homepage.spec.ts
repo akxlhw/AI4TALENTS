@@ -1,4 +1,4 @@
-import { test, Page } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:5173';
 
