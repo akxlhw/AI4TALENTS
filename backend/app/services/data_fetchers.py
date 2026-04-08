@@ -141,7 +141,9 @@ class WorkFetcher:
             return 0
 
         url = f"{OPENALEX_API_BASE}/works"
-        filters = [f"primary_location.source.id:{venue.openalex_source_id}"]
+        # Use locations.source.id to include papers where venue is not primary_location
+        # (e.g., conference papers first published on arXiv)
+        filters = [f"locations.source.id:{venue.openalex_source_id}"]
 
         # Add date filters if provided
         if year_from:
@@ -197,8 +199,10 @@ class WorkFetcher:
                 url = f"{OPENALEX_API_BASE}/works"
 
                 # Build filters: source + optional date range
-                # Note: OpenAlex API DOES support combining source and date filters
-                filters = [f"primary_location.source.id:{venue.openalex_source_id}"]
+                # Note: Use locations.source.id instead of primary_location.source.id
+                # because many conference papers (e.g., NeurIPS, ICML) have arXiv as primary_location
+                # while the conference is only in locations array
+                filters = [f"locations.source.id:{venue.openalex_source_id}"]
                 if year_from:
                     filters.append(f"from_publication_date:{year_from}-01-01")
                 if year_to:
