@@ -298,3 +298,153 @@ class TestCacheServiceWithMockRedis:
         result = await cache.acquire_lock("test:lock", ttl=10)
 
         assert result is False
+
+    @pytest.mark.asyncio
+    async def test_release_lock_success(self, cache_with_redis):
+        """Test releasing a lock successfully."""
+        cache, redis = cache_with_redis
+        redis.delete.return_value = 1
+
+        result = await cache.release_lock("test:lock")
+
+        assert result is True
+        redis.delete.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_release_lock_with_token_verification(self, cache_with_redis):
+        """Test releasing a lock with token verification."""
+        cache, redis = cache_with_redis
+        redis.get.return_value = "my-token"
+        redis.delete.return_value = 1
+
+        result = await cache.release_lock("test:lock", token="my-token")
+
+        assert result is True
+        redis.get.assert_called_once()
+        redis.delete.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_release_lock_token_mismatch(self, cache_with_redis):
+        """Test releasing a lock fails when token doesn't match."""
+        cache, redis = cache_with_redis
+        redis.get.return_value = "other-token"
+
+        result = await cache.release_lock("test:lock", token="my-token")
+
+        assert result is False
+        redis.get.assert_called_once()
+        redis.delete.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_release_lock_no_client(self, cache_with_redis):
+        """Test release_lock returns False when no Redis client."""
+        cache, redis = cache_with_redis
+        # Set client to None to simulate no connection
+        cache._conn.client = None
+        result = await cache.release_lock("test:lock")
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_incr_success(self, cache_with_redis):
+        """Test incrementing a counter."""
+        cache, redis = cache_with_redis
+        redis.incr.return_value = 42
+
+        result = await cache.incr("counter:key")
+
+        assert result == 42
+        redis.incr.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_incr_no_client(self, cache_with_redis):
+        """Test incr returns None when no Redis client."""
+        cache, redis = cache_with_redis
+        cache._conn.client = None
+        result = await cache.incr("counter:key")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_expire_success(self, cache_with_redis):
+        """Test setting TTL on a key."""
+        cache, redis = cache_with_redis
+        redis.expire.return_value = True
+
+        result = await cache.expire("test:key", ttl=300)
+
+        assert result is True
+        redis.expire.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_expire_no_client(self, cache_with_redis):
+        """Test expire returns False when no Redis client."""
+        cache, redis = cache_with_redis
+        cache._conn.client = None
+        result = await cache.expire("test:key", ttl=300)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_get_or_set_cache_empty_false(self, cache_with_redis):
+        """Test get_or_set with cache_empty=False doesn't cache None."""
+        cache, redis = cache_with_redis
+        redis.get.return_value = None
+
+        async def factory():
+            return None
+
+        result = await cache.get_or_set("test:key", factory=factory, cache_empty=False)
+
+        assert result is None
+        # Should not call setex since cache_empty=False and factory returned None
+        redis.setex.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_redis_error_on_get(self, cache_with_redis):
+        """Test Redis error handling on get operation."""
+        cache, redis = cache_with_redis
+        from redis.exceptions import RedisError
+
+        redis.get.side_effect = RedisError("Connection lost")
+
+        result = await cache.get("test:key")
+
+        # Should return None on error, not raise
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_redis_error_on_set(self, cache_with_redis):
+        """Test Redis error handling on set operation."""
+        cache, redis = cache_with_redis
+        from redis.exceptions import RedisError
+
+        redis.setex.side_effect = RedisError("Write failed")
+
+        result = await cache.set("test:key", {"data": "value"})
+
+        # Should return False on error, not raise
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_redis_error_on_delete(self, cache_with_redis):
+        """Test Redis error handling on delete operation."""
+        cache, redis = cache_with_redis
+        from redis.exceptions import RedisError
+
+        redis.delete.side_effect = RedisError("Delete failed")
+
+        result = await cache.delete("test:key")
+
+        # Should return False on error, not raise
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_redis_error_on_acquire_lock(self, cache_with_redis):
+        """Test Redis error handling on acquire_lock operation."""
+        cache, redis = cache_with_redis
+        from redis.exceptions import RedisError
+
+        redis.set.side_effect = RedisError("Lock failed")
+
+        result = await cache.acquire_lock("test:lock")
+
+        # Should return False on error, not raise
+        assert result is False

@@ -277,3 +277,212 @@ class TestTechElementCursorPagination:
 
         assert len(talents2) == 10
         assert next_cursor2 is None  # Last page
+
+
+class TestCursorPaginationEdgeCases:
+    """Tests for cursor pagination edge cases."""
+
+    @pytest.fixture
+    async def setup_empty_data(self, test_session: AsyncSession):
+        """Create minimal test data for edge case tests."""
+        school = School(
+            school_name="Empty University",
+            country_code="US",
+            country_name="美国",
+            is_visible=True,
+        )
+        test_session.add(school)
+        await test_session.commit()
+        return {"school": school}
+
+    @pytest.mark.asyncio
+    async def test_empty_result_set(
+        self, test_session: AsyncSession, setup_empty_data
+    ):
+        """Test cursor pagination with no results."""
+        from app.repositories.talent_repository import TalentRepository
+
+        repo = TalentRepository(test_session)
+
+        talents, next_cursor = await repo.get_list_by_cursor(
+            school_id=99999,  # Non-existent school
+            page_size=10,
+        )
+
+        assert len(talents) == 0
+        assert next_cursor is None
+
+    @pytest.mark.asyncio
+    async def test_cursor_exhausted_returns_empty(
+        self, test_session: AsyncSession, setup_pagination_data
+    ):
+        """Test cursor pagination when cursor points to first item (no more before it)."""
+        from app.repositories.talent_repository import TalentRepository
+
+        repo = TalentRepository(test_session)
+        data = setup_pagination_data
+
+        # Get first page to find the smallest talent_id
+        first_page, _ = await repo.get_list_by_cursor(page_size=100)
+
+        if first_page:
+            # Use the smallest ID as cursor - should return empty (no IDs smaller)
+            min_id = min(t.talent_id for t in first_page)
+            talents, next_cursor = await repo.get_list_by_cursor(
+                cursor=min_id,
+                page_size=10,
+            )
+
+            # Should return empty since no talent_id < min_id
+            assert len(talents) == 0
+            assert next_cursor is None
+
+    @pytest.mark.asyncio
+    async def test_pagination_with_country_filter(
+        self, test_session: AsyncSession, setup_pagination_data
+    ):
+        """Test cursor pagination with country code filter."""
+        from app.repositories.talent_repository import TalentRepository
+
+        repo = TalentRepository(test_session)
+
+        talents, next_cursor = await repo.get_list_by_cursor(
+            country_code="US",
+            page_size=10,
+        )
+
+        # All talents are from US school in setup_pagination_data
+        assert len(talents) <= 10
+        for t in talents:
+            assert t.school is not None
+
+    @pytest.mark.asyncio
+    async def test_pagination_with_keyword(
+        self, test_session: AsyncSession, setup_pagination_data
+    ):
+        """Test cursor pagination with keyword search."""
+        from app.repositories.talent_repository import TalentRepository
+
+        repo = TalentRepository(test_session)
+
+        talents, next_cursor = await repo.get_list_by_cursor(
+            keyword="Talent",
+            page_size=10,
+        )
+
+        assert len(talents) <= 10
+        for t in talents:
+            # Name should contain "Talent"
+            assert "Talent" in t.name or "Talent" in (t.name_en or "")
+
+    @pytest.mark.asyncio
+    async def test_pagination_with_min_works_filter(
+        self, test_session: AsyncSession, setup_pagination_data
+    ):
+        """Test cursor pagination with minimum works filter."""
+        from app.repositories.talent_repository import TalentRepository
+
+        repo = TalentRepository(test_session)
+
+        talents, next_cursor = await repo.get_list_by_cursor(
+            min_works=60,
+            page_size=10,
+        )
+
+        for t in talents:
+            assert t.works_count >= 60
+
+    @pytest.mark.asyncio
+    async def test_pagination_with_min_citations_filter(
+        self, test_session: AsyncSession, setup_pagination_data
+    ):
+        """Test cursor pagination with minimum citations filter."""
+        from app.repositories.talent_repository import TalentRepository
+
+        repo = TalentRepository(test_session)
+
+        talents, next_cursor = await repo.get_list_by_cursor(
+            min_citations=1100,
+            page_size=10,
+        )
+
+        for t in talents:
+            assert t.cited_by_count >= 1100
+
+    @pytest.mark.asyncio
+    async def test_single_item_page(
+        self, test_session: AsyncSession
+    ):
+        """Test cursor pagination with page_size=1."""
+        from app.repositories.talent_repository import TalentRepository
+
+        # Create a single talent
+        school = School(
+            school_name="Single School",
+            country_code="CN",
+            country_name="中国",
+            is_visible=True,
+        )
+        test_session.add(school)
+        await test_session.flush()
+
+        talent = Talent(
+            name="Single Talent",
+            school_id=school.school_id,
+            role_type=RoleType.PROFESSOR.value,
+            h_index=50,
+            visibility_status=VisibilityStatus.ACTIVE.value,
+            is_visible=True,
+        )
+        test_session.add(talent)
+        await test_session.commit()
+
+        repo = TalentRepository(test_session)
+
+        talents, next_cursor = await repo.get_list_by_cursor(
+            page_size=1,
+        )
+
+        assert len(talents) == 1
+        assert next_cursor is None  # Only one item
+
+    @pytest.mark.asyncio
+    async def test_exactly_page_size_results(
+        self, test_session: AsyncSession
+    ):
+        """Test cursor pagination when results equal page_size."""
+        from app.repositories.talent_repository import TalentRepository
+
+        # Create exactly 10 talents
+        school = School(
+            school_name="Exact School",
+            country_code="GB",
+            country_name="英国",
+            is_visible=True,
+        )
+        test_session.add(school)
+        await test_session.flush()
+
+        for i in range(10):
+            talent = Talent(
+                name=f"Exact Talent {i:02d}",
+                school_id=school.school_id,
+                role_type=RoleType.PROFESSOR.value,
+                h_index=50 - i,
+                visibility_status=VisibilityStatus.ACTIVE.value,
+                is_visible=True,
+            )
+            test_session.add(talent)
+
+        await test_session.commit()
+
+        repo = TalentRepository(test_session)
+
+        talents, next_cursor = await repo.get_list_by_cursor(
+            school_id=school.school_id,
+            page_size=10,
+        )
+
+        assert len(talents) == 10
+        # Should have no next cursor since exactly page_size results
+        assert next_cursor is None
