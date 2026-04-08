@@ -16,8 +16,12 @@ async function login(page: Page) {
   await page.locator('.ant-input[placeholder="用户名或邮箱"]').fill('admin');
   await page.locator('.ant-input-password input').fill('admin123');
   await page.locator('button:has-text("登")').click();
-  // 等待登录成功 - 检查侧边栏菜单或用户名显示
-  await page.waitForSelector('.ant-menu, .ant-avatar, text=/admin/i', { timeout: 15000 });
+  // 等待登录成功 - 使用 Promise.any 等待任意一个条件
+  await Promise.any([
+    page.waitForSelector('.ant-menu', { timeout: 20000 }),
+    page.waitForSelector('.ant-avatar', { timeout: 20000 }),
+    page.locator('text=admin').waitFor({ timeout: 20000 }),
+  ]);
   // 额外等待确保页面稳定
   await page.waitForTimeout(1000);
 }
