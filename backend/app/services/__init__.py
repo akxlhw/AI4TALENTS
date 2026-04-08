@@ -12,10 +12,6 @@ This module provides services for data collection, normalization, and synchroniz
 
 ## Usage
 
-For backward compatibility, you can continue using:
-- UnifiedCollectService (deprecated, use CollectionOrchestrator)
-- ServingLayerSync (deprecated, use ServingLayerOrchestrator)
-
 For new code, prefer using the specialized services directly:
 - CollectionOrchestrator for collection pipeline
 - ServingLayerOrchestrator for sync operations
@@ -54,7 +50,6 @@ from app.services.normalizers import (
     TechBelongCalculator,
 )
 from app.services.role_identifier import RoleIdentificationResult, RoleIdentifier
-from app.services.serving_layer_sync import ServingLayerSync
 
 # Sync services
 from app.services.sync import (
@@ -66,13 +61,9 @@ from app.services.sync import (
 
 # Talent service
 from app.services.talent_service import TalentService
-from app.services.unified_collect_service import CollectMode, UnifiedCollectService
 
 __all__ = [
-    # Legacy (deprecated)
-    "UnifiedCollectService",
-    "CollectMode",
-    "ServingLayerSync",
+    # Utilities
     "RoleIdentifier",
     "RoleIdentificationResult",
     # Common

@@ -152,10 +152,8 @@ const CollectPage: React.FC = () => {
   const loadTechElementVenues = async (techElementId: number) => {
     setVenueLoading(true)
     try {
-      console.log('[loadTechElementVenues] 加载技术要素关联的顶刊顶会...')
       const response = await api.venues.getTechElementBindings(techElementId)
       const bindings = response.data.items || []
-      console.log('[loadTechElementVenues] 响应:', bindings)
 
       // 提取绑定的顶刊顶会信息
       const venues: VenueItem[] = bindings
