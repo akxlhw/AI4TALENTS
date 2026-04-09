@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-04-09
+
+### Fixed
+
+#### PostgreSQL 兼容性
+- 批量同步时分批处理插入操作，避免 PostgreSQL 参数限制
+- 移除 SQLite 兼容代码，清理 PostgreSQL 迁移遗留
+- 修复错误迁移删除后的 schema 遗留问题
+- 修复批量同步学者合作网络的事件循环错误
+
+#### 数据采集
+- 使用 `locations.source.id` 替代 `primary_location.source.id` 获取数据源
+- 补充缺失的 OpenAlex Source ID 配置
+- cancel_task 添加数据库锁重试机制
+- 统一时间字段为 UTC 时区
+- Phase 1 完成后立即更新 total_records
+- 修复数据采集和初始化脚本问题
+
+#### 缓存
+- 采集任务完成后自动刷新首页缓存
+- init_system.py 添加 Redis 缓存清理
+
+#### 测试
+- 补充 v1.3 版本测试覆盖 (+51 个测试用例)
+- 修复 Playwright 选择器语法错误
+- 改进前端测试登录函数的可靠性
+- 修复前端测试文件缺少 expect 导入
+
+### Changed
+- 删除错误的迁移文件并补充完整性测试
+- 清理废弃代码和冗余文件
+
+### Documentation
+- 添加 Windows 部署文档
+
 ## [1.3.0] - 2026-04-06
 
 ### Added
@@ -184,6 +219,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frontend: React 18 + TypeScript + Vite + Ant Design v5
 - Database: SQLite (dev) / PostgreSQL (prod)
 
+[1.3.1]: https://github.com/akxlhw/AI4TALENTS/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/akxlhw/AI4TALENTS/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/akxlhw/AI4TALENTS/compare/v1.2.0...v1.2.1
