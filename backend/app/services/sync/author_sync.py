@@ -266,14 +266,21 @@ class AuthorSyncService:
     ) -> dict:
         """PostgreSQL-optimized bulk upsert using ON CONFLICT."""
 
-        # Get existing talents to determine created vs updated
+        # Get existing talents in batches to avoid parameter limit
         author_ids = [a.openalex_author_id for a in std_authors]
-        existing_result = await self.session.execute(
-            select(Talent.source_record_id, Talent.talent_id).where(
-                Talent.source_record_id.in_(author_ids)
+        existing_map = {}
+
+        # Process IN query in batches
+        BATCH_SIZE = 5000
+        for i in range(0, len(author_ids), BATCH_SIZE):
+            batch_ids = author_ids[i:i + BATCH_SIZE]
+            existing_result = await self.session.execute(
+                select(Talent.source_record_id, Talent.talent_id).where(
+                    Talent.source_record_id.in_(batch_ids)
+                )
             )
-        )
-        existing_map = {row.source_record_id: row.talent_id for row in existing_result.all()}
+            for row in existing_result.all():
+                existing_map[row.source_record_id] = row.talent_id
 
         # Prepare bulk data
         now = datetime.utcnow().isoformat()
@@ -319,9 +326,12 @@ class AuthorSyncService:
             else:
                 result["updated"] += 1
 
-        # Execute bulk upsert
-        if talent_data:
-            stmt = pg_insert(Talent).values(talent_data)
+        # Execute bulk upsert in batches (PostgreSQL has 32767 parameter limit)
+        # Each talent has ~16 parameters, so batch size of 1000 is safe
+        BATCH_SIZE = 1000
+        for i in range(0, len(talent_data), BATCH_SIZE):
+            batch = talent_data[i:i + BATCH_SIZE]
+            stmt = pg_insert(Talent).values(batch)
             stmt = stmt.on_conflict_do_update(
                 index_elements=["source_record_id"],
                 set_={
@@ -340,64 +350,72 @@ class AuthorSyncService:
                 }
             )
             await self.session.execute(stmt)
+            logger.debug(f"[BULK_SYNC] Upserted batch {i // BATCH_SIZE + 1}: {len(batch)} records")
 
         result["synced"] = len(std_authors)
 
         # Bulk create role profiles (separate query for new talents)
         if result["created"] > 0:
-            # Get newly created talent IDs
-            new_result = await self.session.execute(
-                select(Talent.talent_id, Talent.source_record_id, Talent.role_type,
-                       Talent.role_confidence).where(
-                    Talent.source_record_id.in_([
-                        a.openalex_author_id for a in std_authors
-                        if a.openalex_author_id not in existing_map
-                    ])
-                )
-            )
+            # Get newly created talent IDs in batches
+            new_author_ids = [
+                a.openalex_author_id for a in std_authors
+                if a.openalex_author_id not in existing_map
+            ]
 
-            for row in new_result.all():
-                # Get role reason from original author
-                author = next(
-                    (a for a in std_authors if a.openalex_author_id == row.source_record_id),
-                    None
-                )
-                if author:
-                    role_result = RoleIdentifier.identify(
-                        works_count=author.works_count or 0,
-                        cited_by_count=author.cited_by_count or 0,
-                        h_index=author.h_index or 0
+            for i in range(0, len(new_author_ids), BATCH_SIZE):
+                batch_ids = new_author_ids[i:i + BATCH_SIZE]
+                new_result = await self.session.execute(
+                    select(Talent.talent_id, Talent.source_record_id, Talent.role_type,
+                           Talent.role_confidence).where(
+                        Talent.source_record_id.in_(batch_ids)
                     )
-                    profile_data.append({
-                        "talent_id": row.talent_id,
-                        "role_type": row.role_type,
-                        "role_confidence": row.role_confidence,
-                        "role_reason": role_result.reason,
-                        "identification_method": "heuristic",
-                        "identified_at": now,
-                    })
+                )
 
-                    # Track new professors for work fetching
-                    if row.role_type == "professor":
-                        result["new_talents"].append({
+                for row in new_result.all():
+                    # Get role reason from original author
+                    author = next(
+                        (a for a in std_authors if a.openalex_author_id == row.source_record_id),
+                        None
+                    )
+                    if author:
+                        role_result = RoleIdentifier.identify(
+                            works_count=author.works_count or 0,
+                            cited_by_count=author.cited_by_count or 0,
+                            h_index=author.h_index or 0
+                        )
+                        profile_data.append({
                             "talent_id": row.talent_id,
-                            "openalex_author_id": row.source_record_id,
-                            "works_count": author.works_count or 0 if author else 0,
+                            "role_type": row.role_type,
+                            "role_confidence": row.role_confidence,
+                            "role_reason": role_result.reason,
+                            "identification_method": "heuristic",
+                            "identified_at": now,
                         })
 
+                        # Track new professors for work fetching
+                        if row.role_type == "professor":
+                            result["new_talents"].append({
+                                "talent_id": row.talent_id,
+                                "openalex_author_id": row.source_record_id,
+                                "works_count": author.works_count or 0 if author else 0,
+                            })
+
             if profile_data:
-                profile_stmt = pg_insert(RoleProfile).values(profile_data)
-                profile_stmt = profile_stmt.on_conflict_do_update(
-                    index_elements=["talent_id"],
-                    set_={
-                        "role_type": profile_stmt.excluded.role_type,
-                        "role_confidence": profile_stmt.excluded.role_confidence,
-                        "role_reason": profile_stmt.excluded.role_reason,
-                        "identification_method": profile_stmt.excluded.identification_method,
-                        "identified_at": profile_stmt.excluded.identified_at,
-                    }
-                )
-                await self.session.execute(profile_stmt)
+                # Batch insert profiles as well
+                for i in range(0, len(profile_data), BATCH_SIZE):
+                    batch = profile_data[i:i + BATCH_SIZE]
+                    profile_stmt = pg_insert(RoleProfile).values(batch)
+                    profile_stmt = profile_stmt.on_conflict_do_update(
+                        index_elements=["talent_id"],
+                        set_={
+                            "role_type": profile_stmt.excluded.role_type,
+                            "role_confidence": profile_stmt.excluded.role_confidence,
+                            "role_reason": profile_stmt.excluded.role_reason,
+                            "identification_method": profile_stmt.excluded.identification_method,
+                            "identified_at": profile_stmt.excluded.identified_at,
+                        }
+                    )
+                    await self.session.execute(profile_stmt)
 
         logger.info(
             f"[BULK_SYNC] PostgreSQL upsert complete: "

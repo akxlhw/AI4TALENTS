@@ -165,14 +165,21 @@ class SchoolSyncService:
     ) -> dict:
         """PostgreSQL-optimized bulk upsert using ON CONFLICT."""
 
-        # Get existing schools
+        # Get existing schools in batches
         inst_ids = [s.openalex_institution_id for s in std_schools]
-        existing_result = await self.session.execute(
-            select(School.source_record_id, School.school_id).where(
-                School.source_record_id.in_(inst_ids)
+        existing_map = {}
+
+        # Process IN query in batches to avoid parameter limit
+        BATCH_SIZE = 5000
+        for i in range(0, len(inst_ids), BATCH_SIZE):
+            batch_ids = inst_ids[i:i + BATCH_SIZE]
+            existing_result = await self.session.execute(
+                select(School.source_record_id, School.school_id).where(
+                    School.source_record_id.in_(batch_ids)
+                )
             )
-        )
-        existing_map = {row.source_record_id: row.school_id for row in existing_result.all()}
+            for row in existing_result.all():
+                existing_map[row.source_record_id] = row.school_id
 
         # Prepare bulk data
         school_data = []
@@ -198,28 +205,38 @@ class SchoolSyncService:
             else:
                 result["updated"] += 1
 
-        # Execute bulk upsert
+        # Execute bulk upsert in batches (PostgreSQL has 32767 parameter limit)
+        # Each school has ~8 parameters, so batch size of 2000 is safe
         if school_data:
-            stmt = pg_insert(School).values(school_data)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["source_record_id"],
-                set_={
-                    "school_name": stmt.excluded.school_name,
-                    "country_code": stmt.excluded.country_code,
-                    "country_name": stmt.excluded.country_name,
-                    "homepage_url": stmt.excluded.homepage_url,
-                    "updated_at": stmt.excluded.updated_at,
-                }
-            )
-            await self.session.execute(stmt)
+            BATCH_SIZE = 2000
+            for i in range(0, len(school_data), BATCH_SIZE):
+                batch = school_data[i:i + BATCH_SIZE]
+                stmt = pg_insert(School).values(batch)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["source_record_id"],
+                    set_={
+                        "school_name": stmt.excluded.school_name,
+                        "country_code": stmt.excluded.country_code,
+                        "country_name": stmt.excluded.country_name,
+                        "homepage_url": stmt.excluded.homepage_url,
+                        "updated_at": stmt.excluded.updated_at,
+                    }
+                )
+                await self.session.execute(stmt)
 
-        # Get all school IDs (both existing and newly created)
-        id_result = await self.session.execute(
-            select(School.source_record_id, School.school_id).where(
-                School.source_record_id.in_(inst_ids)
+        # Get all school IDs (both existing and newly created) in batches
+        school_id_map = {}
+        for i in range(0, len(inst_ids), BATCH_SIZE):
+            batch_ids = inst_ids[i:i + BATCH_SIZE]
+            id_result = await self.session.execute(
+                select(School.source_record_id, School.school_id).where(
+                    School.source_record_id.in_(batch_ids)
+                )
             )
-        )
-        result["school_id_map"] = {row.source_record_id: row.school_id for row in id_result.all()}
+            for row in id_result.all():
+                school_id_map[row.source_record_id] = row.school_id
+
+        result["school_id_map"] = school_id_map
         result["synced"] = len(std_schools)
 
         logger.info(
