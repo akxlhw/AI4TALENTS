@@ -7,7 +7,7 @@
  * - 固定参数：数据类型（学者+论文+机构）
  * - 可配置参数：时间范围（起始年份~截止年份/至今）
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
   Card,
   Table,
@@ -49,6 +49,7 @@ import {
   SyncOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
+import { queryClient, queryKeys } from '../hooks/queryClient'
 import {
   getTaskStatusConfig,
   getVenueTypeConfig,
@@ -100,6 +101,9 @@ const CollectPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('tech-elements')
+
+  // Track running task IDs to detect completion
+  const runningTaskIdsRef = useRef<Set<number>>(new Set())
 
   // Collaboration sync state
   const [collabSyncStatus, setCollabSyncStatus] = useState<{
@@ -240,8 +244,30 @@ const CollectPage: React.FC = () => {
     setLoading(true)
     try {
       const response = await api.collect.listTasks({ page: taskPage, page_size: 10 })
-      setTasks(response.data.items || [])
+      const newTasks = response.data.items || []
+      setTasks(newTasks)
       setTaskTotal(response.data.total || 0)
+
+      // Check for newly completed tasks
+      const currentRunningIds = new Set<number>(
+        newTasks.filter((t: CollectTask) => t.status === 'running').map((t: CollectTask) => t.task_id)
+      )
+      const completedTaskIds = [...runningTaskIdsRef.current].filter(
+        (id: number) => !currentRunningIds.has(id) && newTasks.some((t: CollectTask) => t.task_id === id && t.status === 'completed')
+      )
+
+      // If any task just completed, invalidate homepage cache
+      if (completedTaskIds.length > 0) {
+        console.log('[CollectPage] Tasks completed:', completedTaskIds, 'Invalidating homepage cache')
+        queryClient.invalidateQueries({ queryKey: queryKeys.homepage.overview })
+        queryClient.invalidateQueries({ queryKey: queryKeys.homepage.highlights })
+        queryClient.invalidateQueries({ queryKey: queryKeys.techElements.stats() })
+        queryClient.invalidateQueries({ queryKey: queryKeys.techElements.overallStats })
+        queryClient.invalidateQueries({ queryKey: queryKeys.techElements.overallTalents() })
+      }
+
+      // Update running task tracking
+      runningTaskIdsRef.current = currentRunningIds
     } catch (_error) {
       message.error('加载任务列表失败')
     } finally {
