@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-04-10
+
+### Fixed
+
+#### 合作网络同步
+- 使用 FastAPI BackgroundTasks 替代手动线程管理，修复事件循环冲突错误
+
+#### 测试配置
+- 修复 TEST_DATABASE_URL 指向生产数据库导致测试误删数据的风险
+- 测试数据库改为独立的 `talent_db_test`
+- 默认跳过需要 CREATEDB 权限的迁移测试
+
+#### E2E 测试
+- 修复测试使用正确的 client fixture 以访问测试数据
+
+### Added
+- 添加 `scripts/create_test_db.py` 辅助创建测试数据库
+
+### Documentation
+- README 补充测试数据库创建说明和警告
+
 ## [1.3.1] - 2026-04-09
 
 ### Fixed
@@ -219,6 +240,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frontend: React 18 + TypeScript + Vite + Ant Design v5
 - Database: SQLite (dev) / PostgreSQL (prod)
 
+[1.3.2]: https://github.com/akxlhw/AI4TALENTS/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/akxlhw/AI4TALENTS/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/akxlhw/AI4TALENTS/compare/v1.2.1...v1.2.2
