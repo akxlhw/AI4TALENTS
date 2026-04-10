@@ -251,23 +251,22 @@ class TestE2ETechElementFlow:
 
     @pytest.mark.asyncio
     async def test_tech_element_talents_pagination_e2e(
-        self, test_session: AsyncSession, setup_e2e_data
+        self, client: AsyncClient, setup_e2e_data
     ):
         """Test tech element talents pagination."""
         data = setup_e2e_data
         element_id = data["elements"][0].tech_element_id
 
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            # Get first page
-            response = await client.get(
-                f"/api/v1/tech-elements/{element_id}/talents",
-                params={"page": 1, "page_size": 5},
-            )
-            assert response.status_code == 200
+        # Get first page
+        response = await client.get(
+            f"/api/v1/tech-elements/{element_id}/talents",
+            params={"page": 1, "page_size": 5},
+        )
+        assert response.status_code == 200
 
-            page1 = response.json()
-            # Should have results since we created 8 tech tags
-            assert page1["total"] >= 0  # Just verify the endpoint works
+        page1 = response.json()
+        # Should have results since we created 8 tech tags
+        assert page1["total"] >= 0  # Just verify the endpoint works
 
 
 class TestE2ETalentList:

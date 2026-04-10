@@ -33,10 +33,10 @@ from app.main import app
 from app.core.database import Base, get_async_session
 
 
-# Test database URL (PostgreSQL for testing - matches production)
-# Note: Tests run against the same database but use table cleanup between tests
-# Using PostgreSQL requires tables to exist - use alembic upgrade head first
-TEST_DATABASE_URL = "postgresql+asyncpg://talent_user:ai4recruit@localhost:5432/talent_db"
+# Test database URL (PostgreSQL for testing - MUST be a separate database)
+# IMPORTANT: Never use production database for tests! Tests will DROP ALL TABLES after each run.
+# Create test database with: CREATE DATABASE talent_db_test OWNER talent_user;
+TEST_DATABASE_URL = "postgresql+asyncpg://talent_user:ai4recruit@localhost:5432/talent_db_test"
 
 
 def pytest_configure(config):

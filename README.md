@@ -121,12 +121,18 @@ make sync           # 同步 OpenAlex 数据
 ### 后端测试
 
 ```bash
+# 1. 创建测试数据库（首次运行测试前执行）
+psql -U postgres -c "CREATE DATABASE talent_db_test OWNER talent_user;"
+
+# 2. 运行测试
 cd backend
 pytest                        # 运行所有测试
 pytest tests/test_models.py   # 运行指定测试文件
 pytest -v --cov=app           # 带覆盖率报告
 pytest -m "not slow"          # 跳过慢速测试
 ```
+
+> ⚠️ **重要**: 测试使用独立的 `talent_db_test` 数据库，每个测试结束后会删除所有表。请勿将 `TEST_DATABASE_URL` 指向生产数据库。
 
 ### 前端 E2E 测试
 

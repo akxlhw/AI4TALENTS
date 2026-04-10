@@ -10,7 +10,7 @@ import asyncio
 import csv
 import io
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -424,49 +424,8 @@ async def get_talent_collaborations(
         await collab_service.close()
 
 
-# Background task for syncing collaborations
+# Global state for tracking sync progress
 _sync_progress = {"status": "idle", "processed": 0, "total": 0, "collaborations": 0}
-
-
-def run_sync_in_thread(talent_id: int | None = None):
-    """Run sync in a separate thread to avoid blocking."""
-    global _sync_progress
-
-    async def do_sync():
-        global _sync_progress
-        from app.core.database import AsyncSessionLocal
-        from app.services.collaboration_service import CollaborationService
-
-        _sync_progress = {"status": "running", "processed": 0, "total": 0, "collaborations": 0}
-
-        async with AsyncSessionLocal() as session:
-            service = CollaborationService(session)
-            try:
-                if talent_id:
-                    from app.services.talent_service import TalentService
-                    talent_service = TalentService(session)
-                    talent = await talent_service.get_talent_by_id(talent_id)
-                    if talent:
-                        count = await service.sync_collaborations_for_talent(talent)
-                        _sync_progress["processed"] = 1
-                        _sync_progress["total"] = 1
-                        _sync_progress["collaborations"] = count
-                else:
-                    result = await service.sync_all_collaborations(
-                        progress_callback=lambda p, t, c: _sync_progress.update({
-                            "processed": p, "total": t, "collaborations": c
-                        })
-                    )
-                    _sync_progress.update(result)
-
-                _sync_progress["status"] = "completed"
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                _sync_progress["status"] = f"error: {str(e)}"
-
-    # Use asyncio.run() to properly create and manage the event loop
-    asyncio.run(do_sync())
 
 
 @router.post(
@@ -475,13 +434,13 @@ def run_sync_in_thread(talent_id: int | None = None):
     description="从已采集的论文数据中提取学者合作关系，无需重复调用 OpenAlex API",
 )
 async def sync_collaborations(
+    background_tasks: BackgroundTasks,
     talent_id: int | None = Query(None, description="单个学者ID，为空则同步全部"),
     session: AsyncSession = Depends(get_async_session),
 ):
     """
     Trigger collaboration data sync from local RawWork data.
     """
-    import threading
     global _sync_progress
 
     if _sync_progress["status"] == "running":
@@ -490,15 +449,50 @@ async def sync_collaborations(
     # Reset progress
     _sync_progress = {"status": "pending", "processed": 0, "total": 0, "collaborations": 0}
 
-    # Start background thread
-    thread = threading.Thread(target=run_sync_in_thread, args=(talent_id,), daemon=True)
-    thread.start()
+    # Use FastAPI BackgroundTasks instead of manual threading
+    # This keeps the task in the same event loop, avoiding "Future attached to a different loop" errors
+    background_tasks.add_task(run_sync_background, talent_id)
 
     return {
         "message": "同步任务已启动",
         "talent_id": talent_id,
         "sync_all": talent_id is None
     }
+
+
+async def run_sync_background(talent_id: int | None = None):
+    """Run sync as a background task within the main event loop."""
+    global _sync_progress
+    from app.core.database import AsyncSessionLocal
+    from app.services.collaboration_service import CollaborationService
+
+    _sync_progress = {"status": "running", "processed": 0, "total": 0, "collaborations": 0}
+
+    async with AsyncSessionLocal() as session:
+        service = CollaborationService(session)
+        try:
+            if talent_id:
+                from app.services.talent_service import TalentService
+                talent_service = TalentService(session)
+                talent = await talent_service.get_talent_by_id(talent_id)
+                if talent:
+                    count = await service.sync_collaborations_for_talent(talent)
+                    _sync_progress["processed"] = 1
+                    _sync_progress["total"] = 1
+                    _sync_progress["collaborations"] = count
+            else:
+                result = await service.sync_all_collaborations(
+                    progress_callback=lambda p, t, c: _sync_progress.update({
+                        "processed": p, "total": t, "collaborations": c
+                    })
+                )
+                _sync_progress.update(result)
+
+            _sync_progress["status"] = "completed"
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            _sync_progress["status"] = f"error: {str(e)}"
 
 
 @router.get(
