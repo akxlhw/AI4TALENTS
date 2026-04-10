@@ -173,7 +173,7 @@ npx playwright test --ui      # UI 模式运行
 - [x] TP8 采集配置与任务管理
 - [x] TP9 版本发布与数据质量
 
-### MVP v1.2 (当前版本)
+### MVP v1.2 (已完成)
 技术债务清理、架构优化、测试补全
 
 - [x] CR-01 前端废弃文件清理
@@ -183,6 +183,30 @@ npx playwright test --ui      # UI 模式运行
 - [x] CR-05 后端日志系统配置 (JSON 结构化日志)
 - [x] CR-06 后端请求日志中间件 (request_id 追踪)
 - [x] CR-07 核心API测试补充 (search, talents)
+
+### MVP v1.3 (已完成)
+架构升级与性能优化，支持百万级人才数据
+
+- [x] PostgreSQL 性能索引优化 (12 个索引)
+- [x] Redis 缓存层 (可选，支持降级)
+- [x] 游标分页替代 OFFSET 分页
+- [x] 批量同步操作优化
+- [x] Prometheus 指标采集 (`/api/v1/metrics`)
+- [x] 健康检查端点 (`/api/v1/health`, `/ready`, `/live`)
+- [x] React Query 前端缓存
+- [x] 测试覆盖 (+100 个测试用例)
+
+### v1.3.x 补丁版本
+
+#### v1.3.1
+- PostgreSQL 批量插入参数限制修复
+- 数据采集稳定性改进 (UTC 时区、锁重试、进度更新)
+- 采集完成后自动刷新首页缓存
+
+#### v1.3.2 (当前版本)
+- 合作网络同步事件循环冲突修复
+- 测试数据库配置安全修复 (独立测试库)
+- E2E 测试 fixture 问题修复
 
 ### 功能清单
 
@@ -217,6 +241,23 @@ npx playwright test --ui      # UI 模式运行
 - [x] 默认视角配置 (用户个性化默认视角)
 - [x] 采集配置管理 (采集范围、采集策略、采集任务)
 - [x] 数据版本管理 (版本快照、发布控制、质量摘要)
+
+#### v1.2 新增功能
+- [x] 限流中间件 (100 req/min per user/IP)
+- [x] 结构化 JSON 日志
+- [x] 请求追踪中间件 (X-Request-ID)
+- [x] 全局异常处理
+- [x] Zustand 状态管理
+- [x] 前端通用组件抽象
+
+#### v1.3 新增功能
+- [x] PostgreSQL 性能索引 (12 个优化索引)
+- [x] Redis 缓存层 (可选，支持降级)
+- [x] 游标分页
+- [x] Prometheus 指标采集
+- [x] 健康检查端点 (health/ready/live)
+- [x] React Query 前端缓存
+- [x] 批量同步优化
 
 ## License
 
