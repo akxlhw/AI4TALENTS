@@ -304,3 +304,81 @@ export interface VenueTypeConfig {
   label: string
   color: string
 }
+
+// ============================================
+// v1.4 新增类型定义 - 智能推荐与JD匹配
+// ============================================
+
+// Search Mode - 搜索模式
+export type SearchMode = 'keyword' | 'fulltext' | 'semantic' | 'hybrid'
+
+// Enhanced Search Result - 增强搜索结果
+export interface EnhancedSearchResult extends SearchTalent {
+  similarity_score?: number
+  research_interests?: string
+}
+
+// JD Features - JD解析特征
+export interface JDFeatures {
+  skills: string[]
+  experience: string
+  research_areas: string[]
+  role_type: string
+  education_level?: string
+}
+
+// Match Config - 匹配配置
+export interface MatchConfig {
+  weights?: {
+    skill?: number
+    research?: number
+    experience?: number
+    education?: number
+  }
+  filters?: Record<string, unknown>
+  limit?: number
+}
+
+// Match Result Item - 匹配结果项
+export interface MatchResultItem {
+  talent_id: number
+  name: string
+  title: string
+  school_name: string
+  overall_score: number
+  skill_score: number
+  research_score: number
+  experience_score: number
+  match_reasons: string[]
+  highlight_skills: string[]
+}
+
+// Match Response - 匹配响应
+export interface MatchResponse {
+  session_id: number
+  total: number
+  items: MatchResultItem[]
+  took_ms: number
+}
+
+// Recommend Mode - 推荐模式
+export type RecommendMode = 'similar' | 'complement' | 'diverse'
+
+// Recommend Result Item - 推荐结果项
+export interface RecommendResultItem {
+  talent_id: number
+  name: string
+  title: string
+  school_name: string
+  similarity_score: number
+  reasons: string[]
+}
+
+// Recommend Response - 推荐响应
+export interface RecommendResponse {
+  reference_talents: number[]
+  total: number
+  items: RecommendResultItem[]
+  mode: string
+  took_ms: number
+}

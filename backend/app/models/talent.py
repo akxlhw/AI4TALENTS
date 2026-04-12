@@ -72,6 +72,7 @@ class Talent(Base, TimestampMixin):
     selected_works = relationship("SelectedWork", back_populates="talent")
     tech_tags = relationship("TalentTechTag", back_populates="talent")
     std_author = relationship("StdAuthor", back_populates="talent")
+    embedding = relationship("TalentEmbedding", back_populates="talent", uselist=False)
 
     def update_topic_tags_from_tech_tags(self):
         """

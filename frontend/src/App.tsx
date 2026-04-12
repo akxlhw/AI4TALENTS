@@ -13,6 +13,8 @@ import TechElementPage from './pages/TechElementPage'
 import CountrySchoolPage from './pages/CountrySchoolPage'
 import CollectPage from './pages/CollectPage'
 import DataVersionPage from './pages/DataVersionPage'
+import JDMatchPage from './pages/JDMatchPage'
+import RecommendPage from './pages/RecommendPage'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FavoritesProvider } from './contexts/FavoritesContext'
 
@@ -100,6 +102,8 @@ function AppRoutes() {
         <Route path="tech-element" element={<TechElementPage />} />
         <Route path="country-school" element={<CountrySchoolPage />} />
         <Route path="search" element={<SearchPage />} />
+        <Route path="jd-match" element={<JDMatchPage />} />
+        <Route path="recommend" element={<RecommendPage />} />
         <Route path="talents/:id" element={<TalentDetailPage />} />
         <Route path="schools/:id" element={<SchoolDetailPage />} />
         <Route path="favorites" element={<FavoritesPage />} />

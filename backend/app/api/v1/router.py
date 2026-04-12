@@ -13,9 +13,11 @@ from app.api.v1.endpoints import (
     favorites,
     health,
     homepage,
+    jd_match,
     metrics,
     overview,
     permissions,
+    recommend,
     schools,
     search,
     talent_pool,
@@ -76,3 +78,9 @@ api_router.include_router(venue.router)
 
 # Data version management endpoints
 api_router.include_router(data_version.router)
+
+# JD Match endpoints (v1.4)
+api_router.include_router(jd_match.router)
+
+# Recommend endpoints (v1.4)
+api_router.include_router(recommend.router)

@@ -352,4 +352,52 @@ export const api = {
     getHighlights: () =>
       apiClient.get('/homepage/highlights'),
   },
+
+  // v1.4 Enhanced Search - 增强搜索
+  enhancedSearch: {
+    // 增强搜索（支持多模式）
+    search: (params: {
+      q: string
+      mode?: 'keyword' | 'fulltext' | 'semantic' | 'hybrid'
+      fuzzy?: boolean
+      role_type?: string
+      school_id?: number
+      min_citations?: number
+      page?: number
+      page_size?: number
+    }) => apiClient.get('/search/v2/talents', { params }),
+  },
+
+  // v1.4 JD Match - JD匹配
+  jdMatch: {
+    // 解析JD文本
+    parse: (jdText: string) =>
+      apiClient.post('/jd-match/parse', { jd_text: jdText }),
+    // 匹配人才
+    match: (data: {
+      jd_text: string
+      config?: {
+        weights?: { skill?: number; research?: number; experience?: number; education?: number }
+        filters?: Record<string, unknown>
+        limit?: number
+      }
+    }) => apiClient.post('/jd-match/match', data),
+    // 获取匹配会话
+    getSession: (sessionId: number) =>
+      apiClient.get(`/jd-match/sessions/${sessionId}`),
+  },
+
+  // v1.4 Recommend - 智能推荐
+  recommend: {
+    // 获取推荐人才
+    getRecommendations: (data: {
+      reference_talent_ids: number[]
+      mode?: 'similar' | 'complement' | 'diverse'
+      limit?: number
+      filters?: Record<string, unknown>
+    }) => apiClient.post('/recommend/talents', data),
+    // 获取相似人才（快捷接口）
+    getSimilar: (talentId: number, limit?: number, mode?: string) =>
+      apiClient.get(`/recommend/talents/${talentId}/similar`, { params: { limit, mode } }),
+  },
 }

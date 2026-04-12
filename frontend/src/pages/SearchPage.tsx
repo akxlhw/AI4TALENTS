@@ -19,6 +19,8 @@ import {
   Menu,
   message,
   Modal,
+  Tooltip,
+  Segmented,
 } from 'antd'
 import {
   SearchOutlined,
@@ -31,6 +33,8 @@ import {
   DeleteOutlined,
   SettingOutlined,
   ReloadOutlined,
+  ThunderboltOutlined,
+  BulbOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
 import FavoriteButton from '../components/FavoriteButton'
@@ -41,7 +45,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useSearchTemplates } from '../hooks/useSearchTemplates'
 import { useColumnConfig } from '../hooks/useColumnConfig'
 import { getRoleTypeConfig } from '../constants/roleType'
-import type { SearchTalent, TechElement } from '../types'
+import type { SearchTalent, TechElement, SearchMode, EnhancedSearchResult } from '../types'
 
 const { Title, Text } = Typography
 const { Search } = Input
@@ -70,6 +74,10 @@ const SearchPage: React.FC = () => {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const pageSize = 20
+
+  // v1.4 Search mode state
+  const [searchMode, setSearchMode] = useState<SearchMode>('keyword')
+  const [tookMs, setTookMs] = useState<number | null>(null)
 
   // Filter state - Original
   const [roleFilter, setRoleFilter] = useState<string | undefined>()
@@ -155,62 +163,89 @@ const SearchPage: React.FC = () => {
       setQuery(initialQuery)
       performSearch(initialQuery, 1)
     } else {
-      // 没有初始搜索词时，默认加载所有人才
-      performSearch('', 1)
+      // 没有初始搜索词时，加载所有人才（使用旧版API）
+      loadAllTalents()
     }
   }, [initialQuery])
 
-  const performSearch = async (searchQuery: string, pageNum: number) => {
+  const loadAllTalents = async () => {
     setLoading(true)
     try {
       const response = await api.talents.list({
-        school_id: schoolFilter,
-        country_code: countryFilter,
+        page: 1,
+        page_size: pageSize,
+      })
+      const data = response.data
+      const items: SearchTalent[] = (data.items || []).map((item: SearchTalent) => ({
+        talent_id: item.talent_id,
+        name: item.name,
+        name_en: item.name_en,
+        role_type: item.role_type,
+        school_id: item.school_id,
+        school_name: item.school_name,
+        current_title: item.current_title,
+        works_count: item.works_count,
+        cited_by_count: item.cited_by_count,
+        h_index: item.h_index,
+        topic_tags: item.topic_tags || [],
+        openalex_topics: [],
+      }))
+      setResults(items)
+      setTotal(data.total || items.length)
+      setTookMs(null)
+      setPage(1)
+    } catch (err) {
+      console.error('Load talents failed:', err)
+      message.error('加载人才列表失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const performSearch = async (searchQuery: string, pageNum: number) => {
+    // 空查询时使用旧版API加载所有人才
+    if (!searchQuery.trim()) {
+      return loadAllTalents()
+    }
+
+    setLoading(true)
+    setTookMs(null)
+    try {
+      // Use enhanced search API for all modes (keyword, semantic, hybrid)
+      const response = await api.enhancedSearch.search({
+        q: searchQuery.trim(),
+        mode: searchMode,
         role_type: roleFilter,
-        keyword: searchQuery.trim() || undefined,
+        school_id: schoolFilter,
+        min_citations: minCitations,
         page: pageNum,
         page_size: pageSize,
       })
       const data = response.data
 
-      // Apply client-side filters (for filters not supported by API yet)
-      let filteredItems: SearchTalent[] = data.items || []
+      // Transform results
+      const items: SearchTalent[] = (data.items || []).map((item: EnhancedSearchResult) => ({
+        talent_id: item.talent_id,
+        name: item.name,
+        name_en: item.name_en,
+        role_type: item.role_type,
+        school_id: item.school_id,
+        school_name: item.school_name,
+        current_title: item.current_title,
+        works_count: item.works_count,
+        cited_by_count: item.cited_by_count,
+        h_index: item.h_index,
+        topic_tags: item.topic_tags || [],
+        openalex_topics: item.openalex_topics || [],
+      }))
 
-      if (minWorks !== undefined) {
-        filteredItems = filteredItems.filter((t) => t.works_count >= minWorks)
-      }
-      if (minCitations !== undefined) {
-        filteredItems = filteredItems.filter((t) => t.cited_by_count >= minCitations)
-      }
-
-      // Apply sorting
-      filteredItems.sort((a, b) => {
-        let aVal = 0, bVal = 0
-        switch (sortBy) {
-          case 'works_count':
-            aVal = a.works_count
-            bVal = b.works_count
-            break
-          case 'cited_by_count':
-            aVal = a.cited_by_count
-            bVal = b.cited_by_count
-            break
-          case 'h_index':
-            aVal = a.h_index
-            bVal = b.h_index
-            break
-          default:
-            aVal = a.cited_by_count
-            bVal = b.cited_by_count
-        }
-        return sortOrder === 'desc' ? bVal - aVal : aVal - bVal
-      })
-
-      setResults(filteredItems)
-      setTotal(data.total || filteredItems.length)
+      setResults(items)
+      setTotal(data.total || items.length)
+      setTookMs(data.took_ms || null)
       setPage(pageNum)
     } catch (err) {
       console.error('Search failed:', err)
+      message.error('搜索失败，请重试')
     } finally {
       setLoading(false)
     }
@@ -495,15 +530,20 @@ const SearchPage: React.FC = () => {
       <Title level={3}>
         <SearchOutlined style={{ marginRight: 8 }} />
         人才搜索
+        {tookMs && (
+          <Text type="secondary" style={{ fontSize: 14, marginLeft: 12, fontWeight: 'normal' }}>
+            耗时 {tookMs.toFixed(0)}ms
+          </Text>
+        )}
       </Title>
 
       {/* Search Box */}
       <Card style={{ marginBottom: 16 }}>
-        <Row gutter={16}>
+        <Row gutter={16} align="middle">
           <Col flex="auto">
             <Search
               ref={searchInputRef}
-              placeholder="输入姓名、学校、研究方向等关键词... (按 / 或 Ctrl+F 快速搜索)"
+              placeholder="搜索姓名、研究主题、论文标题... (按 / 或 Ctrl+F 快速搜索)"
               value={query}
               onChange={e => setQuery(e.target.value)}
               onSearch={handleSearch}
@@ -518,6 +558,68 @@ const SearchPage: React.FC = () => {
                 排序 <DownOutlined />
               </Button>
             </Dropdown>
+          </Col>
+        </Row>
+
+        {/* Search Scope Hint */}
+        <Row style={{ marginTop: 8 }}>
+          <Col>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              搜索范围：姓名、研究主题（如 Graph Neural Networks）、论文标题（如 wav2vec）
+            </Text>
+          </Col>
+        </Row>
+
+        {/* v1.4 Search Mode Selector */}
+        <Row style={{ marginTop: 8 }}>
+          <Col>
+            <Space>
+              <Text type="secondary">搜索模式:</Text>
+              <Segmented
+                value={searchMode}
+                onChange={(value) => {
+                  setSearchMode(value as SearchMode)
+                  if (query.trim()) {
+                    performSearch(query, 1)
+                  }
+                }}
+                options={[
+                  {
+                    value: 'keyword',
+                    label: (
+                      <Tooltip title="基础关键词匹配，不调用LLM">
+                        <Space size={4}>
+                          <SearchOutlined />
+                          <span>关键词</span>
+                        </Space>
+                      </Tooltip>
+                    ),
+                  },
+                  {
+                    value: 'semantic',
+                    label: (
+                      <Tooltip title="基于预计算向量的语义相似度搜索">
+                        <Space size={4}>
+                          <BulbOutlined />
+                          <span>语义搜索</span>
+                        </Space>
+                      </Tooltip>
+                    ),
+                  },
+                  {
+                    value: 'hybrid',
+                    label: (
+                      <Tooltip title="结合关键词和语义搜索的综合模式">
+                        <Space size={4}>
+                          <ThunderboltOutlined />
+                          <span>混合搜索</span>
+                        </Space>
+                      </Tooltip>
+                    ),
+                  },
+                ]}
+              />
+            </Space>
           </Col>
         </Row>
       </Card>

@@ -58,6 +58,27 @@ class Settings(BaseSettings):
     CACHE_DEFAULT_TTL: int = 300  # 5 minutes
     CACHE_KEY_PREFIX: str = "ai4talents"
 
+    # ========== LLM Configuration (v1.4) ==========
+    LLM_ENABLED: bool = False  # Global switch for LLM features
+    LLM_PROVIDER: str = "deepseek"  # deepseek, openai, zhipu, qwen, custom
+    LLM_API_KEY: str = ""
+    LLM_API_BASE: str = "https://api.deepseek.com/v1"  # API base URL
+    LLM_MODEL: str = "deepseek-chat"  # Chat model name
+    LLM_EMBEDDING_MODEL: str = "deepseek-embedding"  # Embedding model name
+
+    # LLM Advanced
+    LLM_TIMEOUT: float = 30.0  # API timeout in seconds
+    LLM_MAX_RETRIES: int = 3  # Max retry attempts
+    LLM_ENABLE_FALLBACK: bool = True  # Enable fallback to rule-based parsing
+
+    # Embedding Configuration
+    EMBEDDING_DIMENSION: int = 1536  # Vector dimension
+    EMBEDDING_BATCH_SIZE: int = 100  # Batch size for embedding generation
+
+    # Search Configuration (v1.4)
+    SEARCH_DEFAULT_MODE: str = "keyword"  # keyword, fulltext, semantic, hybrid
+    SEARCH_ENABLE_SEMANTIC: bool = True  # Enable semantic search
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

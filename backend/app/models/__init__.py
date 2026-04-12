@@ -37,6 +37,8 @@ from app.models.sync import (
 from app.models.talent import RoleProfile, SelectedWork, Talent
 from app.models.tech_element import TalentTechTag, TechDirection, TechElement
 from app.models.venue import Venue, VenueSubTask, VenueTechBinding
+from app.models.embedding import TalentEmbedding
+from app.models.jd_match import JDMatchSession, JDMatchResult
 
 __all__ = [
     # Enums
@@ -90,6 +92,11 @@ __all__ = [
     "SchoolNameAlias",
     # Search
     "SearchTalentDocument",
+    # Embedding (v1.4)
+    "TalentEmbedding",
+    # JD Match (v1.4)
+    "JDMatchSession",
+    "JDMatchResult",
     # Audit
     "AuditOperationLog",
 ]

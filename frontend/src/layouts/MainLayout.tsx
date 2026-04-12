@@ -11,6 +11,8 @@ import {
   GlobalOutlined,
   ThunderboltOutlined,
   DatabaseOutlined,
+  RobotOutlined,
+  TeamOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -42,6 +44,16 @@ const MainLayout: React.FC = () => {
       key: '/search',
       icon: <SearchOutlined />,
       label: '人才搜索',
+    },
+    {
+      key: '/jd-match',
+      icon: <RobotOutlined />,
+      label: 'JD 匹配',
+    },
+    {
+      key: '/recommend',
+      icon: <TeamOutlined />,
+      label: '智能推荐',
     },
     {
       key: '/favorites',
