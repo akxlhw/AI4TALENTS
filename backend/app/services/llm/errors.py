@@ -88,7 +88,7 @@ class TalentNotFoundError(EmbeddingError):
 
 
 class JDMatchError(Exception):
-    """JD 匹配错误基类"""
+    """岗位匹配错误基类"""
 
     def __init__(self, message: str):
         self.message = message

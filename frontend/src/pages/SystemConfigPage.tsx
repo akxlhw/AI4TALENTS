@@ -803,7 +803,7 @@ const SystemConfigPage: React.FC = () => {
                 <Spin spinning={llmLoading}>
                   <Alert
                     message="LLM 配置说明"
-                    description="配置 LLM API 以启用 JD 匹配、智能推荐等功能。API Key 将被加密存储，前端仅显示脱敏值。"
+                    description="配置 LLM API 以启用岗位匹配、智能推荐等功能。API Key 将被加密存储，前端仅显示脱敏值。"
                     type="info"
                     showIcon
                     style={{ marginBottom: 24 }}

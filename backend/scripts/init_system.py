@@ -74,7 +74,7 @@ BUSINESS_TABLES = [
     "data_correction_record",
     "data_publish_record",
     "data_version",
-    # JD 匹配 (v1.4)
+    # 岗位匹配 (v1.4)
     "jd_match_result",
     "jd_match_session",
     # 系统配置 (v1.4)

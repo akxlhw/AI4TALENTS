@@ -368,7 +368,7 @@ export const api = {
     }) => apiClient.get('/search/v2/talents', { params }),
   },
 
-  // v1.4 JD Match - JD匹配
+  // v1.4 JD Match - 岗位匹配
   jdMatch: {
     // 解析JD文本
     parse: (jdText: string) =>

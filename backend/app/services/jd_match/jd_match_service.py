@@ -1,6 +1,6 @@
 """
 JD Match Service implementation.
-JD 匹配服务实现 - v1.4
+岗位匹配服务实现 - v1.4
 
 Features:
 - JD parsing via LLM
@@ -97,9 +97,9 @@ class MatchResult:
 
 
 class JDMatchService:
-    """JD 匹配服务
+    """岗位匹配服务
 
-    负责解析 JD 并匹配候选人。
+    负责解析职位描述(JD)并匹配候选人。
     """
 
     def __init__(
@@ -110,7 +110,7 @@ class JDMatchService:
         cache: Any = None,
     ):
         """
-        初始化 JD 匹配服务
+        初始化岗位匹配服务
 
         Args:
             session: 数据库会话
@@ -157,7 +157,7 @@ class JDMatchService:
         user_id: int,
     ) -> MatchResult:
         """
-        执行 JD 匹配
+        执行岗位匹配
 
         Args:
             jd_text: JD 文本

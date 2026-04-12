@@ -1,6 +1,6 @@
 """
 Tests for JD Match Service.
-JD 匹配服务测试 - v1.4 TDD
+岗位匹配服务测试 - v1.4 TDD
 
 Coverage:
 - JD parsing and feature extraction
@@ -125,7 +125,7 @@ class TestJDMatchServiceParsing:
 
 
 class TestJDMatchServiceMatching:
-    """JD 匹配测试"""
+    """岗位匹配测试"""
 
     @pytest.mark.asyncio
     async def test_match_returns_candidates(

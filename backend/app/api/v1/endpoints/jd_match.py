@@ -92,8 +92,8 @@ async def parse_jd(
 @router.post(
     "/match",
     response_model=MatchResponse,
-    summary="JD 匹配人才",
-    description="根据 JD 匹配合适的人才，返回按匹配度排序的候选人列表",
+    summary="岗位匹配人才",
+    description="根据职位描述(JD)匹配合适的人才，返回按匹配度排序的候选人列表",
 )
 async def match_talents(
     request: JDMatchRequest,

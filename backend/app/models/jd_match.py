@@ -1,6 +1,6 @@
 """
 JD Match models.
-JD 匹配模型 - v1.4
+岗位匹配模型 - v1.4
 """
 
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, JSON
@@ -11,9 +11,9 @@ from app.models.base import TimestampMixin
 
 
 class JDMatchSession(Base, TimestampMixin):
-    """JD 匹配会话表
+    """岗位匹配会话表
 
-    存储每次 JD 匹配的会话信息。
+    存储每次岗位匹配的会话信息。
     """
 
     __tablename__ = "jd_match_session"
@@ -62,7 +62,7 @@ class JDMatchSession(Base, TimestampMixin):
 
 
 class JDMatchResult(Base, TimestampMixin):
-    """JD 匹配结果表
+    """岗位匹配结果表
 
     存储匹配会话的结果列表。
     """

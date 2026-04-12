@@ -3,7 +3,7 @@
  *
  * 功能说明：
  * - 人才搜索 Tab: 关键词/语义/混合搜索
- * - 智能推荐 Tab: 包含 JD 匹配和相似推荐两种模式
+ * - 智能推荐 Tab: 包含岗位匹配和相似推荐两种模式
  */
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -726,14 +726,14 @@ const SearchRecommendPage: React.FC = () => {
                         navigate(`/search-recommend?tab=recommend&mode=${value}`)
                       }}
                       options={[
-                        { value: 'jd-match', label: <span><RobotOutlined /> JD 匹配</span> },
+                        { value: 'jd-match', label: <span><RobotOutlined /> 岗位匹配</span> },
                         { value: 'similar', label: <span><TeamOutlined /> 相似推荐</span> },
                       ]}
                     />
                   </Space>
                 </Card>
 
-                {/* JD 匹配模式 */}
+                {/* 岗位匹配模式 */}
                 {recommendMode === 'jd-match' && (
                   <>
                     <Alert message="输入职位描述(JD)，系统将使用 LLM 解析关键特征并智能匹配合适的人才。需要配置 LLM API Key。" type="info" showIcon style={{ marginBottom: 16 }} />
