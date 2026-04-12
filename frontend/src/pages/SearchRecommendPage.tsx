@@ -59,7 +59,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useSearchTemplates } from '../hooks/useSearchTemplates'
 import { useColumnConfig } from '../hooks/useColumnConfig'
 import { getRoleTypeConfig } from '../constants/roleType'
-import type { SearchTalent, TechElement, SearchMode, EnhancedSearchResult, JDFeatures, MatchResultItem, RecommendResultItem } from '../types'
+import type { SearchTalent, TechElement, EnhancedSearchResult, JDFeatures, MatchResultItem, RecommendResultItem } from '../types'
 
 const { Title, Text } = Typography
 const { Search } = Input
@@ -89,8 +89,8 @@ const SearchRecommendPage: React.FC = () => {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const pageSize = 20
-  const [searchMode, setSearchMode] = useState<SearchMode>('keyword')
   const [tookMs, setTookMs] = useState<number | null>(null)
+  const [searchModeUsed, setSearchModeUsed] = useState<string | null>(null) // 实际使用的搜索模式
   const [roleFilter, setRoleFilter] = useState<string | undefined>()
   const [schoolFilter, setSchoolFilter] = useState<number | undefined>()
   const [minCitations, setMinCitations] = useState<number | undefined>()
@@ -198,10 +198,11 @@ const SearchRecommendPage: React.FC = () => {
     if (!searchQuery.trim()) return loadAllTalents()
     setSearchLoading(true)
     setTookMs(null)
+    setSearchModeUsed(null)
     try {
       const response = await api.enhancedSearch.search({
         q: searchQuery.trim(),
-        mode: searchMode,
+        mode: 'hybrid', // 默认使用混合搜索（最强模式）
         role_type: roleFilter,
         school_id: schoolFilter,
         min_citations: minCitations,
@@ -225,6 +226,7 @@ const SearchRecommendPage: React.FC = () => {
       setResults(items)
       setTotal(response.data.total || items.length)
       setTookMs(response.data.took_ms || null)
+      setSearchModeUsed(response.data.mode || 'hybrid')
       setPage(pageNum)
     } catch {
       message.error('搜索失败，请重试')
@@ -652,23 +654,28 @@ const SearchRecommendPage: React.FC = () => {
                       </Dropdown>
                     </Col>
                   </Row>
-                  <Row style={{ marginTop: 8 }}>
-                    <Col>
-                      <Space>
-                        <Text type="secondary">搜索模式:</Text>
-                        <Segmented
-                          value={searchMode}
-                          onChange={(value) => { setSearchMode(value as SearchMode); if (query.trim()) performSearch(query, 1) }}
-                          options={[
-                            { value: 'keyword', label: <Tooltip title="基础关键词匹配"><Space size={4}><SearchOutlined /><span>关键词</span></Space></Tooltip> },
-                            { value: 'semantic', label: <Tooltip title="语义相似度搜索"><Space size={4}><BulbOutlined /><span>语义搜索</span></Space></Tooltip> },
-                            { value: 'hybrid', label: <Tooltip title="综合模式"><Space size={4}><ThunderboltOutlined /><span>混合搜索</span></Space></Tooltip> },
-                          ]}
-                        />
-                      </Space>
-                    </Col>
-                  </Row>
                 </Card>
+
+                {/* Search Technology Info */}
+                {query.trim() && tookMs && (
+                  <Alert
+                    message={
+                      <Space>
+                        <ThunderboltOutlined style={{ color: '#1890ff' }} />
+                        <span>
+                          智能搜索已启用：
+                          {searchModeUsed === 'hybrid' && '混合搜索（关键词 + 语义向量）'}
+                          {searchModeUsed === 'semantic' && '语义向量搜索'}
+                          {searchModeUsed === 'keyword' && '关键词匹配'}
+                          {searchModeUsed === 'fulltext' && '全文检索'}
+                        </span>
+                      </Space>
+                    }
+                    type="info"
+                    style={{ marginBottom: 16 }}
+                    showIcon={false}
+                  />
+                )}
 
                 {/* Filters */}
                 <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 24px' }}>
