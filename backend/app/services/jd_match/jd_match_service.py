@@ -29,12 +29,22 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MatchConfig:
-    """匹配配置"""
+    """匹配配置
+
+    权重说明（v1.4 临时方案）：
+    - skill: 技能匹配，基于 topic_tags
+    - research: 研究方向匹配，基于 research_interests
+    - experience: 经验匹配，暂无数据来源，固定 50 分
+    - education: 学历匹配，暂无数据来源，固定 50 分
+
+    TODO: 后续版本通过 ORCID API 补充教育背景，
+          或从首篇论文年份推断学术年龄
+    """
     weights: Dict[str, float] = field(default_factory=lambda: {
-        "skill": 0.4,
-        "research": 0.3,
-        "experience": 0.2,
-        "education": 0.1
+        "skill": 0.5,        # 提高：有可靠数据来源
+        "research": 0.4,     # 提高：有可靠数据来源
+        "experience": 0.05,  # 降低：暂无数据，固定 50 分
+        "education": 0.05    # 降低：暂无数据，固定 50 分
     })
     filters: Dict[str, Any] = field(default_factory=dict)
     limit: int = 20
@@ -242,8 +252,12 @@ class JDMatchService:
             research_score = self._scorer.calculate_research_score(
                 jd_features.research_areas, candidate_research
             )
-            experience_score = 50.0  # 简化，实际需要根据经验要求计算
-            education_score = 50.0   # 简化
+            # v1.4 临时方案：experience 和 education 暂无数据来源
+            # 后续版本可通过以下方式补充：
+            # 1. ORCID API 获取教育背景
+            # 2. 首篇论文年份推断学术年龄
+            experience_score = 50.0
+            education_score = 50.0
 
             # 计算综合分数
             overall_score = self._scorer.calculate_overall_score(
