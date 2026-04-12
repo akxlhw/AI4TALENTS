@@ -120,6 +120,7 @@ const SearchRecommendPage: React.FC = () => {
 
   // ========== Recommend Tab State ==========
   const [referenceTalentIds, setReferenceTalentIds] = useState<number[]>([])
+  const [referenceTalentNames, setReferenceTalentNames] = useState<Map<number, string>>(new Map())
   const [recommendLimit, setRecommendLimit] = useState(10)
   const [recommendLoading, setRecommendLoading] = useState(false)
   const [talentOptions, setTalentOptions] = useState<SearchTalent[]>([])
@@ -358,7 +359,7 @@ const SearchRecommendPage: React.FC = () => {
     }
   }
 
-  const handleAddReferenceTalent = (talentId: number) => {
+  const handleAddReferenceTalent = (talentId: number, talentName: string) => {
     if (referenceTalentIds.includes(talentId)) {
       message.warning('该人才已添加')
       return
@@ -368,11 +369,15 @@ const SearchRecommendPage: React.FC = () => {
       return
     }
     setReferenceTalentIds([...referenceTalentIds, talentId])
+    setReferenceTalentNames(new Map(referenceTalentNames).set(talentId, talentName))
     setTalentOptions([])
   }
 
   const handleRemoveReferenceTalent = (talentId: number) => {
     setReferenceTalentIds(referenceTalentIds.filter(id => id !== talentId))
+    const newNames = new Map(referenceTalentNames)
+    newNames.delete(talentId)
+    setReferenceTalentNames(newNames)
   }
 
   const handleGetRecommendations = async () => {
@@ -399,13 +404,14 @@ const SearchRecommendPage: React.FC = () => {
 
   const handleResetRecommend = () => {
     setReferenceTalentIds([])
+    setReferenceTalentNames(new Map())
     setRecommendResults([])
     setRecommendTookMs(null)
   }
 
   // ========== Add to Reference (Linkage) ==========
   const handleAddToReference = (talentId: number, talentName: string) => {
-    handleAddReferenceTalent(talentId)
+    handleAddReferenceTalent(talentId, talentName)
     message.success(`已将 ${talentName} 添加到参考列表`, 2)
   }
 
@@ -570,7 +576,7 @@ const SearchRecommendPage: React.FC = () => {
       width: 100,
       render: (_: unknown, record: RecommendResultItem) => (
         <Tooltip title="设为参考人才">
-          <Button type="text" size="small" icon={<PlusOutlined />} onClick={() => handleAddReferenceTalent(record.talent_id)} disabled={referenceTalentIds.includes(record.talent_id)} />
+          <Button type="text" size="small" icon={<PlusOutlined />} onClick={() => handleAddReferenceTalent(record.talent_id, record.name)} disabled={referenceTalentIds.includes(record.talent_id)} />
         </Tooltip>
       ),
     },
@@ -774,28 +780,35 @@ const SearchRecommendPage: React.FC = () => {
                     <Card title="参考人才" style={{ marginBottom: 16 }}>
                       <Row gutter={[16, 16]}>
                         <Col span={24}>
-                          <Space.Compact style={{ width: '100%' }}>
-                            <InputNumber placeholder="输入人才ID" style={{ width: 150 }} min={1} onPressEnter={(e) => { const value = parseInt((e.target as HTMLInputElement).value, 10); if (!isNaN(value)) handleAddReferenceTalent(value) }} />
-                            <Select
-                              showSearch
-                              placeholder="或搜索人才姓名..."
-                              style={{ width: 300 }}
-                              value={null}
-                              onSearch={handleSearchTalents}
-                              onChange={(value) => { if (value) handleAddReferenceTalent(value) }}
-                              filterOption={false}
-                              loading={searchingTalents}
-                              notFoundContent={searchingTalents ? <Spin size="small" /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="搜索人才" />}
-                              options={talentOptions.map(t => ({ value: t.talent_id, label: `${t.name} (${t.school_name || '未知学校'})` }))}
-                            />
-                          </Space.Compact>
+                          <Select
+                            showSearch
+                            placeholder="搜索人才姓名添加参考..."
+                            style={{ width: '100%' }}
+                            size="large"
+                            value={null}
+                            onSearch={handleSearchTalents}
+                            onChange={(value, option) => {
+                              if (value && option) {
+                                // 从 option.label 中提取姓名
+                                const label = typeof option.label === 'string' ? option.label : ''
+                                const name = label.split(' (')[0]
+                                handleAddReferenceTalent(value, name)
+                              }
+                            }}
+                            filterOption={false}
+                            loading={searchingTalents}
+                            notFoundContent={searchingTalents ? <Spin size="small" /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="输入姓名搜索人才" />}
+                            options={talentOptions.map(t => ({ value: t.talent_id, label: `${t.name} (${t.school_name || '未知学校'})` }))}
+                          />
                         </Col>
                         <Col span={24}>
                           <Space size={[8, 8]} wrap>
                             {referenceTalentIds.map((id) => (
-                              <Tag key={id} closable onClose={() => handleRemoveReferenceTalent(id)} style={{ padding: '4px 8px' }}>ID: {id}</Tag>
+                              <Tag key={id} closable onClose={() => handleRemoveReferenceTalent(id)} style={{ padding: '4px 8px' }}>
+                                {referenceTalentNames.get(id) || `ID: ${id}`}
+                              </Tag>
                             ))}
-                            {referenceTalentIds.length === 0 && <Text type="secondary">请添加参考人才（最多10位）</Text>}
+                            {referenceTalentIds.length === 0 && <Text type="secondary">请在上方搜索框输入姓名添加参考人才（最多10位）</Text>}
                           </Space>
                         </Col>
                       </Row>
