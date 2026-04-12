@@ -101,8 +101,8 @@ function AppRoutes() {
         <Route path="country-school" element={<CountrySchoolPage />} />
         <Route path="search-recommend" element={<SearchRecommendPage />} />
         <Route path="search" element={<Navigate to="/search-recommend" replace />} />
-        <Route path="jd-match" element={<Navigate to="/search-recommend?tab=jd-match" replace />} />
-        <Route path="recommend" element={<Navigate to="/search-recommend?tab=recommend" replace />} />
+        <Route path="jd-match" element={<Navigate to="/search-recommend?tab=recommend&mode=jd-match" replace />} />
+        <Route path="recommend" element={<Navigate to="/search-recommend?tab=recommend&mode=similar" replace />} />
         <Route path="talents/:id" element={<TalentDetailPage />} />
         <Route path="schools/:id" element={<SchoolDetailPage />} />
         <Route path="favorites" element={<FavoritesPage />} />

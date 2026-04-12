@@ -3,8 +3,7 @@
  *
  * 功能说明：
  * - 人才搜索 Tab: 关键词/语义/混合搜索
- * - JD 匹配 Tab: JD解析与智能匹配
- * - 智能推荐 Tab: 基于参考人才的推荐
+ * - 智能推荐 Tab: 包含 JD 匹配和相似推荐两种模式
  */
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -75,6 +74,10 @@ const SearchRecommendPage: React.FC = () => {
   const [urlSearchParams] = useSearchParams()
   const initialTab = urlSearchParams.get('tab') || 'search'
   const [activeTab, setActiveTab] = useState(initialTab)
+
+  // 智能推荐子 Tab 状态
+  const initialRecommendMode = urlSearchParams.get('mode') || 'jd-match'
+  const [recommendMode, setRecommendMode] = useState(initialRecommendMode)
 
   // ========== Shared State ==========
   const searchInputRef = useRef<InputRef>(null)
@@ -595,7 +598,11 @@ const SearchRecommendPage: React.FC = () => {
   // ========== Tab Change Handler ==========
   const handleTabChange = (key: string) => {
     setActiveTab(key)
-    navigate(`/search-recommend?tab=${key}`)
+    if (key === 'recommend') {
+      navigate(`/search-recommend?tab=${key}&mode=${recommendMode}`)
+    } else {
+      navigate(`/search-recommend?tab=${key}`)
+    }
   }
 
   // ========== Render ==========
@@ -704,101 +711,122 @@ const SearchRecommendPage: React.FC = () => {
             ),
           },
           {
-            key: 'jd-match',
-            label: <span><RobotOutlined /> JD 匹配 {jdTookMs && <Text type="secondary" style={{ fontSize: 12 }}>({jdTookMs.toFixed(0)}ms)</Text>}</span>,
+            key: 'recommend',
+            label: <span><BulbOutlined /> 智能推荐</span>,
             children: (
               <>
-                <Alert message="输入职位描述(JD)，系统将使用 LLM 解析关键特征并智能匹配合适的人才。" type="info" showIcon style={{ marginBottom: 16 }} />
-                <Card title="职位描述 (JD)" style={{ marginBottom: 16 }}>
-                  <TextArea placeholder="请粘贴职位描述内容..." value={jdText} onChange={(e) => setJdText(e.target.value)} rows={6} showCount maxLength={5000} />
-                  <Space style={{ marginTop: 12 }}>
-                    <Button type="primary" icon={<SearchOutlined />} onClick={handleMatch} loading={jdLoading}>智能匹配</Button>
-                    <Button icon={<BulbOutlined />} onClick={handleParseJD} loading={parsing}>解析 JD</Button>
-                    <Button icon={<ReloadOutlined />} onClick={handleResetJD}>重置</Button>
+                {/* 智能推荐模式切换 */}
+                <Card style={{ marginBottom: 16 }}>
+                  <Space>
+                    <Text type="secondary">推荐模式:</Text>
+                    <Segmented
+                      value={recommendMode}
+                      onChange={(value) => {
+                        setRecommendMode(value as string)
+                        navigate(`/search-recommend?tab=recommend&mode=${value}`)
+                      }}
+                      options={[
+                        { value: 'jd-match', label: <span><RobotOutlined /> JD 匹配</span> },
+                        { value: 'similar', label: <span><TeamOutlined /> 相似推荐</span> },
+                      ]}
+                    />
                   </Space>
                 </Card>
-                {jdFeatures && (
-                  <Card title="JD 解析结果" style={{ marginBottom: 16 }} size="small">
-                    <Descriptions column={2} size="small">
-                      <Descriptions.Item label="技能要求">
-                        <Space size={[4, 4]} wrap>{jdFeatures.skills?.map((skill, idx) => <Tag key={idx} color="blue">{skill}</Tag>)}</Space>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="角色类型"><Tag color="purple">{jdFeatures.role_type || '未指定'}</Tag></Descriptions.Item>
-                    </Descriptions>
-                  </Card>
+
+                {/* JD 匹配模式 */}
+                {recommendMode === 'jd-match' && (
+                  <>
+                    <Alert message="输入职位描述(JD)，系统将使用 LLM 解析关键特征并智能匹配合适的人才。需要配置 LLM API Key。" type="info" showIcon style={{ marginBottom: 16 }} />
+                    <Card title="职位描述 (JD)" style={{ marginBottom: 16 }}>
+                      <TextArea placeholder="请粘贴职位描述内容，包括岗位职责、任职要求、技能要求等..." value={jdText} onChange={(e) => setJdText(e.target.value)} rows={6} showCount maxLength={5000} />
+                      <Space style={{ marginTop: 12 }}>
+                        <Button type="primary" icon={<SearchOutlined />} onClick={handleMatch} loading={jdLoading}>智能匹配 {jdTookMs && <Text type="secondary">({jdTookMs.toFixed(0)}ms)</Text>}</Button>
+                        <Button icon={<BulbOutlined />} onClick={handleParseJD} loading={parsing}>解析 JD</Button>
+                        <Button icon={<ReloadOutlined />} onClick={handleResetJD}>重置</Button>
+                      </Space>
+                    </Card>
+                    {jdFeatures && (
+                      <Card title="JD 解析结果" style={{ marginBottom: 16 }} size="small">
+                        <Descriptions column={2} size="small">
+                          <Descriptions.Item label="技能要求">
+                            <Space size={[4, 4]} wrap>{jdFeatures.skills?.map((skill, idx) => <Tag key={idx} color="blue">{skill}</Tag>)}</Space>
+                          </Descriptions.Item>
+                          <Descriptions.Item label="角色类型"><Tag color="purple">{jdFeatures.role_type || '未指定'}</Tag></Descriptions.Item>
+                        </Descriptions>
+                      </Card>
+                    )}
+                    <Card title={`匹配结果 (${matchResults.length} 人)`}>
+                      <Spin spinning={jdLoading}>
+                        {matchResults.length > 0 ? (
+                          <Table dataSource={matchResults} columns={jdColumns} rowKey="talent_id" pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 位候选人` }} scroll={{ x: 1200 }} />
+                        ) : (
+                          <Empty description='请输入职位描述并点击"智能匹配"开始搜索' image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        )}
+                      </Spin>
+                    </Card>
+                  </>
                 )}
-                <Card title={`匹配结果 (${matchResults.length} 人)`}>
-                  <Spin spinning={jdLoading}>
-                    {matchResults.length > 0 ? (
-                      <Table dataSource={matchResults} columns={jdColumns} rowKey="talent_id" pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 位候选人` }} scroll={{ x: 1200 }} />
-                    ) : (
-                      <Empty description='请输入职位描述并点击"智能匹配"开始搜索' image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                    )}
-                  </Spin>
-                </Card>
-              </>
-            ),
-          },
-          {
-            key: 'recommend',
-            label: <span><TeamOutlined /> 智能推荐 {recommendTookMs && <Text type="secondary" style={{ fontSize: 12 }}>({recommendTookMs.toFixed(0)}ms)</Text>}</span>,
-            children: (
-              <>
-                <Alert message="选择参考人才，系统将推荐研究方向和技能相似的人才。" type="info" showIcon style={{ marginBottom: 16 }} />
-                <Card title="参考人才" style={{ marginBottom: 16 }}>
-                  <Row gutter={[16, 16]}>
-                    <Col span={24}>
-                      <Space.Compact style={{ width: '100%' }}>
-                        <InputNumber placeholder="输入人才ID" style={{ width: 150 }} min={1} onPressEnter={(e) => { const value = parseInt((e.target as HTMLInputElement).value, 10); if (!isNaN(value)) handleAddReferenceTalent(value) }} />
-                        <Select
-                          showSearch
-                          placeholder="或搜索人才姓名..."
-                          style={{ width: 300 }}
-                          value={null}
-                          onSearch={handleSearchTalents}
-                          onChange={(value) => { if (value) handleAddReferenceTalent(value) }}
-                          filterOption={false}
-                          loading={searchingTalents}
-                          notFoundContent={searchingTalents ? <Spin size="small" /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="搜索人才" />}
-                          options={talentOptions.map(t => ({ value: t.talent_id, label: `${t.name} (${t.school_name || '未知学校'})` }))}
-                        />
-                      </Space.Compact>
-                    </Col>
-                    <Col span={24}>
-                      <Space size={[8, 8]} wrap>
-                        {referenceTalentIds.map((id) => (
-                          <Tag key={id} closable onClose={() => handleRemoveReferenceTalent(id)} style={{ padding: '4px 8px' }}>ID: {id}</Tag>
-                        ))}
-                        {referenceTalentIds.length === 0 && <Text type="secondary">请添加参考人才（最多10位）</Text>}
-                      </Space>
-                    </Col>
-                  </Row>
-                </Card>
-                <Card title="推荐配置" style={{ marginBottom: 16 }}>
-                  <Row gutter={[24, 16]} align="middle">
-                    <Col>
-                      <Space>
-                        <Text>推荐数量:</Text>
-                        <InputNumber min={1} max={50} value={recommendLimit} onChange={(value) => setRecommendLimit(value ?? 10)} />
-                      </Space>
-                    </Col>
-                    <Col>
-                      <Space>
-                        <Button type="primary" icon={<BulbOutlined />} onClick={handleGetRecommendations} loading={recommendLoading}>获取推荐</Button>
-                        <Button icon={<ReloadOutlined />} onClick={handleResetRecommend}>重置</Button>
-                      </Space>
-                    </Col>
-                  </Row>
-                </Card>
-                <Card title={`推荐结果 (${recommendResults.length} 人)`}>
-                  <Spin spinning={recommendLoading}>
-                    {recommendResults.length > 0 ? (
-                      <Table dataSource={recommendResults} columns={recommendColumns} rowKey="talent_id" pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 位候选人` }} />
-                    ) : (
-                      <Empty description='请添加参考人才并点击"获取推荐"开始' image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                    )}
-                  </Spin>
-                </Card>
+
+                {/* 相似推荐模式 */}
+                {recommendMode === 'similar' && (
+                  <>
+                    <Alert message="选择参考人才，系统将推荐研究方向和技能相似的人才。推荐基于预计算的向量嵌入，不调用 LLM。" type="info" showIcon style={{ marginBottom: 16 }} />
+                    <Card title="参考人才" style={{ marginBottom: 16 }}>
+                      <Row gutter={[16, 16]}>
+                        <Col span={24}>
+                          <Space.Compact style={{ width: '100%' }}>
+                            <InputNumber placeholder="输入人才ID" style={{ width: 150 }} min={1} onPressEnter={(e) => { const value = parseInt((e.target as HTMLInputElement).value, 10); if (!isNaN(value)) handleAddReferenceTalent(value) }} />
+                            <Select
+                              showSearch
+                              placeholder="或搜索人才姓名..."
+                              style={{ width: 300 }}
+                              value={null}
+                              onSearch={handleSearchTalents}
+                              onChange={(value) => { if (value) handleAddReferenceTalent(value) }}
+                              filterOption={false}
+                              loading={searchingTalents}
+                              notFoundContent={searchingTalents ? <Spin size="small" /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="搜索人才" />}
+                              options={talentOptions.map(t => ({ value: t.talent_id, label: `${t.name} (${t.school_name || '未知学校'})` }))}
+                            />
+                          </Space.Compact>
+                        </Col>
+                        <Col span={24}>
+                          <Space size={[8, 8]} wrap>
+                            {referenceTalentIds.map((id) => (
+                              <Tag key={id} closable onClose={() => handleRemoveReferenceTalent(id)} style={{ padding: '4px 8px' }}>ID: {id}</Tag>
+                            ))}
+                            {referenceTalentIds.length === 0 && <Text type="secondary">请添加参考人才（最多10位）</Text>}
+                          </Space>
+                        </Col>
+                      </Row>
+                    </Card>
+                    <Card title="推荐配置" style={{ marginBottom: 16 }}>
+                      <Row gutter={[24, 16]} align="middle">
+                        <Col>
+                          <Space>
+                            <Text>推荐数量:</Text>
+                            <InputNumber min={1} max={50} value={recommendLimit} onChange={(value) => setRecommendLimit(value ?? 10)} />
+                          </Space>
+                        </Col>
+                        <Col>
+                          <Space>
+                            <Button type="primary" icon={<BulbOutlined />} onClick={handleGetRecommendations} loading={recommendLoading}>获取推荐 {recommendTookMs && <Text type="secondary">({recommendTookMs.toFixed(0)}ms)</Text>}</Button>
+                            <Button icon={<ReloadOutlined />} onClick={handleResetRecommend}>重置</Button>
+                          </Space>
+                        </Col>
+                      </Row>
+                    </Card>
+                    <Card title={`推荐结果 (${recommendResults.length} 人)`}>
+                      <Spin spinning={recommendLoading}>
+                        {recommendResults.length > 0 ? (
+                          <Table dataSource={recommendResults} columns={recommendColumns} rowKey="talent_id" pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 位候选人` }} />
+                        ) : (
+                          <Empty description='请添加参考人才并点击"获取推荐"开始' image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        )}
+                      </Spin>
+                    </Card>
+                  </>
+                )}
               </>
             ),
           },
