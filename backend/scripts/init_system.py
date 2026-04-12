@@ -43,6 +43,7 @@ BUSINESS_TABLES = [
     "core_selected_work",
     "core_role_profile",
     "core_talent",
+    "core_talent_embedding",  # v1.4 向量嵌入
     # 学校相关
     "core_school_alias",
     "core_school",
@@ -73,6 +74,11 @@ BUSINESS_TABLES = [
     "data_correction_record",
     "data_publish_record",
     "data_version",
+    # JD 匹配 (v1.4)
+    "jd_match_result",
+    "jd_match_session",
+    # 系统配置 (v1.4)
+    "sys_config",
 ]
 
 # 基础配置表（仅在 --full 时清空）

@@ -65,8 +65,76 @@ talent-platform/
 ### 环境要求
 - Python 3.11+
 - Node.js 20+
-- PostgreSQL 14+
+- PostgreSQL 14+ (推荐 16)
+- pgvector 扩展 (用于语义搜索)
 - Docker & Docker Compose (可选)
+
+### PostgreSQL 与 pgvector 配置
+
+v1.4 版本新增语义搜索功能，需要 pgvector 扩展支持向量存储和相似度检索。
+
+#### PostgreSQL 版本要求
+
+| PostgreSQL 版本 | pgvector 支持 | 说明 |
+|----------------|--------------|------|
+| 16.x | ✅ 推荐 | 官方预编译二进制可用 |
+| 15.x | ✅ 支持 | 官方预编译二进制可用 |
+| 14.x | ✅ 支持 | 官方预编译二进制可用 |
+| 17.x+ | ⚠️ 需自行编译 | 无预编译 Windows 版本 |
+| 18.x+ | ⚠️ 需自行编译 | 无预编译 Windows 版本 |
+
+#### pgvector 安装方式
+
+**方式一：Docker（推荐）**
+```bash
+# 使用预装 pgvector 的镜像
+docker run -d --name talent-postgres \
+  -e POSTGRES_USER=talent_user \
+  -e POSTGRES_PASSWORD=talent_password \
+  -e POSTGRES_DB=talent_db \
+  -p 5432:5432 \
+  pgvector/pgvector:pg16
+```
+
+**方式二：Linux 安装**
+```bash
+# Debian/Ubuntu
+sudo apt install postgresql-16-pgvector
+
+# CentOS/RHEL
+sudo yum install pgvector_16
+```
+
+**方式三：Windows 本地安装**
+1. 安装 PostgreSQL 16（推荐，有预编译 pgvector）
+2. 下载 pgvector 预编译版本：https://github.com/pgvector/pgvector/releases
+3. 解压后将文件复制到 PostgreSQL 安装目录：
+   - `vector.dll` → `PostgreSQL\16\lib\`
+   - `vector.control`, `vector--*.sql` → `PostgreSQL\16\share\extension\`
+4. 在数据库中执行：`CREATE EXTENSION vector;`
+
+**方式四：从源码编译（PostgreSQL 17/18）**
+```bash
+# 需要安装 Visual Studio Build Tools
+git clone https://github.com/pgvector/pgvector.git
+cd pgvector
+set PG_CONFIG=D:\Program Files\PostgreSQL\18\bin\pg_config.exe
+nmake /F Makefile.win
+nmake /F Makefile.win install
+```
+
+#### 验证 pgvector 安装
+```sql
+-- 连接数据库后执行
+CREATE EXTENSION vector;
+SELECT * FROM pg_extension WHERE extname = 'vector';
+```
+
+#### 不安装 pgvector 的影响
+- ❌ 语义搜索不可用
+- ❌ 智能推荐功能受限
+- ❌ JD 匹配精度下降
+- ✅ 其他功能正常使用
 
 ### 使用 Docker Compose (推荐)
 
