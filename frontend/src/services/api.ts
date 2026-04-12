@@ -389,15 +389,56 @@ export const api = {
 
   // v1.4 Recommend - 智能推荐
   recommend: {
-    // 获取推荐人才
+    // 获取相似人才推荐
     getRecommendations: (data: {
       reference_talent_ids: number[]
-      mode?: 'similar' | 'complement' | 'diverse'
       limit?: number
       filters?: Record<string, unknown>
     }) => apiClient.post('/recommend/talents', data),
     // 获取相似人才（快捷接口）
-    getSimilar: (talentId: number, limit?: number, mode?: string) =>
-      apiClient.get(`/recommend/talents/${talentId}/similar`, { params: { limit, mode } }),
+    getSimilar: (talentId: number, limit?: number) =>
+      apiClient.get(`/recommend/talents/${talentId}/similar`, { params: { limit } }),
+  },
+
+  // v1.4 System Config - 系统配置
+  systemConfig: {
+    // 获取所有配置
+    list: () =>
+      apiClient.get('/system-config'),
+    // 获取 LLM 配置
+    getLLMConfig: () =>
+      apiClient.get('/system-config/llm'),
+    // 更新 LLM 配置
+    updateLLMConfig: (data: {
+      enabled?: boolean
+      provider?: string
+      api_key?: string
+      api_base?: string
+      model?: string
+      embedding_model?: string
+      timeout?: number
+    }) => apiClient.put('/system-config/llm', data),
+    // 更新单个配置
+    updateConfig: (key: string, value: string | number | boolean) =>
+      apiClient.put(`/system-config/${key}`, { value }),
+    // 测试 LLM 连接
+    testLLM: (data?: { provider?: string; api_key?: string; api_base?: string }) =>
+      apiClient.post('/system-config/test-llm', data || {}),
+  },
+
+  // v1.4 Embeddings - 向量嵌入
+  embeddings: {
+    // 获取嵌入状态
+    getStatus: () =>
+      apiClient.get('/embeddings/status'),
+    // 获取生成进度
+    getProgress: () =>
+      apiClient.get('/embeddings/progress'),
+    // 触发生成
+    generate: (force?: boolean, batchSize?: number) =>
+      apiClient.post('/embeddings/generate', null, { params: { force, batch_size: batchSize } }),
+    // 取消生成
+    cancel: () =>
+      apiClient.post('/embeddings/cancel'),
   },
 }

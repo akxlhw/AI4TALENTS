@@ -361,8 +361,8 @@ export interface MatchResponse {
   took_ms: number
 }
 
-// Recommend Mode - 推荐模式
-export type RecommendMode = 'similar' | 'complement' | 'diverse'
+// Recommend Mode - 推荐模式 (仅支持相似推荐)
+export type RecommendMode = 'similar'
 
 // Recommend Result Item - 推荐结果项
 export interface RecommendResultItem {

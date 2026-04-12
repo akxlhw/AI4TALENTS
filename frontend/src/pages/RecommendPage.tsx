@@ -2,8 +2,7 @@
  * Recommend Page - v1.4
  *
  * 功能说明：
- * - 基于参考人才推荐相似/互补/多样化人才
- * - 支持多种推荐模式
+ * - 基于参考人才推荐相似人才
  * - 显示推荐原因和相似度分数
  */
 import { useState, useEffect } from 'react'
@@ -22,7 +21,6 @@ import {
   Col,
   message,
   Alert,
-  Segmented,
   InputNumber,
   List,
   Tooltip,
@@ -33,12 +31,9 @@ import {
   BulbOutlined,
   ReloadOutlined,
   PlusOutlined,
-  CopyOutlined,
-  AppstoreOutlined,
-  SwapOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
-import type { RecommendResultItem, RecommendMode, SearchTalent } from '../types'
+import type { RecommendResultItem, SearchTalent } from '../types'
 
 const { Title, Text } = Typography
 
@@ -48,7 +43,6 @@ const RecommendPage: React.FC = () => {
 
   // State
   const [referenceTalentIds, setReferenceTalentIds] = useState<number[]>([])
-  const [mode, setMode] = useState<RecommendMode>('similar')
   const [limit, setLimit] = useState(10)
   const [loading, setLoading] = useState(false)
   const [talentOptions, setTalentOptions] = useState<SearchTalent[]>([])
@@ -112,7 +106,6 @@ const RecommendPage: React.FC = () => {
     try {
       const response = await api.recommend.getRecommendations({
         reference_talent_ids: referenceTalentIds,
-        mode,
         limit,
       })
       setResults(response.data.items || [])
@@ -240,7 +233,7 @@ const RecommendPage: React.FC = () => {
 
       <Alert
         message="功能说明"
-        description="选择参考人才，系统将推荐相似、互补或多样化的人才。推荐基于预计算的向量嵌入，不调用 LLM。"
+        description="选择参考人才，系统将推荐研究方向和技能相似的人才。推荐基于预计算的向量嵌入，不调用 LLM。"
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
@@ -302,50 +295,6 @@ const RecommendPage: React.FC = () => {
       {/* Recommendation Config */}
       <Card title="推荐配置" style={{ marginBottom: 16 }}>
         <Row gutter={[24, 16]} align="middle">
-          <Col>
-            <Space>
-              <Text>推荐模式:</Text>
-              <Segmented
-                value={mode}
-                onChange={(value) => setMode(value as RecommendMode)}
-                options={[
-                  {
-                    value: 'similar',
-                    label: (
-                      <Tooltip title="推荐研究方向和技能相似的人才">
-                        <Space size={4}>
-                          <CopyOutlined />
-                          <span>相似人才</span>
-                        </Space>
-                      </Tooltip>
-                    ),
-                  },
-                  {
-                    value: 'complement',
-                    label: (
-                      <Tooltip title="推荐具有互补技能的人才">
-                        <Space size={4}>
-                          <SwapOutlined />
-                          <span>互补人才</span>
-                        </Space>
-                      </Tooltip>
-                    ),
-                  },
-                  {
-                    value: 'diverse',
-                    label: (
-                      <Tooltip title="推荐覆盖不同研究方向的多样化人才">
-                        <Space size={4}>
-                          <AppstoreOutlined />
-                          <span>多样化</span>
-                        </Space>
-                      </Tooltip>
-                    ),
-                  },
-                ]}
-              />
-            </Space>
-          </Col>
           <Col>
             <Space>
               <Text>推荐数量:</Text>

@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Spin } from 'antd'
 import MainLayout from './layouts/MainLayout'
 import HomePage from './pages/HomePage'
-import SearchPage from './pages/SearchPage'
+import SearchRecommendPage from './pages/SearchRecommendPage'
 import TalentDetailPage from './pages/TalentDetailPage'
 import SchoolDetailPage from './pages/SchoolDetailPage'
 import LoginPage from './pages/LoginPage'
@@ -11,10 +11,8 @@ import FavoritesPage from './pages/FavoritesPage'
 import ProfilePage from './pages/ProfilePage'
 import TechElementPage from './pages/TechElementPage'
 import CountrySchoolPage from './pages/CountrySchoolPage'
-import CollectPage from './pages/CollectPage'
+import SystemConfigPage from './pages/SystemConfigPage'
 import DataVersionPage from './pages/DataVersionPage'
-import JDMatchPage from './pages/JDMatchPage'
-import RecommendPage from './pages/RecommendPage'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FavoritesProvider } from './contexts/FavoritesContext'
 
@@ -101,9 +99,10 @@ function AppRoutes() {
         <Route index element={<HomePage />} />
         <Route path="tech-element" element={<TechElementPage />} />
         <Route path="country-school" element={<CountrySchoolPage />} />
-        <Route path="search" element={<SearchPage />} />
-        <Route path="jd-match" element={<JDMatchPage />} />
-        <Route path="recommend" element={<RecommendPage />} />
+        <Route path="search-recommend" element={<SearchRecommendPage />} />
+        <Route path="search" element={<Navigate to="/search-recommend" replace />} />
+        <Route path="jd-match" element={<Navigate to="/search-recommend?tab=jd-match" replace />} />
+        <Route path="recommend" element={<Navigate to="/search-recommend?tab=recommend" replace />} />
         <Route path="talents/:id" element={<TalentDetailPage />} />
         <Route path="schools/:id" element={<SchoolDetailPage />} />
         <Route path="favorites" element={<FavoritesPage />} />
@@ -117,11 +116,17 @@ function AppRoutes() {
           }
         />
         <Route
-          path="collect"
+          path="system-config"
           element={
             <AdminRoute>
-              <CollectPage />
+              <SystemConfigPage />
             </AdminRoute>
+          }
+        />
+        <Route
+          path="collect"
+          element={
+            <Navigate to="/system-config" replace />
           }
         />
         <Route

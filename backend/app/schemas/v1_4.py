@@ -123,13 +123,6 @@ class JDParseRequest(BaseModel):
 
 # ============ Recommend Schemas ============
 
-class RecommendMode:
-    """Recommend mode constants."""
-    SIMILAR = "similar"
-    COMPLEMENT = "complement"
-    DIVERSE = "diverse"
-
-
 class RecommendRequest(BaseModel):
     """Recommendation request."""
     reference_talent_ids: List[int] = Field(
@@ -137,10 +130,6 @@ class RecommendRequest(BaseModel):
         min_length=1,
         max_length=10,
         description="Reference talent IDs"
-    )
-    mode: str = Field(
-        default="similar",
-        description="Recommendation mode: similar, complement, diverse"
     )
     limit: int = Field(default=10, ge=1, le=50, description="Max results")
     filters: dict = Field(default_factory=dict, description="Filters")

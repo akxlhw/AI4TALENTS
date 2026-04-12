@@ -11,8 +11,6 @@ import {
   GlobalOutlined,
   ThunderboltOutlined,
   DatabaseOutlined,
-  RobotOutlined,
-  TeamOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -41,19 +39,9 @@ const MainLayout: React.FC = () => {
       label: '院校机构',
     },
     {
-      key: '/search',
+      key: '/search-recommend',
       icon: <SearchOutlined />,
-      label: '人才搜索',
-    },
-    {
-      key: '/jd-match',
-      icon: <RobotOutlined />,
-      label: 'JD 匹配',
-    },
-    {
-      key: '/recommend',
-      icon: <TeamOutlined />,
-      label: '智能推荐',
+      label: '搜索推荐',
     },
     {
       key: '/favorites',
@@ -66,9 +54,9 @@ const MainLayout: React.FC = () => {
       label: '权限管理',
     }] : []),
     ...(isAdmin ? [{
-      key: '/collect',
+      key: '/system-config',
       icon: <ThunderboltOutlined />,
-      label: '采集配置',
+      label: '系统配置',
     }] : []),
     ...(isAdmin ? [{
       key: '/data-version',

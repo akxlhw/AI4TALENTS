@@ -39,6 +39,7 @@ from app.models.tech_element import TalentTechTag, TechDirection, TechElement
 from app.models.venue import Venue, VenueSubTask, VenueTechBinding
 from app.models.embedding import TalentEmbedding
 from app.models.jd_match import JDMatchSession, JDMatchResult
+from app.models.system_config import SystemConfig
 
 __all__ = [
     # Enums
@@ -97,6 +98,8 @@ __all__ = [
     # JD Match (v1.4)
     "JDMatchSession",
     "JDMatchResult",
+    # System Config (v1.4)
+    "SystemConfig",
     # Audit
     "AuditOperationLog",
 ]

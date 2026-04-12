@@ -231,6 +231,18 @@ class EmbeddingRepository:
         # 返回缺失的 ID
         return [tid for tid in talent_ids if tid not in existing_ids]
 
+    async def get_existing_talent_ids(self) -> set[int]:
+        """
+        获取所有已有嵌入向量的人才 ID
+
+        Returns:
+            set[int]: 已有嵌入的人才 ID 集合
+        """
+        result = await self.session.execute(
+            select(TalentEmbedding.talent_id)
+        )
+        return set(row[0] for row in result.fetchall())
+
     def _embedding_to_str(self, embedding: List[float]) -> str:
         """
         将嵌入向量转换为字符串

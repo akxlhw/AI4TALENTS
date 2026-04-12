@@ -26,13 +26,6 @@ from app.services.llm.errors import RecommendError, InvalidReferenceError, Empty
 logger = logging.getLogger(__name__)
 
 
-class RecommendMode(str, Enum):
-    """推荐模式"""
-    SIMILAR = "similar"        # 相似人才
-    COMPLEMENT = "complement"  # 互补人才
-    DIVERSE = "diverse"        # 多样化人才
-
-
 @dataclass
 class RecommendResultItem:
     """推荐结果项"""
@@ -97,16 +90,14 @@ class RecommendService:
     async def get_similar(
         self,
         reference_talent_ids: List[int],
-        mode: RecommendMode | str = RecommendMode.SIMILAR,
         limit: int = 20,
         filters: Dict[str, Any] | None = None,
     ) -> RecommendResult:
         """
-        获取推荐人才
+        获取相似人才推荐
 
         Args:
             reference_talent_ids: 参考人才 ID 列表
-            mode: 推荐模式
             limit: 数量限制
             filters: 过滤条件
 
@@ -123,27 +114,13 @@ class RecommendService:
         if not reference_talent_ids:
             raise EmptyReferenceError()
 
-        # 规范化模式
-        if isinstance(mode, str):
-            try:
-                mode = RecommendMode(mode.lower())
-            except ValueError:
-                mode = RecommendMode.SIMILAR
-
         # 获取参考人才
         reference_talents = await self._get_reference_talents(reference_talent_ids)
         if not reference_talents:
             raise InvalidReferenceError(reference_talent_ids[0])
 
-        # 根据模式获取推荐
-        if mode == RecommendMode.SIMILAR:
-            items = await self._find_similar(reference_talents, limit, filters)
-        elif mode == RecommendMode.COMPLEMENT:
-            items = await self._find_complement(reference_talents, limit, filters)
-        elif mode == RecommendMode.DIVERSE:
-            items = await self._find_diverse(reference_talents, limit, filters)
-        else:
-            items = await self._find_similar(reference_talents, limit, filters)
+        # 获取相似人才
+        items = await self._find_similar(reference_talents, limit, filters)
 
         took_ms = (time.time() - start_time) * 1000
 
@@ -151,7 +128,7 @@ class RecommendService:
             reference_talents=reference_talent_ids,
             total=len(items),
             items=items,
-            mode=mode.value if isinstance(mode, RecommendMode) else mode,
+            mode="similar",
             took_ms=took_ms,
         )
 
@@ -220,25 +197,6 @@ class RecommendService:
         items.sort(key=lambda x: x.similarity_score, reverse=True)
         return items[:limit]
 
-    async def _find_complement(
-        self,
-        reference_talents: List[Talent],
-        limit: int,
-        filters: Dict[str, Any] | None,
-    ) -> List[RecommendResultItem]:
-        """查找互补人才"""
-        # 简化实现：查找不同技能的人才
-        return await self._find_similar(reference_talents, limit, filters)
-
-    async def _find_diverse(
-        self,
-        reference_talents: List[Talent],
-        limit: int,
-        filters: Dict[str, Any] | None,
-    ) -> List[RecommendResultItem]:
-        """查找多样化人才"""
-        # 简化实现
-        return await self._find_similar(reference_talents, limit, filters)
 
     def _calculate_similarity(
         self,

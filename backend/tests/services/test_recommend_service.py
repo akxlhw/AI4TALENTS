@@ -1,11 +1,9 @@
 """
 Tests for Recommend Service.
-推荐服务测试 - v1.4 TDD
+推荐服务测试 - v1.4
 
 Coverage:
 - Similar talent recommendation
-- Complement recommendation
-- Diverse recommendation
 - Similarity calculation
 - Filter application
 """
@@ -14,7 +12,6 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from typing import List
 from dataclasses import dataclass
-from enum import Enum
 import numpy as np
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,13 +21,6 @@ from tests.mocks.mock_llm_gateway import MockLLMGateway
 
 
 # ============ Test Data Classes ============
-
-class RecommendMode(str, Enum):
-    """推荐模式"""
-    SIMILAR = "similar"
-    COMPLEMENT = "complement"
-    DIVERSE = "diverse"
-
 
 @dataclass
 class RecommendResultItem:
@@ -77,13 +67,12 @@ class TestRecommendServiceSimilar:
         # Act
         result = await service.get_similar(
             reference_talent_ids=[sample_talent["talent"].talent_id],
-            mode=RecommendMode.SIMILAR,
             limit=10
         )
 
         # Assert
         assert result is not None
-        assert result.mode == RecommendMode.SIMILAR.value
+        assert result.mode == "similar"
 
     @pytest.mark.asyncio
     async def test_get_similar_excludes_reference(
@@ -105,7 +94,6 @@ class TestRecommendServiceSimilar:
         # Act
         result = await service.get_similar(
             reference_talent_ids=[reference_id],
-            mode=RecommendMode.SIMILAR,
             limit=10
         )
 
@@ -131,7 +119,6 @@ class TestRecommendServiceSimilar:
         # Act
         result = await service.get_similar(
             reference_talent_ids=[sample_talent["talent"].talent_id],
-            mode=RecommendMode.SIMILAR,
             limit=5
         )
 
@@ -157,89 +144,11 @@ class TestRecommendServiceSimilar:
         # Act
         result = await service.get_similar(
             reference_talent_ids=[sample_talent["talent"].talent_id],
-            mode=RecommendMode.SIMILAR,
             limit=10
         )
 
         # Assert - 验证结果正确返回
-        assert result.mode == RecommendMode.SIMILAR.value
-
-
-class TestRecommendServiceComplement:
-    """互补推荐测试"""
-
-    @pytest.mark.asyncio
-    async def test_get_complement_returns_different_skills(
-        self, test_session: AsyncSession, sample_talent: dict
-    ):
-        """互补推荐应返回不同技能的人才"""
-        # Arrange
-        from app.services.recommend.recommend_service import RecommendService
-
-        mock_embed = AsyncMock()
-
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
-
-        # Act
-        result = await service.get_similar(
-            reference_talent_ids=[sample_talent["talent"].talent_id],
-            mode=RecommendMode.COMPLEMENT,
-            limit=10
-        )
-
-        # Assert
-        assert result.mode == RecommendMode.COMPLEMENT.value
-
-    @pytest.mark.asyncio
-    async def test_get_complement_finds_skill_gaps(
-        self, test_session: AsyncSession
-    ):
-        """互补推荐应发现技能差距"""
-        # 这个测试验证互补推荐逻辑
-        # 找到参考人才不具备的技能
-
-        pass
-
-
-class TestRecommendServiceDiverse:
-    """多样化推荐测试"""
-
-    @pytest.mark.asyncio
-    async def test_get_diverse_returns_varied_results(
-        self, test_session: AsyncSession, sample_talent: dict
-    ):
-        """多样化推荐应返回多样化结果"""
-        # Arrange
-        from app.services.recommend.recommend_service import RecommendService
-
-        mock_embed = AsyncMock()
-
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
-
-        # Act
-        result = await service.get_similar(
-            reference_talent_ids=[sample_talent["talent"].talent_id],
-            mode=RecommendMode.DIVERSE,
-            limit=10
-        )
-
-        # Assert
-        assert result.mode == RecommendMode.DIVERSE.value
-
-    @pytest.mark.asyncio
-    async def test_diverse_maximizes_coverage(
-        self, test_session: AsyncSession
-    ):
-        """多样化推荐应最大化覆盖范围"""
-        # 验证结果覆盖不同的学校、研究方向等
-
-        pass
+        assert result.mode == "similar"
 
 
 class TestRecommendServiceSimilarity:
@@ -335,7 +244,6 @@ class TestRecommendServiceFilters:
         # Act
         result = await service.get_similar(
             reference_talent_ids=[sample_talent["talent"].talent_id],
-            mode=RecommendMode.SIMILAR,
             limit=10,
             filters=filters
         )
@@ -368,7 +276,6 @@ class TestRecommendServiceFilters:
         # Act
         result = await service.get_similar(
             reference_talent_ids=[sample_talent["talent"].talent_id],
-            mode=RecommendMode.SIMILAR,
             limit=10,
             filters=filters
         )
@@ -399,7 +306,6 @@ class TestRecommendServiceFilters:
         # Act
         result = await service.get_similar(
             reference_talent_ids=[sample_talent["talent"].talent_id],
-            mode=RecommendMode.SIMILAR,
             limit=10,
             filters=filters
         )
@@ -482,7 +388,6 @@ class TestRecommendServiceMultiReference:
         # Act - 使用多个已存在的参考人才
         result = await service.get_similar(
             reference_talent_ids=[sample_talent["talent"].talent_id],
-            mode=RecommendMode.SIMILAR,
             limit=10
         )
 
@@ -509,7 +414,6 @@ class TestRecommendServiceMultiReference:
         # Act
         result = await service.get_similar(
             reference_talent_ids=reference_ids,
-            mode=RecommendMode.SIMILAR,
             limit=10
         )
 
@@ -539,8 +443,7 @@ class TestRecommendServiceErrorHandling:
         with pytest.raises((ValueError, RecommendError)):
             await service.get_similar(
                 reference_talent_ids=[99999],
-                mode=RecommendMode.SIMILAR,
-                limit=10
+                    limit=10
             )
 
     @pytest.mark.asyncio
@@ -560,8 +463,7 @@ class TestRecommendServiceErrorHandling:
         with pytest.raises((ValueError, RecommendError)):
             await service.get_similar(
                 reference_talent_ids=[],
-                mode=RecommendMode.SIMILAR,
-                limit=10
+                    limit=10
             )
 
     @pytest.mark.asyncio
@@ -582,7 +484,6 @@ class TestRecommendServiceErrorHandling:
         # Act - 使用已存在的参考人才
         result = await service.get_similar(
             reference_talent_ids=[sample_talent["talent"].talent_id],
-            mode=RecommendMode.SIMILAR,
             limit=10
         )
 
@@ -611,7 +512,6 @@ class TestRecommendServiceTiming:
         # Act
         result = await service.get_similar(
             reference_talent_ids=[sample_talent["talent"].talent_id],
-            mode=RecommendMode.SIMILAR,
             limit=10
         )
 
@@ -639,7 +539,6 @@ class TestRecommendServiceTiming:
         start = time.time()
         await service.get_similar(
             reference_talent_ids=[sample_talent["talent"].talent_id],
-            mode=RecommendMode.SIMILAR,
             limit=10
         )
         elapsed = time.time() - start

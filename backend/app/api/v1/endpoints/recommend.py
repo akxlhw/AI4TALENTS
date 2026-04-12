@@ -15,7 +15,6 @@ from app.schemas.v1_4 import (
     RecommendRequest,
     RecommendResponse,
     RecommendResultItem,
-    RecommendMode,
 )
 from app.services.recommend.recommend_service import RecommendService
 from app.services.embedding.embedding_service import EmbeddingService
@@ -27,8 +26,8 @@ router = APIRouter(prefix="/recommend", tags=["Recommend"])
 @router.post(
     "/talents",
     response_model=RecommendResponse,
-    summary="智能推荐人才",
-    description="基于参考人才推荐相似/互补/多样化的人才",
+    summary="智能推荐相似人才",
+    description="基于参考人才推荐研究方向和技能相似的人才",
 )
 async def recommend_talents(
     request: RecommendRequest,
@@ -37,10 +36,7 @@ async def recommend_talents(
     """
     Get talent recommendations based on reference talents.
 
-    **Recommendation Modes:**
-    - `similar`: Find talents with similar research interests and skills
-    - `complement`: Find talents with complementary skills (different from reference)
-    - `diverse`: Find diverse talents covering different research areas
+    Finds talents with similar research interests and skills to the reference talents.
 
     **Reference Talents:**
     Provide 1-10 talent IDs as reference. The system will analyze their
@@ -50,7 +46,6 @@ async def recommend_talents(
     ```json
     {
         "reference_talent_ids": [1, 2, 3],
-        "mode": "similar",
         "limit": 10,
         "filters": {"school_id": 5}
     }
@@ -59,14 +54,6 @@ async def recommend_talents(
     **Note:** Requires pre-computed embeddings in database.
     """
     start_time = time.time()
-
-    # Validate mode
-    valid_modes = [RecommendMode.SIMILAR, RecommendMode.COMPLEMENT, RecommendMode.DIVERSE]
-    if request.mode not in valid_modes:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid mode. Must be one of: {valid_modes}"
-        )
 
     # Validate reference IDs
     if not request.reference_talent_ids:
@@ -83,7 +70,6 @@ async def recommend_talents(
         # Execute recommendation
         result = await recommend_service.get_similar(
             reference_talent_ids=request.reference_talent_ids,
-            mode=request.mode,
             limit=request.limit,
             filters=request.filters,
         )
@@ -124,7 +110,6 @@ async def recommend_talents(
 async def find_similar_talents(
     talent_id: int,
     limit: int = 10,
-    mode: str = RecommendMode.SIMILAR,
     session: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -143,7 +128,6 @@ async def find_similar_talents(
 
         result = await recommend_service.get_similar(
             reference_talent_ids=[talent_id],
-            mode=mode,
             limit=limit,
         )
 

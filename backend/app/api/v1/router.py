@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     collect,
     countries,
     data_version,
+    embeddings,
     favorites,
     health,
     homepage,
@@ -20,6 +21,7 @@ from app.api.v1.endpoints import (
     recommend,
     schools,
     search,
+    system_config,
     talent_pool,
     talents,
     tech_element,
@@ -75,6 +77,12 @@ api_router.include_router(collect.router)
 
 # Venue configuration endpoints
 api_router.include_router(venue.router)
+
+# System configuration endpoints
+api_router.include_router(system_config.router)
+
+# Embeddings endpoints
+api_router.include_router(embeddings.router)
 
 # Data version management endpoints
 api_router.include_router(data_version.router)
