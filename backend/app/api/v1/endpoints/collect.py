@@ -608,6 +608,26 @@ async def delete_task(
         {"task_id": task_id}
     )
 
+    # 清除 raw_work 中子任务的关联（子任务删除前）
+    # 先获取要删除的子任务 ID
+    sub_task_result = await session.execute(
+        text("SELECT sub_task_id FROM sync_venue_sub_task WHERE task_id = :task_id"),
+        {"task_id": task_id}
+    )
+    sub_task_ids = [row[0] for row in sub_task_result.fetchall()]
+
+    if sub_task_ids:
+        # 清除 raw_work 的 sub_task_id 引用
+        # 使用 unnest 将数组展开为多行进行匹配
+        from sqlalchemy import bindparam
+        from sqlalchemy.dialects.postgresql import array
+
+        # 直接使用原生 SQL，构建 IN 子句
+        ids_str = ','.join(str(sid) for sid in sub_task_ids)
+        await session.execute(
+            text(f"UPDATE raw_work SET sub_task_id = NULL WHERE sub_task_id IN ({ids_str})")
+        )
+
     # 删除子任务
     await session.execute(
         text("DELETE FROM sync_venue_sub_task WHERE task_id = :task_id"),
