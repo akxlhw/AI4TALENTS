@@ -6,8 +6,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -171,7 +171,7 @@
 /* Text Styles */
 .ai-loading-text {
   text-align: center;
-  color: #fff;
+  color: #333;
 }
 
 .ai-loading-text h3 {
@@ -211,7 +211,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
 }
 
@@ -228,7 +228,7 @@
 .current-step {
   margin: 0;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(0, 0, 0, 0.65);
   min-height: 24px;
   animation: textFade 0.5s ease;
 }

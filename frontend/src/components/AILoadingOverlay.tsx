@@ -4,9 +4,9 @@
  * 特效元素：
  * - 神经网络粒子动画
  * - 脉冲光环效果
- * - 动态进度提示文字
+ * - 动态进度提示文字（线性推进）
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { RobotOutlined } from '@ant-design/icons'
 import './AILoadingOverlay.css'
 
@@ -25,25 +25,47 @@ const DEFAULT_STEPS = [
   '生成推荐结果...',
 ]
 
+const STEP_INTERVAL = 2500 // 每个步骤间隔时间(ms)
+
 const AILoadingOverlay: React.FC<AILoadingOverlayProps> = ({
   visible,
   title = 'AI 智能分析中',
   steps = DEFAULT_STEPS,
 }) => {
   const [currentStep, setCurrentStep] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (!visible) {
+      // 重置状态
       setCurrentStep(0)
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
       return
     }
 
-    // 循环显示步骤提示
-    const interval = setInterval(() => {
-      setCurrentStep((prev) => (prev + 1) % steps.length)
-    }, 2000)
+    // 重置到第一步
+    setCurrentStep(0)
 
-    return () => clearInterval(interval)
+    // 线性推进步骤，到达最后一步后停止
+    timerRef.current = setInterval(() => {
+      setCurrentStep((prev) => {
+        // 到达最后一步就停止，不再推进
+        if (prev >= steps.length - 1) {
+          return prev
+        }
+        return prev + 1
+      })
+    }, STEP_INTERVAL)
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
   }, [visible, steps.length])
 
   if (!visible) return null
