@@ -28,6 +28,7 @@ class LLMConfig:
     api_base: str = ""
     model: str = "deepseek-chat"
     embedding_model: str = ""
+    embedding_api_base: str = ""  # 单独的嵌入 API 地址（可选）
     timeout: int = 60
 
 
@@ -220,6 +221,7 @@ class ConfigService:
         api_base = await self.get_value("LLM_API_BASE", "", use_cache)
         model = await self.get_value("LLM_MODEL", "deepseek-chat", use_cache)
         embedding_model = await self.get_value("LLM_EMBEDDING_MODEL", "", use_cache)
+        embedding_api_base = await self.get_value("LLM_EMBEDDING_API_BASE", "", use_cache)
         timeout = await self.get_value("LLM_TIMEOUT", 60, use_cache)
 
         return LLMConfig(
@@ -229,6 +231,7 @@ class ConfigService:
             api_base=str(api_base),
             model=str(model),
             embedding_model=str(embedding_model),
+            embedding_api_base=str(embedding_api_base),
             timeout=int(timeout),
         )
 
@@ -246,6 +249,7 @@ class ConfigService:
             "api_base": "LLM_API_BASE",
             "model": "LLM_MODEL",
             "embedding_model": "LLM_EMBEDDING_MODEL",
+            "embedding_api_base": "LLM_EMBEDDING_API_BASE",
             "timeout": "LLM_TIMEOUT",
         }
 

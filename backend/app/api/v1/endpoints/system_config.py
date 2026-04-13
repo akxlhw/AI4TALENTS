@@ -74,6 +74,7 @@ async def get_llm_config(
         api_base=config.api_base,
         model=config.model,
         embedding_model=config.embedding_model,
+        embedding_api_base=config.embedding_api_base,
         timeout=config.timeout,
     )
 
@@ -201,6 +202,8 @@ async def test_llm_connection(
             return await _test_zhipu(api_key, api_base)
         elif provider == "qwen":
             return await _test_qwen(api_key, api_base)
+        elif provider == "minimax":
+            return await _test_minimax(api_key, api_base)
         else:
             # Generic test for custom providers
             return await _test_generic(api_key, api_base)
@@ -295,6 +298,61 @@ async def _test_qwen(api_key: str, api_base: str) -> TestLLMResponse:
             return TestLLMResponse(
                 success=False,
                 message=f"Qwen API returned status {response.status_code}",
+            )
+
+
+async def _test_minimax(api_key: str, api_base: str) -> TestLLMResponse:
+    """Test MiniMax API connection."""
+    import httpx
+
+    # MiniMax API base URL
+    base_url = api_base or "https://api.minimax.chat/v1"
+
+    # 确保 URL 以 /v1 结尾
+    if not base_url.endswith("/v1"):
+        base_url = base_url.rstrip("/") + "/v1"
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            # MiniMax 使用 chat/completions 测试连接
+            response = await client.post(
+                f"{base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "abab6.5s-chat",
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "max_tokens": 1,
+                },
+            )
+
+            if response.status_code == 200:
+                return TestLLMResponse(
+                    success=True,
+                    message="MiniMax API 连接成功",
+                    details={"provider": "minimax", "base_url": base_url},
+                )
+            elif response.status_code == 401:
+                return TestLLMResponse(
+                    success=False,
+                    message="MiniMax API Key 无效",
+                )
+            else:
+                return TestLLMResponse(
+                    success=False,
+                    message=f"MiniMax API 返回状态码 {response.status_code}: {response.text[:200]}",
+                )
+        except httpx.ConnectError as e:
+            return TestLLMResponse(
+                success=False,
+                message=f"无法连接到 MiniMax API: {str(e)}",
+            )
+        except Exception as e:
+            return TestLLMResponse(
+                success=False,
+                message=f"连接测试失败: {str(e)}",
             )
 
 

@@ -9,6 +9,7 @@
 import { Table, Typography, Space, Button, Tooltip, Badge, Progress, Empty, Popconfirm } from 'antd'
 import { EyeOutlined, StopOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { CollectTask, TaskStatusConfig } from '../../types'
+import { formatUTCToLocal } from '../../utils/datetime'
 
 const { Text } = Typography
 
@@ -93,7 +94,7 @@ const CollectTaskTable: React.FC<CollectTaskTableProps> = ({
       title: '触发时间',
       dataIndex: 'triggered_at',
       key: 'triggered_at',
-      render: (date: string) => new Date(date).toLocaleString(),
+      render: (date: string) => formatUTCToLocal(date),
     },
     {
       title: '操作',

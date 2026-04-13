@@ -416,6 +416,7 @@ export const api = {
       api_base?: string
       model?: string
       embedding_model?: string
+      embedding_api_base?: string
       timeout?: number
     }) => apiClient.put('/system-config/llm', data),
     // 更新单个配置

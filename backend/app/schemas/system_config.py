@@ -28,11 +28,12 @@ class UpdateConfigRequest(BaseModel):
 class LLMConfigRequest(BaseModel):
     """Request for updating LLM configuration."""
     enabled: bool | None = Field(None, description="Enable LLM functionality")
-    provider: str | None = Field(None, description="LLM provider (deepseek/openai/zhipu/qwen/custom)")
+    provider: str | None = Field(None, description="LLM provider (deepseek/openai/zhipu/qwen/minimax/custom)")
     api_key: str | None = Field(None, description="API key")
     api_base: str | None = Field(None, description="API base URL")
     model: str | None = Field(None, description="Chat model name")
     embedding_model: str | None = Field(None, description="Embedding model name")
+    embedding_api_base: str | None = Field(None, description="Embedding API base URL (optional)")
     timeout: int | None = Field(None, ge=1, le=600, description="Request timeout in seconds")
 
 
@@ -44,6 +45,7 @@ class LLMConfigResponse(BaseModel):
     api_base: str
     model: str
     embedding_model: str
+    embedding_api_base: str
     timeout: int
 
 

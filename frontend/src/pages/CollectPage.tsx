@@ -58,6 +58,7 @@ import {
   TIME_RANGE_CONFIG,
 } from '../constants'
 import type { VenueItem, VenueBinding, TechElementCollect, CollectTask } from '../types'
+import { formatUTCToLocal } from '../utils/datetime'
 
 const { Text, Title } = Typography
 
@@ -491,7 +492,7 @@ const CollectPage: React.FC = () => {
       title: '触发时间',
       dataIndex: 'triggered_at',
       key: 'triggered_at',
-      render: (date: string) => new Date(date).toLocaleString(),
+      render: (date: string) => formatUTCToLocal(date),
     },
     {
       title: '操作',
@@ -634,7 +635,7 @@ const CollectPage: React.FC = () => {
                       <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
                         <Statistic
                           title="最后同步时间"
-                          value={collabDataStatus?.last_sync ? new Date(collabDataStatus.last_sync).toLocaleString() : '-'}
+                          value={formatUTCToLocal(collabDataStatus?.last_sync)}
                           valueStyle={{ fontSize: 16 }}
                         />
                       </Card>
@@ -935,37 +936,49 @@ const CollectPage: React.FC = () => {
 
             {/* 统计信息 */}
             <Card title="采集统计" size="small" style={{ marginTop: 16 }}>
-              <Space size="large">
-                <div>
-                  <Text type="secondary">采集论文</Text>
-                  <div style={{ fontSize: 24, fontWeight: 'bold' }}>{selectedTask.total_records}</div>
-                </div>
-                <div>
-                  <Text type="secondary">入库人才</Text>
-                  <div style={{ fontSize: 24, fontWeight: 'bold', color: '#52c41a' }}>{selectedTask.success_records}</div>
-                </div>
-                <div>
-                  <Text type="secondary">标准化院校机构</Text>
-                  <div style={{ fontSize: 24, fontWeight: 'bold' }}>{selectedTask.skipped_records}</div>
-                </div>
-                <div>
-                  <Text type="secondary">标准化作者</Text>
-                  <div style={{ fontSize: 24, fontWeight: 'bold' }}>{selectedTask.processed_records}</div>
-                </div>
-              </Space>
+              <Row gutter={16}>
+                <Col span={4}>
+                  <Statistic title="采集论文" value={selectedTask.total_records || 0} />
+                </Col>
+                <Col span={4}>
+                  <Statistic title="获取作者" value={selectedTask.result_summary?.total_authors || selectedTask.processed_records || 0} />
+                </Col>
+                <Col span={4}>
+                  <Statistic title="标准化作者" value={selectedTask.processed_records || 0} />
+                </Col>
+                <Col span={4}>
+                  <Statistic title="标准化院校" value={selectedTask.skipped_records || 0} />
+                </Col>
+                <Col span={4}>
+                  <Statistic title="入库人才" value={selectedTask.success_records || 0} valueStyle={{ color: '#52c41a' }} />
+                </Col>
+                <Col span={4}>
+                  <Statistic title="更新人才" value={selectedTask.result_summary?.updated_talents || 0} />
+                </Col>
+              </Row>
+              {selectedTask.result_summary && (
+                <Row gutter={16} style={{ marginTop: 16 }}>
+                  <Col span={4}>
+                    <Statistic title="新建人才" value={selectedTask.result_summary.created_talents || 0} valueStyle={{ color: '#1890ff' }} />
+                  </Col>
+                  <Col span={4}>
+                    <Statistic title="技术标签" value={selectedTask.result_summary.created_tech_tags || 0} />
+                  </Col>
+                </Row>
+              )}
             </Card>
 
             {/* 时间信息 */}
             <Card title="时间信息" size="small" style={{ marginTop: 16 }}>
               <Descriptions column={2} size="small">
                 <Descriptions.Item label="触发时间">
-                  {new Date(selectedTask.triggered_at).toLocaleString()}
+                  {formatUTCToLocal(selectedTask.triggered_at)}
                 </Descriptions.Item>
                 <Descriptions.Item label="开始时间">
-                  {selectedTask.started_at ? new Date(selectedTask.started_at).toLocaleString() : '-'}
+                  {formatUTCToLocal(selectedTask.started_at)}
                 </Descriptions.Item>
                 <Descriptions.Item label="完成时间">
-                  {selectedTask.completed_at ? new Date(selectedTask.completed_at).toLocaleString() : '-'}
+                  {formatUTCToLocal(selectedTask.completed_at)}
                 </Descriptions.Item>
                 <Descriptions.Item label="耗时">
                   {selectedTask.result_summary?.total_duration || '-'}
@@ -1054,7 +1067,7 @@ const CollectPage: React.FC = () => {
                             {log.level.toUpperCase()}
                           </Tag>
                           <Text type="secondary" style={{ fontSize: 12 }}>
-                            {new Date(log.timestamp).toLocaleString()}
+                            {formatUTCToLocal(log.timestamp)}
                           </Text>
                         </div>
                         <div>{log.message}</div>

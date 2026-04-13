@@ -8,9 +8,10 @@
  * - 显示采集源详情
  * - 显示执行日志
  */
-import { Modal, Descriptions, Badge, Progress, Card, Space, Typography, Table, Timeline, Alert, Button, Popconfirm } from 'antd'
+import { Modal, Descriptions, Badge, Progress, Card, Space, Typography, Table, Timeline, Alert, Button, Popconfirm, Row, Col, Statistic } from 'antd'
 import { ReloadOutlined, DeleteOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import type { CollectTask, TaskStatusConfig } from '../../types'
+import { formatUTCToLocal } from '../../utils/datetime'
 
 const { Text } = Typography
 
@@ -127,37 +128,49 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
       {/* 统计信息 */}
       <Card title="采集统计" size="small" style={{ marginTop: 16 }}>
-        <Space size="large">
-          <div>
-            <Text type="secondary">采集论文</Text>
-            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{task.total_records}</div>
-          </div>
-          <div>
-            <Text type="secondary">入库人才</Text>
-            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#52c41a' }}>{task.success_records}</div>
-          </div>
-          <div>
-            <Text type="secondary">标准化院校机构</Text>
-            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{task.skipped_records}</div>
-          </div>
-          <div>
-            <Text type="secondary">标准化作者</Text>
-            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{task.processed_records}</div>
-          </div>
-        </Space>
+        <Row gutter={16}>
+          <Col span={4}>
+            <Statistic title="采集论文" value={task.total_records || 0} />
+          </Col>
+          <Col span={4}>
+            <Statistic title="获取作者" value={task.result_summary?.total_authors || task.processed_records || 0} />
+          </Col>
+          <Col span={4}>
+            <Statistic title="标准化作者" value={task.processed_records || 0} />
+          </Col>
+          <Col span={4}>
+            <Statistic title="标准化院校" value={task.skipped_records || 0} />
+          </Col>
+          <Col span={4}>
+            <Statistic title="入库人才" value={task.success_records || 0} valueStyle={{ color: '#52c41a' }} />
+          </Col>
+          <Col span={4}>
+            <Statistic title="更新人才" value={task.result_summary?.updated_talents || 0} />
+          </Col>
+        </Row>
+        {task.result_summary && (
+          <Row gutter={16} style={{ marginTop: 16 }}>
+            <Col span={4}>
+              <Statistic title="新建人才" value={task.result_summary.created_talents || 0} valueStyle={{ color: '#1890ff' }} />
+            </Col>
+            <Col span={4}>
+              <Statistic title="技术标签" value={task.result_summary.created_tech_tags || 0} />
+            </Col>
+          </Row>
+        )}
       </Card>
 
       {/* 时间信息 */}
       <Card title="时间信息" size="small" style={{ marginTop: 16 }}>
         <Descriptions column={2} size="small">
           <Descriptions.Item label="触发时间">
-            {new Date(task.triggered_at).toLocaleString()}
+            {formatUTCToLocal(task.triggered_at)}
           </Descriptions.Item>
           <Descriptions.Item label="开始时间">
-            {task.started_at ? new Date(task.started_at).toLocaleString() : '-'}
+            {formatUTCToLocal(task.started_at)}
           </Descriptions.Item>
           <Descriptions.Item label="完成时间">
-            {task.completed_at ? new Date(task.completed_at).toLocaleString() : '-'}
+            {formatUTCToLocal(task.completed_at)}
           </Descriptions.Item>
           <Descriptions.Item label="耗时">
             {task.result_summary?.total_duration || '-'}
@@ -238,7 +251,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <Text strong={log.level === 'error'}>{log.level.toUpperCase()}</Text>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      {new Date(log.timestamp).toLocaleString()}
+                      {formatUTCToLocal(log.timestamp)}
                     </Text>
                   </div>
                   <div>{log.message}</div>

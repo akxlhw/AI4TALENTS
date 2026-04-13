@@ -165,6 +165,10 @@ class CollaborationService:
 
             logger.info(f"已处理 {processed}/{total_works} 篇论文，创建 {collaborations_created} 条合作关系")
 
+        # 保存同步时间
+        await self.save_sync_time()
+        logger.info("合作网络同步完成，已保存同步时间")
+
         return {
             "total_works": total_works,
             "processed": processed,
@@ -525,6 +529,8 @@ class CollaborationService:
         """
         获取当前合作网络同步状态。
         """
+        from app.services.config_service import ConfigService
+
         # 统计合作关系数
         collab_count_stmt = select(func.count(Collaboration.collaboration_id))
         result = await self.session.execute(collab_count_stmt)
@@ -543,9 +549,26 @@ class CollaborationService:
         result = await self.session.execute(work_count_stmt)
         total_works = result.scalar() or 0
 
+        # 获取最后同步时间
+        config_service = ConfigService(self.session)
+        last_sync = await config_service.get_value("COLLABORATION_LAST_SYNC", None)
+
         return {
             "total_collaborations": total_collaborations,
             "talents_with_collaborations": len(talents_with_collab),
             "total_works": total_works,
-            "last_sync": None
+            "last_sync": last_sync
         }
+
+    async def save_sync_time(self):
+        """保存最后同步时间"""
+        from datetime import datetime
+        from app.services.config_service import ConfigService
+
+        config_service = ConfigService(self.session)
+        await config_service.set_value(
+            "COLLABORATION_LAST_SYNC",
+            datetime.utcnow().isoformat(),
+            "string"
+        )
+        await self.session.commit()

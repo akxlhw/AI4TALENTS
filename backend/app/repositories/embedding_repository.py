@@ -112,11 +112,12 @@ class EmbeddingRepository:
         if _is_postgres(self.session):
             # PostgreSQL: 使用原生 SQL 插入向量
             vector_str = '[' + ','.join(str(v) for v in embedding) + ']'
+            # 使用 CAST 函数避免 :: 类型转换与 SQLAlchemy 参数冲突
             await self.session.execute(
                 text("""
                     INSERT INTO core_talent_embedding
                     (talent_id, embedding, model_name, source_text_hash, created_at, updated_at)
-                    VALUES (:talent_id, :embedding::vector, :model_name, :source_text_hash, :created_at, :updated_at)
+                    VALUES (:talent_id, CAST(:embedding AS vector), :model_name, :source_text_hash, :created_at, :updated_at)
                 """),
                 {
                     "talent_id": talent_id,
@@ -169,11 +170,12 @@ class EmbeddingRepository:
         if _is_postgres(self.session):
             # PostgreSQL: 使用原生 SQL UPSERT
             vector_str = '[' + ','.join(str(v) for v in embedding) + ']'
+            # 使用 CAST 函数避免 :: 类型转换与 SQLAlchemy 参数冲突
             await self.session.execute(
                 text("""
                     INSERT INTO core_talent_embedding
                     (talent_id, embedding, model_name, source_text_hash, created_at, updated_at)
-                    VALUES (:talent_id, :embedding::vector, :model_name, :source_text_hash, :created_at, :updated_at)
+                    VALUES (:talent_id, CAST(:embedding AS vector), :model_name, :source_text_hash, :created_at, :updated_at)
                     ON CONFLICT (talent_id) DO UPDATE SET
                         embedding = EXCLUDED.embedding,
                         model_name = EXCLUDED.model_name,

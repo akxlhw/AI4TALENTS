@@ -267,6 +267,14 @@ export interface CollectTask {
   error_message: string | null
   error_details: unknown
   result_summary: {
+    total_works?: number
+    total_authors?: number
+    normalized_authors?: number
+    normalized_schools?: number
+    synced_authors?: number
+    created_talents?: number
+    updated_talents?: number
+    created_tech_tags?: number
     total_duration?: string
     venue_details?: Array<{
       venue_id: number

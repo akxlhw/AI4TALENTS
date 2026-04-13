@@ -317,6 +317,21 @@ class CollectionOrchestrator:
             task.processed_records = progress.normalized_authors
             task.skipped_records = progress.normalized_schools
 
+            # Build result_summary with venue details
+            venue_details = await self._build_venue_details(task.task_id)
+            task.result_summary = {
+                "total_works": progress.total_works,
+                "total_authors": progress.total_authors,
+                "normalized_authors": progress.normalized_authors,
+                "normalized_schools": progress.normalized_schools,
+                "synced_authors": progress.synced_authors,
+                "created_talents": progress.created_talents,
+                "updated_talents": progress.updated_talents,
+                "created_tech_tags": progress.created_tech_tags,
+                "venue_details": venue_details,
+                "total_duration": self._calculate_duration(task.started_at, task.completed_at),
+            }
+
             # Mark task as completed
             await self.progress_tracker.update_task_status(task, "completed")
             progress.status = "completed"
@@ -906,3 +921,70 @@ class CollectionOrchestrator:
             "completed_at": task.completed_at.isoformat() if task.completed_at else None,
             "error_message": task.error_message
         }
+
+    async def _build_venue_details(self, task_id: int) -> list[dict]:
+        """构建采集源详情列表
+
+        Args:
+            task_id: 任务ID
+
+        Returns:
+            采集源详情列表
+        """
+        from app.models.venue import Venue
+
+        sub_tasks = await self.sub_task_repo.get_by_task(task_id)
+        venue_details = []
+
+        for sub_task in sub_tasks:
+            venue = await self.venue_repo.get_by_id(sub_task.venue_id)
+            if venue:
+                # 计算耗时
+                duration = None
+                if sub_task.started_at and sub_task.completed_at:
+                    delta = sub_task.completed_at - sub_task.started_at
+                    total_seconds = int(delta.total_seconds())
+                    if total_seconds >= 60:
+                        duration = f"{total_seconds // 60}分{total_seconds % 60}秒"
+                    else:
+                        duration = f"{total_seconds}秒"
+
+                venue_details.append({
+                    "venue_id": sub_task.venue_id,
+                    "venue_name": venue.venue_name,
+                    "status": sub_task.status or "unknown",
+                    "fetched": sub_task.works_fetched or 0,
+                    "saved": sub_task.new_authors or 0,
+                    "duration": duration,
+                    "error": sub_task.error_message,
+                })
+
+        return venue_details
+
+    def _calculate_duration(self, started_at, completed_at) -> str | None:
+        """计算任务耗时
+
+        Args:
+            started_at: 开始时间
+            completed_at: 完成时间
+
+        Returns:
+            耗时字符串，如 "5分30秒"
+        """
+        if not started_at or not completed_at:
+            return None
+
+        delta = completed_at - started_at
+        total_seconds = int(delta.total_seconds())
+
+        if total_seconds >= 3600:
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+            return f"{hours}时{minutes}分{seconds}秒"
+        elif total_seconds >= 60:
+            minutes = total_seconds // 60
+            seconds = total_seconds % 60
+            return f"{minutes}分{seconds}秒"
+        else:
+            return f"{total_seconds}秒"

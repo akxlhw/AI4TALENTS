@@ -159,21 +159,37 @@ class EmbeddingService:
         # 批量处理
         for i in range(0, len(talent_ids), batch_size):
             batch = talent_ids[i:i + batch_size]
+            batch_num = i // batch_size + 1
 
             try:
                 # 获取人才信息
                 talents = await self._get_talents_by_ids(batch)
                 if not talents:
+                    logger.warning(f"Batch {batch_num}: No talents found for IDs {batch}")
                     continue
 
                 # 构建文本
                 texts = [self._build_source_text(t) for t in talents]
                 talent_id_map = {self._build_source_text(t): t.talent_id for t in talents}
 
+                logger.info(f"Batch {batch_num}: Generating embeddings for {len(texts)} talents")
+
                 # 批量生成嵌入
                 results = await self.llm_gateway.generate_embedding_batch(texts)
 
+                logger.info(f"Batch {batch_num}: Received {len(results)} embedding results")
+
+                # 验证结果数量
+                if len(results) != len(texts):
+                    logger.error(
+                        f"Batch {batch_num}: Result count mismatch! "
+                        f"Expected {len(texts)}, got {len(results)}"
+                    )
+                    # 只处理匹配的部分
+                    stats["failed"] += len(texts) - len(results)
+
                 # 存储结果
+                stored_count = 0
                 for text, result in zip(texts, results):
                     talent_id = talent_id_map.get(text)
                     if talent_id:
@@ -184,7 +200,10 @@ class EmbeddingService:
                             model_name=self.model_name,
                             source_text_hash=source_hash,
                         )
+                        stored_count += 1
                         stats["processed"] += 1
+
+                logger.info(f"Batch {batch_num}: Stored {stored_count} embeddings")
 
                 # 提交事务
                 await self.session.commit()

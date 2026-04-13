@@ -59,6 +59,7 @@ import {
   TIME_RANGE_CONFIG,
 } from '../constants'
 import type { VenueItem, VenueBinding, TechElementCollect, CollectTask } from '../types'
+import { formatUTCToLocal } from '../utils/datetime'
 
 const { Text, Title } = Typography
 
@@ -85,6 +86,7 @@ interface LLMConfig {
   api_base: string
   model: string
   embedding_model: string
+  embedding_api_base: string
   timeout: number
 }
 
@@ -577,7 +579,7 @@ const SystemConfigPage: React.FC = () => {
       title: '触发时间',
       dataIndex: 'triggered_at',
       key: 'triggered_at',
-      render: (date: string) => new Date(date).toLocaleString(),
+      render: (date: string) => formatUTCToLocal(date),
     },
     {
       title: '操作',
@@ -686,12 +688,23 @@ const SystemConfigPage: React.FC = () => {
                             </Col>
                             <Col span={8}>
                               <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
-                                <Statistic title="最后同步时间" value={collabDataStatus?.last_sync ? new Date(collabDataStatus.last_sync).toLocaleString() : '-'} valueStyle={{ fontSize: 16 }} />
+                                <Statistic title="最后同步时间" value={formatUTCToLocal(collabDataStatus?.last_sync)} valueStyle={{ fontSize: 16 }} />
                               </Card>
                             </Col>
                           </Row>
                           {(collabSyncStatus?.status === 'running' || collabSyncStatus?.status === 'pending') && (
-                            <Alert type="info" showIcon icon={<SyncOutlined spin />} style={{ marginBottom: 16 }} message={collabSyncStatus?.status === 'pending' ? '正在启动同步任务...' : '同步进行中...'} />
+                            <div style={{ marginBottom: 16 }}>
+                              <Alert type="info" showIcon icon={<SyncOutlined spin />} style={{ marginBottom: 8 }} message={collabSyncStatus?.status === 'pending' ? '正在启动同步任务...' : '同步进行中...'} />
+                              {collabSyncStatus?.status === 'running' && collabSyncStatus?.total > 0 && (
+                                <div style={{ marginTop: 8 }}>
+                                  <Progress
+                                    percent={Math.round((collabSyncStatus.processed / collabSyncStatus.total) * 100)}
+                                    status="active"
+                                    format={() => `${collabSyncStatus.processed}/${collabSyncStatus.total} 论文，${collabSyncStatus.collaborations} 条合作关系`}
+                                  />
+                                </div>
+                              )}
+                            </div>
                           )}
                           <Space>
                             <Button type="primary" icon={<SyncOutlined spin={collabSyncStatus?.status === 'running'} />} onClick={handleSyncAllCollaborations} loading={collabSyncStatus?.status === 'running'} disabled={collabSyncStatus?.status === 'running'}>
@@ -827,6 +840,7 @@ const SystemConfigPage: React.FC = () => {
                             { value: 'openai', label: 'OpenAI' },
                             { value: 'zhipu', label: '智谱 AI' },
                             { value: 'qwen', label: '通义千问' },
+                            { value: 'minimax', label: 'MiniMax' },
                             { value: 'custom', label: '自定义' },
                           ]} />
                         </Form.Item>
@@ -851,12 +865,21 @@ const SystemConfigPage: React.FC = () => {
                         </Form.Item>
                       </Col>
                       <Col span={12}>
-                        <Form.Item name="embedding_model" label="嵌入模型（可选）">
-                          <Input placeholder="用于向量嵌入" />
+                        <Form.Item name="embedding_model" label="嵌入模型">
+                          <Input placeholder="如 text-embedding-3-small" />
                         </Form.Item>
                       </Col>
                     </Row>
                     <Row gutter={24}>
+                      <Col span={12}>
+                        <Form.Item
+                          name="embedding_api_base"
+                          label="嵌入 API 地址"
+                          tooltip="如果嵌入模型使用不同的 API 服务，请填写此地址。留空则使用上方的 API 地址。"
+                        >
+                          <Input placeholder="如 https://api.openai.com/v1" />
+                        </Form.Item>
+                      </Col>
                       <Col span={12}>
                         <Form.Item name="timeout" label="超时时间（秒）">
                           <InputNumber min={10} max={300} style={{ width: '100%' }} />
@@ -961,19 +984,84 @@ const SystemConfigPage: React.FC = () => {
         width={800}
       >
         {selectedTask && (
-          <Descriptions bordered column={2} size="small">
-            <Descriptions.Item label="任务编码">{selectedTask.task_code}</Descriptions.Item>
-            <Descriptions.Item label="状态">
-              <Badge status={getTaskStatusConfig(selectedTask.status).status} text={getTaskStatusConfig(selectedTask.status).label} />
-            </Descriptions.Item>
-            <Descriptions.Item label="技术要素">{selectedTask.tech_element_name}</Descriptions.Item>
-            <Descriptions.Item label="时间范围">{selectedTask.start_year}年 ~ {selectedTask.end_year ? `${selectedTask.end_year}年` : '至今'}</Descriptions.Item>
-            <Descriptions.Item label="进度" span={2}>
-              <Progress percent={selectedTask.progress_percent} status={selectedTask.status === 'failed' ? 'exception' : selectedTask.status === 'completed' ? 'success' : 'active'} />
-            </Descriptions.Item>
-            <Descriptions.Item label="采集论文">{selectedTask.total_records}</Descriptions.Item>
-            <Descriptions.Item label="入库人才"><Text type="success">{selectedTask.success_records}</Text></Descriptions.Item>
-          </Descriptions>
+          <>
+            <Descriptions bordered column={2} size="small">
+              <Descriptions.Item label="任务编码">{selectedTask.task_code}</Descriptions.Item>
+              <Descriptions.Item label="状态">
+                <Badge status={getTaskStatusConfig(selectedTask.status).status} text={getTaskStatusConfig(selectedTask.status).label} />
+              </Descriptions.Item>
+              <Descriptions.Item label="技术要素">{selectedTask.tech_element_name}</Descriptions.Item>
+              <Descriptions.Item label="时间范围">{selectedTask.start_year}年 ~ {selectedTask.end_year ? `${selectedTask.end_year}年` : '至今'}</Descriptions.Item>
+              <Descriptions.Item label="进度" span={2}>
+                <Progress percent={selectedTask.progress_percent} status={selectedTask.status === 'failed' ? 'exception' : selectedTask.status === 'completed' ? 'success' : 'active'} />
+              </Descriptions.Item>
+            </Descriptions>
+
+            <Card title="采集统计" size="small" style={{ marginTop: 16 }}>
+              <Row gutter={16}>
+                <Col span={4}>
+                  <Statistic title="采集论文" value={selectedTask.total_records || 0} />
+                </Col>
+                <Col span={4}>
+                  <Statistic title="获取作者" value={selectedTask.result_summary?.total_authors || selectedTask.processed_records || 0} />
+                </Col>
+                <Col span={4}>
+                  <Statistic title="标准化作者" value={selectedTask.processed_records || 0} />
+                </Col>
+                <Col span={4}>
+                  <Statistic title="标准化院校" value={selectedTask.skipped_records || 0} />
+                </Col>
+                <Col span={4}>
+                  <Statistic title="入库人才" value={selectedTask.success_records || 0} valueStyle={{ color: '#52c41a' }} />
+                </Col>
+                <Col span={4}>
+                  <Statistic title="更新人才" value={selectedTask.result_summary?.updated_talents || 0} />
+                </Col>
+              </Row>
+              {selectedTask.result_summary && (
+                <Row gutter={16} style={{ marginTop: 16 }}>
+                  <Col span={4}>
+                    <Statistic title="新建人才" value={selectedTask.result_summary.created_talents || 0} valueStyle={{ color: '#1890ff' }} />
+                  </Col>
+                  <Col span={4}>
+                    <Statistic title="技术标签" value={selectedTask.result_summary.created_tech_tags || 0} />
+                  </Col>
+                </Row>
+              )}
+            </Card>
+
+            <Card title="时间信息" size="small" style={{ marginTop: 16 }}>
+              <Descriptions column={2} size="small">
+                <Descriptions.Item label="触发时间">{formatUTCToLocal(selectedTask.triggered_at)}</Descriptions.Item>
+                <Descriptions.Item label="开始时间">{formatUTCToLocal(selectedTask.started_at)}</Descriptions.Item>
+                <Descriptions.Item label="完成时间">{formatUTCToLocal(selectedTask.completed_at)}</Descriptions.Item>
+                <Descriptions.Item label="耗时">{selectedTask.result_summary?.total_duration || '-'}</Descriptions.Item>
+              </Descriptions>
+            </Card>
+
+            {selectedTask.result_summary?.venue_details && selectedTask.result_summary.venue_details.length > 0 && (
+              <Card title="采集源详情" size="small" style={{ marginTop: 16 }}>
+                <Table
+                  dataSource={selectedTask.result_summary.venue_details}
+                  rowKey="venue_id"
+                  size="small"
+                  pagination={false}
+                  columns={[
+                    { title: '采集源', dataIndex: 'venue_name', key: 'venue_name', ellipsis: true },
+                    { title: '状态', dataIndex: 'status', key: 'status', width: 80 },
+                    { title: '获取', dataIndex: 'fetched', key: 'fetched', width: 60, align: 'center' },
+                    { title: '入库', dataIndex: 'saved', key: 'saved', width: 60, align: 'center' },
+                    { title: '耗时', dataIndex: 'duration', key: 'duration', width: 80 },
+                    { title: '错误', dataIndex: 'error', key: 'error', ellipsis: true, render: (e: string) => e ? <Text type="danger">{e}</Text> : '-' },
+                  ]}
+                />
+              </Card>
+            )}
+
+            {selectedTask.error_message && (
+              <Alert type="error" message="错误信息" description={selectedTask.error_message} style={{ marginTop: 16 }} showIcon />
+            )}
+          </>
         )}
       </Modal>
     </div>

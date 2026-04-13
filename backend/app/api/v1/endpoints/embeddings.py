@@ -151,6 +151,22 @@ async def trigger_generation(
             detail="LLM API Key 未配置。请在系统配置中设置 API Key。"
         )
 
+    # 检查嵌入模型配置
+    if not llm_config.embedding_model:
+        raise HTTPException(
+            status_code=400,
+            detail="嵌入模型未配置。请在系统配置中设置嵌入模型名称（如 text-embedding-3-small）。"
+        )
+
+    # 检查嵌入 API 地址（DeepSeek 不支持嵌入，必须单独配置）
+    if not llm_config.embedding_api_base and not llm_config.api_base:
+        provider = llm_config.provider or "deepseek"
+        if provider == "deepseek":
+            raise HTTPException(
+                status_code=400,
+                detail="DeepSeek 不支持嵌入功能。请在系统配置中设置「嵌入 API 地址」（如 OpenAI API 地址）和「嵌入模型」。"
+            )
+
     # Count talents
     total_result = await session.execute(
         select(func.count()).select_from(Talent).where(Talent.is_visible == True)
@@ -226,17 +242,38 @@ async def _run_embedding_generation(force: bool, batch_size: int):
 
             if not llm_config.enabled or not llm_config.api_key:
                 _embedding_progress["status"] = "error"
-                _embedding_progress["error_message"] = "LLM not enabled or API key not configured"
+                _embedding_progress["error_message"] = "LLM 未启用或 API Key 未配置"
                 return
 
+            # 检查嵌入模型配置
+            if not llm_config.embedding_model:
+                _embedding_progress["status"] = "error"
+                _embedding_progress["error_message"] = "嵌入模型未配置。请在系统配置中设置嵌入模型名称。"
+                return
+
+            # 检查嵌入 API 地址
+            if not llm_config.embedding_api_base and not llm_config.api_base:
+                provider = llm_config.provider or "deepseek"
+                if provider == "deepseek":
+                    _embedding_progress["status"] = "error"
+                    _embedding_progress["error_message"] = "DeepSeek 不支持嵌入功能。请配置「嵌入 API 地址」。"
+                    return
+
             # Create LLM gateway with database config
+            # 使用用户配置的 embedding_api_base 或 api_base
+            embedding_api_base = llm_config.embedding_api_base or llm_config.api_base
+
+            logger.info(f"Creating LLMGateway with api_base={embedding_api_base}, embedding_model={llm_config.embedding_model}")
+
             llm_gateway = LLMGateway(
                 api_key=llm_config.api_key,
-                api_base=llm_config.api_base or "https://api.deepseek.com/v1",
+                api_base=embedding_api_base,
                 model=llm_config.model or "deepseek-chat",
-                embedding_model=llm_config.embedding_model or "deepseek-embedding",
+                embedding_model=llm_config.embedding_model,  # 使用用户配置
                 timeout=llm_config.timeout or 60,
             )
+
+            logger.info(f"LLMGateway provider detected: {llm_gateway.provider}")
 
             # Get talent IDs
             query = select(Talent.talent_id).where(
@@ -246,8 +283,8 @@ async def _run_embedding_generation(force: bool, batch_size: int):
             result = await session.execute(query)
             talent_ids = [row[0] for row in result.fetchall()]
 
-            # 获取实际的嵌入模型名称
-            embedding_model = llm_config.embedding_model or "deepseek-embedding"
+            # 使用用户配置的嵌入模型名称
+            embedding_model = llm_config.embedding_model
 
             if not force:
                 # Exclude already embedded talents (使用正确的模型名称)
@@ -271,33 +308,37 @@ async def _run_embedding_generation(force: bool, batch_size: int):
                 model_name=embedding_model,  # 使用实际模型名称
             )
 
-            # Process in batches
+            # Process in batches (使用较小的批次以便实时更新进度)
             processed = 0
             failed = 0
+            # MiniMax 有速率限制，使用较小的批次
+            actual_batch_size = min(batch_size, 10)
 
-            for i in range(0, len(talent_ids), batch_size):
+            for i in range(0, len(talent_ids), actual_batch_size):
                 if _embedding_progress["status"] == "cancelled":
                     logger.info("Embedding generation cancelled")
                     return
 
-                batch = talent_ids[i:i + batch_size]
+                batch = talent_ids[i:i + actual_batch_size]
 
                 try:
                     stats = await embed_service.batch_generate_embeddings(
                         talent_ids=batch,
-                        batch_size=batch_size,
+                        batch_size=actual_batch_size,
                         force_regenerate=force,  # 使用 force 参数
                     )
                     processed += stats.get("processed", 0)
                     failed += stats.get("failed", 0)
 
+                    # 实时更新进度
                     _embedding_progress["processed"] = processed
                     _embedding_progress["failed"] = failed
+                    logger.info(f"Progress: {processed}/{len(talent_ids)} processed, {failed} failed")
 
                     await session.commit()
 
                 except Exception as e:
-                    logger.error(f"Batch {i // batch_size + 1} failed: {e}")
+                    logger.error(f"Batch {i // actual_batch_size + 1} failed: {e}")
                     failed += len(batch)
                     _embedding_progress["failed"] = failed
 
