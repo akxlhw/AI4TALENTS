@@ -246,12 +246,15 @@ async def _run_embedding_generation(force: bool, batch_size: int):
             result = await session.execute(query)
             talent_ids = [row[0] for row in result.fetchall()]
 
+            # 获取实际的嵌入模型名称
+            embedding_model = llm_config.embedding_model or "deepseek-embedding"
+
             if not force:
-                # Exclude already embedded talents
+                # Exclude already embedded talents (使用正确的模型名称)
                 from app.repositories.embedding_repository import EmbeddingRepository
                 repo = EmbeddingRepository(session)
-                existing_ids = await repo.get_existing_talent_ids()
-                talent_ids = [tid for tid in talent_ids if tid not in existing_ids]
+                missing_ids = await repo.get_missing_talent_ids(talent_ids, embedding_model)
+                talent_ids = missing_ids
 
             _embedding_progress["total"] = len(talent_ids)
 
@@ -265,6 +268,7 @@ async def _run_embedding_generation(force: bool, batch_size: int):
                 session=session,
                 llm_gateway=llm_gateway,
                 rate_limit_delay=1.0,
+                model_name=embedding_model,  # 使用实际模型名称
             )
 
             # Process in batches
@@ -282,7 +286,7 @@ async def _run_embedding_generation(force: bool, batch_size: int):
                     stats = await embed_service.batch_generate_embeddings(
                         talent_ids=batch,
                         batch_size=batch_size,
-                        force_regenerate=False,
+                        force_regenerate=force,  # 使用 force 参数
                     )
                     processed += stats.get("processed", 0)
                     failed += stats.get("failed", 0)
