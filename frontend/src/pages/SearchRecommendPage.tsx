@@ -448,8 +448,9 @@ const SearchRecommendPage: React.FC = () => {
         )
 
         if (isSimilarRecommend) {
+          const percent = Math.round((similarity || 0) * 100)
           return (
-            <Tooltip title="相似推荐：该人才研究方向与搜索词语义相近，但非精准匹配">
+            <Tooltip title={`相似推荐 (${percent}%)：该人才研究方向与搜索词语义相近，但非精准匹配`}>
               {nameContent}
             </Tooltip>
           )
