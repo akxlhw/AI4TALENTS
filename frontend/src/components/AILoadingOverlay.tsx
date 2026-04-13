@@ -1,10 +1,11 @@
 /**
- * AI Loading Overlay - AI主题加载遮罩层
+ * AI Loading Overlay - AI4RECRUIT 智能人才库
  *
- * 特效元素：
- * - 神经网络粒子动画
- * - 脉冲光环效果
- * - 动态进度提示文字（线性推进）
+ * 设计理念：
+ * - 简洁优雅，符合 Ant Design v5 设计语言
+ * - 品牌标识清晰展示
+ * - 微妙的 AI 视觉元素
+ * - 进度可视化反馈
  */
 import { useEffect, useState, useRef } from 'react'
 import './AILoadingOverlay.css'
@@ -16,19 +17,18 @@ interface AILoadingOverlayProps {
 }
 
 const DEFAULT_STEPS = [
-  '正在连接 AI 服务...',
-  '解析职位描述...',
-  '提取关键技能要求...',
-  '分析研究方向匹配...',
-  '计算候选人匹配度...',
-  '生成推荐结果...',
+  '连接 AI 服务',
+  '解析职位描述',
+  '提取技能要求',
+  '匹配候选人',
+  '生成推荐结果',
 ]
 
-const STEP_INTERVAL = 2500 // 每个步骤间隔时间(ms)
+const STEP_INTERVAL = 2500
 
 const AILoadingOverlay: React.FC<AILoadingOverlayProps> = ({
   visible,
-  title = 'AI 智能分析中',
+  title = '智能分析中',
   steps = DEFAULT_STEPS,
 }) => {
   const [currentStep, setCurrentStep] = useState(0)
@@ -36,7 +36,6 @@ const AILoadingOverlay: React.FC<AILoadingOverlayProps> = ({
 
   useEffect(() => {
     if (!visible) {
-      // 重置状态
       setCurrentStep(0)
       if (timerRef.current) {
         clearInterval(timerRef.current)
@@ -45,13 +44,10 @@ const AILoadingOverlay: React.FC<AILoadingOverlayProps> = ({
       return
     }
 
-    // 重置到第一步
     setCurrentStep(0)
 
-    // 线性推进步骤，到达最后一步后停止
     timerRef.current = setInterval(() => {
       setCurrentStep((prev) => {
-        // 到达最后一步就停止，不再推进
         if (prev >= steps.length - 1) {
           return prev
         }
@@ -71,66 +67,65 @@ const AILoadingOverlay: React.FC<AILoadingOverlayProps> = ({
 
   return (
     <div className="ai-loading-overlay">
-      <div className="ai-loading-content">
-        {/* 神经网络背景 */}
-        <div className="neural-network">
-          <div className="node node-1" />
-          <div className="node node-2" />
-          <div className="node node-3" />
-          <div className="node node-4" />
-          <div className="node node-5" />
-          <div className="node node-6" />
-          <svg className="connections" viewBox="0 0 200 200">
-            <line className="connection" x1="50" y1="50" x2="100" y2="100" />
-            <line className="connection" x1="150" y1="50" x2="100" y2="100" />
-            <line className="connection" x1="50" y1="150" x2="100" y2="100" />
-            <line className="connection" x1="150" y1="150" x2="100" y2="100" />
-            <line className="connection" x1="100" y1="30" x2="100" y2="100" />
-            <line className="connection" x1="100" y1="170" x2="100" y2="100" />
-          </svg>
+      <div className="loading-container">
+        {/* 品牌区域 */}
+        <div className="brand-section">
+          <div className="brand-name">
+            <span className="brand-ai">AI</span>
+            <span className="brand-connector">4</span>
+            <span className="brand-recruit">RECRUIT</span>
+          </div>
+          <div className="brand-tagline">智能人才发现平台</div>
         </div>
 
-        {/* 中心品牌图标 */}
-        <div className="ai-icon-container">
-          <div className="pulse-ring ring-1" />
-          <div className="pulse-ring ring-2" />
-          <div className="pulse-ring ring-3" />
-          <div className="ai-icon">
-            {/* AI4 图标 - AI for Recruitment */}
-            <div className="brand-logo">
-              <span className="logo-ai">AI</span>
-              <span className="logo-4">4</span>
-              <span className="logo-r">R</span>
-            </div>
-            {/* 人才连接网络 */}
-            <div className="talent-network">
-              <div className="talent-dot t1" />
-              <div className="talent-dot t2" />
-              <div className="talent-dot t3" />
-              <div className="talent-dot t4" />
-              <svg className="talent-lines" viewBox="0 0 60 60">
-                <line x1="30" y1="10" x2="30" y2="20" />
-                <line x1="10" y1="30" x2="20" y2="30" />
-                <line x1="40" y1="30" x2="50" y2="30" />
-                <line x1="30" y1="40" x2="30" y2="50" />
-              </svg>
-            </div>
+        {/* 主视觉区域 */}
+        <div className="visual-section">
+          {/* 外圈动画 */}
+          <div className="orbit-ring">
+            <div className="orbit-dot dot-1" />
+            <div className="orbit-dot dot-2" />
+            <div className="orbit-dot dot-3" />
+          </div>
+
+          {/* 中心图标 */}
+          <div className="center-icon">
+            <svg viewBox="0 0 48 48" className="ai-svg">
+              {/* 大脑轮廓 */}
+              <path
+                className="brain-path"
+                d="M24 4C14 4 8 12 8 20C8 28 12 34 18 38L18 42L30 42L30 38C36 34 40 28 40 20C40 12 34 4 24 4Z"
+                fill="none"
+                strokeWidth="2"
+              />
+              {/* 神经连接线 */}
+              <path className="neural-line line-1" d="M16 18 L24 24 L32 18" fill="none" strokeWidth="1.5" />
+              <path className="neural-line line-2" d="M16 28 L24 22 L32 28" fill="none" strokeWidth="1.5" />
+              {/* 连接节点 */}
+              <circle className="node node-1" cx="16" cy="18" r="2" />
+              <circle className="node node-2" cx="32" cy="18" r="2" />
+              <circle className="node node-3" cx="24" cy="24" r="2.5" />
+              <circle className="node node-4" cx="16" cy="28" r="2" />
+              <circle className="node node-5" cx="32" cy="28" r="2" />
+            </svg>
           </div>
         </div>
 
-        {/* 标题和进度提示 */}
-        <div className="ai-loading-text">
-          <h3>{title}</h3>
-          <div className="step-indicator">
-            <div className="step-dots">
-              {steps.map((_, idx) => (
-                <span
-                  key={idx}
-                  className={`step-dot ${idx === currentStep ? 'active' : ''} ${idx < currentStep ? 'completed' : ''}`}
-                />
-              ))}
+        {/* 状态区域 */}
+        <div className="status-section">
+          <h3 className="status-title">{title}</h3>
+
+          {/* 步骤进度条 */}
+          <div className="step-progress">
+            <div className="progress-track">
+              <div
+                className="progress-fill"
+                style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+              />
             </div>
-            <p className="current-step">{steps[currentStep]}</p>
+            <div className="step-label">
+              <span className="step-number">{currentStep + 1}/{steps.length}</span>
+              <span className="step-text">{steps[currentStep]}</span>
+            </div>
           </div>
         </div>
       </div>

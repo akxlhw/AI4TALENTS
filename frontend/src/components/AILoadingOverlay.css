@@ -1,4 +1,6 @@
-/* AI Loading Overlay Styles */
+/* AI Loading Overlay - AI4RECRUIT 智能人才库
+ * 设计语言: Ant Design v5 - 简洁、专业、优雅
+ */
 
 .ai-loading-overlay {
   position: fixed;
@@ -6,356 +8,332 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(2px);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn 0.25s ease-out;
 }
 
 @keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 64px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
+  animation: slideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideUp {
   from {
     opacity: 0;
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.ai-loading-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 48px;
-  position: relative;
-}
-
-/* Neural Network Animation */
-.neural-network {
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  opacity: 0.4;
-}
-
-.node {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  background: linear-gradient(135deg, #1890ff, #722ed1);
-  border-radius: 50%;
-  animation: nodePulse 2s ease-in-out infinite;
-}
-
-.node-1 { top: 44px; left: 44px; animation-delay: 0s; }
-.node-2 { top: 44px; right: 44px; animation-delay: 0.3s; }
-.node-3 { bottom: 44px; left: 44px; animation-delay: 0.6s; }
-.node-4 { bottom: 44px; right: 44px; animation-delay: 0.9s; }
-.node-5 { top: 24px; left: 50%; transform: translateX(-50%); animation-delay: 0.2s; }
-.node-6 { bottom: 24px; left: 50%; transform: translateX(-50%); animation-delay: 0.5s; }
-
-@keyframes nodePulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.5;
-  }
-  50% {
-    transform: scale(1.3);
-    opacity: 1;
-  }
-}
-
-.connections {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-}
-
-.connection {
-  stroke: linear-gradient(90deg, #1890ff, #722ed1);
-  stroke: #1890ff;
-  stroke-width: 1;
-  opacity: 0.3;
-  animation: connectionPulse 2s ease-in-out infinite;
-}
-
-@keyframes connectionPulse {
-  0%, 100% {
-    opacity: 0.2;
-  }
-  50% {
-    opacity: 0.6;
-  }
-}
-
-/* AI Icon with Pulse Rings */
-.ai-icon-container {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* ========== 品牌区域 ========== */
+.brand-section {
+  text-align: center;
   margin-bottom: 32px;
 }
 
-.pulse-ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  background: linear-gradient(135deg, rgba(24, 144, 255, 0.3), rgba(114, 46, 209, 0.3)) border-box;
-  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: pulseRing 2s ease-out infinite;
+.brand-name {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px;
 }
 
-.ring-1 {
+.brand-ai {
+  color: #1890ff;
+}
+
+.brand-connector {
+  color: #722ed1;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.brand-recruit {
+  color: #262626;
+}
+
+.brand-tagline {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #8c8c8c;
+  letter-spacing: 1px;
+}
+
+/* ========== 主视觉区域 ========== */
+.visual-section {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 32px;
+}
+
+/* 外圈轨道动画 */
+.orbit-ring {
+  position: absolute;
   width: 100%;
   height: 100%;
-  animation-delay: 0s;
+  border: 1.5px solid #f0f0f0;
+  border-radius: 50%;
+  animation: orbitRotate 8s linear infinite;
 }
 
-.ring-2 {
-  width: 130%;
-  height: 130%;
-  animation-delay: 0.5s;
+@keyframes orbitRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.ring-3 {
-  width: 160%;
-  height: 160%;
-  animation-delay: 1s;
+.orbit-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #1890ff;
+  border-radius: 50%;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 12px rgba(24, 144, 255, 0.4);
 }
 
-@keyframes pulseRing {
-  0% {
-    transform: scale(0.8);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
+.orbit-dot.dot-2 {
+  top: auto;
+  bottom: -4px;
+  background: #722ed1;
+  box-shadow: 0 0 12px rgba(114, 46, 209, 0.4);
+  animation: dotPulse 1.5s ease-in-out infinite 0.5s;
 }
 
-.ai-icon {
+.orbit-dot.dot-3 {
+  top: 50%;
+  right: -4px;
+  left: auto;
+  transform: translateY(-50%);
+  background: #52c41a;
+  box-shadow: 0 0 12px rgba(82, 196, 26, 0.4);
+  animation: dotPulse 1.5s ease-in-out infinite 1s;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.6; transform: translateX(-50%) scale(0.8); }
+}
+
+.orbit-dot.dot-2 {
+  animation: dotPulse2 1.5s ease-in-out infinite 0.5s;
+}
+
+.orbit-dot.dot-3 {
+  animation: dotPulse3 1.5s ease-in-out infinite 1s;
+}
+
+@keyframes dotPulse2 {
+  0%, 100% { opacity: 1; transform: translateY(50%) scale(1); }
+  50% { opacity: 0.6; transform: translateY(50%) scale(0.8); }
+}
+
+@keyframes dotPulse3 {
+  0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
+  50% { opacity: 0.6; transform: translateY(-50%) scale(0.8); }
+}
+
+/* 中心 AI 图标 */
+.center-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, #1890ff, #722ed1);
+  background: linear-gradient(135deg, #f0f5ff 0%, #f9f0ff 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 40px rgba(24, 144, 255, 0.5), 0 0 80px rgba(114, 46, 209, 0.3);
-  animation: iconFloat 3s ease-in-out infinite;
-  position: relative;
-  overflow: hidden;
 }
 
-/* AI4R 品牌标识 */
-.brand-logo {
-  display: flex;
-  align-items: baseline;
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-weight: 700;
+.ai-svg {
+  width: 48px;
+  height: 48px;
 }
 
-.logo-ai {
-  font-size: 24px;
-  color: #fff;
-  letter-spacing: -1px;
+.brain-path {
+  stroke: #1890ff;
+  stroke-linecap: round;
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: drawPath 2s ease-out forwards;
 }
 
-.logo-4 {
-  font-size: 18px;
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0 -2px;
+@keyframes drawPath {
+  to { stroke-dashoffset: 0; }
 }
 
-.logo-r {
-  font-size: 20px;
-  color: #52c41a;
-  margin-left: 2px;
+.neural-line {
+  stroke: #722ed1;
+  stroke-linecap: round;
+  opacity: 0;
+  animation: fadeInLine 0.5s ease-out forwards;
 }
 
-/* 人才连接网络 */
-.talent-network {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
+.line-1 { animation-delay: 0.8s; }
+.line-2 { animation-delay: 1s; }
+
+@keyframes fadeInLine {
+  to { opacity: 0.6; }
 }
 
-.talent-dot {
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  background: #fff;
-  border-radius: 50%;
-  opacity: 0.8;
-  animation: talentPulse 1.5s ease-in-out infinite;
+.node {
+  fill: #1890ff;
+  opacity: 0;
+  animation: nodeAppear 0.3s ease-out forwards;
 }
 
-.t1 { top: 8px; left: 50%; transform: translateX(-50%); animation-delay: 0s; }
-.t2 { top: 50%; left: 8px; transform: translateY(-50%); animation-delay: 0.3s; }
-.t3 { top: 50%; right: 8px; transform: translateY(-50%); animation-delay: 0.6s; }
-.t4 { bottom: 8px; left: 50%; transform: translateX(-50%); animation-delay: 0.9s; }
+.node-1 { animation-delay: 1.2s; }
+.node-2 { animation-delay: 1.3s; }
+.node-3 { fill: #722ed1; animation-delay: 1.1s; }
+.node-4 { animation-delay: 1.4s; }
+.node-5 { animation-delay: 1.5s; }
 
-@keyframes talentPulse {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.3); }
+@keyframes nodeAppear {
+  to { opacity: 1; }
 }
 
-.t1 { animation: talentPulse1 1.5s ease-in-out infinite; }
-.t2 { animation: talentPulse2 1.5s ease-in-out infinite; }
-.t3 { animation: talentPulse3 1.5s ease-in-out infinite; }
-.t4 { animation: talentPulse4 1.5s ease-in-out infinite; }
-
-@keyframes talentPulse1 {
-  0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
-  50% { opacity: 1; transform: translateX(-50%) scale(1.3); }
-}
-
-@keyframes talentPulse2 {
-  0%, 100% { opacity: 0.4; transform: translateY(-50%) scale(1); }
-  50% { opacity: 1; transform: translateY(-50%) scale(1.3); }
-}
-
-@keyframes talentPulse3 {
-  0%, 100% { opacity: 0.4; transform: translateY(-50%) scale(1); }
-  50% { opacity: 1; transform: translateY(-50%) scale(1.3); }
-}
-
-@keyframes talentPulse4 {
-  0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
-  50% { opacity: 1; transform: translateX(-50%) scale(1.3); }
-}
-
-.talent-lines {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-}
-
-.talent-lines line {
-  stroke: rgba(255, 255, 255, 0.3);
-  stroke-width: 1;
-}
-
-@keyframes iconFloat {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-/* Text Styles */
-.ai-loading-text {
+/* ========== 状态区域 ========== */
+.status-section {
   text-align: center;
-  color: #333;
+  min-width: 240px;
 }
 
-.ai-loading-text h3 {
+.status-title {
   margin: 0 0 16px 0;
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 500;
-  background: linear-gradient(90deg, #1890ff, #722ed1, #1890ff);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: gradientMove 3s linear infinite;
+  color: #262626;
 }
 
-@keyframes gradientMove {
-  0% {
-    background-position: 0% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
-}
-
-.step-indicator {
+/* 步骤进度条 */
+.step-progress {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.step-dots {
-  display: flex;
   gap: 8px;
 }
 
-.step-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease;
+.progress-track {
+  height: 4px;
+  background: #f0f0f0;
+  border-radius: 2px;
+  overflow: hidden;
 }
 
-.step-dot.active {
-  background: #1890ff;
-  box-shadow: 0 0 12px rgba(24, 144, 255, 0.8);
-  transform: scale(1.3);
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1890ff, #722ed1);
+  border-radius: 2px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.step-dot.completed {
-  background: #52c41a;
+.step-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
 }
 
-.current-step {
-  margin: 0;
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.65);
-  min-height: 24px;
-  animation: textFade 0.5s ease;
+.step-number {
+  color: #1890ff;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
-@keyframes textFade {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.step-text {
+  color: #595959;
 }
 
-/* Responsive */
+/* ========== 响应式 ========== */
 @media (max-width: 480px) {
-  .ai-loading-content {
-    padding: 32px;
+  .loading-container {
+    padding: 32px 40px;
+    margin: 16px;
   }
 
-  .ai-icon-container {
+  .brand-name {
+    font-size: 24px;
+  }
+
+  .visual-section {
     width: 100px;
     height: 100px;
   }
 
-  .ai-icon {
+  .center-icon {
     width: 64px;
     height: 64px;
   }
 
-  .ai-icon .anticon {
-    font-size: 32px;
+  .ai-svg {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* ========== 深色模式支持 ========== */
+@media (prefers-color-scheme: dark) {
+  .ai-loading-overlay {
+    background: rgba(0, 0, 0, 0.85);
   }
 
-  .ai-loading-text h3 {
-    font-size: 20px;
+  .loading-container {
+    background: #1f1f1f;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .brand-recruit {
+    color: #fff;
+  }
+
+  .brand-tagline {
+    color: #8c8c8c;
+  }
+
+  .orbit-ring {
+    border-color: #303030;
+  }
+
+  .center-icon {
+    background: linear-gradient(135deg, #111d2c 0%, #1f1f1f 100%);
+  }
+
+  .status-title {
+    color: #fff;
+  }
+
+  .progress-track {
+    background: #303030;
+  }
+
+  .step-text {
+    color: #a6a6a6;
   }
 }

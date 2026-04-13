@@ -881,11 +881,11 @@ const SearchRecommendPage: React.FC = () => {
       {/* AI Loading Overlay for JD Match */}
       <AILoadingOverlay
         visible={jdLoading || parsing}
-        title={parsing ? 'AI 解析职位描述' : 'AI 智能匹配中'}
+        title={parsing ? '解析职位描述' : '智能匹配中'}
         steps={
           parsing
-            ? ['正在连接 AI 服务...', '分析职位描述...', '提取技能要求...', '识别研究方向...', '生成特征向量...']
-            : ['正在连接 AI 服务...', '解析职位关键信息...', '搜索匹配候选人...', '计算匹配度分数...', '生成推荐理由...', '排序最佳候选人...']
+            ? ['连接 AI 服务', '分析职位描述', '提取技能要求', '识别研究方向', '生成特征向量']
+            : ['连接 AI 服务', '解析关键信息', '搜索候选人', '计算匹配度', '生成推荐理由', '排序结果']
         }
       />
     </div>
