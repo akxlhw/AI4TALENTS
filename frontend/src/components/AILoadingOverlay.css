@@ -102,57 +102,44 @@
   to { transform: rotate(360deg); }
 }
 
+/* 三点均匀分布：0°, 120°, 240° */
 .orbit-dot {
   position: absolute;
   width: 8px;
   height: 8px;
   background: #1890ff;
   border-radius: 50%;
-  top: -4px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform-origin: center center;
   box-shadow: 0 0 12px rgba(24, 144, 255, 0.4);
+  animation: dotPulse 1.5s ease-in-out infinite;
 }
 
+/* 点1: 顶部 (0°) */
+.orbit-dot.dot-1 {
+  transform: translate(-50%, -50%) translateY(-60px);
+}
+
+/* 点2: 右下 (120°) */
 .orbit-dot.dot-2 {
-  top: auto;
-  bottom: -4px;
+  transform: translate(-50%, -50%) rotate(120deg) translateY(-60px);
   background: #722ed1;
   box-shadow: 0 0 12px rgba(114, 46, 209, 0.4);
-  animation: dotPulse 1.5s ease-in-out infinite 0.5s;
+  animation-delay: 0.5s;
 }
 
+/* 点3: 左下 (240°) */
 .orbit-dot.dot-3 {
-  top: 50%;
-  right: -4px;
-  left: auto;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%) rotate(240deg) translateY(-60px);
   background: #52c41a;
   box-shadow: 0 0 12px rgba(82, 196, 26, 0.4);
-  animation: dotPulse 1.5s ease-in-out infinite 1s;
+  animation-delay: 1s;
 }
 
 @keyframes dotPulse {
-  0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
-  50% { opacity: 0.6; transform: translateX(-50%) scale(0.8); }
-}
-
-.orbit-dot.dot-2 {
-  animation: dotPulse2 1.5s ease-in-out infinite 0.5s;
-}
-
-.orbit-dot.dot-3 {
-  animation: dotPulse3 1.5s ease-in-out infinite 1s;
-}
-
-@keyframes dotPulse2 {
-  0%, 100% { opacity: 1; transform: translateY(50%) scale(1); }
-  50% { opacity: 0.6; transform: translateY(50%) scale(0.8); }
-}
-
-@keyframes dotPulse3 {
-  0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
-  50% { opacity: 0.6; transform: translateY(-50%) scale(0.8); }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 /* 中心 AI 图标 */
