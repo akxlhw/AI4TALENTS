@@ -15,6 +15,7 @@ from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
 from app.models.talent import Talent
 from app.models.embedding import TalentEmbedding
+from app.services.config_service import ConfigService
 
 logger = logging.getLogger(__name__)
 
@@ -134,12 +135,20 @@ async def trigger_generation(
             detail="Embedding generation is already running"
         )
 
-    # Check LLM configuration
-    from app.core.config import settings
-    if not settings.LLM_ENABLED:
+    # Check LLM configuration from database
+    config_service = ConfigService(session)
+    llm_config = await config_service.get_llm_config()
+
+    if not llm_config.enabled:
         raise HTTPException(
             status_code=400,
-            detail="LLM is not enabled. Please configure LLM settings first."
+            detail="LLM 功能未启用。请在系统配置中启用 LLM 并配置 API Key。"
+        )
+
+    if not llm_config.api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="LLM API Key 未配置。请在系统配置中设置 API Key。"
         )
 
     # Count talents
@@ -206,17 +215,29 @@ async def _run_embedding_generation(force: bool, batch_size: int):
 
     from datetime import datetime
     from app.core.database import AsyncSessionLocal
-    from app.services.llm import create_llm_gateway
+    from app.services.llm import LLMGateway
     from app.services.embedding.embedding_service import EmbeddingService
 
     try:
-        llm_gateway = create_llm_gateway()
-        if not llm_gateway:
-            _embedding_progress["status"] = "error"
-            _embedding_progress["error_message"] = "Failed to create LLM gateway"
-            return
-
         async with AsyncSessionLocal() as session:
+            # Get LLM config from database
+            config_service = ConfigService(session)
+            llm_config = await config_service.get_llm_config()
+
+            if not llm_config.enabled or not llm_config.api_key:
+                _embedding_progress["status"] = "error"
+                _embedding_progress["error_message"] = "LLM not enabled or API key not configured"
+                return
+
+            # Create LLM gateway with database config
+            llm_gateway = LLMGateway(
+                api_key=llm_config.api_key,
+                api_base=llm_config.api_base or "https://api.deepseek.com/v1",
+                model=llm_config.model or "deepseek-chat",
+                embedding_model=llm_config.embedding_model or "deepseek-embedding",
+                timeout=llm_config.timeout or 60,
+            )
+
             # Get talent IDs
             query = select(Talent.talent_id).where(
                 Talent.is_visible == True

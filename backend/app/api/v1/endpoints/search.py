@@ -11,7 +11,6 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.core.config import settings
 from app.repositories.talent_repository import TalentRepository
 from app.schemas.overview import SearchResponse, SearchTalentResult
 from app.schemas.v1_4 import (
@@ -21,7 +20,8 @@ from app.schemas.v1_4 import (
 )
 from app.services.search.search_service import SearchService
 from app.services.search.errors import EmptyQueryError
-from app.services.llm import create_llm_gateway
+from app.services.config_service import ConfigService
+from app.services.llm import LLMGateway
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
@@ -145,14 +145,24 @@ async def enhanced_search_talents(
         # Create embedding service for semantic/hybrid search
         embed_service = None
         if mode in [SearchMode.SEMANTIC, SearchMode.HYBRID]:
-            if settings.LLM_ENABLED:
-                llm_gateway = create_llm_gateway()
-                if llm_gateway:
-                    from app.services.embedding.embedding_service import EmbeddingService
-                    embed_service = EmbeddingService(
-                        session=session,
-                        llm_gateway=llm_gateway,
-                    )
+            # Get LLM config from database
+            config_service = ConfigService(session)
+            llm_config = await config_service.get_llm_config()
+
+            if llm_config.enabled and llm_config.api_key:
+                # Create LLM gateway with database config
+                llm_gateway = LLMGateway(
+                    api_key=llm_config.api_key,
+                    api_base=llm_config.api_base or "https://api.deepseek.com/v1",
+                    model=llm_config.model or "deepseek-chat",
+                    embedding_model=llm_config.embedding_model or "deepseek-embedding",
+                    timeout=llm_config.timeout or 60,
+                )
+                from app.services.embedding.embedding_service import EmbeddingService
+                embed_service = EmbeddingService(
+                    session=session,
+                    llm_gateway=llm_gateway,
+                )
 
         # Create search service
         search_service = SearchService(
