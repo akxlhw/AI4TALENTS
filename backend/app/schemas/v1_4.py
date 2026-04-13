@@ -46,6 +46,7 @@ class SemanticSearchResult(BaseModel):
     cited_by_count: int = 0
     h_index: int = 0
     topic_tags: List[str] = Field(default_factory=list)
+    openalex_topics: List[str] = Field(default_factory=list, description="OpenAlex research topics")
     research_interests: Optional[str] = None
     similarity_score: Optional[float] = Field(default=None, description="Similarity score for semantic search")
     highlight: Optional[str] = None

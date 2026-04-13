@@ -182,7 +182,7 @@ const SearchRecommendPage: React.FC = () => {
         cited_by_count: item.cited_by_count,
         h_index: item.h_index,
         topic_tags: item.topic_tags || [],
-        openalex_topics: [],
+        openalex_topics: item.openalex_topics || [],
       }))
       setResults(items)
       setTotal(response.data.total || items.length)

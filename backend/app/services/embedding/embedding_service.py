@@ -39,7 +39,7 @@ class EmbeddingService:
     def __init__(
         self,
         session: AsyncSession,
-        llm_gateway: LLMGatewayProtocol,
+        llm_gateway: LLMGatewayProtocol | None = None,
         cache: Any = None,
         dimension: int = 1536,
         model_name: str | None = None,
@@ -50,7 +50,7 @@ class EmbeddingService:
 
         Args:
             session: 数据库会话
-            llm_gateway: LLM 网关
+            llm_gateway: LLM 网关（可选，仅生成新嵌入时需要）
             cache: 缓存管理器
             dimension: 向量维度
             model_name: 模型名称
@@ -97,6 +97,13 @@ class EmbeddingService:
             cached = await self.cache.get_embedding(talent_id)
             if cached:
                 return cached
+
+        # 需要生成嵌入，检查是否有 LLM 网关
+        if self.llm_gateway is None:
+            raise EmbeddingError(
+                f"No embedding found for talent {talent_id} and no LLM gateway configured. "
+                "Cannot generate new embedding."
+            )
 
         # 生成嵌入
         source_text = self._build_source_text(talent)
@@ -156,6 +163,13 @@ class EmbeddingService:
             logger.info("All talents already have embeddings")
             return stats
 
+        # 检查是否有 LLM 网关（生成嵌入需要）
+        if self.llm_gateway is None:
+            logger.error("Cannot generate embeddings: no LLM gateway configured")
+            stats["failed"] = len(talent_ids)
+            stats["failed_ids"] = talent_ids
+            return stats
+
         # 批量处理
         for i in range(0, len(talent_ids), batch_size):
             batch = talent_ids[i:i + batch_size]
@@ -188,22 +202,23 @@ class EmbeddingService:
                     # 只处理匹配的部分
                     stats["failed"] += len(texts) - len(results)
 
-                # 存储结果
-                stored_count = 0
+                # 批量存储结果（性能优化：单次数据库操作）
+                items_to_store = []
                 for text, result in zip(texts, results):
                     talent_id = talent_id_map.get(text)
                     if talent_id:
                         source_hash = self.calculate_source_hash(text)
-                        await self.repository.upsert(
-                            talent_id=talent_id,
-                            embedding=result.embedding,
-                            model_name=self.model_name,
-                            source_text_hash=source_hash,
-                        )
-                        stored_count += 1
-                        stats["processed"] += 1
+                        items_to_store.append({
+                            'talent_id': talent_id,
+                            'embedding': result.embedding,
+                            'model_name': self.model_name,
+                            'source_text_hash': source_hash,
+                        })
 
-                logger.info(f"Batch {batch_num}: Stored {stored_count} embeddings")
+                if items_to_store:
+                    stored_count = await self.repository.batch_upsert(items_to_store)
+                    stats["processed"] += stored_count
+                    logger.info(f"Batch {batch_num}: Batch stored {stored_count} embeddings")
 
                 # 提交事务
                 await self.session.commit()

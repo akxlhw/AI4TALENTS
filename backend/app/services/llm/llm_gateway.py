@@ -325,7 +325,13 @@ class LLMGateway(LLMGatewayProtocol):
             )
 
     async def _generate_embedding_batch_minimax(self, texts: List[str]) -> List[EmbeddingResult]:
-        """MiniMax 专用的嵌入生成方法"""
+        """MiniMax 专用的嵌入生成方法
+
+        性能优化说明：
+        - MiniMax embo-01 模型支持每批最多 16 个文本
+        - RPM 限制约 60，即每秒 1 个请求
+        - 批次间延迟 1 秒足以满足速率限制
+        """
         import httpx
         import asyncio
 
@@ -339,10 +345,11 @@ class LLMGateway(LLMGatewayProtocol):
                 # 默认使用 embo-01
                 model = "embo-01"
 
-            # MiniMax 速率限制很严格，需要分批处理
-            # 每批最多 3 个文本，批次间延迟 5 秒
-            max_batch_size = 3
-            batch_delay = 5.0  # 秒
+            # MiniMax embo-01 支持：
+            # - 每批最多 16 个文本（根据文本长度可能更少）
+            # - RPM 约 60，即每秒 1 个请求
+            max_batch_size = 16  # 提高批次大小
+            batch_delay = 1.0    # 减少批次间延迟到 1 秒
             all_results = []
 
             for i in range(0, len(texts), max_batch_size):

@@ -39,6 +39,69 @@ class SearchMode(str, Enum):
     HYBRID = "hybrid"        # 混合搜索
 
 
+# 学术领域常见缩写同义词映射
+SYNONYM_MAP = {
+    # AI/ML 领域
+    "ml": "machine learning",
+    "dl": "deep learning",
+    "nlp": "natural language processing",
+    "cv": "computer vision",
+    "ai": "artificial intelligence",
+    "nn": "neural network",
+    "cnn": "convolutional neural network",
+    "rnn": "recurrent neural network",
+    "gan": "generative adversarial network",
+    "transformer": "transformer attention mechanism",
+    "llm": "large language model",
+    "rl": "reinforcement learning",
+    "svm": "support vector machine",
+    "knn": "k-nearest neighbors",
+    "pca": "principal component analysis",
+    # 系统领域
+    "os": "operating system",
+    "db": "database",
+    "io": "input output",
+    "cpu": "central processing unit",
+    "gpu": "graphics processing unit",
+    "ram": "random access memory",
+    # 网络领域
+    "tcp": "transmission control protocol",
+    "ip": "internet protocol",
+    "http": "hypertext transfer protocol",
+    "api": "application programming interface",
+    "sdn": "software defined networking",
+    # 安全领域
+    "aes": "advanced encryption standard",
+    "rsa": "rivest shamir adleman encryption",
+    "ddos": "distributed denial of service",
+    # 数据科学
+    "bi": "business intelligence",
+    "etl": "extract transform load",
+    "dw": "data warehouse",
+}
+
+
+def expand_query_with_synonyms(query: str) -> str:
+    """
+    扩展查询词，添加同义词
+
+    Args:
+        query: 原始查询
+
+    Returns:
+        str: 扩展后的查询（原始查询 + 同义词）
+    """
+    query_lower = query.lower().strip()
+
+    # 检查是否是已知缩写
+    if query_lower in SYNONYM_MAP:
+        synonym = SYNONYM_MAP[query_lower]
+        # 返回原词 + 同义词，用于语义搜索
+        return f"{query} {synonym}"
+
+    return query
+
+
 @dataclass
 class SearchResult:
     """搜索结果"""
@@ -332,6 +395,7 @@ class SearchService:
                     "role_type": doc.role_type,
                     "research_interests": None,
                     "topic_tags": doc.topic_tags or [],
+                    "openalex_topics": [],  # SearchTalentDocument 没有 openalex_topics，需要从 core_talent 获取
                     "works_count": doc.works_count,
                     "cited_by_count": doc.cited_by_count,
                     "h_index": doc.h_index,
@@ -364,16 +428,102 @@ class SearchService:
             return await self._fulltext_search(query, page, page_size, filters)
 
         try:
-            # 获取查询嵌入向量
-            query_embedding = await self.embedding_service.get_query_embedding(query)
+            # 同义词扩展：将缩写扩展为完整术语
+            expanded_query = expand_query_with_synonyms(query)
+            if expanded_query != query:
+                logger.info(f"Query expanded: '{query}' -> '{expanded_query}'")
 
-            # 使用向量相似度搜索
-            # 目前简化实现，降级到全文搜索
-            # 完整实现需要 pgvector 支持
-            return await self._fulltext_search(query, page, page_size, filters)
+            # 获取查询嵌入向量
+            query_embedding = await self.embedding_service.get_query_embedding(expanded_query)
+
+            # 使用 pgvector 进行向量相似度搜索
+            # 将向量转换为 PostgreSQL 格式（纯数值，安全）
+            vector_str = '[' + ','.join(str(v) for v in query_embedding) + ']'
+
+            # 计算偏移量
+            offset = (page - 1) * page_size
+
+            # 构建基础查询
+            # 注意：向量字符串直接嵌入 SQL，因为它是纯数值，没有 SQL 注入风险
+            base_query = f"""
+                SELECT t.talent_id, t.name, t.name_en, t.current_title, t.school_id,
+                       t.role_type, t.research_interests, t.topic_tags, t.openalex_topics,
+                       t.works_count, t.cited_by_count, t.h_index, t.orcid,
+                       s.school_name,
+                       e.embedding <=> '{vector_str}'::vector AS distance
+                FROM core_talent t
+                LEFT JOIN core_school s ON t.school_id = s.school_id
+                INNER JOIN core_talent_embedding e ON t.talent_id = e.talent_id
+                WHERE 1=1
+            """
+
+            # 添加过滤条件
+            filter_params = {}
+            filter_clauses = []
+
+            if filters:
+                if "school_id" in filters:
+                    filter_clauses.append("t.school_id = :school_id")
+                    filter_params["school_id"] = filters["school_id"]
+                if "role_type" in filters:
+                    filter_clauses.append("t.role_type = :role_type")
+                    filter_params["role_type"] = filters["role_type"]
+                if "min_citations" in filters:
+                    filter_clauses.append("t.cited_by_count >= :min_citations")
+                    filter_params["min_citations"] = filters["min_citations"]
+
+            if filter_clauses:
+                base_query += " AND " + " AND ".join(filter_clauses)
+
+            # 计算总数
+            count_query = f"SELECT COUNT(*) as total FROM ({base_query}) subq"
+            count_result = await self.session.execute(text(count_query), filter_params)
+            total = count_result.scalar() or 0
+
+            # 获取分页结果
+            data_query = f"""
+                {base_query}
+                ORDER BY distance ASC
+                LIMIT :limit OFFSET :offset
+            """
+            filter_params["limit"] = page_size
+            filter_params["offset"] = offset
+
+            result = await self.session.execute(text(data_query), filter_params)
+            rows = result.fetchall()
+
+            # 转换结果
+            items = []
+            for row in rows:
+                items.append({
+                    "talent_id": row.talent_id,
+                    "name": row.name,
+                    "name_en": row.name_en,
+                    "title": row.current_title,
+                    "school_id": row.school_id,
+                    "school_name": row.school_name,
+                    "role_type": row.role_type,
+                    "research_interests": row.research_interests,
+                    "topic_tags": row.topic_tags or [],
+                    "openalex_topics": row.openalex_topics or [],
+                    "works_count": row.works_count,
+                    "cited_by_count": row.cited_by_count,
+                    "h_index": row.h_index,
+                    "orcid": row.orcid,
+                    "similarity_score": 1.0 - (row.distance or 0),  # 距离转相似度
+                })
+
+            logger.info(f"Semantic search found {total} results for query: {query}")
+
+            return {
+                "total": total,
+                "items": items,
+            }
 
         except Exception as e:
             logger.error(f"Semantic search failed: {e}, falling back to fulltext")
+            # 回滚失败的事务，确保后续查询可以执行
+            await self.session.rollback()
             return await self._fulltext_search(query, page, page_size, filters)
 
     async def _hybrid_search(
@@ -388,11 +538,65 @@ class SearchService:
         """
         混合搜索
 
-        结合关键词搜索和语义搜索。
+        结合全文搜索和语义搜索的结果，重新排序。
         """
-        # 目前简化实现，使用关键词搜索
-        # 完整实现需要结合多种搜索结果并重新排序
-        return await self._keyword_search(query, fields, fuzzy, page, page_size, filters)
+        # 如果没有嵌入服务，降级到全文搜索
+        if self.embedding_service is None:
+            logger.info("Hybrid search: no embedding service, using fulltext only")
+            return await self._fulltext_search(query, page, page_size, filters)
+
+        try:
+            # 并行执行全文搜索和语义搜索
+            # 获取更多结果用于融合
+            extended_page_size = min(page_size * 3, 100)
+
+            fulltext_result = await self._fulltext_search(query, 1, extended_page_size, filters)
+            semantic_result = await self._semantic_search(query, 1, extended_page_size, filters)
+
+            # 融合结果
+            # 使用倒数排名融合 (Reciprocal Rank Fusion)
+            k = 60  # RRF 常数
+            score_map = {}  # talent_id -> combined_score
+            item_map = {}   # talent_id -> item data
+
+            # 全文搜索结果
+            for rank, item in enumerate(fulltext_result["items"], 1):
+                tid = item["talent_id"]
+                score_map[tid] = score_map.get(tid, 0) + 1.0 / (k + rank)
+                item_map[tid] = item
+
+            # 语义搜索结果
+            for rank, item in enumerate(semantic_result["items"], 1):
+                tid = item["talent_id"]
+                score_map[tid] = score_map.get(tid, 0) + 1.0 / (k + rank)
+                # 保留语义相似度分数
+                if "similarity_score" in item:
+                    if tid not in item_map:
+                        item_map[tid] = item
+                    item_map[tid]["similarity_score"] = item["similarity_score"]
+
+            # 按融合分数排序
+            sorted_ids = sorted(score_map.keys(), key=lambda x: score_map[x], reverse=True)
+
+            # 分页
+            offset = (page - 1) * page_size
+            paginated_ids = sorted_ids[offset:offset + page_size]
+
+            # 构建最终结果
+            items = [item_map[tid] for tid in paginated_ids if tid in item_map]
+
+            logger.info(f"Hybrid search: fulltext={len(fulltext_result['items'])}, semantic={len(semantic_result['items'])}, merged={len(sorted_ids)}, returned={len(items)}")
+
+            return {
+                "total": len(sorted_ids),
+                "items": items,
+            }
+
+        except Exception as e:
+            logger.error(f"Hybrid search failed: {e}, falling back to keyword search")
+            # 回滚失败的事务
+            await self.session.rollback()
+            return await self._keyword_search(query, fields, fuzzy, page, page_size, filters)
 
     def _apply_filters(self, query, filters: dict | None):
         """应用过滤条件"""
@@ -429,6 +633,7 @@ class SearchService:
             "role_type": talent.role_type,
             "research_interests": talent.research_interests,
             "topic_tags": talent.topic_tags or [],
+            "openalex_topics": talent.openalex_topics or [],
             "works_count": talent.works_count,
             "cited_by_count": talent.cited_by_count,
             "h_index": talent.h_index,

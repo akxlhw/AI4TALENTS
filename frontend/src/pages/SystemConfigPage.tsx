@@ -992,8 +992,11 @@ const SystemConfigPage: React.FC = () => {
               </Descriptions.Item>
               <Descriptions.Item label="技术要素">{selectedTask.tech_element_name}</Descriptions.Item>
               <Descriptions.Item label="时间范围">{selectedTask.start_year}年 ~ {selectedTask.end_year ? `${selectedTask.end_year}年` : '至今'}</Descriptions.Item>
-              <Descriptions.Item label="进度" span={2}>
-                <Progress percent={selectedTask.progress_percent} status={selectedTask.status === 'failed' ? 'exception' : selectedTask.status === 'completed' ? 'success' : 'active'} />
+              <Descriptions.Item label="当前阶段">
+                {selectedTask.current_step || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="进度">
+                <Progress percent={selectedTask.progress_percent} status={selectedTask.status === 'failed' ? 'exception' : selectedTask.status === 'completed' ? 'success' : 'active'} style={{ minWidth: 120 }} />
               </Descriptions.Item>
             </Descriptions>
 

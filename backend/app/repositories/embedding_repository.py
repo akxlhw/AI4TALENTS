@@ -146,6 +146,73 @@ class EmbeddingRepository:
             await self.session.flush()
             return record
 
+    async def batch_upsert(
+        self,
+        items: List[dict],
+    ) -> int:
+        """
+        批量创建或更新嵌入记录
+
+        使用 PostgreSQL 的多行 INSERT ... ON CONFLICT 实现高效批量操作。
+
+        Args:
+            items: 嵌入记录列表，每个包含:
+                - talent_id: 人才 ID
+                - embedding: 嵌入向量
+                - model_name: 模型名称
+                - source_text_hash: 源文本哈希
+
+        Returns:
+            int: 处理的记录数
+        """
+        if not items:
+            return 0
+
+        now = datetime.utcnow()
+
+        if _is_postgres(self.session):
+            # PostgreSQL: 使用原生 SQL 批量 UPSERT
+            # 构建多行 VALUES 子句
+            values_clauses = []
+            params = {}
+            for i, item in enumerate(items):
+                vector_str = '[' + ','.join(str(v) for v in item['embedding']) + ']'
+                values_clauses.append(
+                    f"(:talent_id_{i}, CAST(:embedding_{i} AS vector), :model_name_{i}, :hash_{i}, :created_at, :updated_at)"
+                )
+                params[f"talent_id_{i}"] = item['talent_id']
+                params[f"embedding_{i}"] = vector_str
+                params[f"model_name_{i}"] = item['model_name']
+                params[f"hash_{i}"] = item['source_text_hash']
+
+            params["created_at"] = now
+            params["updated_at"] = now
+
+            sql = f"""
+                INSERT INTO core_talent_embedding
+                (talent_id, embedding, model_name, source_text_hash, created_at, updated_at)
+                VALUES {', '.join(values_clauses)}
+                ON CONFLICT (talent_id) DO UPDATE SET
+                    embedding = EXCLUDED.embedding,
+                    model_name = EXCLUDED.model_name,
+                    source_text_hash = EXCLUDED.source_text_hash,
+                    updated_at = EXCLUDED.updated_at
+            """
+
+            await self.session.execute(text(sql), params)
+            await self.session.flush()
+            return len(items)
+        else:
+            # SQLite: 逐个处理（SQLite 不支持多行 ON CONFLICT）
+            for item in items:
+                await self.upsert(
+                    talent_id=item['talent_id'],
+                    embedding=item['embedding'],
+                    model_name=item['model_name'],
+                    source_text_hash=item['source_text_hash'],
+                )
+            return len(items)
+
     async def upsert(
         self,
         talent_id: int,

@@ -198,8 +198,9 @@ async def enhanced_search_talents(
                 cited_by_count=item.get("cited_by_count", 0),
                 h_index=item.get("h_index", 0),
                 topic_tags=item.get("topic_tags", []),
+                openalex_topics=item.get("openalex_topics", []),
                 research_interests=item.get("research_interests"),
-                similarity_score=None,
+                similarity_score=item.get("similarity_score"),
                 highlight=None,
             ))
 
