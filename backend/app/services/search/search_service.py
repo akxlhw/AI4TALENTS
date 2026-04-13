@@ -13,7 +13,6 @@ Features:
 
 from __future__ import annotations
 
-import asyncio
 import time
 import logging
 from enum import Enum
