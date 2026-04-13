@@ -671,10 +671,10 @@ class CollectionOrchestrator:
                             talent_id=talent_id,
                             title=work.get("title", "")[:500],  # 截断超长标题
                             publication_year=work.get("publication_year"),
-                            venue_name=work.get("venue_name"),
+                            venue_name=work.get("venue_name", "")[:255] if work.get("venue_name") else None,  # 截断超长期刊名
                             citation_count=work.get("citation_count", 0),
-                            source_work_id=work.get("source_work_id"),
-                            doi=work.get("doi"),
+                            source_work_id=work.get("source_work_id", "")[:100] if work.get("source_work_id") else None,  # 截断超长 ID
+                            doi=work.get("doi", "")[:100] if work.get("doi") else None,  # 截断超长 DOI
                             display_order=order
                         )
                         self.session.add(selected_work)
