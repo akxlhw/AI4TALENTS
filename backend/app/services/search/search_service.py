@@ -13,7 +13,6 @@ Features:
 
 from __future__ import annotations
 
-import asyncio
 import time
 import logging
 from enum import Enum
@@ -613,35 +612,7 @@ class SearchService:
             # 获取更多结果用于融合
             extended_page_size = min(page_size * 3, 100)
 
-            # 检查是否有中文到英文的翻译
-            english_translation = get_english_translation(query)
-
-            # 全文搜索：同时使用中文和英文
-            fulltext_tasks = []
-            fulltext_tasks.append(self._fulltext_search(query, 1, extended_page_size, filters))
-
-            # 如果有英文翻译，也用英文执行全文搜索
-            if english_translation:
-                logger.info(f"Hybrid search: also searching with English translation '{english_translation}'")
-                fulltext_tasks.append(self._fulltext_search(english_translation, 1, extended_page_size, filters))
-
-            # 并行执行所有全文搜索，捕获异常
-            fulltext_results = await asyncio.gather(*fulltext_tasks, return_exceptions=True)
-
-            # 合并全文搜索结果，处理可能的异常
-            fulltext_merged = {}
-            for result in fulltext_results:
-                if isinstance(result, Exception):
-                    logger.warning(f"Fulltext search task failed: {result}")
-                    continue
-                for item in result["items"]:
-                    tid = item["talent_id"]
-                    if tid not in fulltext_merged:
-                        fulltext_merged[tid] = item
-
-            fulltext_result = {"items": list(fulltext_merged.values())}
-
-            # 语义搜索
+            fulltext_result = await self._fulltext_search(query, 1, extended_page_size, filters)
             semantic_result = await self._semantic_search(query, 1, extended_page_size, filters)
 
             # 融合结果
