@@ -41,7 +41,7 @@ class SearchMode(str, Enum):
 
 # 学术领域常见缩写同义词映射
 SYNONYM_MAP = {
-    # AI/ML 领域
+    # AI/ML 领域 - 英文缩写
     "ml": "machine learning",
     "dl": "deep learning",
     "nlp": "natural language processing",
@@ -80,10 +80,32 @@ SYNONYM_MAP = {
     "dw": "data warehouse",
 }
 
+# 中英文翻译映射（仅用于语义搜索，使用英文 embedding）
+CHINESE_TO_ENGLISH_MAP = {
+    "机器学习": "machine learning",
+    "深度学习": "deep learning",
+    "自然语言处理": "natural language processing",
+    "计算机视觉": "computer vision",
+    "人工智能": "artificial intelligence",
+    "神经网络": "neural network",
+    "强化学习": "reinforcement learning",
+    "数据挖掘": "data mining",
+    "数据科学": "data science",
+    "大数据": "big data",
+    "云计算": "cloud computing",
+    "物联网": "internet of things",
+    "机器人": "robotics",
+    "信息安全": "information security",
+    "网络安全": "cybersecurity",
+    "分布式系统": "distributed systems",
+    "操作系统": "operating system",
+    "数据库": "database",
+}
+
 
 def expand_query_with_synonyms(query: str) -> str:
     """
-    扩展查询词，添加同义词
+    扩展查询词，添加同义词（用于全文搜索）
 
     Args:
         query: 原始查询
@@ -96,10 +118,34 @@ def expand_query_with_synonyms(query: str) -> str:
     # 检查是否是已知缩写
     if query_lower in SYNONYM_MAP:
         synonym = SYNONYM_MAP[query_lower]
-        # 返回原词 + 同义词，用于语义搜索
+        # 返回原词 + 同义词，用于全文搜索
         return f"{query} {synonym}"
 
     return query
+
+
+def get_english_translation(query: str) -> str | None:
+    """
+    获取中文查询的英文翻译（用于语义搜索 embedding）
+
+    Args:
+        query: 原始查询
+
+    Returns:
+        str | None: 英文翻译，如果没有则返回 None
+    """
+    query_stripped = query.strip()
+
+    # 检查是否是中文术语
+    if query_stripped in CHINESE_TO_ENGLISH_MAP:
+        return CHINESE_TO_ENGLISH_MAP[query_stripped]
+
+    # 也检查小写版本（针对英文缩写）
+    query_lower = query_stripped.lower()
+    if query_lower in SYNONYM_MAP:
+        return SYNONYM_MAP[query_lower]
+
+    return None
 
 
 @dataclass
@@ -428,13 +474,21 @@ class SearchService:
             return await self._fulltext_search(query, page, page_size, filters)
 
         try:
-            # 同义词扩展：将缩写扩展为完整术语
-            expanded_query = expand_query_with_synonyms(query)
-            if expanded_query != query:
-                logger.info(f"Query expanded: '{query}' -> '{expanded_query}'")
+            # 检查是否有中文到英文的翻译映射
+            english_translation = get_english_translation(query)
+
+            if english_translation:
+                # 中文查询：使用英文翻译生成 embedding（避免拼接导致的语义偏差）
+                embedding_text = english_translation
+                logger.info(f"Chinese query '{query}' -> English embedding '{english_translation}'")
+            else:
+                # 英文查询：同义词扩展后生成 embedding
+                embedding_text = expand_query_with_synonyms(query)
+                if embedding_text != query:
+                    logger.info(f"Query expanded: '{query}' -> '{embedding_text}'")
 
             # 获取查询嵌入向量
-            query_embedding = await self.embedding_service.get_query_embedding(expanded_query)
+            query_embedding = await self.embedding_service.get_query_embedding(embedding_text)
 
             # 使用 pgvector 进行向量相似度搜索
             # 将向量转换为 PostgreSQL 格式（纯数值，安全）
@@ -481,8 +535,10 @@ class SearchService:
             total = count_result.scalar() or 0
 
             # 获取分页结果
+            # 相似度阈值：distance <= 0.3 即相似度 >= 70%
             data_query = f"""
                 {base_query}
+                AND e.embedding <=> '{vector_str}'::vector <= 0.3
                 ORDER BY distance ASC
                 LIMIT :limit OFFSET :offset
             """
@@ -492,28 +548,34 @@ class SearchService:
             result = await self.session.execute(text(data_query), filter_params)
             rows = result.fetchall()
 
-            # 转换结果
+            # 转换结果，并过滤低于阈值的结果
             items = []
             for row in rows:
-                items.append({
-                    "talent_id": row.talent_id,
-                    "name": row.name,
-                    "name_en": row.name_en,
-                    "title": row.current_title,
-                    "school_id": row.school_id,
-                    "school_name": row.school_name,
-                    "role_type": row.role_type,
-                    "research_interests": row.research_interests,
-                    "topic_tags": row.topic_tags or [],
-                    "openalex_topics": row.openalex_topics or [],
-                    "works_count": row.works_count,
-                    "cited_by_count": row.cited_by_count,
-                    "h_index": row.h_index,
-                    "orcid": row.orcid,
-                    "similarity_score": 1.0 - (row.distance or 0),  # 距离转相似度
-                })
+                similarity = 1.0 - (row.distance or 0)
+                # 再次确认相似度 >= 70%
+                if similarity >= 0.7:
+                    items.append({
+                        "talent_id": row.talent_id,
+                        "name": row.name,
+                        "name_en": row.name_en,
+                        "title": row.current_title,
+                        "school_id": row.school_id,
+                        "school_name": row.school_name,
+                        "role_type": row.role_type,
+                        "research_interests": row.research_interests,
+                        "topic_tags": row.topic_tags or [],
+                        "openalex_topics": row.openalex_topics or [],
+                        "works_count": row.works_count,
+                        "cited_by_count": row.cited_by_count,
+                        "h_index": row.h_index,
+                        "orcid": row.orcid,
+                        "similarity_score": similarity,
+                    })
 
-            logger.info(f"Semantic search found {total} results for query: {query}")
+            # 更新总数为实际过滤后的数量
+            total = len(items)
+
+            logger.info(f"Semantic search found {total} results (similarity >= 70%) for query: {query}")
 
             return {
                 "total": total,
@@ -559,24 +621,33 @@ class SearchService:
             score_map = {}  # talent_id -> combined_score
             item_map = {}   # talent_id -> item data
 
-            # 全文搜索结果
+            # 全文搜索结果（精准匹配，给高分）
             for rank, item in enumerate(fulltext_result["items"], 1):
                 tid = item["talent_id"]
                 score_map[tid] = score_map.get(tid, 0) + 1.0 / (k + rank)
+                # 全文搜索匹配的给高分相似度（95%+）
+                item["similarity_score"] = 0.95
                 item_map[tid] = item
 
-            # 语义搜索结果
+            # 语义搜索结果（已过滤相似度 >= 70%）
             for rank, item in enumerate(semantic_result["items"], 1):
                 tid = item["talent_id"]
                 score_map[tid] = score_map.get(tid, 0) + 1.0 / (k + rank)
-                # 保留语义相似度分数
-                if "similarity_score" in item:
-                    if tid not in item_map:
-                        item_map[tid] = item
-                    item_map[tid]["similarity_score"] = item["similarity_score"]
+                # 如果已存在（全文搜索命中），保留较高的相似度
+                if tid in item_map:
+                    existing_score = item_map[tid].get("similarity_score", 0)
+                    new_score = item.get("similarity_score", 0)
+                    if new_score > existing_score:
+                        item_map[tid]["similarity_score"] = new_score
+                else:
+                    item_map[tid] = item
 
-            # 按融合分数排序
-            sorted_ids = sorted(score_map.keys(), key=lambda x: score_map[x], reverse=True)
+            # 按相似度排序（优先显示精准匹配）
+            sorted_ids = sorted(
+                item_map.keys(),
+                key=lambda x: (item_map[x].get("similarity_score", 0), score_map.get(x, 0)),
+                reverse=True
+            )
 
             # 分页
             offset = (page - 1) * page_size

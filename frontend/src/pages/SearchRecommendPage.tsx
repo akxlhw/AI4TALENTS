@@ -223,6 +223,7 @@ const SearchRecommendPage: React.FC = () => {
         h_index: item.h_index,
         topic_tags: item.topic_tags || [],
         openalex_topics: item.openalex_topics || [],
+        similarity_score: item.similarity_score,
       }))
       setResults(items)
       setTotal(response.data.total || items.length)
@@ -432,14 +433,42 @@ const SearchRecommendPage: React.FC = () => {
       dataIndex: 'name',
       key: 'name',
       width: 180,
-      render: (name: string, record: SearchTalent) => (
-        <a onClick={() => navigate(`/talents/${record.talent_id}`)} style={{ fontWeight: 500 }}>
-          <Space direction="vertical" size={0}>
-            <span>{name}</span>
-            {record.name_en && <span style={{ fontSize: 12, color: '#999' }}>{record.name_en}</span>}
-          </Space>
-        </a>
-      ),
+      render: (name: string, record: SearchTalent) => {
+        const similarity = record.similarity_score
+        const isSimilarRecommend = similarity !== undefined && similarity >= 0.7 && similarity < 0.9
+        const nameStyle = isSimilarRecommend ? { fontWeight: 500, color: '#fa8c16' } : { fontWeight: 500 }
+
+        const nameContent = (
+          <a onClick={() => navigate(`/talents/${record.talent_id}`)} style={nameStyle}>
+            <Space direction="vertical" size={0}>
+              <span>{name}</span>
+              {record.name_en && <span style={{ fontSize: 12, color: '#999' }}>{record.name_en}</span>}
+            </Space>
+          </a>
+        )
+
+        if (isSimilarRecommend) {
+          return (
+            <Tooltip title="相似推荐：该人才研究方向与搜索词语义相近，但非精准匹配">
+              {nameContent}
+            </Tooltip>
+          )
+        }
+        return nameContent
+      },
+    },
+    {
+      title: '相似度',
+      dataIndex: 'similarity_score',
+      key: 'similarity_score',
+      width: 90,
+      align: 'center' as const,
+      render: (score: number | undefined) => {
+        if (score === undefined) return '-'
+        const percent = Math.round(score * 100)
+        const color = score >= 0.9 ? '#52c41a' : score >= 0.7 ? '#fa8c16' : '#8c8c8c'
+        return <Tag color={color}>{percent}%</Tag>
+      },
     },
     {
       title: '角色',

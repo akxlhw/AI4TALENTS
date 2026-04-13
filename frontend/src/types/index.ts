@@ -153,6 +153,7 @@ export interface SearchTalent {
   h_index: number
   topic_tags: string[]
   openalex_topics: string[]  // OpenAlex研究主题（具体研究方向）
+  similarity_score?: number  // 语义搜索相似度分数
 }
 
 // Search Filter Params - 搜索筛选参数

@@ -700,9 +700,9 @@ class CollectionOrchestrator:
         self.progress_tracker.add_log("info", f"代表作品获取完成: {total_fetched} 位教授，{total_inserted} 篇作品")
 
     async def _update_talent_topic_tags(self, task_id: int, progress: CollectionProgress):
-        """Phase 9: Update talent topic_tags from tech tags
+        """Phase 9: Update talent topic_tags from OpenAlex topics
 
-        只更新与当前任务相关的人才（通过 tech_tag 关联），避免全表查询。
+        以 OpenAlex 返回的研究主题为准，不再自动根据 venue 打标签。
         """
         from sqlalchemy.orm import selectinload
 
@@ -736,27 +736,23 @@ class CollectionOrchestrator:
 
         # 然后加载 Talent 对象
         result = await self.session.execute(
-            select(Talent).options(
-                selectinload(Talent.tech_tags).selectinload(TalentTechTag.tech_element)
-            ).where(Talent.talent_id.in_(talent_ids))
+            select(Talent).where(Talent.talent_id.in_(talent_ids))
         )
         talents = result.scalars().all()
 
         updated_count = 0
         for i, talent in enumerate(talents):
-            if talent.tech_tags:
-                # Get unique tech element names
-                tech_names = list({
-                    tag.tech_element.element_name
-                    for tag in talent.tech_tags
-                    if tag.tech_element and tag.is_enabled
-                })
-                if tech_names:
-                    talent.topic_tags = tech_names
-                    updated_count += 1
+            # 以 OpenAlex 返回的研究主题为准
+            # 如果 openalex_topics 不为空，则使用它作为 topic_tags
+            # 如果为空，则 topic_tags 也为空（不自动打标签）
+            if talent.openalex_topics:
+                talent.topic_tags = list(talent.openalex_topics)
+                updated_count += 1
+            else:
+                talent.topic_tags = []
 
-                # Save progress periodically
-                if (i + 1) % 100 == 0:
+            # Save progress periodically
+            if (i + 1) % 100 == 0:
                     await self.session.commit()
 
         await self.session.flush()
