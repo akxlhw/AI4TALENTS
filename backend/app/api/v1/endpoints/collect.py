@@ -602,6 +602,12 @@ async def delete_task(
         {"task_id": task_id}
     )
 
+    # 清除数据版本的关联
+    await session.execute(
+        text("UPDATE data_version SET source_task_id = NULL WHERE source_task_id = :task_id"),
+        {"task_id": task_id}
+    )
+
     # 删除子任务
     await session.execute(
         text("DELETE FROM sync_venue_sub_task WHERE task_id = :task_id"),
