@@ -459,19 +459,6 @@ const SearchRecommendPage: React.FC = () => {
       },
     },
     {
-      title: '相似度',
-      dataIndex: 'similarity_score',
-      key: 'similarity_score',
-      width: 90,
-      align: 'center' as const,
-      render: (score: number | undefined) => {
-        if (score === undefined) return '-'
-        const percent = Math.round(score * 100)
-        const color = score >= 0.9 ? '#52c41a' : score >= 0.7 ? '#fa8c16' : '#8c8c8c'
-        return <Tag color={color}>{percent}%</Tag>
-      },
-    },
-    {
       title: '角色',
       dataIndex: 'role_type',
       key: 'role_type',
