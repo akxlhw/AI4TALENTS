@@ -299,27 +299,51 @@ class EmbeddingService:
         """
         构建嵌入源文本
 
+        优先使用研究方向信息，让语义搜索更精准匹配研究领域。
+
         Args:
             talent: 人才对象
 
         Returns:
             str: 用于生成嵌入的文本
         """
-        parts = [talent.name]
+        # 研究方向相关字段优先
+        research_parts = []
 
-        if talent.name_en:
-            parts.append(talent.name_en)
+        # 1. OpenAlex 研究主题（最精准的研究方向描述）
+        if talent.openalex_topics:
+            research_parts.extend(talent.openalex_topics)
 
-        if talent.current_title:
-            parts.append(talent.current_title)
-
+        # 2. 研究兴趣描述
         if talent.research_interests:
-            parts.append(talent.research_interests)
+            research_parts.append(talent.research_interests)
 
+        # 3. 技术标签
         if talent.topic_tags:
-            parts.extend(talent.topic_tags)
+            research_parts.extend(talent.topic_tags)
 
-        return " ".join(parts)
+        # 如果没有任何研究方向信息，使用职位
+        if not research_parts:
+            if talent.current_title:
+                research_parts.append(talent.current_title)
+
+        # 组合：研究方向为主，姓名为辅
+        # 格式："研究方向1, 研究方向2. Researcher: Name"
+        research_text = ", ".join(research_parts) if research_parts else ""
+
+        # 添加姓名作为标识（放在末尾，权重较低）
+        name_parts = []
+        if talent.name:
+            name_parts.append(talent.name)
+        if talent.name_en and talent.name_en != talent.name:
+            name_parts.append(talent.name_en)
+
+        if name_parts and research_text:
+            return f"{research_text}. Researcher: {' '.join(name_parts)}"
+        elif research_text:
+            return research_text
+        else:
+            return " ".join(name_parts) if name_parts else ""
 
     async def _get_talents_by_ids(self, talent_ids: List[int]) -> List[Talent]:
         """根据 ID 列表获取人才"""
