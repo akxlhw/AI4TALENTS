@@ -558,6 +558,8 @@ async def delete_task(
     current_user: dict = Depends(require_admin_user),
 ):
     """Delete a completed task record."""
+    from sqlalchemy import text
+
     repo = CollectTaskRepository(session)
     task = await repo.get_by_id(task_id)
 
@@ -567,15 +569,51 @@ async def delete_task(
     if task.status in ["pending", "running"]:
         raise HTTPException(status_code=400, detail="Cannot delete running or pending task")
 
-    # Delete related venue sub-tasks first
-    from app.repositories.venue_repository import VenueSubTaskRepository
-    sub_task_repo = VenueSubTaskRepository(session)
-    sub_tasks = await sub_task_repo.get_by_task(task_id)
-    for st in sub_tasks:
-        await session.delete(st)
+    # 清除关联数据的外键引用（设为 NULL），而不是删除数据本身
+    # 这样可以保留采集的数据，只是断开与任务的关联
 
-    # Delete the task
-    await session.delete(task)
+    # 清除原始数据层的关联
+    await session.execute(
+        text("UPDATE raw_work SET fetch_task_id = NULL WHERE fetch_task_id = :task_id"),
+        {"task_id": task_id}
+    )
+    await session.execute(
+        text("UPDATE raw_author SET fetch_task_id = NULL WHERE fetch_task_id = :task_id"),
+        {"task_id": task_id}
+    )
+    await session.execute(
+        text("UPDATE raw_institution SET fetch_task_id = NULL WHERE fetch_task_id = :task_id"),
+        {"task_id": task_id}
+    )
+
+    # 清除标准化层的关联
+    await session.execute(
+        text("UPDATE std_author SET source_task_id = NULL WHERE source_task_id = :task_id"),
+        {"task_id": task_id}
+    )
+    await session.execute(
+        text("UPDATE std_school SET source_task_id = NULL WHERE source_task_id = :task_id"),
+        {"task_id": task_id}
+    )
+
+    # 清除技术归属的关联
+    await session.execute(
+        text("UPDATE rel_author_tech_belong SET source_task_id = NULL WHERE source_task_id = :task_id"),
+        {"task_id": task_id}
+    )
+
+    # 删除子任务
+    await session.execute(
+        text("DELETE FROM sync_venue_sub_task WHERE task_id = :task_id"),
+        {"task_id": task_id}
+    )
+
+    # 删除任务本身
+    await session.execute(
+        text("DELETE FROM sync_collect_task WHERE task_id = :task_id"),
+        {"task_id": task_id}
+    )
+
     await session.commit()
 
     return {"message": "Task deleted", "task_id": task_id}
