@@ -8,15 +8,22 @@ Handles database operations for talent embeddings.
 from __future__ import annotations
 
 import logging
+import json
 from typing import List, Optional
 from datetime import datetime
 
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.embedding import TalentEmbedding
+from app.core.database import get_engine
 
 logger = logging.getLogger(__name__)
+
+
+def _is_postgres(session: AsyncSession) -> bool:
+    """Check if the database is PostgreSQL."""
+    return session.bind.dialect.name == 'postgresql'
 
 
 class EmbeddingRepository:
@@ -86,23 +93,43 @@ class EmbeddingRepository:
         Returns:
             TalentEmbedding: 创建的记录
         """
-        # 将向量转换为字符串存储（兼容 SQLite）
-        # PostgreSQL 可以使用 pgvector 的 vector 类型
-        embedding_str = self._embedding_to_str(embedding)
+        now = datetime.utcnow()
 
-        record = TalentEmbedding(
-            talent_id=talent_id,
-            embedding=embedding_str,
-            model_name=model_name,
-            source_text_hash=source_text_hash,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-        )
-
-        self.session.add(record)
-        await self.session.flush()
-
-        return record
+        if _is_postgres(self.session):
+            # PostgreSQL: 使用原生 SQL 插入向量
+            vector_str = '[' + ','.join(str(v) for v in embedding) + ']'
+            await self.session.execute(
+                text("""
+                    INSERT INTO core_talent_embedding
+                    (talent_id, embedding, model_name, source_text_hash, created_at, updated_at)
+                    VALUES (:talent_id, :embedding::vector, :model_name, :source_text_hash, :created_at, :updated_at)
+                """),
+                {
+                    "talent_id": talent_id,
+                    "embedding": vector_str,
+                    "model_name": model_name,
+                    "source_text_hash": source_text_hash,
+                    "created_at": now,
+                    "updated_at": now,
+                }
+            )
+            await self.session.flush()
+            # 返回记录（需要重新查询）
+            return await self.get_by_talent_id(talent_id)
+        else:
+            # SQLite: 使用 JSON 存储
+            embedding_str = json.dumps(embedding)
+            record = TalentEmbedding(
+                talent_id=talent_id,
+                embedding=embedding_str,
+                model_name=model_name,
+                source_text_hash=source_text_hash,
+                created_at=now,
+                updated_at=now,
+            )
+            self.session.add(record)
+            await self.session.flush()
+            return record
 
     async def upsert(
         self,
@@ -123,19 +150,46 @@ class EmbeddingRepository:
         Returns:
             TalentEmbedding: 记录
         """
-        existing = await self.get_by_talent_id(talent_id)
+        now = datetime.utcnow()
 
-        if existing:
-            # 更新现有记录
-            existing.embedding = self._embedding_to_str(embedding)
-            existing.model_name = model_name
-            existing.source_text_hash = source_text_hash
-            existing.updated_at = datetime.utcnow()
+        if _is_postgres(self.session):
+            # PostgreSQL: 使用原生 SQL UPSERT
+            vector_str = '[' + ','.join(str(v) for v in embedding) + ']'
+            await self.session.execute(
+                text("""
+                    INSERT INTO core_talent_embedding
+                    (talent_id, embedding, model_name, source_text_hash, created_at, updated_at)
+                    VALUES (:talent_id, :embedding::vector, :model_name, :source_text_hash, :created_at, :updated_at)
+                    ON CONFLICT (talent_id) DO UPDATE SET
+                        embedding = EXCLUDED.embedding,
+                        model_name = EXCLUDED.model_name,
+                        source_text_hash = EXCLUDED.source_text_hash,
+                        updated_at = EXCLUDED.updated_at
+                """),
+                {
+                    "talent_id": talent_id,
+                    "embedding": vector_str,
+                    "model_name": model_name,
+                    "source_text_hash": source_text_hash,
+                    "created_at": now,
+                    "updated_at": now,
+                }
+            )
             await self.session.flush()
-            return existing
+            return await self.get_by_talent_id(talent_id)
         else:
-            # 创建新记录
-            return await self.create(talent_id, embedding, model_name, source_text_hash)
+            # SQLite: 使用 JSON 存储
+            existing = await self.get_by_talent_id(talent_id)
+
+            if existing:
+                existing.embedding = json.dumps(embedding)
+                existing.model_name = model_name
+                existing.source_text_hash = source_text_hash
+                existing.updated_at = now
+                await self.session.flush()
+                return existing
+            else:
+                return await self.create(talent_id, embedding, model_name, source_text_hash)
 
     async def delete_by_talent_id(self, talent_id: int) -> bool:
         """
@@ -243,20 +297,6 @@ class EmbeddingRepository:
         )
         return set(row[0] for row in result.fetchall())
 
-    def _embedding_to_str(self, embedding: List[float]) -> str:
-        """
-        将嵌入向量转换为字符串
-
-        Args:
-            embedding: 嵌入向量
-
-        Returns:
-            str: 字符串表示
-        """
-        # 使用 JSON 格式存储
-        import json
-        return json.dumps(embedding)
-
     def _str_to_embedding(self, embedding_str: str) -> List[float]:
         """
         将字符串转换为嵌入向量
@@ -267,8 +307,16 @@ class EmbeddingRepository:
         Returns:
             List[float]: 嵌入向量
         """
-        import json
-        return json.loads(embedding_str)
+        if not embedding_str:
+            return []
+
+        # PostgreSQL vector 格式: '[0.1,0.2,...]'
+        # SQLite JSON 格式: '[0.1, 0.2, ...]'
+        try:
+            return json.loads(embedding_str)
+        except json.JSONDecodeError:
+            # 尝试解析 PostgreSQL vector 格式
+            return [float(v.strip()) for v in embedding_str.strip('[]').split(',') if v.strip()]
 
     def get_embedding_vector(self, record: TalentEmbedding) -> List[float]:
         """
