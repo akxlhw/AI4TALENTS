@@ -8,8 +8,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -285,7 +285,7 @@
 /* ========== 深色模式支持 ========== */
 @media (prefers-color-scheme: dark) {
   .ai-loading-overlay {
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.5);
   }
 
   .brand-recruit {
