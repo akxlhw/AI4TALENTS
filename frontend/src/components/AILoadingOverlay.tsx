@@ -7,7 +7,6 @@
  * - 动态进度提示文字（线性推进）
  */
 import { useEffect, useState, useRef } from 'react'
-import { RobotOutlined } from '@ant-design/icons'
 import './AILoadingOverlay.css'
 
 interface AILoadingOverlayProps {
@@ -91,13 +90,31 @@ const AILoadingOverlay: React.FC<AILoadingOverlayProps> = ({
           </svg>
         </div>
 
-        {/* 中心 AI 图标 */}
+        {/* 中心品牌图标 */}
         <div className="ai-icon-container">
           <div className="pulse-ring ring-1" />
           <div className="pulse-ring ring-2" />
           <div className="pulse-ring ring-3" />
           <div className="ai-icon">
-            <RobotOutlined />
+            {/* AI4 图标 - AI for Recruitment */}
+            <div className="brand-logo">
+              <span className="logo-ai">AI</span>
+              <span className="logo-4">4</span>
+              <span className="logo-r">R</span>
+            </div>
+            {/* 人才连接网络 */}
+            <div className="talent-network">
+              <div className="talent-dot t1" />
+              <div className="talent-dot t2" />
+              <div className="talent-dot t3" />
+              <div className="talent-dot t4" />
+              <svg className="talent-lines" viewBox="0 0 60 60">
+                <line x1="30" y1="10" x2="30" y2="20" />
+                <line x1="10" y1="30" x2="20" y2="30" />
+                <line x1="40" y1="30" x2="50" y2="30" />
+                <line x1="30" y1="40" x2="30" y2="50" />
+              </svg>
+            </div>
           </div>
         </div>
 
