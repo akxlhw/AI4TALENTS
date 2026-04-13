@@ -55,6 +55,7 @@ import FavoriteButton from '../components/FavoriteButton'
 import TalentCompareModal from '../components/TalentCompareModal'
 import TopicTags from '../components/TopicTags'
 import ColumnSettings from '../components/ColumnSettings'
+import AILoadingOverlay from '../components/AILoadingOverlay'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useSearchTemplates } from '../hooks/useSearchTemplates'
 import { useColumnConfig } from '../hooks/useColumnConfig'
@@ -795,7 +796,7 @@ const SearchRecommendPage: React.FC = () => {
                             value={null}
                             onSearch={handleSearchTalents}
                             onChange={(value, option) => {
-                              if (value && option) {
+                              if (value && option && !Array.isArray(option)) {
                                 // 从 option.label 中提取姓名
                                 const label = typeof option.label === 'string' ? option.label : ''
                                 const name = label.split(' (')[0]
@@ -876,6 +877,17 @@ const SearchRecommendPage: React.FC = () => {
       >
         <Input placeholder="输入模板名称..." value={newTemplateName} onChange={(e) => setNewTemplateName(e.target.value)} onPressEnter={() => setSaveTemplateModalVisible(false)} />
       </Modal>
+
+      {/* AI Loading Overlay for JD Match */}
+      <AILoadingOverlay
+        visible={jdLoading || parsing}
+        title={parsing ? 'AI 解析职位描述' : 'AI 智能匹配中'}
+        steps={
+          parsing
+            ? ['正在连接 AI 服务...', '分析职位描述...', '提取技能要求...', '识别研究方向...', '生成特征向量...']
+            : ['正在连接 AI 服务...', '解析职位关键信息...', '搜索匹配候选人...', '计算匹配度分数...', '生成推荐理由...', '排序最佳候选人...']
+        }
+      />
     </div>
   )
 }
