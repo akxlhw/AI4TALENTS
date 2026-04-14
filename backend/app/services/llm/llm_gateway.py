@@ -31,12 +31,26 @@ JD_PARSE_PROMPT = """你是一个专业的招聘助手。请分析以下职位�
 
 请以 JSON 格式返回以下字段：
 {
-    "skills": ["技能1", "技能2", ...],  // 所需技能列表
+    "skills": ["技能1", "技能2", ...],  // 所需技能列表，如编程语言、框架、工具等
     "experience": "经验要求",  // 如 "3年以上"
-    "research_areas": ["研究方向1", ...],  // 研究方向
+    "research_areas": ["研究方向1", ...],  // 研究方向/学术领域，如"自然语言处理"、"计算机视觉"、"深度学习"、"机器学习"等
     "role_type": "角色类型",  // engineer/researcher/intern/senior/lead
     "education_level": "学历要求",  // bachelor/master/phd/any
     "keywords": ["关键词1", ...]  // JD 中的关键词
+}
+
+注意区分：
+- skills: 技术技能，如 "Python", "TensorFlow", "PyTorch", "深度学习框架"
+- research_areas: 学术研究领域，如 "自然语言处理", "计算机视觉", "语音识别", "机器学习", "深度学习"
+
+示例输出：
+{
+    "skills": ["Python", "TensorFlow", "PyTorch"],
+    "experience": "3年以上",
+    "research_areas": ["自然语言处理", "计算机视觉", "深度学习"],
+    "role_type": "researcher",
+    "education_level": "phd",
+    "keywords": ["人工智能", "深度学习", "算法"]
 }
 
 只返回 JSON，不要有其他内容。"""
