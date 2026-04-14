@@ -29,31 +29,29 @@ logger = logging.getLogger(__name__)
 # System prompt for JD parsing
 JD_PARSE_PROMPT = """你是一个专业的招聘助手。请分析以下职位描述（JD），提取关键信息。
 
-请以 JSON 格式返回以下字段：
+请直接返回 JSON 格式，不要有任何分析过程或解释。
+
+返回格式：
 {
-    "skills": ["技能1", "技能2", ...],  // 所需技能列表，如编程语言、框架、工具等
-    "experience": "经验要求",  // 如 "3年以上"
-    "research_areas": ["研究方向1", ...],  // 研究方向/学术领域，如"自然语言处理"、"计算机视觉"、"深度学习"、"机器学习"等
-    "role_type": "角色类型",  // engineer/researcher/intern/senior/lead
-    "education_level": "学历要求",  // bachelor/master/phd/any
-    "keywords": ["关键词1", ...]  // JD 中的关键词
+    "skills": ["技能1", "技能2", ...],
+    "experience": "经验要求",
+    "research_areas": ["研究方向1", ...],
+    "role_type": "角色类型",
+    "education_level": "学历要求",
+    "keywords": ["关键词1", ...]
 }
 
-注意区分：
-- skills: 技术技能，如 "Python", "TensorFlow", "PyTorch", "深度学习框架"
-- research_areas: 学术研究领域，如 "自然语言处理", "计算机视觉", "语音识别", "机器学习", "深度学习"
+字段说明：
+- skills: 技术技能列表（编程语言、框架、工具），如 ["Python", "TensorFlow", "PyTorch"]
+- research_areas: 学术研究领域，如 ["自然语言处理", "计算机视觉", "深度学习", "机器学习"]
+- experience: 经验要求，如 "3年以上"
+- role_type: engineer/researcher/intern/senior/lead
+- education_level: bachelor/master/phd/any
+- keywords: 关键词列表
 
-示例输出：
-{
-    "skills": ["Python", "TensorFlow", "PyTorch"],
-    "experience": "3年以上",
-    "research_areas": ["自然语言处理", "计算机视觉", "深度学习"],
-    "role_type": "researcher",
-    "education_level": "phd",
-    "keywords": ["人工智能", "深度学习", "算法"]
-}
+注意：skills 是技术技能，research_areas 是学术研究领域，不要混淆。
 
-只返回 JSON，不要有其他内容。"""
+直接返回 JSON 对象，从 { 开始，以 } 结束，不要有任何其他内容。"""
 
 
 class LLMGateway(LLMGatewayProtocol):
@@ -117,8 +115,8 @@ class LLMGateway(LLMGatewayProtocol):
             return "minimax"
         return "custom"
 
-    @with_retry(max_retries=3)
-    @with_timeout(timeout_seconds=30.0)
+    @with_retry(max_retries=5)
+    @with_timeout(timeout_seconds=60.0)
     async def parse_jd(self, jd_text: str) -> JDFeatures:
         """
         解析 JD 文本
@@ -177,11 +175,12 @@ class LLMGateway(LLMGatewayProtocol):
                 json_end = content.rfind('}')
                 if json_start != -1 and json_end != -1 and json_end > json_start:
                     content = content[json_start:json_end + 1]
-                    logger.info(f"Extracted JSON from MiniMax response")
+                    logger.info(f"Extracted JSON from MiniMax response: {content[:200]}...")
                 else:
                     logger.warning(f"No JSON object found in MiniMax response")
 
             data = json.loads(content)
+            logger.info(f"Parsed JSON data: {data}")
             features = JDFeatures.from_dict(data)
 
             # 写入缓存
@@ -209,21 +208,57 @@ class LLMGateway(LLMGatewayProtocol):
 
         except APIConnectionError as e:
             logger.error(f"API connection error: {e}")
-            if self.enable_fallback:
-                return self._fallback_parse(jd_text)
             raise LLMError(
                 error_type=LLMErrorType.NETWORK_ERROR,
                 message=str(e)
             )
 
         except APIError as e:
+            # 检查是否是 529 服务过载错误
+            status_code = getattr(e, 'status_code', None)
+            if status_code == 529:
+                logger.warning(f"Service overloaded (529), will retry: {e}")
+                raise LLMError(
+                    error_type=LLMErrorType.API_ERROR,
+                    message=f"Service overloaded: {e}"
+                )
+            # 其他 API 错误
             logger.error(f"API error: {e}")
-            if self.enable_fallback:
-                return self._fallback_parse(jd_text)
             raise LLMError(
                 error_type=LLMErrorType.API_ERROR,
                 message=str(e)
             )
+
+        except LLMError:
+            # 让 LLMError 继续向上传播给重试装饰器
+            raise
+
+        except Exception as e:
+            logger.error(f"Unexpected error during JD parsing: {e}")
+            raise LLMError(
+                error_type=LLMErrorType.API_ERROR,
+                message=f"Unexpected error: {e}"
+            )
+
+    async def parse_jd_with_fallback(self, jd_text: str) -> JDFeatures:
+        """
+        解析 JD 文本（带 fallback）
+
+        先尝试 LLM 解析，如果所有重试都失败则使用规则解析。
+
+        Args:
+            jd_text: JD 文本内容
+
+        Returns:
+            JDFeatures: 解析出的特征
+        """
+        try:
+            return await self.parse_jd(jd_text)
+        except LLMError as e:
+            logger.warning(f"LLM parsing failed after all retries: {e}")
+            if self.enable_fallback:
+                return self._fallback_parse(jd_text)
+            raise
 
     @with_retry(max_retries=3)
     @with_timeout(timeout_seconds=60.0)
@@ -612,6 +647,8 @@ class LLMGateway(LLMGatewayProtocol):
             if pattern in jd_text:
                 role = value
                 break
+
+        logger.info(f"Fallback JD parsing result - skills: {found_skills}, research_areas: {found_research}")
 
         return JDFeatures(
             skills=found_skills,

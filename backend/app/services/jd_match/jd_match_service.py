@@ -141,8 +141,8 @@ class JDMatchService:
             if cached:
                 return cached
 
-        # 调用 LLM 解析
-        features = await self.llm_gateway.parse_jd(jd_text)
+        # 调用 LLM 解析（带 fallback）
+        features = await self.llm_gateway.parse_jd_with_fallback(jd_text)
 
         # 写入缓存
         if self.cache:
