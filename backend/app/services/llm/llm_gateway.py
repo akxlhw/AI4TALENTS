@@ -142,26 +142,44 @@ class LLMGateway(LLMGatewayProtocol):
         try:
             start_time = time.time()
 
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
+            # MiniMax 不支持 response_format 参数
+            request_params = {
+                "model": self.model,
+                "messages": [
                     {"role": "system", "content": JD_PARSE_PROMPT},
                     {"role": "user", "content": jd_text}
                 ],
-                temperature=0.1,  # 低温度保证稳定性
-                response_format={"type": "json_object"}
-            )
+                "temperature": 0.1,  # 低温度保证稳定性
+            }
+
+            # 只有非 MiniMax 提供商才使用 response_format
+            if self.provider != "minimax":
+                request_params["response_format"] = {"type": "json_object"}
+
+            response = await self.client.chat.completions.create(**request_params)
 
             elapsed = time.time() - start_time
             logger.info(f"JD parsing completed in {elapsed:.2f}s")
 
             # 解析响应
             content = response.choices[0].message.content
+            logger.info(f"LLM raw response (first 500 chars): {content[:500] if content else 'None'}")
             if not content:
                 raise LLMError(
                     error_type=LLMErrorType.INVALID_RESPONSE,
                     message="Empty response from LLM"
                 )
+
+            # MiniMax 可能返回包含额外文本的响应，需要提取 JSON 部分
+            if self.provider == "minimax":
+                # 尝试找到 JSON 对象的开始和结束位置
+                json_start = content.find('{')
+                json_end = content.rfind('}')
+                if json_start != -1 and json_end != -1 and json_end > json_start:
+                    content = content[json_start:json_end + 1]
+                    logger.info(f"Extracted JSON from MiniMax response")
+                else:
+                    logger.warning(f"No JSON object found in MiniMax response")
 
             data = json.loads(content)
             features = JDFeatures.from_dict(data)
