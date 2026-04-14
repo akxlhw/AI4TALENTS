@@ -157,6 +157,8 @@ class SearchResult:
     items: List[dict]
     search_mode: str
     took_ms: float
+    precise_count: int = 0  # 精准匹配数量 (similarity >= 0.95)
+    similar_count: int = 0  # 相似匹配数量 (0.7 <= similarity < 0.95)
 
     def to_dict(self) -> dict:
         """转换为字典"""
@@ -167,6 +169,8 @@ class SearchResult:
             "items": self.items,
             "search_mode": self.search_mode,
             "took_ms": self.took_ms,
+            "precise_count": self.precise_count,
+            "similar_count": self.similar_count,
         }
 
 
@@ -272,6 +276,10 @@ class SearchService:
         # 计算耗时
         took_ms = (time.time() - start_time) * 1000
 
+        # 从结果中获取精准匹配和相似匹配数量
+        precise_count = result.get("precise_count", 0)
+        similar_count = result.get("similar_count", 0)
+
         return SearchResult(
             total=result["total"],
             page=page,
@@ -279,6 +287,8 @@ class SearchService:
             items=result["items"],
             search_mode=mode.value if isinstance(mode, SearchMode) else mode,
             took_ms=took_ms,
+            precise_count=precise_count,
+            similar_count=similar_count,
         )
 
     async def _keyword_search(
@@ -550,6 +560,8 @@ class SearchService:
 
             # 转换结果，并过滤低于阈值的结果
             items = []
+            precise_count = 0
+            similar_count = 0
             for row in rows:
                 similarity = 1.0 - (row.distance or 0)
                 # 再次确认相似度 >= 70%
@@ -571,6 +583,11 @@ class SearchService:
                         "orcid": row.orcid,
                         "similarity_score": similarity,
                     })
+                    # 统计精准匹配和相似匹配
+                    if similarity >= 0.95:
+                        precise_count += 1
+                    else:
+                        similar_count += 1
 
             # 更新总数为实际过滤后的数量
             total = len(items)
@@ -580,6 +597,8 @@ class SearchService:
             return {
                 "total": total,
                 "items": items,
+                "precise_count": precise_count,
+                "similar_count": similar_count,
             }
 
         except Exception as e:
@@ -673,6 +692,10 @@ class SearchService:
                 reverse=True
             )
 
+            # 计算精准匹配和相似匹配数量（基于全部合并结果）
+            precise_count = sum(1 for tid in sorted_ids if item_map[tid].get("similarity_score", 0) >= 0.95)
+            similar_count = sum(1 for tid in sorted_ids if 0.7 <= item_map[tid].get("similarity_score", 0) < 0.95)
+
             # 分页
             offset = (page - 1) * page_size
             paginated_ids = sorted_ids[offset:offset + page_size]
@@ -680,11 +703,13 @@ class SearchService:
             # 构建最终结果
             items = [item_map[tid] for tid in paginated_ids if tid in item_map]
 
-            logger.info(f"Hybrid search: fulltext={len(fulltext_result['items'])}, semantic={len(semantic_result['items'])}, merged={len(sorted_ids)}, returned={len(items)}")
+            logger.info(f"Hybrid search: fulltext={len(fulltext_result['items'])}, semantic={len(semantic_result['items'])}, merged={len(sorted_ids)}, returned={len(items)}, precise={precise_count}, similar={similar_count}")
 
             return {
                 "total": len(sorted_ids),
                 "items": items,
+                "precise_count": precise_count,
+                "similar_count": similar_count,
             }
 
         except Exception as e:

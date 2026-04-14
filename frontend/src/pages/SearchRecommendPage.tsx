@@ -92,6 +92,8 @@ const SearchRecommendPage: React.FC = () => {
   const pageSize = 20
   const [tookMs, setTookMs] = useState<number | null>(null)
   const [searchModeUsed, setSearchModeUsed] = useState<string | null>(null) // 实际使用的搜索模式
+  const [preciseCount, setPreciseCount] = useState(0) // 精准匹配数量
+  const [similarCount, setSimilarCount] = useState(0) // 相似匹配数量
   const [roleFilter, setRoleFilter] = useState<string | undefined>()
   const [schoolFilter, setSchoolFilter] = useState<number | undefined>()
   const [minCitations, setMinCitations] = useState<number | undefined>()
@@ -112,12 +114,35 @@ const SearchRecommendPage: React.FC = () => {
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false)
 
   // ========== JD Match Tab State ==========
-  const [jdText, setJdText] = useState('')
+  // 使用 sessionStorage 持久化 JD 匹配状态，解决页面跳转后状态丢失问题
+  const JD_STATE_KEY = 'jd_match_state'
+
+  // 从 sessionStorage 恢复状态
+  const getSavedJDState = (): { jdText: string; parsedJdText: string; jdFeatures: JDFeatures | null; matchResults: MatchResultItem[]; jdTookMs: number | null } => {
+    try {
+      const saved = sessionStorage.getItem(JD_STATE_KEY)
+      if (saved) {
+        return JSON.parse(saved)
+      }
+    } catch { /* ignore */ }
+    return { jdText: '', parsedJdText: '', jdFeatures: null, matchResults: [], jdTookMs: null }
+  }
+
+  const savedJDState = getSavedJDState()
+  const [jdText, setJdText] = useState(savedJDState.jdText)
+  const [parsedJdText, setParsedJdText] = useState(savedJDState.parsedJdText) // 已解析的 JD 文本
   const [jdLoading, setJdLoading] = useState(false)
   const [parsing, setParsing] = useState(false)
-  const [jdFeatures, setJdFeatures] = useState<JDFeatures | null>(null)
-  const [matchResults, setMatchResults] = useState<MatchResultItem[]>([])
-  const [jdTookMs, setJdTookMs] = useState<number | null>(null)
+  const [jdFeatures, setJdFeatures] = useState<JDFeatures | null>(savedJDState.jdFeatures)
+  const [matchResults, setMatchResults] = useState<MatchResultItem[]>(savedJDState.matchResults)
+  const [jdTookMs, setJdTookMs] = useState<number | null>(savedJDState.jdTookMs)
+
+  // 保存状态到 sessionStorage
+  const saveJDState = useCallback((text: string, parsedText: string, features: JDFeatures | null, results: MatchResultItem[], took: number | null) => {
+    try {
+      sessionStorage.setItem(JD_STATE_KEY, JSON.stringify({ jdText: text, parsedJdText: parsedText, jdFeatures: features, matchResults: results, jdTookMs: took }))
+    } catch { /* ignore */ }
+  }, [])
 
   // ========== Recommend Tab State ==========
   const [referenceTalentIds, setReferenceTalentIds] = useState<number[]>([])
@@ -154,16 +179,58 @@ const SearchRecommendPage: React.FC = () => {
     loadReferenceData()
   }, [loadReferenceData])
 
-  // Initialize from URL
+  // 搜索状态持久化 key
+  const SEARCH_STATE_KEY = 'search_state'
+
+  // 从 sessionStorage 恢复搜索状态
+  const getSavedSearchState = () => {
+    try {
+      const saved = sessionStorage.getItem(SEARCH_STATE_KEY)
+      if (saved) {
+        return JSON.parse(saved)
+      }
+    } catch { /* ignore */ }
+    return null
+  }
+
+  // Initialize from URL or restore from sessionStorage
   useEffect(() => {
+    const savedState = getSavedSearchState()
     const q = urlSearchParams.get('q')
+
+    // 如果 URL 有查询参数
     if (q) {
-      setQuery(q)
-      performSearch(q, 1)
+      // 检查是否已有缓存的搜索结果且查询词相同
+      if (savedState && savedState.query === q && savedState.results?.length > 0) {
+        // 恢复缓存状态，不重新搜索
+        setQuery(savedState.query)
+        setResults(savedState.results)
+        setTotal(savedState.total)
+        setTookMs(savedState.tookMs)
+        setSearchModeUsed(savedState.searchModeUsed)
+        setPreciseCount(savedState.preciseCount || 0)
+        setSimilarCount(savedState.similarCount || 0)
+        setPage(savedState.page || 1)
+      } else {
+        // 执行新搜索
+        setQuery(q)
+        performSearch(q, 1)
+      }
+    } else if (savedState) {
+      // 否则恢复之前的搜索状态
+      setQuery(savedState.query || '')
+      setResults(savedState.results || [])
+      setTotal(savedState.total || 0)
+      setTookMs(savedState.tookMs || null)
+      setSearchModeUsed(savedState.searchModeUsed || null)
+      setPreciseCount(savedState.preciseCount || 0)
+      setSimilarCount(savedState.similarCount || 0)
+      setPage(savedState.page || 1)
     } else {
       loadAllTalents()
     }
-  }, [urlSearchParams.get('q')])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ========== Search Functions ==========
   const loadAllTalents = async () => {
@@ -229,7 +296,21 @@ const SearchRecommendPage: React.FC = () => {
       setTotal(response.data.total || items.length)
       setTookMs(response.data.took_ms || null)
       setSearchModeUsed(response.data.mode || 'hybrid')
+      setPreciseCount(response.data.precise_count || 0)
+      setSimilarCount(response.data.similar_count || 0)
       setPage(pageNum)
+
+      // 保存搜索状态到 sessionStorage
+      sessionStorage.setItem(SEARCH_STATE_KEY, JSON.stringify({
+        query: searchQuery.trim(),
+        results: items,
+        total: response.data.total || items.length,
+        tookMs: response.data.took_ms || null,
+        searchModeUsed: response.data.mode || 'hybrid',
+        preciseCount: response.data.precise_count || 0,
+        similarCount: response.data.similar_count || 0,
+        page: pageNum,
+      }))
     } catch {
       message.error('搜索失败，请重试')
     } finally {
@@ -304,7 +385,11 @@ const SearchRecommendPage: React.FC = () => {
     setParsing(true)
     try {
       const response = await api.jdMatch.parse(jdText)
-      setJdFeatures(response.data)
+      const features = response.data
+      setJdFeatures(features)
+      setParsedJdText(jdText)
+      // 保存到 sessionStorage
+      saveJDState(jdText, jdText, features, matchResults, jdTookMs)
       message.success('JD 解析成功')
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } } }
@@ -325,26 +410,46 @@ const SearchRecommendPage: React.FC = () => {
         jd_text: jdText,
         config: { weights: { skill: 0.4, research: 0.3, experience: 0.2, education: 0.1 }, limit: 20 },
       })
-      setMatchResults(response.data.items || [])
-      setJdTookMs(response.data.took_ms)
-      if (!jdFeatures) {
-        const parseResponse = await api.jdMatch.parse(jdText)
-        setJdFeatures(parseResponse.data)
-      }
+      const results = response.data.items || []
+      const took = response.data.took_ms
+      setMatchResults(results)
+      setJdTookMs(took)
+
+      // 先关闭 loading，让用户看到结果
+      setJdLoading(false)
       message.success(`找到 ${response.data.total} 位匹配候选人`)
+
+      // 后台解析 JD 特征（仅当 JD 文本有变化时才重新解析）
+      if (jdText !== parsedJdText) {
+        try {
+          const parseResponse = await api.jdMatch.parse(jdText)
+          const features = parseResponse.data
+          setJdFeatures(features)
+          setParsedJdText(jdText)
+          // 保存状态到 sessionStorage
+          saveJDState(jdText, jdText, features, results, took)
+        } catch {
+          // 解析失败不影响匹配结果展示
+        }
+      } else {
+        // JD 未变化，直接保存
+        saveJDState(jdText, jdText, jdFeatures, results, took)
+      }
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } } }
       message.error(err.response?.data?.detail || '匹配失败，请检查 LLM 配置')
-    } finally {
       setJdLoading(false)
     }
   }
 
   const handleResetJD = () => {
     setJdText('')
+    setParsedJdText('')
     setJdFeatures(null)
     setMatchResults([])
     setJdTookMs(null)
+    // 清除 sessionStorage
+    sessionStorage.removeItem('jd_match_state')
   }
 
   // ========== Recommend Functions ==========
@@ -678,15 +783,29 @@ const SearchRecommendPage: React.FC = () => {
                 {query.trim() && tookMs && (
                   <Alert
                     message={
-                      <Space>
-                        <ThunderboltOutlined style={{ color: '#1890ff' }} />
-                        <span>
-                          智能搜索已启用：
-                          {searchModeUsed === 'hybrid' && '混合搜索（关键词 + 语义向量）'}
-                          {searchModeUsed === 'semantic' && '语义向量搜索'}
-                          {searchModeUsed === 'keyword' && '关键词匹配'}
-                          {searchModeUsed === 'fulltext' && '全文检索'}
-                        </span>
+                      <Space split={<span style={{ color: '#d9d9d9' }}>|</span>}>
+                        <Space>
+                          <ThunderboltOutlined style={{ color: '#1890ff' }} />
+                          <span>
+                            智能搜索已启用：
+                            {searchModeUsed === 'hybrid' && '混合搜索（关键词 + 语义向量）'}
+                            {searchModeUsed === 'semantic' && '语义向量搜索'}
+                            {searchModeUsed === 'keyword' && '关键词匹配'}
+                            {searchModeUsed === 'fulltext' && '全文检索'}
+                          </span>
+                        </Space>
+                        <span>共 {total} 人</span>
+                        {(preciseCount > 0 || similarCount > 0) && (
+                          <>
+                            <span style={{ color: '#52c41a' }}>
+                              精准匹配 {preciseCount} 人
+                            </span>
+                            <span style={{ color: '#1890ff' }}>
+                              相似匹配 {similarCount} 人
+                            </span>
+                          </>
+                        )}
+                        <span type="secondary">耗时 {tookMs.toFixed(0)}ms</span>
                       </Space>
                     }
                     type="info"
@@ -778,11 +897,28 @@ const SearchRecommendPage: React.FC = () => {
                     </Card>
                     {jdFeatures && (
                       <Card title="JD 解析结果" style={{ marginBottom: 16 }} size="small">
-                        <Descriptions column={2} size="small">
+                        <Descriptions column={1} size="small" bordered>
                           <Descriptions.Item label="技能要求">
                             <Space size={[4, 4]} wrap>{jdFeatures.skills?.map((skill, idx) => <Tag key={idx} color="blue">{skill}</Tag>)}</Space>
                           </Descriptions.Item>
-                          <Descriptions.Item label="角色类型"><Tag color="purple">{jdFeatures.role_type || '未指定'}</Tag></Descriptions.Item>
+                          <Descriptions.Item label="研究方向">
+                            <Space size={[4, 4]} wrap>
+                              {jdFeatures.research_areas?.length > 0 ? (
+                                jdFeatures.research_areas.map((area, idx) => <Tag key={idx} color="green">{area}</Tag>)
+                              ) : (
+                                <span style={{ color: '#999' }}>未指定</span>
+                              )}
+                            </Space>
+                          </Descriptions.Item>
+                          <Descriptions.Item label="经验要求">
+                            {jdFeatures.experience || '未指定'}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="角色类型">
+                            <Tag color="purple">{jdFeatures.role_type || '未指定'}</Tag>
+                          </Descriptions.Item>
+                          <Descriptions.Item label="学历要求">
+                            <Tag color="orange">{jdFeatures.education_level || '未指定'}</Tag>
+                          </Descriptions.Item>
                         </Descriptions>
                       </Card>
                     )}

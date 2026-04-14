@@ -45,7 +45,7 @@ const HomePage: React.FC = () => {
 
   const handleSearch = (value: string) => {
     if (value.trim()) {
-      navigate(`/search?q=${encodeURIComponent(value.trim())}`)
+      navigate(`/search-recommend?tab=search&q=${encodeURIComponent(value.trim())}`)
     }
   }
 

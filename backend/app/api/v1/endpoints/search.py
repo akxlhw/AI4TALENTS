@@ -212,6 +212,8 @@ async def enhanced_search_talents(
             page=page,
             page_size=page_size,
             took_ms=took_ms,
+            precise_count=results.precise_count,
+            similar_count=results.similar_count,
         )
 
     except EmptyQueryError:

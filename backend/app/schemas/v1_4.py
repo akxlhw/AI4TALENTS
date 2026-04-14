@@ -61,6 +61,8 @@ class EnhancedSearchResponse(BaseModel):
     page: int
     page_size: int
     took_ms: float = Field(description="Query execution time in milliseconds")
+    precise_count: int = Field(default=0, description="Number of precise matches (similarity >= 0.95)")
+    similar_count: int = Field(default=0, description="Number of similar matches (0.7 <= similarity < 0.95)")
 
 
 # ============ JD Match Schemas ============
