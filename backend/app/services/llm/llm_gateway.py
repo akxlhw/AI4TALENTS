@@ -512,14 +512,23 @@ class LLMGateway(LLMGatewayProtocol):
         """
         logger.info("Using fallback JD parsing")
 
-        # 技能关键词库
+        # 技能关键词库（技术工具、框架、编程语言）
         SKILL_KEYWORDS = [
             "Python", "Java", "C++", "Go", "Rust", "JavaScript", "TypeScript",
-            "机器学习", "深度学习", "自然语言处理", "NLP", "计算机视觉", "CV",
             "PyTorch", "TensorFlow", "Keras", "scikit-learn",
             "大数据", "分布式", "云计算", "Docker", "Kubernetes",
             "数据库", "MySQL", "PostgreSQL", "MongoDB", "Redis",
-            "前端", "后端", "全栈", "架构", "算法",
+            "前端", "后端", "全栈", "架构",
+        ]
+
+        # 研究方向关键词库（学术领域）
+        RESEARCH_KEYWORDS = [
+            "人工智能", "AI", "机器学习", "深度学习", "强化学习",
+            "自然语言处理", "NLP", "语音识别", "语音合成",
+            "计算机视觉", "CV", "图像处理", "目标检测",
+            "推荐系统", "知识图谱", "数据挖掘", "数据分析",
+            "神经网络", "大模型", "LLM", "生成式AI",
+            "联邦学习", "迁移学习", "多模态",
         ]
 
         # 经验关键词
@@ -559,6 +568,12 @@ class LLMGateway(LLMGatewayProtocol):
             if skill.lower() in text_lower or skill in jd_text:
                 found_skills.append(skill)
 
+        # 提取研究方向
+        found_research = []
+        for research in RESEARCH_KEYWORDS:
+            if research.lower() in text_lower or research in jd_text:
+                found_research.append(research)
+
         # 提取经验
         experience = "未知"
         for pattern, value in EXPERIENCE_PATTERNS:
@@ -583,10 +598,10 @@ class LLMGateway(LLMGatewayProtocol):
         return JDFeatures(
             skills=found_skills,
             experience=experience,
-            research_areas=[],
+            research_areas=found_research,
             role_type=role,
             education_level=education,
-            keywords=found_skills[:10],  # 取前10个作为关键词
+            keywords=found_skills[:10] + found_research[:5],  # 合并技能和研究方向作为关键词
         )
 
 
