@@ -56,10 +56,34 @@ const LoginPage: React.FC = () => {
       >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div style={{ textAlign: 'center' }}>
-            <Title level={3} style={{ marginBottom: 0 }}>
+            <Title
+              level={2}
+              style={{
+                marginBottom: 8,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                fontWeight: 700,
+                letterSpacing: '2px',
+              }}
+            >
+              AI4TALENT
+            </Title>
+            <Title
+              level={4}
+              style={{
+                margin: 0,
+                color: '#1890ff',
+                fontWeight: 500,
+                letterSpacing: '4px',
+              }}
+            >
               智能人才库
             </Title>
-            <Text type="secondary">学术人才发现平台</Text>
+            <Text type="secondary" style={{ fontSize: 13, marginTop: 8, display: 'block' }}>
+              学术人才发现平台
+            </Text>
           </div>
 
           <Form
@@ -100,12 +124,6 @@ const LoginPage: React.FC = () => {
               </Button>
             </Form.Item>
           </Form>
-
-          <div style={{ textAlign: 'center' }}>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              默认管理员账号: admin / admin123
-            </Text>
-          </div>
         </Space>
       </Card>
     </div>
