@@ -314,11 +314,7 @@ class EmbeddingService:
         if talent.openalex_topics:
             research_parts.extend(talent.openalex_topics)
 
-        # 2. 研究兴趣描述
-        if talent.research_interests:
-            research_parts.append(talent.research_interests)
-
-        # 3. 技术标签
+        # 2. 技术标签
         if talent.topic_tags:
             research_parts.extend(talent.topic_tags)
 
@@ -346,9 +342,17 @@ class EmbeddingService:
         if not talent_ids:
             return []
 
-        query = select(Talent).where(Talent.talent_id.in_(talent_ids))
-        result = await self.session.execute(query)
-        return list(result.scalars().all())
+        # 分批查询，避免 PostgreSQL 参数上限 (32767)
+        BATCH_SIZE = 5000
+        all_talents = []
+
+        for i in range(0, len(talent_ids), BATCH_SIZE):
+            batch_ids = talent_ids[i:i + BATCH_SIZE]
+            query = select(Talent).where(Talent.talent_id.in_(batch_ids))
+            result = await self.session.execute(query)
+            all_talents.extend(result.scalars().all())
+
+        return all_talents
 
     async def get_stats(self) -> dict:
         """

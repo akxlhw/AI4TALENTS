@@ -134,9 +134,20 @@ class RecommendService:
 
     async def _get_reference_talents(self, talent_ids: List[int]) -> List[Talent]:
         """获取参考人才"""
-        query = select(Talent).where(Talent.talent_id.in_(talent_ids))
-        result = await self.session.execute(query)
-        return list(result.scalars().all())
+        if not talent_ids:
+            return []
+
+        # 分批查询，避免 PostgreSQL 参数上限 (32767)
+        BATCH_SIZE = 5000
+        all_talents = []
+
+        for i in range(0, len(talent_ids), BATCH_SIZE):
+            batch_ids = talent_ids[i:i + BATCH_SIZE]
+            query = select(Talent).where(Talent.talent_id.in_(batch_ids))
+            result = await self.session.execute(query)
+            all_talents.extend(result.scalars().all())
+
+        return all_talents
 
     async def _find_similar(
         self,
@@ -154,8 +165,8 @@ class RecommendService:
         for t in reference_talents:
             if t.topic_tags:
                 all_tags.update(t.topic_tags)
-            if t.research_interests:
-                all_research.update(t.research_interests.lower().split(","))
+            if t.openalex_topics:
+                all_research.update(topic.lower() for topic in t.openalex_topics)
 
         # 构建查询
         query = (
@@ -181,7 +192,7 @@ class RecommendService:
             reasons = self.generate_reasons(
                 similarity,
                 reference_talents[0].__dict__,
-                {"research_interests": candidate.research_interests}
+                {"openalex_topics": candidate.openalex_topics}
             )
 
             items.append(RecommendResultItem(
@@ -221,14 +232,14 @@ class RecommendService:
         for t in reference_talents:
             if t.topic_tags:
                 ref_tags.update(tag.lower() for tag in t.topic_tags)
-            if t.research_interests:
-                ref_research.update(r.strip().lower() for r in t.research_interests.split(","))
+            if t.openalex_topics:
+                ref_research.update(topic.lower() for topic in t.openalex_topics)
 
         # 候选人标签
         cand_tags = set(tag.lower() for tag in (candidate.topic_tags or []))
         cand_research = set()
-        if candidate.research_interests:
-            cand_research = set(r.strip().lower() for r in candidate.research_interests.split(","))
+        if candidate.openalex_topics:
+            cand_research = set(topic.lower() for topic in candidate.openalex_topics)
 
         # 计算标签重叠
         if ref_tags and cand_tags:

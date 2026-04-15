@@ -734,26 +734,35 @@ class CollectionOrchestrator:
         if not talent_ids:
             return
 
-        # 然后加载 Talent 对象
-        result = await self.session.execute(
-            select(Talent).where(Talent.talent_id.in_(talent_ids))
-        )
-        talents = result.scalars().all()
-
+        # 分批加载 Talent 对象，避免 PostgreSQL 参数上限 (32767)
+        # 每批最多 5000 个 ID
+        BATCH_SIZE = 5000
         updated_count = 0
-        for i, talent in enumerate(talents):
-            # 以 OpenAlex 返回的研究主题为准
-            # 如果 openalex_topics 不为空，则使用它作为 topic_tags
-            # 如果为空，则 topic_tags 也为空（不自动打标签）
-            if talent.openalex_topics:
-                talent.topic_tags = list(talent.openalex_topics)
-                updated_count += 1
-            else:
-                talent.topic_tags = []
 
-            # Save progress periodically
-            if (i + 1) % 100 == 0:
-                    await self.session.commit()
+        for batch_start in range(0, len(talent_ids), BATCH_SIZE):
+            batch_ids = talent_ids[batch_start:batch_start + BATCH_SIZE]
+            result = await self.session.execute(
+                select(Talent).where(Talent.talent_id.in_(batch_ids))
+            )
+            talents = result.scalars().all()
+
+            for i, talent in enumerate(talents):
+                # 以 OpenAlex 返回的研究主题为准
+                # 如果 openalex_topics 不为空，则使用它作为 topic_tags
+                # 如果为空，则 topic_tags 也为空（不自动打标签）
+                if talent.openalex_topics:
+                    talent.topic_tags = list(talent.openalex_topics)
+                    updated_count += 1
+                else:
+                    talent.topic_tags = []
+
+            # 每批提交一次
+            if batch_start + BATCH_SIZE < len(talent_ids):
+                await self.session.commit()
+                self.progress_tracker.add_log(
+                    "debug",
+                    f"更新进度: {min(batch_start + BATCH_SIZE, len(talent_ids))}/{len(talent_ids)}"
+                )
 
         await self.session.flush()
         self.progress_tracker.add_log("info", f"更新了 {updated_count} 个人才的技术标签")

@@ -83,10 +83,18 @@ class EmbeddingRepository:
         if not talent_ids:
             return []
 
-        result = await self.session.execute(
-            select(TalentEmbedding).where(TalentEmbedding.talent_id.in_(talent_ids))
-        )
-        return list(result.scalars().all())
+        # 分批查询，避免 PostgreSQL 参数上限 (32767)
+        BATCH_SIZE = 5000
+        all_results = []
+
+        for i in range(0, len(talent_ids), BATCH_SIZE):
+            batch_ids = talent_ids[i:i + BATCH_SIZE]
+            result = await self.session.execute(
+                select(TalentEmbedding).where(TalentEmbedding.talent_id.in_(batch_ids))
+            )
+            all_results.extend(result.scalars().all())
+
+        return all_results
 
     async def create(
         self,
@@ -355,15 +363,21 @@ class EmbeddingRepository:
         if not talent_ids:
             return []
 
-        # 查询已有嵌入的人才 ID
-        query = select(TalentEmbedding.talent_id).where(
-            TalentEmbedding.talent_id.in_(talent_ids)
-        )
-        if model_name:
-            query = query.where(TalentEmbedding.model_name == model_name)
+        # 分批查询已有嵌入的人才 ID，避免 PostgreSQL 参数上限 (32767)
+        BATCH_SIZE = 5000
+        existing_ids = set()
 
-        result = await self.session.execute(query)
-        existing_ids = set(row[0] for row in result.fetchall())
+        for i in range(0, len(talent_ids), BATCH_SIZE):
+            batch_ids = talent_ids[i:i + BATCH_SIZE]
+            query = select(TalentEmbedding.talent_id).where(
+                TalentEmbedding.talent_id.in_(batch_ids)
+            )
+            if model_name:
+                query = query.where(TalentEmbedding.model_name == model_name)
+
+            result = await self.session.execute(query)
+            for row in result.fetchall():
+                existing_ids.add(row[0])
 
         # 返回缺失的 ID
         return [tid for tid in talent_ids if tid not in existing_ids]
