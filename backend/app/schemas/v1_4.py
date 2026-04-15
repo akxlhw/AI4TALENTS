@@ -23,7 +23,7 @@ class EnhancedSearchRequest(BaseModel):
     q: str = Field(..., min_length=1, description="Search query")
     mode: str = Field(default="keyword", description="Search mode: keyword, fulltext, semantic, hybrid")
     fields: List[str] = Field(
-        default=["name", "title", "research_interests", "topics"],
+        default=["name", "title", "topics", "works"],
         description="Fields to search in"
     )
     fuzzy: bool = Field(default=False, description="Enable fuzzy matching")
@@ -47,7 +47,6 @@ class SemanticSearchResult(BaseModel):
     h_index: int = 0
     topic_tags: List[str] = Field(default_factory=list)
     openalex_topics: List[str] = Field(default_factory=list, description="OpenAlex research topics")
-    research_interests: Optional[str] = None
     similarity_score: Optional[float] = Field(default=None, description="Similarity score for semantic search")
     highlight: Optional[str] = None
 
@@ -68,22 +67,18 @@ class EnhancedSearchResponse(BaseModel):
 # ============ JD Match Schemas ============
 
 class JDFeaturesResponse(BaseModel):
-    """JD parsing result."""
-    skills: List[str] = Field(default_factory=list, description="Required skills")
-    experience: str = Field(default="", description="Experience requirement")
-    research_areas: List[str] = Field(default_factory=list, description="Research areas")
-    role_type: str = Field(default="", description="Role type")
-    education_level: Optional[str] = Field(default=None, description="Education level requirement")
+    """JD parsing result.
+
+    v1.4.1: Simplified to only return research_areas.
+    """
+    research_areas: List[str] = Field(default_factory=list, description="Research areas (English keywords)")
 
 
 class MatchConfigRequest(BaseModel):
     """Match configuration request."""
     weights: dict = Field(
         default_factory=lambda: {
-            "skill": 0.4,
-            "research": 0.3,
-            "experience": 0.2,
-            "education": 0.1
+            "research": 1.0
         },
         description="Score weights"
     )
@@ -92,17 +87,17 @@ class MatchConfigRequest(BaseModel):
 
 
 class MatchResultItemResponse(BaseModel):
-    """Match result item."""
+    """Match result item.
+
+    v1.4.1: Simplified to only return research_score and overall_score.
+    """
     talent_id: int
     name: str
     title: str
     school_name: str
     overall_score: float = Field(description="Overall match score (0-100)")
-    skill_score: float = Field(description="Skill match score")
     research_score: float = Field(description="Research match score")
-    experience_score: float = Field(description="Experience match score")
     match_reasons: List[str] = Field(default_factory=list, description="Match reasons")
-    highlight_skills: List[str] = Field(default_factory=list, description="Matched skills to highlight")
 
 
 class MatchResponse(BaseModel):

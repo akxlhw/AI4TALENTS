@@ -1,6 +1,8 @@
 """
 Mock LLM Gateway for testing.
 Mock LLM 网关实现，用于单元测试
+
+v1.4.1: Simplified to only output research_areas
 """
 
 from typing import List
@@ -9,12 +11,11 @@ from dataclasses import dataclass
 
 @dataclass
 class JDFeatures:
-    """JD 解析结果"""
-    skills: List[str]
-    experience: str
+    """JD 解析结果
+
+    v1.4.1: Simplified to only output research_areas
+    """
     research_areas: List[str]
-    role_type: str
-    education_level: str | None
 
 
 @dataclass
@@ -47,11 +48,7 @@ class MockLLMGateway:
             fail_count: 失败次数（用于测试重试）
         """
         self._jd_features = jd_features or JDFeatures(
-            skills=["机器学习", "Python", "深度学习"],
-            experience="3年以上",
-            research_areas=["自然语言处理", "深度学习"],
-            role_type="engineer",
-            education_level="master"
+            research_areas=["Natural Language Processing", "Deep Learning", "Machine Learning"]
         )
         self._embedding = embedding or [0.1] * 1536
         self._should_fail = should_fail
@@ -78,6 +75,22 @@ class MockLLMGateway:
             raise Exception("Mock LLM API error")
 
         return self._jd_features
+
+    async def parse_jd_with_fallback(self, jd_text: str) -> JDFeatures:
+        """解析 JD 文本
+
+        v1.4.1: 移除 fallback，如果解析失败直接抛出错误
+
+        Args:
+            jd_text: JD 文本内容
+
+        Returns:
+            JDFeatures: 解析出的特征
+
+        Raises:
+            Exception: 如果 should_fail=True
+        """
+        return await self.parse_jd(jd_text)
 
     async def generate_embedding(self, text: str) -> EmbeddingResult:
         """生成嵌入向量

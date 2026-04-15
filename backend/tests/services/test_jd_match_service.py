@@ -1,11 +1,11 @@
 """
 Tests for JD Match Service.
-岗位匹配服务测试 - v1.4 TDD
+岗位匹配服务测试 - v1.4.1
 
 Coverage:
-- JD parsing and feature extraction
-- Candidate matching
-- Score calculation
+- JD parsing and feature extraction (simplified to research_areas only)
+- Candidate matching (research direction + paper titles)
+- Score calculation (simplified to research score only)
 - Match reasons generation
 - Session management
 """
@@ -38,11 +38,8 @@ class MatchResultItem:
     name: str
     title: str
     overall_score: float
-    skill_score: float
     research_score: float
-    experience_score: float
     match_reasons: List[str]
-    highlight_skills: List[str]
 
 
 @dataclass
@@ -81,7 +78,7 @@ class TestJDMatchServiceParsing:
 
         # Assert
         assert result is not None
-        assert len(result.skills) > 0
+        assert len(result.research_areas) > 0
 
     @pytest.mark.asyncio
     async def test_parse_jd_caches_result(
@@ -98,11 +95,7 @@ class TestJDMatchServiceParsing:
         # 创建 mock 缓存
         mock_cache = AsyncMock()
         cached_features = JDFeatures(
-            skills=["机器学习"],
-            experience="3年以上",
-            research_areas=[],
-            role_type="engineer",
-            education_level="master"
+            research_areas=["Machine Learning", "Deep Learning"]
         )
         # 第一次返回 None（缓存未命中），第二次返回缓存结果
         mock_cache.get_jd_features = AsyncMock(side_effect=[None, cached_features])
@@ -146,7 +139,7 @@ class TestJDMatchServiceMatching:
         )
 
         config = MatchConfig(
-            weights={"skill": 0.4, "research": 0.3, "experience": 0.2, "education": 0.1},
+            weights={"research": 1.0},
             filters={},
             limit=10
         )
@@ -180,7 +173,7 @@ class TestJDMatchServiceMatching:
         )
 
         config = MatchConfig(
-            weights={"skill": 0.4, "research": 0.3, "experience": 0.2, "education": 0.1},
+            weights={"research": 1.0},
             filters={},
             limit=5
         )
@@ -213,7 +206,7 @@ class TestJDMatchServiceMatching:
         )
 
         config = MatchConfig(
-            weights={"skill": 0.4, "research": 0.3, "experience": 0.2, "education": 0.1},
+            weights={"research": 1.0},
             filters={
                 "min_citations": 100,
                 "school_ids": [1, 2, 3]
@@ -238,34 +231,6 @@ class TestJDMatchServiceScoring:
     """评分测试"""
 
     @pytest.mark.asyncio
-    async def test_calculate_skill_score(
-        self, test_session: AsyncSession
-    ):
-        """应正确计算技能分数"""
-        # Arrange
-        from app.services.jd_match.match_scorer import MatchScorer
-
-        scorer = MatchScorer()
-
-        jd_features = JDFeatures(
-            skills=["Python", "PyTorch", "NLP"],
-            experience="3年以上",
-            research_areas=["深度学习"],
-            role_type="engineer",
-            education_level="master"
-        )
-
-        candidate_skills = ["Python", "TensorFlow", "机器学习"]
-
-        # Act
-        score = scorer.calculate_skill_score(jd_features.skills, candidate_skills)
-
-        # Assert
-        assert 0 <= score <= 100
-        # Python 匹配，应有一定分数
-        assert score > 0
-
-    @pytest.mark.asyncio
     async def test_calculate_research_score(
         self, test_session: AsyncSession
     ):
@@ -275,45 +240,34 @@ class TestJDMatchServiceScoring:
 
         scorer = MatchScorer()
 
-        jd_areas = ["深度学习", "自然语言处理"]
-        candidate_areas = ["深度学习", "计算机视觉"]
+        jd_areas = ["Deep Learning", "Natural Language Processing"]
+        candidate_areas = ["Deep Learning", "Computer Vision"]
 
         # Act
         score = scorer.calculate_research_score(jd_areas, candidate_areas)
 
         # Assert
         assert 0 <= score <= 100
-        # 深度学习匹配
+        # Deep Learning 匹配
         assert score > 0
 
     @pytest.mark.asyncio
-    async def test_calculate_overall_score_with_weights(
+    async def test_calculate_overall_score(
         self, test_session: AsyncSession
     ):
-        """应使用权重计算综合分数"""
+        """应正确计算综合分数"""
         # Arrange
         from app.services.jd_match.match_scorer import MatchScorer
 
         scorer = MatchScorer()
-        weights = {
-            "skill": 0.4,
-            "research": 0.3,
-            "experience": 0.2,
-            "education": 0.1
-        }
 
         # Act
         overall = scorer.calculate_overall_score(
-            skill_score=80,
-            research_score=90,
-            experience_score=70,
-            education_score=60,
-            weights=weights
+            research_score=80
         )
 
         # Assert
-        expected = 80 * 0.4 + 90 * 0.3 + 70 * 0.2 + 60 * 0.1
-        assert abs(overall - expected) < 0.01
+        assert overall == 80.0
 
     @pytest.mark.asyncio
     async def test_score_zero_on_no_match(
@@ -326,13 +280,33 @@ class TestJDMatchServiceScoring:
         scorer = MatchScorer()
 
         # Act
-        score = scorer.calculate_skill_score(
-            jd_skills=["Rust", "Go"],
-            candidate_skills=["Python", "Java"]
+        score = scorer.calculate_research_score(
+            jd_areas=["Rust", "Go"],
+            candidate_matchable=["Python", "Java"]
         )
 
         # Assert
         assert score == 0
+
+    @pytest.mark.asyncio
+    async def test_score_with_five_requirements(
+        self, test_session: AsyncSession
+    ):
+        """分母上限为5，应正确计算"""
+        # Arrange
+        from app.services.jd_match.match_scorer import MatchScorer
+
+        scorer = MatchScorer()
+
+        # 5 个研究方向，全部匹配
+        jd_areas = ["Machine Learning", "Deep Learning", "NLP", "Computer Vision", "Reinforcement Learning"]
+        candidate_matchable = ["Machine Learning", "Deep Learning", "NLP", "Computer Vision", "Reinforcement Learning"]
+
+        # Act
+        score = scorer.calculate_research_score(jd_areas, candidate_matchable)
+
+        # Assert - 5/5 = 100%
+        assert score == 100.0
 
 
 class TestJDMatchServiceReasons:
@@ -349,16 +323,12 @@ class TestJDMatchServiceReasons:
         scorer = MatchScorer()
 
         jd_features = JDFeatures(
-            skills=["Python", "深度学习"],
-            experience="3年以上",
-            research_areas=["NLP"],
-            role_type="engineer",
-            education_level="master"
+            research_areas=["Natural Language Processing", "Deep Learning"]
         )
 
         candidate = {
-            "skills": ["Python", "PyTorch"],
-            "research_interests": "自然语言处理",
+            "research_topics": ["Natural Language Processing", "Machine Learning"],
+            "paper_titles": ["Deep Learning for NLP", "Transformer Models"],
             "h_index": 15
         }
 
@@ -367,28 +337,8 @@ class TestJDMatchServiceReasons:
 
         # Assert
         assert len(reasons) > 0
-        assert any("Python" in r or "技能" in r for r in reasons)
-
-    @pytest.mark.asyncio
-    async def test_reasons_includes_highlight_skills(
-        self, test_session: AsyncSession
-    ):
-        """匹配原因应包含高亮技能"""
-        # Arrange
-        from app.services.jd_match.match_scorer import MatchScorer
-
-        scorer = MatchScorer()
-
-        jd_skills = ["Python", "深度学习", "NLP"]
-        candidate_skills = ["Python", "深度学习", "机器学习"]
-
-        # Act
-        highlights = scorer.get_highlight_skills(jd_skills, candidate_skills)
-
-        # Assert
-        assert "Python" in highlights
-        assert "深度学习" in highlights
-        assert "机器学习" not in highlights  # 不在 JD 中
+        # 应包含研究方向匹配
+        assert any("研究方向" in r for r in reasons)
 
 
 class TestJDMatchServiceSession:
@@ -440,7 +390,7 @@ class TestJDMatchServiceErrorHandling:
     async def test_match_handles_llm_failure(
         self, test_session: AsyncSession
     ):
-        """LLM 失败应使用降级策略"""
+        """LLM 失败应抛出错误"""
         # Arrange
         from app.services.jd_match.jd_match_service import JDMatchService
 
@@ -455,18 +405,13 @@ class TestJDMatchServiceErrorHandling:
 
         config = MatchConfig(weights={}, filters={}, limit=10)
 
-        # Act & Assert - 应该有降级策略，不会抛出异常
-        # 或者抛出特定异常
-        try:
-            result = await service.match(
+        # Act & Assert - 应该抛出异常
+        with pytest.raises(Exception):
+            await service.match(
                 jd_text="招聘机器学习工程师",
                 config=config,
                 user_id=1
             )
-            # 如果有降级，应该返回结果
-        except Exception:
-            # 如果没有降级，应该抛出异常
-            pass
 
     @pytest.mark.asyncio
     async def test_match_handles_empty_jd(
@@ -525,4 +470,4 @@ class TestJDMatchServiceTiming:
 
         # Assert
         assert hasattr(result, 'took_ms')
-        assert result.took_ms > 0
+        assert result.took_ms >= 0  # 可能太快导致 took_ms 为 0

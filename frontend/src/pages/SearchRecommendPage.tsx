@@ -29,9 +29,7 @@ import {
   Tooltip,
   Segmented,
   Tabs,
-  Progress,
   Alert,
-  Descriptions,
   List,
   InputNumber,
   Badge,
@@ -136,6 +134,7 @@ const SearchRecommendPage: React.FC = () => {
   const [jdFeatures, setJdFeatures] = useState<JDFeatures | null>(savedJDState.jdFeatures)
   const [matchResults, setMatchResults] = useState<MatchResultItem[]>(savedJDState.matchResults)
   const [jdTookMs, setJdTookMs] = useState<number | null>(savedJDState.jdTookMs)
+  const [jdPage, setJdPage] = useState(1) // JD 匹配结果分页
 
   // 保存状态到 sessionStorage
   const saveJDState = useCallback((text: string, parsedText: string, features: JDFeatures | null, results: MatchResultItem[], took: number | null) => {
@@ -448,6 +447,7 @@ const SearchRecommendPage: React.FC = () => {
     setJdFeatures(null)
     setMatchResults([])
     setJdTookMs(null)
+    setJdPage(1)
     // 清除 sessionStorage
     sessionStorage.removeItem('jd_match_state')
   }
@@ -611,38 +611,38 @@ const SearchRecommendPage: React.FC = () => {
       title: '排名',
       key: 'rank',
       width: 60,
-      render: (_: unknown, __: MatchResultItem, index: number) => <Tag color={index < 3 ? 'gold' : 'default'}>{index + 1}</Tag>,
+      render: (_: unknown, __: MatchResultItem, index: number) => {
+        const rank = (jdPage - 1) * 10 + index + 1
+        return <Tag color={rank <= 3 ? 'gold' : 'default'}>{rank}</Tag>
+      },
     },
     {
       title: '姓名',
       dataIndex: 'name',
       key: 'name',
-      width: 150,
+      width: 100,
       render: (name: string, record: MatchResultItem) => (
         <a onClick={() => navigate(`/talents/${record.talent_id}`)} style={{ fontWeight: 500 }}>{name}</a>
       ),
     },
-    { title: '职位', dataIndex: 'title', key: 'title', width: 150, ellipsis: true },
-    { title: '学校', dataIndex: 'school_name', key: 'school_name', width: 150, ellipsis: true },
+    { title: '院校机构', dataIndex: 'school_name', key: 'school_name', width: 150, ellipsis: true },
     {
-      title: '综合分数',
+      title: '推荐指数',
       dataIndex: 'overall_score',
       key: 'overall_score',
-      width: 150,
-      render: (score: number) => (
-        <Progress percent={score} size="small" status={score >= 70 ? 'success' : score >= 50 ? 'normal' : 'exception'} format={(percent) => `${percent?.toFixed(0)}分`} />
-      ),
+      width: 70,
+      render: (score: number) => <Tag color={score >= 70 ? 'green' : score >= 50 ? 'blue' : 'default'}>{score.toFixed(0)}分</Tag>,
       sorter: (a: MatchResultItem, b: MatchResultItem) => a.overall_score - b.overall_score,
       defaultSortOrder: 'descend' as const,
     },
     {
-      title: '匹配技能',
-      dataIndex: 'highlight_skills',
-      key: 'highlight_skills',
+      title: '匹配原因',
+      dataIndex: 'match_reasons',
+      key: 'match_reasons',
       width: 200,
-      render: (skills: string[]) => (
+      render: (reasons: string[]) => (
         <Space size={[4, 4]} wrap>
-          {skills?.slice(0, 5).map((skill, idx) => <Tag key={idx} color="blue" style={{ margin: 0 }}>{skill}</Tag>)}
+          {reasons?.slice(0, 3).map((reason, idx) => <Tag key={idx} color="blue" style={{ margin: 0 }}>{reason}</Tag>)}
         </Space>
       ),
     },
@@ -805,7 +805,7 @@ const SearchRecommendPage: React.FC = () => {
                             </span>
                           </>
                         )}
-                        <span type="secondary">耗时 {tookMs.toFixed(0)}ms</span>
+                        <span style={{ color: '#999' }}>耗时 {tookMs.toFixed(0)}ms</span>
                       </Space>
                     }
                     type="info"
@@ -896,36 +896,27 @@ const SearchRecommendPage: React.FC = () => {
                       </Space>
                     </Card>
                     {jdFeatures && (
-                      <Card title="JD 解析结果" style={{ marginBottom: 16 }} size="small">
-                        <Descriptions column={1} size="small" bordered>
-                          <Descriptions.Item label="技能要求">
-                            <Space size={[4, 4]} wrap>{jdFeatures.skills?.map((skill, idx) => <Tag key={idx} color="blue">{skill}</Tag>)}</Space>
-                          </Descriptions.Item>
-                          <Descriptions.Item label="研究方向">
-                            <Space size={[4, 4]} wrap>
-                              {jdFeatures.research_areas?.length > 0 ? (
-                                jdFeatures.research_areas.map((area, idx) => <Tag key={idx} color="green">{area}</Tag>)
-                              ) : (
-                                <span style={{ color: '#999' }}>未指定</span>
-                              )}
-                            </Space>
-                          </Descriptions.Item>
-                          <Descriptions.Item label="经验要求">
-                            {jdFeatures.experience || '未指定'}
-                          </Descriptions.Item>
-                          <Descriptions.Item label="角色类型">
-                            <Tag color="purple">{jdFeatures.role_type || '未指定'}</Tag>
-                          </Descriptions.Item>
-                          <Descriptions.Item label="学历要求">
-                            <Tag color="orange">{jdFeatures.education_level || '未指定'}</Tag>
-                          </Descriptions.Item>
-                        </Descriptions>
+                      <Card title="JD 解析结果 - 研究方向" style={{ marginBottom: 16 }} size="small">
+                        <Space size={[4, 4]} wrap>
+                          {jdFeatures.research_areas?.length > 0 ? (
+                            jdFeatures.research_areas.map((area, idx) => <Tag key={idx} color="green">{area}</Tag>)
+                          ) : (
+                            <span style={{ color: '#999' }}>未识别到研究方向关键词</span>
+                          )}
+                        </Space>
                       </Card>
                     )}
                     <Card title={`匹配结果 (${matchResults.length} 人)`}>
                       <Spin spinning={jdLoading}>
                         {matchResults.length > 0 ? (
-                          <Table dataSource={matchResults} columns={jdColumns} rowKey="talent_id" pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 位候选人` }} scroll={{ x: 1200 }} />
+                          <Table
+                            dataSource={matchResults}
+                            columns={jdColumns}
+                            rowKey="talent_id"
+                            pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 位候选人` }}
+                            scroll={{ x: 1200 }}
+                            onChange={(pagination) => setJdPage(pagination.current || 1)}
+                          />
                         ) : (
                           <Empty description='请输入职位描述并点击"智能匹配"开始搜索' image={Empty.PRESENTED_IMAGE_SIMPLE} />
                         )}

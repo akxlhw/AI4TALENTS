@@ -335,8 +335,8 @@ class TestRecommendServiceReasons:
         # Act
         reasons = service.generate_reasons(
             similarity_score=0.85,
-            reference_talent={"research_interests": "机器学习"},
-            candidate_talent={"research_interests": "深度学习"}
+            reference_talent={"openalex_topics": ["Machine Learning"]},
+            candidate_talent={"openalex_topics": ["Deep Learning"]}
         )
 
         # Assert
@@ -358,8 +358,8 @@ class TestRecommendServiceReasons:
         # Act
         reasons = service.generate_reasons(
             similarity_score=0.9,
-            reference_talent={"research_interests": "NLP, 深度学习"},
-            candidate_talent={"research_interests": "深度学习, 机器学习"}
+            reference_talent={"openalex_topics": ["NLP", "Deep Learning"]},
+            candidate_talent={"openalex_topics": ["Deep Learning", "Machine Learning"]}
         )
 
         # Assert

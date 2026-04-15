@@ -13,42 +13,24 @@ class JDFeatures:
 
     LLM 从职位描述中提取的结构化特征。
 
+    v1.4.1: Simplified to only output research_areas (English keywords)
+
     Attributes:
-        skills: 所需技能列表
-        experience: 经验要求（如 "3年以上"）
-        research_areas: 研究方向列表
-        role_type: 角色类型 (engineer/researcher/intern/senior/lead)
-        education_level: 学历要求 (bachelor/master/phd/any)
-        keywords: 关键词列表
+        research_areas: 研究方向列表（英文关键词）
     """
-    skills: List[str] = field(default_factory=list)
-    experience: str = "未知"
     research_areas: List[str] = field(default_factory=list)
-    role_type: str = "unknown"
-    education_level: str | None = None
-    keywords: List[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """转换为字典"""
         return {
-            "skills": self.skills,
-            "experience": self.experience,
             "research_areas": self.research_areas,
-            "role_type": self.role_type,
-            "education_level": self.education_level,
-            "keywords": self.keywords,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "JDFeatures":
         """从字典创建"""
         return cls(
-            skills=data.get("skills", []),
-            experience=data.get("experience", "未知"),
             research_areas=data.get("research_areas", []),
-            role_type=data.get("role_type", "unknown"),
-            education_level=data.get("education_level"),
-            keywords=data.get("keywords", []),
         )
 
 

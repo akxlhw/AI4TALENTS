@@ -69,7 +69,18 @@ class Settings(BaseSettings):
     # LLM Advanced
     LLM_TIMEOUT: float = 30.0  # API timeout in seconds
     LLM_MAX_RETRIES: int = 3  # Max retry attempts
-    LLM_ENABLE_FALLBACK: bool = True  # Enable fallback to rule-based parsing
+    LLM_ENABLE_FALLBACK: bool = False  # Disable fallback, require LLM for JD parsing
+
+    # JD Match Score Weights (v1.4.1)
+    # Simplified to only research weight
+    JD_MATCH_WEIGHT_RESEARCH: float = 1.0  # 研究方向匹配权重
+
+    @property
+    def JD_MATCH_WEIGHTS(self) -> dict:
+        """获取 JD 匹配权重字典"""
+        return {
+            "research": self.JD_MATCH_WEIGHT_RESEARCH,
+        }
 
     # Embedding Configuration
     EMBEDDING_DIMENSION: int = 1536  # Vector dimension

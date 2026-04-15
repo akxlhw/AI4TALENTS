@@ -1,13 +1,12 @@
 """
 Tests for LLM Gateway.
-LLM 网关测试 - v1.4 TDD
+LLM 网关测试 - v1.4.1
 
 Coverage:
-- JD parsing
+- JD parsing (simplified to research_areas only)
 - Embedding generation
 - Error handling
 - Retry logic
-- Fallback strategy
 - Health check
 """
 
@@ -37,63 +36,16 @@ class TestLLMGatewayJDParsing:
         # Assert
         assert result is not None
         assert isinstance(result, JDFeatures)
-        assert len(result.skills) > 0
-        assert result.role_type is not None
-
-    @pytest.mark.asyncio
-    async def test_parse_jd_extracts_skills(self):
-        """解析 JD 应提取技能"""
-        # Arrange
-        expected_skills = ["Python", "PyTorch", "NLP"]
-        gateway = MockLLMGateway(
-            jd_features=JDFeatures(
-                skills=expected_skills,
-                experience="3年以上",
-                research_areas=[],
-                role_type="engineer",
-                education_level="master"
-            )
-        )
-
-        # Act
-        result = await gateway.parse_jd("招聘NLP工程师，熟悉Python和PyTorch")
-
-        # Assert
-        assert "Python" in result.skills
-        assert "PyTorch" in result.skills
-
-    @pytest.mark.asyncio
-    async def test_parse_jd_extracts_experience(self):
-        """解析 JD 应提取经验要求"""
-        # Arrange
-        gateway = MockLLMGateway(
-            jd_features=JDFeatures(
-                skills=["机器学习"],
-                experience="5年以上",
-                research_areas=[],
-                role_type="senior",
-                education_level="phd"
-            )
-        )
-
-        # Act
-        result = await gateway.parse_jd("招聘高级工程师，5年以上经验")
-
-        # Assert
-        assert result.experience == "5年以上"
+        assert len(result.research_areas) > 0
 
     @pytest.mark.asyncio
     async def test_parse_jd_extracts_research_areas(self):
         """解析 JD 应提取研究方向"""
         # Arrange
-        expected_areas = ["计算机视觉", "深度学习"]
+        expected_areas = ["Computer Vision", "Deep Learning"]
         gateway = MockLLMGateway(
             jd_features=JDFeatures(
-                skills=["深度学习"],
-                experience="3年以上",
-                research_areas=expected_areas,
-                role_type="researcher",
-                education_level="phd"
+                research_areas=expected_areas
             )
         )
 
@@ -101,27 +53,8 @@ class TestLLMGatewayJDParsing:
         result = await gateway.parse_jd("招聘计算机视觉研究员")
 
         # Assert
-        assert "计算机视觉" in result.research_areas
-
-    @pytest.mark.asyncio
-    async def test_parse_jd_extracts_role_type(self):
-        """解析 JD 应提取角色类型"""
-        # Arrange
-        gateway = MockLLMGateway(
-            jd_features=JDFeatures(
-                skills=["机器学习"],
-                experience="应届",
-                research_areas=[],
-                role_type="intern",
-                education_level="bachelor"
-            )
-        )
-
-        # Act
-        result = await gateway.parse_jd("招聘实习生")
-
-        # Assert
-        assert result.role_type == "intern"
+        assert "Computer Vision" in result.research_areas
+        assert "Deep Learning" in result.research_areas
 
 
 class TestLLMGatewayEmbedding:
@@ -273,35 +206,6 @@ class TestLLMGatewayHealthCheck:
 
         # Assert
         assert result is False
-
-
-class TestLLMGatewayFallback:
-    """降级策略测试"""
-
-    @pytest.mark.asyncio
-    async def test_fallback_returns_minimal_features(self):
-        """降级应返回最小特征集"""
-        # 这个测试验证实际的 LLMGateway 实现
-        # 当 LLM API 不可用时，应使用规则降级
-        # 这里我们测试 Mock 行为作为示例
-
-        # Arrange
-        gateway = MockLLMGateway(
-            jd_features=JDFeatures(
-                skills=[],  # 降级时可能没有技能
-                experience="未知",
-                research_areas=[],
-                role_type="unknown",
-                education_level=None
-            )
-        )
-
-        # Act
-        result = await gateway.parse_jd("测试JD")
-
-        # Assert
-        assert result.role_type == "unknown"
-        assert result.experience == "未知"
 
 
 class TestLLMGatewayCache:

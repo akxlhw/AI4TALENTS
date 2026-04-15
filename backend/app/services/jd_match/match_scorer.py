@@ -1,63 +1,37 @@
 """
 Match Scorer implementation.
-匹配评分器实现 - v1.4
+匹配评分器实现 - v1.4.1
 
-Calculates match scores between JD features and candidate profiles.
+Simplified to only calculate research direction matching score.
+- Matches research_areas against openalex_topics and paper titles
+- Denominator limit changed from 3 to 5
 """
 
+import logging
 from typing import List, Dict, Any
+
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class MatchScorer:
     """匹配评分器
 
-    计算 JD 与候选人之间的匹配分数。
+    v1.4.1: Simplified to only calculate research score.
     """
-
-    def calculate_skill_score(
-        self,
-        jd_skills: List[str],
-        candidate_skills: List[str],
-    ) -> float:
-        """
-        计算技能匹配分数
-
-        Args:
-            jd_skills: JD 要求的技能
-            candidate_skills: 候选人具备的技能
-
-        Returns:
-            float: 0-100 的分数
-        """
-        if not jd_skills:
-            return 50.0
-
-        if not candidate_skills:
-            return 0.0
-
-        # 标准化为小写
-        jd_set = set(s.lower() for s in jd_skills)
-        candidate_set = set(s.lower() for s in candidate_skills)
-
-        # 计算交集
-        matched = jd_set & candidate_set
-
-        # 分数 = 匹配数 / JD要求数
-        score = len(matched) / len(jd_set) * 100
-
-        return min(100.0, score)
 
     def calculate_research_score(
         self,
         jd_areas: List[str],
-        candidate_areas: List[str],
+        candidate_matchable: List[str],
     ) -> float:
         """
-        计算研究方向匹配分数
+        计算研究方向匹配分数（支持子串匹配）
 
         Args:
-            jd_areas: JD 要求的研究方向
-            candidate_areas: 候选人的研究方向
+            jd_areas: JD 要求的研究方向（英文关键词）
+            candidate_matchable: 候选人的可匹配内容（研究方向 + 论文标题）
 
         Returns:
             float: 0-100 的分数
@@ -65,52 +39,54 @@ class MatchScorer:
         if not jd_areas:
             return 50.0
 
-        if not candidate_areas:
+        if not candidate_matchable:
             return 0.0
 
         # 标准化
-        jd_set = set(a.lower() for a in jd_areas)
-        candidate_set = set(a.lower() for a in candidate_areas)
+        jd_keywords = [a.lower() for a in jd_areas]
+        candidate_lower = [a.lower() for a in candidate_matchable]
 
-        # 计算交集
-        matched = jd_set & candidate_set
+        # 子串匹配：检查 JD 关键词是否出现在候选人的研究方向或论文标题中
+        matched = set()
+        for jd_kw in jd_keywords:
+            for cand_item in candidate_lower:
+                # 双向子串匹配
+                if jd_kw in cand_item or cand_item in jd_kw:
+                    matched.add(jd_kw)
+                    logger.debug(f"Research matched: JD '{jd_kw}' <-> Candidate '{cand_item}'")
+                    break
 
-        score = len(matched) / len(jd_set) * 100
+        # v1.4.1: 按5个计要求数，超过计顶格
+        max_required = 5
+        required_count = min(len(jd_keywords), max_required)
+        matched_count = min(len(matched), max_required)
+
+        # 分数 = 匹配数 / 要求数
+        score = matched_count / required_count * 100
+
+        logger.info(
+            f"Research score: {score:.1f} "
+            f"(matched={len(matched)}/{required_count}, JD={jd_keywords})"
+        )
 
         return min(100.0, score)
 
     def calculate_overall_score(
         self,
-        skill_score: float,
         research_score: float,
-        experience_score: float,
-        education_score: float,
-        weights: Dict[str, float],
     ) -> float:
         """
         计算综合分数
 
+        v1.4.1: Simplified to only use research score
+
         Args:
-            skill_score: 技能分数
             research_score: 研究方向分数
-            experience_score: 经验分数
-            education_score: 学历分数
-            weights: 权重配置
 
         Returns:
             float: 0-100 的综合分数
         """
-        w = weights or {}
-        total_weight = sum(w.values()) or 1.0
-
-        overall = (
-            skill_score * w.get("skill", 0.25) +
-            research_score * w.get("research", 0.25) +
-            experience_score * w.get("experience", 0.25) +
-            education_score * w.get("education", 0.25)
-        ) / total_weight
-
-        return min(100.0, max(0.0, overall))
+        return min(100.0, max(0.0, research_score))
 
     def generate_match_reasons(
         self,
@@ -129,48 +105,29 @@ class MatchScorer:
         """
         reasons = []
 
-        # 技能匹配
-        jd_skills = set(s.lower() for s in jd_features.skills)
-        candidate_skills = set(s.lower() for s in candidate.get("skills", []))
-        matched_skills = jd_skills & candidate_skills
+        # 研究方向匹配（子串匹配）
+        research_topics = candidate.get("research_topics", [])
+        paper_titles = candidate.get("paper_titles", [])
 
-        if matched_skills:
-            reasons.append(f"技能匹配：{', '.join(matched_skills)}")
+        # 合并研究方向和论文标题
+        all_matchable = research_topics + paper_titles
 
-        # 研究方向匹配
-        if candidate.get("research_interests"):
-            jd_areas = set(a.lower() for a in jd_features.research_areas)
-            research = candidate["research_interests"].lower()
-            for area in jd_areas:
-                if area in research:
-                    reasons.append(f"研究方向匹配：{area}")
-                    break
+        if all_matchable and jd_features.research_areas:
+            jd_areas = [a.lower() for a in jd_features.research_areas]
+            candidate_items = [item.lower() for item in all_matchable]
+            matched_areas = set()
+
+            for jd_kw in jd_areas:
+                for cand_item in candidate_items:
+                    if jd_kw in cand_item or cand_item in jd_kw:
+                        matched_areas.add(jd_kw)
+                        break
+
+            if matched_areas:
+                reasons.append(f"研究方向匹配：{', '.join(list(matched_areas)[:5])}")
 
         # 引用量
         if candidate.get("h_index", 0) >= 10:
             reasons.append(f"高影响力学者：H-index {candidate['h_index']}")
 
         return reasons
-
-    def get_highlight_skills(
-        self,
-        jd_skills: List[str],
-        candidate_skills: List[str],
-    ) -> List[str]:
-        """
-        获取高亮技能（匹配的技能）
-
-        Args:
-            jd_skills: JD 要求的技能
-            candidate_skills: 候选人具备的技能
-
-        Returns:
-            List[str]: 匹配的技能列表
-        """
-        jd_set = set(s.lower() for s in jd_skills)
-        candidate_set = set(s.lower() for s in candidate_skills)
-
-        matched = jd_set & candidate_set
-
-        # 返回原始大小写形式
-        return [s for s in jd_skills if s.lower() in matched]

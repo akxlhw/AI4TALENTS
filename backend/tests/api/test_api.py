@@ -266,7 +266,7 @@ class TestTalentsEndpoint:
             role_type=RoleType.PROFESSOR.value,
             works_count=50,
             cited_by_count=1000,
-            research_interests="Machine Learning",
+            openalex_topics=["Machine Learning", "Deep Learning"],
         )
         test_session.add(talent)
         await test_session.flush()
@@ -289,7 +289,7 @@ class TestTalentsEndpoint:
         assert data["name"] == "John Doe"
         assert data["role_type"] == "professor"
         assert data["school_name"] == "MIT"
-        assert data["research_interests"] == "Machine Learning"
+        assert "Machine Learning" in data.get("openalex_topics", [])
         assert data["role_reason"] == "High citation count"
         assert data["academic_age"] == 15
 

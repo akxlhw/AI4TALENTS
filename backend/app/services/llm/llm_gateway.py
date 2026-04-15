@@ -27,29 +27,20 @@ logger = logging.getLogger(__name__)
 
 
 # System prompt for JD parsing
-JD_PARSE_PROMPT = """你是一个专业的招聘助手。请分析以下职位描述（JD），提取关键信息。
+# v1.4.1: Simplified to only output research_areas (English keywords)
+JD_PARSE_PROMPT = """你是一个专业的招聘助手。请分析以下职位描述（JD），提取研究方向关键词。
 
 请直接返回 JSON 格式，不要有任何分析过程或解释。
 
 返回格式：
 {
-    "skills": ["技能1", "技能2", ...],
-    "experience": "经验要求",
-    "research_areas": ["研究方向1", ...],
-    "role_type": "角色类型",
-    "education_level": "学历要求",
-    "keywords": ["关键词1", ...]
+    "research_areas": ["area1", "area2", ...]
 }
 
 字段说明：
-- skills: 技术技能列表（编程语言、框架、工具），如 ["Python", "TensorFlow", "PyTorch"]
-- research_areas: 学术研究领域，如 ["自然语言处理", "计算机视觉", "深度学习", "机器学习"]
-- experience: 经验要求，如 "3年以上"
-- role_type: engineer/researcher/intern/senior/lead
-- education_level: bachelor/master/phd/any
-- keywords: 关键词列表
+- research_areas: 学术研究领域，必须使用英文关键词，如 ["Natural Language Processing", "Computer Vision", "Deep Learning", "Machine Learning", "Speech Recognition", "Reinforcement Learning", "Generative AI", "Large Language Models"]
 
-注意：skills 是技术技能，research_areas 是学术研究领域，不要混淆。
+重要：research_areas 必须输出英文关键词，以便与学术数据库匹配。
 
 直接返回 JSON 对象，从 { 开始，以 } 结束，不要有任何其他内容。"""
 
@@ -242,23 +233,20 @@ class LLMGateway(LLMGatewayProtocol):
 
     async def parse_jd_with_fallback(self, jd_text: str) -> JDFeatures:
         """
-        解析 JD 文本（带 fallback）
+        解析 JD 文本
 
-        先尝试 LLM 解析，如果所有重试都失败则使用规则解析。
+        v1.4.1: 移除 fallback，如果 LLM 解析失败直接抛出错误给用户
 
         Args:
             jd_text: JD 文本内容
 
         Returns:
             JDFeatures: 解析出的特征
+
+        Raises:
+            LLMError: LLM API 调用失败
         """
-        try:
-            return await self.parse_jd(jd_text)
-        except LLMError as e:
-            logger.warning(f"LLM parsing failed after all retries: {e}")
-            if self.enable_fallback:
-                return self._fallback_parse(jd_text)
-            raise
+        return await self.parse_jd(jd_text)
 
     @with_retry(max_retries=3)
     @with_timeout(timeout_seconds=60.0)
@@ -550,114 +538,6 @@ class LLMGateway(LLMGatewayProtocol):
         except Exception as e:
             logger.warning(f"Health check failed: {e}")
             return False
-
-    def _fallback_parse(self, jd_text: str) -> JDFeatures:
-        """
-        降级策略：基于规则的 JD 解析
-
-        当 LLM API 不可用时使用。
-
-        Args:
-            jd_text: JD 文本
-
-        Returns:
-            JDFeatures: 解析出的特征
-        """
-        logger.info("Using fallback JD parsing")
-
-        # 技能关键词库（技术工具、框架、编程语言）
-        SKILL_KEYWORDS = [
-            "Python", "Java", "C++", "Go", "Rust", "JavaScript", "TypeScript",
-            "PyTorch", "TensorFlow", "Keras", "scikit-learn",
-            "大数据", "分布式", "云计算", "Docker", "Kubernetes",
-            "数据库", "MySQL", "PostgreSQL", "MongoDB", "Redis",
-            "前端", "后端", "全栈", "架构",
-        ]
-
-        # 研究方向关键词库（学术领域）
-        RESEARCH_KEYWORDS = [
-            "人工智能", "AI", "机器学习", "深度学习", "强化学习",
-            "自然语言处理", "NLP", "语音识别", "语音合成",
-            "计算机视觉", "CV", "图像处理", "目标检测",
-            "推荐系统", "知识图谱", "数据挖掘", "数据分析",
-            "神经网络", "大模型", "LLM", "生成式AI",
-            "联邦学习", "迁移学习", "多模态",
-        ]
-
-        # 经验关键词
-        EXPERIENCE_PATTERNS = [
-            ("应届", "应届"),
-            ("1年", "1年以上"),
-            ("2年", "2年以上"),
-            ("3年", "3年以上"),
-            ("5年", "5年以上"),
-            ("5+", "5年以上"),
-            ("十年", "10年以上"),
-        ]
-
-        # 学历关键词
-        EDUCATION_PATTERNS = [
-            ("本科", "bachelor"),
-            ("硕士", "master"),
-            ("博士", "phd"),
-            ("研究生", "master"),
-        ]
-
-        # 角色关键词
-        ROLE_PATTERNS = [
-            ("实习生", "intern"),
-            ("工程师", "engineer"),
-            ("研究员", "researcher"),
-            ("高级", "senior"),
-            ("资深", "senior"),
-            ("主管", "lead"),
-            ("经理", "lead"),
-        ]
-
-        # 提取技能
-        found_skills = []
-        text_lower = jd_text.lower()
-        for skill in SKILL_KEYWORDS:
-            if skill.lower() in text_lower or skill in jd_text:
-                found_skills.append(skill)
-
-        # 提取研究方向
-        found_research = []
-        for research in RESEARCH_KEYWORDS:
-            if research.lower() in text_lower or research in jd_text:
-                found_research.append(research)
-
-        # 提取经验
-        experience = "未知"
-        for pattern, value in EXPERIENCE_PATTERNS:
-            if pattern in jd_text:
-                experience = value
-                break
-
-        # 提取学历
-        education = None
-        for pattern, value in EDUCATION_PATTERNS:
-            if pattern in jd_text:
-                education = value
-                break
-
-        # 提取角色
-        role = "unknown"
-        for pattern, value in ROLE_PATTERNS:
-            if pattern in jd_text:
-                role = value
-                break
-
-        logger.info(f"Fallback JD parsing result - skills: {found_skills}, research_areas: {found_research}")
-
-        return JDFeatures(
-            skills=found_skills,
-            experience=experience,
-            research_areas=found_research,
-            role_type=role,
-            education_level=education,
-            keywords=found_skills[:10] + found_research[:5],  # 合并技能和研究方向作为关键词
-        )
 
 
 def create_llm_gateway(

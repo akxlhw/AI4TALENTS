@@ -23,6 +23,7 @@ from app.services.llm import LLMGateway
 from app.services.llm.errors import EmptyJDError, LLMError
 from app.services.jd_match.jd_match_service import JDMatchService, MatchConfig
 from app.services.config_service import ConfigService
+from app.core.config import settings
 
 router = APIRouter(prefix="/jd-match", tags=["JD Match"])
 
@@ -55,6 +56,7 @@ async def get_llm_gateway(session: AsyncSession) -> LLMGateway:
         model=llm_config.model or "deepseek-chat",
         embedding_model=llm_config.embedding_model or "deepseek-embedding",
         timeout=llm_config.timeout or 60,
+        enable_fallback=settings.LLM_ENABLE_FALLBACK,
     )
 
 
@@ -62,7 +64,7 @@ async def get_llm_gateway(session: AsyncSession) -> LLMGateway:
     "/parse",
     response_model=JDFeaturesResponse,
     summary="解析 JD 文本",
-    description="使用 LLM 解析职位描述，提取技能、经验、研究方向等关键特征",
+    description="使用 LLM 解析职位描述，提取研究方向关键词（英文）",
 )
 async def parse_jd(
     request: JDParseRequest,
@@ -71,12 +73,10 @@ async def parse_jd(
     """
     Parse JD text and extract features.
 
+    v1.4.1: Simplified to only extract research_areas (English keywords).
+
     **Extracted Features:**
-    - `skills`: Required technical skills
-    - `experience`: Experience requirement
-    - `research_areas`: Research area requirements
-    - `role_type`: Identified role type
-    - `education_level`: Education level requirement
+    - `research_areas`: Research area requirements (English keywords)
 
     **Note:** This endpoint requires LLM to be enabled.
     """
@@ -91,11 +91,7 @@ async def parse_jd(
         features = await service.parse_jd(request.jd_text)
 
         return JDFeaturesResponse(
-            skills=features.skills,
-            experience=features.experience,
             research_areas=features.research_areas,
-            role_type=features.role_type,
-            education_level=features.education_level,
         )
 
     except HTTPException:
@@ -122,18 +118,19 @@ async def match_talents(
     """
     Match talents based on JD.
 
+    v1.4.1: Simplified to only calculate research direction matching.
+
     **Process:**
     1. Parse JD text using LLM
-    2. Extract required skills and research areas
-    3. Search for matching talents in database
-    4. Calculate match scores for each candidate
+    2. Extract research_areas (English keywords)
+    3. Search for matching talents by:
+       - Research topics (openalex_topics)
+       - Paper titles (raw_work.title)
+    4. Calculate match score (denominator limit: 5)
     5. Return sorted results with match reasons
 
-    **Match Score Components:**
-    - Skill score (default weight: 0.5)
-    - Research score (default weight: 0.4)
-    - Experience score (default weight: 0.05)
-    - Education score (default weight: 0.05)
+    **Match Score:**
+    - Research score: Based on keyword matching against topics and paper titles
 
     **Note:** This endpoint requires LLM to be enabled.
     """
@@ -174,11 +171,8 @@ async def match_talents(
                 title=item.title,
                 school_name=item.school_name,
                 overall_score=item.overall_score,
-                skill_score=item.skill_score,
                 research_score=item.research_score,
-                experience_score=item.experience_score,
                 match_reasons=item.match_reasons,
-                highlight_skills=item.highlight_skills,
             )
             for item in result.items
         ]
