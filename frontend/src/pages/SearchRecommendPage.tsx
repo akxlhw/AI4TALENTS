@@ -152,6 +152,13 @@ const SearchRecommendPage: React.FC = () => {
   const [jdTookMs, setJdTookMs] = useState<number | null>(savedJDState.jdTookMs)
   const [jdPage, setJdPage] = useState(1) // JD 匹配结果分页
 
+  // JD 匹配筛选条件
+  const [jdTechElementFilter, setJdTechElementFilter] = useState<number | undefined>()
+  const [jdCountryFilter, setJdCountryFilter] = useState<string | undefined>()
+  const [jdSchoolFilter, setJdSchoolFilter] = useState<number | undefined>()
+  const [jdRoleFilter, setJdRoleFilter] = useState<string | undefined>()
+  const [jdMinCitations, setJdMinCitations] = useState<number | undefined>()
+
   // 保存状态到 sessionStorage
   const saveJDState = useCallback((text: string, parsedText: string, features: JDFeatures | null, results: MatchResultItem[], took: number | null) => {
     try {
@@ -420,8 +427,20 @@ const SearchRecommendPage: React.FC = () => {
     }
     setJdLoading(true)
     try {
+      // 构建筛选条件
+      const filters: Record<string, unknown> = {}
+      if (jdTechElementFilter) filters.tech_element_id = jdTechElementFilter
+      if (jdCountryFilter) filters.country_code = jdCountryFilter
+      if (jdSchoolFilter) filters.school_id = jdSchoolFilter
+      if (jdRoleFilter) filters.role_type = jdRoleFilter
+      if (jdMinCitations) filters.min_citations = jdMinCitations
+
       const response = await api.jdMatch.match({
         jd_text: jdText,
+        config: {
+          filters,
+          limit: 50,
+        },
       })
       const results = response.data.items || []
       const took = response.data.took_ms
@@ -461,8 +480,25 @@ const SearchRecommendPage: React.FC = () => {
     setMatchResults([])
     setJdTookMs(null)
     setJdPage(1)
+    // 重置筛选条件
+    setJdTechElementFilter(undefined)
+    setJdCountryFilter(undefined)
+    setJdSchoolFilter(undefined)
+    setJdRoleFilter(undefined)
+    setJdMinCitations(undefined)
     // 清除 sessionStorage
     sessionStorage.removeItem('jd_match_state')
+  }
+
+  // JD 匹配是否有激活的筛选条件
+  const hasJdActiveFilters = jdTechElementFilter || jdCountryFilter || jdSchoolFilter || jdRoleFilter || jdMinCitations
+
+  const handleResetJdFilters = () => {
+    setJdTechElementFilter(undefined)
+    setJdCountryFilter(undefined)
+    setJdSchoolFilter(undefined)
+    setJdRoleFilter(undefined)
+    setJdMinCitations(undefined)
   }
 
   // ========== Recommend Functions ==========
@@ -902,6 +938,15 @@ const SearchRecommendPage: React.FC = () => {
                     <Alert message="输入职位描述(JD)，系统将使用 LLM 解析关键特征并智能匹配合适的人才。需要配置 LLM API Key。" type="info" showIcon style={{ marginBottom: 16 }} />
                     <Card title="职位描述 (JD)" style={{ marginBottom: 16 }}>
                       <TextArea placeholder="请粘贴职位描述内容，包括岗位职责、任职要求、技能要求等..." value={jdText} onChange={(e) => setJdText(e.target.value)} rows={6} showCount maxLength={5000} />
+                      <Space style={{ marginTop: 12, flexWrap: 'wrap' }}>
+                        <Text type="secondary">筛选:</Text>
+                        <Select placeholder="技术要素" value={jdTechElementFilter} onChange={setJdTechElementFilter} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techElementOptions} />
+                        <Select placeholder="国家" value={jdCountryFilter} onChange={setJdCountryFilter} allowClear showSearch optionFilterProp="label" style={{ width: 120 }} options={countryOptions} />
+                        <Select placeholder="学校" value={jdSchoolFilter} onChange={setJdSchoolFilter} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
+                        <Select placeholder="角色" value={jdRoleFilter} onChange={setJdRoleFilter} allowClear style={{ width: 140 }} options={[{ value: 'professor', label: '教授/研究员' }, { value: 'student', label: '学生' }, { value: 'graduated', label: '毕业生' }]} />
+                        <Select placeholder="最少引用" value={jdMinCitations} onChange={setJdMinCitations} allowClear style={{ width: 120 }} options={[{ value: 100, label: '100次以上' }, { value: 500, label: '500次以上' }, { value: 1000, label: '1000次以上' }]} />
+                        {hasJdActiveFilters && <Button type="link" icon={<ReloadOutlined />} onClick={handleResetJdFilters}>重置筛选</Button>}
+                      </Space>
                       <Space style={{ marginTop: 12 }}>
                         <Button type="primary" icon={<SearchOutlined />} onClick={handleMatch} loading={jdLoading}>智能匹配 {jdTookMs && <Text type="secondary">({jdTookMs.toFixed(0)}ms)</Text>}</Button>
                         <Button icon={<BulbOutlined />} onClick={handleParseJD} loading={parsing}>解析 JD</Button>
