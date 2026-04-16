@@ -985,7 +985,6 @@ const SearchRecommendPage: React.FC = () => {
                 {/* 相似推荐模式 */}
                 {recommendMode === 'similar' && (
                   <>
-                    <Alert message="选择参考人才，系统将推荐研究方向和技能相似的人才。推荐基于预计算的向量嵌入，不调用 LLM。" type="info" showIcon style={{ marginBottom: 16 }} />
                     <Card title="参考人才" style={{ marginBottom: 16 }}>
                       <Row gutter={[16, 16]}>
                         <Col span={24}>
