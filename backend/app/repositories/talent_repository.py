@@ -754,19 +754,22 @@ class TalentRepository:
             return []
 
         # Build OR conditions for openalex_topics
+        # 使用唯一参数名避免参数覆盖
         topic_conditions = []
-        for keyword in keywords:
+        for i, keyword in enumerate(keywords):
             pattern = f"%{keyword}%"
+            param_name = f"topic_pattern_{i}"
             topic_conditions.append(
-                text("core_talent.openalex_topics::text ILIKE :pattern").bindparams(pattern=pattern)
+                text(f"core_talent.openalex_topics::text ILIKE :{param_name}").bindparams(**{param_name: pattern})
             )
 
         # Build OR conditions for paper titles (EXISTS subquery)
         paper_conditions = []
-        for keyword in keywords:
+        for i, keyword in enumerate(keywords):
             pattern = f"%{keyword}%"
+            param_name = f"paper_pattern_{i}"
             paper_conditions.append(
-                text("""
+                text(f"""
                     EXISTS (
                         SELECT 1
                         FROM raw_work rw
@@ -779,9 +782,9 @@ class TalentRepository:
                             END
                         )
                         WHERE sa.std_author_id = core_talent.std_author_id
-                        AND rw.title ILIKE :pattern
+                        AND rw.title ILIKE :{param_name}
                     )
-                """).bindparams(pattern=pattern)
+                """).bindparams(**{param_name: pattern})
             )
 
         # Combine conditions based on search scope
