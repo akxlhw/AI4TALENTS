@@ -935,7 +935,6 @@ const SearchRecommendPage: React.FC = () => {
                 {/* 岗位匹配模式 */}
                 {recommendMode === 'jd-match' && (
                   <>
-                    <Alert message="输入职位描述(JD)，系统将使用 LLM 解析关键特征并智能匹配合适的人才。需要配置 LLM API Key。" type="info" showIcon style={{ marginBottom: 16 }} />
                     <Card title="职位描述 (JD)" style={{ marginBottom: 16 }}>
                       <TextArea placeholder="请粘贴职位描述内容，包括岗位职责、任职要求、技能要求等..." value={jdText} onChange={(e) => setJdText(e.target.value)} rows={6} showCount maxLength={5000} />
                       <Space style={{ marginTop: 12, flexWrap: 'wrap' }}>
