@@ -312,83 +312,89 @@ class SearchService:
         filters: dict | None,
     ) -> dict:
         """
-        关键词搜索
+        关键词搜索（使用 GIN 索引优化）
 
-        使用 ILIKE 进行模式匹配。
-        搜索范围：姓名、职位、研究方向、研究主题(openalex_topics)、论文标题
+        搜索范围：姓名、职位、研究方向(openalex_topics)、论文标题
+        使用 GIN 索引加速 JSON 数组和全文搜索。
         """
         # 默认搜索字段
         if fields is None:
             fields = ["name", "title", "topics", "works"]
 
-        # 构建搜索条件
+        # 收集匹配的人才 ID
+        matched_talent_ids: set = set()
         pattern = f"%{query}%"
 
-        # 基础查询
-        query_stmt = (
-            select(Talent)
-            .options(selectinload(Talent.school))
-            .where(Talent.is_visible.is_(True))
-        )
+        # 1. 姓名、职位搜索（使用 ILIKE，无专门索引）
+        basic_fields = [f for f in fields if f in ["name", "title"]]
+        if basic_fields:
+            query_stmt = (
+                select(Talent.talent_id)
+                .where(Talent.is_visible.is_(True))
+            )
 
-        # 字段映射（直接用 ORM 列的）
-        field_mapping = {
-            "name": [Talent.name, Talent.name_en],
-            "title": [Talent.current_title],
-        }
+            field_mapping = {
+                "name": [Talent.name, Talent.name_en],
+                "title": [Talent.current_title],
+            }
 
-        # 构建基础搜索条件
-        search_conditions = []
-        for field in fields:
-            if field in field_mapping:
-                for col in field_mapping[field]:
+            search_conditions = []
+            for field in basic_fields:
+                for col in field_mapping.get(field, []):
                     if col is not None:
                         search_conditions.append(col.ilike(pattern))
 
-        # 添加 openalex_topics 搜索（JSON 数组字段转为文本搜索）
+            if search_conditions:
+                query_stmt = query_stmt.where(or_(*search_conditions))
+                query_stmt = self._apply_filters(query_stmt, filters)
+                result = await self.session.execute(query_stmt)
+                for row in result.fetchall():
+                    matched_talent_ids.add(row.talent_id)
+
+        # 2. 研究方向搜索（使用模糊匹配，因为 openalex_topics 值通常是复合词）
         if "topics" in fields:
-            # 使用 PostgreSQL 的 ::text 转换来搜索 JSON 数组
-            search_conditions.append(
-                text("core_talent.openalex_topics::text ILIKE :pattern").bindparams(pattern=pattern)
+            # 使用 ILIKE 进行子串匹配
+            query_stmt = (
+                select(Talent.talent_id)
+                .where(Talent.is_visible.is_(True))
+                .where(text("core_talent.openalex_topics::text ILIKE :pattern").bindparams(pattern=pattern))
             )
+            query_stmt = self._apply_filters(query_stmt, filters)
+            result = await self.session.execute(query_stmt)
+            for row in result.fetchall():
+                matched_talent_ids.add(row.talent_id)
 
-        # 添加论文标题搜索（使用 EXISTS 子查询）
+        # 3. 论文标题搜索（使用 pg_trgm GIN 索引）
         if "works" in fields:
-            # 使用 Repository 的方式搜索论文标题
-            work_exists = text("""
-                EXISTS (
-                    SELECT 1
-                    FROM raw_work rw
-                    JOIN std_author sa ON sa.openalex_author_id = ANY(
-                        SELECT jsonb_array_elements_text(rw.author_ids::jsonb)
-                    )
-                    WHERE sa.std_author_id = core_talent.std_author_id
-                    AND rw.title ILIKE :pattern
+            try:
+                work_talents = await self.talent_repo._search_by_paper_titles_gin(
+                    keywords=[query],
+                    filters=filters,
+                    limit=page_size * 3,
                 )
-            """).bindparams(pattern=pattern)
-            search_conditions.append(work_exists)
+                for t in work_talents:
+                    matched_talent_ids.add(t.talent_id)
+            except Exception as e:
+                logger.warning(f"Paper title GIN search failed: {e}")
 
-        if search_conditions:
-            query_stmt = query_stmt.where(or_(*search_conditions))
+        # 4. 如果没有匹配，返回空结果
+        if not matched_talent_ids:
+            return {"total": 0, "items": []}
 
-        # 应用额外过滤 - 使用 Repository 的过滤器
-        query_stmt = self._apply_filters(query_stmt, filters)
+        # 5. 获取完整人才数据并排序
+        talent_ids_list = list(matched_talent_ids)
+        talents = await self.talent_repo.get_by_ids(talent_ids_list, include_relations=True)
 
-        # 获取总数
-        count_query = select(func.count()).select_from(query_stmt.subquery())
-        total_result = await self.session.execute(count_query)
-        total = total_result.scalar() or 0
+        # 按引用数排序
+        talents.sort(key=lambda t: t.cited_by_count or 0, reverse=True)
 
-        # 分页
+        # 6. 计算总数和分页
+        total = len(talents)
         offset = (page - 1) * page_size
-        query_stmt = query_stmt.order_by(Talent.cited_by_count.desc())
-        query_stmt = query_stmt.offset(offset).limit(page_size)
+        paginated_talents = talents[offset:offset + page_size]
 
-        result = await self.session.execute(query_stmt)
-        talents = list(result.scalars().all())
-
-        # 转换结果
-        items = [self._talent_to_dict(t) for t in talents]
+        # 7. 转换结果
+        items = [self._talent_to_dict(t) for t in paginated_talents]
 
         return {"total": total, "items": items}
 

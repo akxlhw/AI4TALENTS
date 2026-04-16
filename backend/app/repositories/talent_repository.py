@@ -736,10 +736,10 @@ class TalentRepository:
         limit: int = 100,
     ) -> List[Dict[str, Any]]:
         """
-        Comprehensive search for JD matching.
+        Comprehensive search for JD matching using GIN indexes.
 
-        Searches both openalex_topics (research direction) and paper titles.
-        Returns candidates with matched keywords.
+        Searches both openalex_topics (research direction) and paper titles
+        with optimized index usage.
 
         Args:
             keywords: List of research area keywords
@@ -753,97 +753,55 @@ class TalentRepository:
         if not keywords:
             return []
 
-        # Build OR conditions for openalex_topics
-        # 使用唯一参数名避免参数覆盖
-        topic_conditions = []
-        for i, keyword in enumerate(keywords):
-            pattern = f"%{keyword}%"
-            param_name = f"topic_pattern_{i}"
-            topic_conditions.append(
-                text(f"core_talent.openalex_topics::text ILIKE :{param_name}").bindparams(**{param_name: pattern})
-            )
+        talents: List[Talent] = []
+        talent_id_set: set = set()
 
-        # Build OR conditions for paper titles (EXISTS subquery)
-        paper_conditions = []
-        for i, keyword in enumerate(keywords):
-            pattern = f"%{keyword}%"
-            param_name = f"paper_pattern_{i}"
-            paper_conditions.append(
-                text(f"""
-                    EXISTS (
-                        SELECT 1
-                        FROM raw_work rw
-                        JOIN std_author sa ON sa.openalex_author_id = ANY(
-                            CASE
-                                WHEN rw.author_ids::jsonb ? 'id' THEN ARRAY[rw.author_ids::jsonb->>'id']
-                                WHEN jsonb_typeof(rw.author_ids::jsonb) = 'array' THEN
-                                    ARRAY(SELECT jsonb_array_elements_text(rw.author_ids::jsonb))
-                                ELSE ARRAY[]::text[]
-                            END
-                        )
-                        WHERE sa.std_author_id = core_talent.std_author_id
-                        AND rw.title ILIKE :{param_name}
-                    )
-                """).bindparams(**{param_name: pattern})
-            )
-
-        # Combine conditions based on search scope
-        all_conditions = []
+        # 1. Search openalex_topics using pg_trgm GIN index (fuzzy match)
         if "openalex_topics" in search_scope:
-            all_conditions.extend(topic_conditions)
-        if "paper_titles" in search_scope:
-            all_conditions.extend(paper_conditions)
+            topic_talents = await self.search_by_openalex_topics_gin(
+                keywords=keywords,
+                match_mode="fuzzy",
+                filters=filters,
+                limit=limit,
+            )
+            for t in topic_talents:
+                if t.talent_id not in talent_id_set:
+                    talents.append(t)
+                    talent_id_set.add(t.talent_id)
 
-        if not all_conditions:
-            return []
-
-        # Build query
-        query = (
-            select(Talent)
-            .options(joinedload(Talent.school))
-            .where(Talent.is_visible.is_(True))
-            .where(or_(*all_conditions))
-        )
-
-        # Apply filters
-        query = self._apply_search_filters(query, filters)
-
-        # Limit results
-        query = query.limit(limit * 2)  # Get more for scoring later
-
-        result = await self.session.execute(query)
-        talents = list(result.scalars().all())
+        # 2. Search paper titles using pg_trgm GIN index
+        if "paper_titles" in search_scope and len(talents) < limit:
+            paper_talents = await self._search_by_paper_titles_gin(
+                keywords=keywords,
+                filters=filters,
+                limit=limit,
+            )
+            for t in paper_talents:
+                if t.talent_id not in talent_id_set:
+                    talents.append(t)
+                    talent_id_set.add(t.talent_id)
 
         logger.info(f"Found {len(talents)} candidates for keywords: {keywords}")
 
-        # Batch get paper titles
+        # 3. Batch get paper titles
         talent_ids = [t.talent_id for t in talents]
         paper_titles_map = await self.get_paper_titles_for_talents(talent_ids)
 
-        # Build result with matched keywords
+        # 4. Build result with matched keywords
         candidates = []
         for talent in talents:
             paper_titles = paper_titles_map.get(talent.talent_id, [])
             openalex_topics = talent.openalex_topics or []
-
-            # Find matched keywords
-            matched_keywords = set()
-            all_text = " ".join(
-                [t.lower() for t in openalex_topics] +
-                [t.lower() for t in paper_titles]
-            )
-            for keyword in keywords:
-                if keyword.lower() in all_text:
-                    matched_keywords.add(keyword)
+            matched_keywords = self._find_matched_keywords(keywords, talent, paper_titles)
 
             candidates.append({
                 "talent": talent,
                 "paper_titles": paper_titles,
                 "openalex_topics": openalex_topics,
-                "matched_keywords": list(matched_keywords),
+                "matched_keywords": matched_keywords,
             })
 
-        return candidates
+        return candidates[:limit]
 
     def _apply_search_filters(self, query, filters: Optional[Dict[str, Any]]):
         """Apply common filters to a query."""
@@ -892,3 +850,189 @@ class TalentRepository:
             query = query.where(Talent.talent_id.in_(subquery))
 
         return query
+
+    # ========================================
+    # GIN Index Optimized Search Methods
+    # ========================================
+
+    async def search_by_openalex_topics_gin(
+        self,
+        keywords: List[str],
+        match_mode: str = "exact",
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 100,
+    ) -> List[Talent]:
+        """
+        Search talents by openalex_topics using GIN index.
+
+        This method leverages the GIN index on openalex_topics for efficient
+        JSON array containment queries, significantly faster than ILIKE scans.
+
+        Args:
+            keywords: List of keywords to search
+            match_mode:
+                - "exact": Precise match using @> operator (index accelerated)
+                - "fuzzy": Substring match using jsonb_array_elements + ILIKE
+            filters: Additional filters (school_id, role_type, etc.)
+            limit: Maximum results
+
+        Returns:
+            List of matching Talent instances
+        """
+        import json
+
+        if not keywords:
+            return []
+
+        # Build filter clauses for raw SQL
+        filter_clauses = ["t.is_visible = TRUE"]
+        params: Dict[str, Any] = {}
+
+        if filters:
+            if "school_id" in filters:
+                filter_clauses.append("t.school_id = :school_id")
+                params["school_id"] = filters["school_id"]
+            if "role_type" in filters:
+                filter_clauses.append("t.role_type = :role_type")
+                params["role_type"] = filters["role_type"]
+            if "min_citations" in filters:
+                filter_clauses.append("t.cited_by_count >= :min_citations")
+                params["min_citations"] = filters["min_citations"]
+
+        filter_sql = " AND ".join(filter_clauses)
+
+        if match_mode == "exact":
+            # Precise match: uses GIN index with @> operator
+            # Build OR conditions with safely escaped JSON values
+            conditions = []
+            for i, kw in enumerate(keywords):
+                # Safely escape the keyword for JSON
+                escaped_kw = json.dumps(kw)
+                conditions.append(f"t.openalex_topics::jsonb @> '[{escaped_kw}]'::jsonb")
+
+            conditions_sql = " OR ".join(conditions)
+            query_str = f"""
+                SELECT t.*
+                FROM core_talent t
+                WHERE {filter_sql}
+                AND ({conditions_sql})
+                ORDER BY t.cited_by_count DESC
+                LIMIT :limit
+            """
+        else:
+            # Fuzzy match: uses pg_trgm GIN index on openalex_topics::text
+            # This supports ILIKE substring matching with index acceleration
+            keyword_conditions = []
+            for i, kw in enumerate(keywords):
+                keyword_conditions.append(f"t.openalex_topics::text ILIKE :pattern_{i}")
+                params[f"pattern_{i}"] = f"%{kw}%"
+
+            conditions_sql = " OR ".join(keyword_conditions)
+            query_str = f"""
+                SELECT t.*
+                FROM core_talent t
+                WHERE {filter_sql}
+                AND ({conditions_sql})
+                ORDER BY t.cited_by_count DESC
+                LIMIT :limit
+            """
+
+        params["limit"] = limit
+        result = await self.session.execute(text(query_str), params)
+        rows = result.fetchall()
+
+        # Get talent IDs and fetch full objects
+        talent_ids = [row.talent_id for row in rows if hasattr(row, 'talent_id')]
+        if not talent_ids:
+            return []
+
+        return await self.get_by_ids(talent_ids, include_relations=True)
+
+    async def _search_by_paper_titles_gin(
+        self,
+        keywords: List[str],
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 100,
+    ) -> List[Talent]:
+        """
+        Search talents by paper titles using pg_trgm GIN index.
+
+        Uses the trigram index on raw_work.title for efficient ILIKE queries.
+
+        Args:
+            keywords: List of keywords to search in paper titles
+            filters: Additional filters
+            limit: Maximum results
+
+        Returns:
+            List of matching Talent instances
+        """
+        if not keywords:
+            return []
+
+        # Build OR conditions for keywords using ILIKE with pg_trgm index support
+        keyword_conditions = " OR ".join([f"rw.title ILIKE :kw_{i}" for i in range(len(keywords))])
+        params: Dict[str, Any] = {f"kw_{i}": f"%{kw}%" for i, kw in enumerate(keywords)}
+
+        # Build filter clauses
+        filter_clauses = []
+        if filters:
+            if "school_id" in filters:
+                filter_clauses.append("t.school_id = :school_id")
+                params["school_id"] = filters["school_id"]
+            if "role_type" in filters:
+                filter_clauses.append("t.role_type = :role_type")
+                params["role_type"] = filters["role_type"]
+
+        filter_sql = " AND " + " AND ".join(filter_clauses) if filter_clauses else ""
+
+        query_str = f"""
+            SELECT DISTINCT t.talent_id
+            FROM core_talent t
+            INNER JOIN std_author sa ON sa.std_author_id = t.std_author_id
+            INNER JOIN raw_work rw ON (
+                rw.author_ids::jsonb ? sa.openalex_author_id
+                OR rw.author_ids::text LIKE '%' || sa.openalex_author_id || '%'
+            )
+            WHERE t.is_visible = TRUE
+            AND ({keyword_conditions})
+            {filter_sql}
+            LIMIT :limit
+        """
+        params["limit"] = limit
+
+        result = await self.session.execute(text(query_str), params)
+        talent_ids = [row.talent_id for row in result.fetchall()]
+
+        if not talent_ids:
+            return []
+
+        # Fetch full Talent objects with relationships
+        return await self.get_by_ids(talent_ids, include_relations=True)
+
+    def _find_matched_keywords(
+        self,
+        keywords: List[str],
+        talent: Talent,
+        paper_titles: List[str] = None,
+    ) -> List[str]:
+        """
+        Find which keywords matched a talent's profile.
+
+        Args:
+            keywords: List of search keywords
+            talent: Talent instance
+            paper_titles: Optional list of paper titles
+
+        Returns:
+            List of matched keywords
+        """
+        matched = set()
+        all_text = " ".join(
+            [t.lower() for t in (talent.openalex_topics or [])] +
+            [t.lower() for t in (paper_titles or [])]
+        )
+        for keyword in keywords:
+            if keyword.lower() in all_text:
+                matched.add(keyword)
+        return list(matched)
