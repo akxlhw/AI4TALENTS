@@ -24,6 +24,7 @@ from app.services.llm.errors import EmptyJDError, LLMError
 from app.services.jd_match.jd_match_service import JDMatchService, MatchConfig
 from app.services.config_service import ConfigService
 from app.core.config import settings
+from app.api.v1.endpoints.auth import get_current_user
 
 router = APIRouter(prefix="/jd-match", tags=["JD Match"])
 
@@ -114,6 +115,7 @@ async def match_talents(
     request: JDMatchRequest,
     fastapi_request: Request,
     session: AsyncSession = Depends(get_async_session),
+    current_user: dict | None = Depends(get_current_user),
 ):
     """
     Match talents based on JD.
@@ -147,8 +149,8 @@ async def match_talents(
             limit=config_dict.limit,
         )
 
-        # Get user ID from request (if authenticated)
-        user_id = 1  # Default for now, should get from auth
+        # Get user ID from authentication (or use default admin user_id=15)
+        user_id = current_user["user_id"] if current_user else 15
 
         # Create service
         service = JDMatchService(

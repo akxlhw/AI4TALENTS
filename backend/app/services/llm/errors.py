@@ -122,3 +122,37 @@ class EmptyReferenceError(RecommendError):
 
     def __init__(self):
         super().__init__("参考人才列表不能为空")
+
+
+# ========================================
+# 搜索相关异常 (Search-specific errors)
+# ========================================
+
+class SemanticSearchError(SearchError):
+    """语义搜索失败错误"""
+
+    def __init__(self, message: str, original_error: Optional[Exception] = None):
+        super().__init__(message)
+        self.original_error = original_error
+
+
+class FulltextSearchError(SearchError):
+    """全文搜索失败错误"""
+
+    def __init__(self, message: str, original_error: Optional[Exception] = None):
+        super().__init__(message)
+        self.original_error = original_error
+
+
+class VectorParseError(SearchError):
+    """向量解析失败错误"""
+
+    def __init__(self, message: str = "向量格式解析失败"):
+        super().__init__(message)
+
+
+class EmbeddingServiceError(SearchError):
+    """嵌入服务错误"""
+
+    def __init__(self, message: str = "嵌入服务不可用"):
+        super().__init__(message)

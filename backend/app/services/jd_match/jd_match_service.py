@@ -7,22 +7,22 @@ Features:
 - Candidate matching (research direction + paper titles)
 - Score calculation (simplified to research score only)
 - Match reasons generation
+- Session persistence to database
 """
 
 from __future__ import annotations
 
 import time
 import logging
+from datetime import datetime
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any
 
-from sqlalchemy import select, and_, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy import select
 
-from app.models.talent import Talent
-from app.models.raw_data import RawWork
-from app.models.standardized import StdAuthor
+from app.repositories.talent_repository import TalentRepository
+from app.models.jd_match import JDMatchSession, JDMatchResult
 from app.services.llm.protocols import LLMGatewayProtocol, JDFeatures
 from app.services.llm.errors import JDMatchError, EmptyJDError
 from app.services.jd_match.match_scorer import MatchScorer
@@ -41,7 +41,7 @@ class MatchConfig:
     """
     weights: Dict[str, float] = field(default_factory=lambda: settings.JD_MATCH_WEIGHTS.copy())
     filters: Dict[str, Any] = field(default_factory=dict)
-    limit: int = 20
+    limit: int = 50
 
 
 @dataclass
@@ -100,6 +100,7 @@ class JDMatchService:
         llm_gateway: LLMGatewayProtocol,
         embed_service: Any = None,
         cache: Any = None,
+        talent_repository: TalentRepository | None = None,
     ):
         """
         初始化岗位匹配服务
@@ -109,6 +110,7 @@ class JDMatchService:
             llm_gateway: LLM 网关
             embed_service: 嵌入服务（可选）
             cache: 缓存管理器（可选）
+            talent_repository: 人才数据仓储（可选，默认自动创建）
         """
         self.session = session
         self.llm_gateway = llm_gateway
@@ -116,6 +118,7 @@ class JDMatchService:
         self.cache = cache
         self._scorer = MatchScorer()
         self._session_counter = 0  # 简化的会话计数器
+        self.talent_repo = talent_repository or TalentRepository(session)
 
     async def parse_jd(self, jd_text: str) -> JDFeatures:
         """
@@ -168,13 +171,25 @@ class JDMatchService:
         if not jd_text or not jd_text.strip():
             raise EmptyJDError()
 
-        # 创建会话
-        self._session_counter += 1
-        session_id = self._session_counter
+        # 创建数据库会话记录
+        db_session = JDMatchSession(
+            user_id=user_id,
+            jd_text=jd_text,
+            status="pending",
+            created_at=datetime.utcnow(),
+        )
+        self.session.add(db_session)
+        await self.session.flush()  # 获取 session_id
+        session_id = db_session.session_id
 
         try:
             # 解析 JD
             jd_features = await self.parse_jd(jd_text)
+
+            # 更新会话特征
+            db_session.jd_features = jd_features.to_dict() if hasattr(jd_features, 'to_dict') else {
+                "research_areas": jd_features.research_areas,
+            }
 
             # 获取候选人及其论文标题
             candidates = await self._get_candidates_with_papers(jd_features, config)
@@ -186,7 +201,29 @@ class JDMatchService:
             items.sort(key=lambda x: x.overall_score, reverse=True)
             items = items[:config.limit]
 
+            # 持久化匹配结果
+            for item in items:
+                result = JDMatchResult(
+                    session_id=session_id,
+                    talent_id=item.talent_id,
+                    overall_score=item.overall_score,
+                    research_score=item.research_score,
+                    skill_score=None,
+                    experience_score=None,
+                    match_reasons=item.match_reasons,
+                    highlight_skills=[],
+                    created_at=datetime.utcnow(),
+                )
+                self.session.add(result)
+
+            # 更新会话状态
+            db_session.status = "completed"
+            db_session.completed_at = datetime.utcnow()
+
             took_ms = (time.time() - start_time) * 1000
+
+            # 提交事务
+            await self.session.commit()
 
             return MatchResult(
                 session_id=session_id,
@@ -197,6 +234,10 @@ class JDMatchService:
 
         except Exception as e:
             logger.error(f"JD match failed: {e}")
+            # 更新会话状态为失败
+            db_session.status = "failed"
+            db_session.completed_at = datetime.utcnow()
+            await self.session.commit()  # 保存失败状态
             raise
 
     async def _get_candidates_with_papers(
@@ -204,76 +245,31 @@ class JDMatchService:
         jd_features: JDFeatures,
         config: MatchConfig,
     ) -> List[Dict[str, Any]]:
-        """获取候选人列表及其论文标题
+        """根据 JD 关键词搜索匹配的候选人
+
+        搜索范围：
+        1. openalex_topics (研究方向)
+        2. RawWork.title (论文标题)
 
         Returns:
-            List of dicts with keys: talent, paper_titles, openalex_topics
+            List of dicts with keys: talent, paper_titles, openalex_topics, matched_keywords
         """
-        # 基础查询：获取可见人才
-        query = (
-            select(Talent)
-            .options(joinedload(Talent.school))
-            .where(Talent.is_visible.is_(True))
+        research_areas = jd_features.research_areas
+        if not research_areas:
+            logger.warning("No research areas extracted from JD, returning empty candidates")
+            return []
+
+        # 使用 Repository 进行综合搜索
+        candidates = await self.talent_repo.search_by_research_keywords(
+            keywords=research_areas,
+            search_scope=["openalex_topics", "paper_titles"],
+            filters=config.filters,
+            limit=config.limit * 2,
         )
 
-        # 应用过滤条件
-        filters = config.filters
-        if "school_ids" in filters:
-            query = query.where(Talent.school_id.in_(filters["school_ids"]))
-
-        if "min_citations" in filters:
-            query = query.where(Talent.cited_by_count >= filters["min_citations"])
-
-        result = await self.session.execute(query.limit(100))
-        talents = list(result.scalars().all())
-
-        # 获取每个人才的论文标题
-        candidates = []
-        for talent in talents:
-            # 获取论文标题
-            paper_titles = await self._get_paper_titles_for_talent(talent)
-
-            candidates.append({
-                "talent": talent,
-                "paper_titles": paper_titles,
-                "openalex_topics": talent.openalex_topics or [],
-            })
+        logger.info(f"Found {len(candidates)} candidates matching JD keywords: {research_areas}")
 
         return candidates
-
-    async def _get_paper_titles_for_talent(self, talent: Talent) -> List[str]:
-        """获取人才的论文标题列表
-
-        数据路径: Talent.std_author_id → StdAuthor.openalex_author_id → RawWork.author_ids
-        """
-        if not talent.std_author_id:
-            return []
-
-        try:
-            # 获取 StdAuthor 的 openalex_author_id
-            std_author_query = select(StdAuthor.openalex_author_id).where(
-                StdAuthor.std_author_id == talent.std_author_id
-            )
-            result = await self.session.execute(std_author_query)
-            openalex_author_id = result.scalar_one_or_none()
-
-            if not openalex_author_id:
-                return []
-
-            # 查询 RawWork 中包含该作者的论文标题
-            # author_ids 是 JSON 数组字符串，使用 LIKE 模式匹配
-            paper_query = select(RawWork.title).where(
-                RawWork.author_ids.ilike(f'%"{openalex_author_id}"%')
-            ).limit(20)  # 限制论文数量
-
-            result = await self.session.execute(paper_query)
-            titles = [row[0] for row in result.all() if row[0]]
-
-            return titles
-
-        except Exception as e:
-            logger.warning(f"Failed to get paper titles for talent {talent.talent_id}: {e}")
-            return []
 
     async def _calculate_scores(
         self,
@@ -341,3 +337,35 @@ class JDMatchService:
             items.append(item)
 
         return items
+
+    async def get_session(self, session_id: int) -> dict | None:
+        """
+        获取匹配会话详情
+
+        Args:
+            session_id: 会话 ID
+
+        Returns:
+            会话信息字典，包含结果列表
+        """
+        # 查询会话
+        result = await self.session.execute(
+            select(JDMatchSession).where(JDMatchSession.session_id == session_id)
+        )
+        db_session = result.scalar_one_or_none()
+
+        if not db_session:
+            return None
+
+        # 查询结果
+        results_result = await self.session.execute(
+            select(JDMatchResult)
+            .where(JDMatchResult.session_id == session_id)
+            .order_by(JDMatchResult.overall_score.desc())
+        )
+        results = results_result.scalars().all()
+
+        return {
+            **db_session.to_dict(),
+            "results": [r.to_dict() for r in results],
+        }

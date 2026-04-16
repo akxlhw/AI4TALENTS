@@ -68,6 +68,22 @@ const { TextArea } = Input
 interface School { school_id: number; school_name: string }
 interface Country { country_code: string; country_name_cn: string }
 
+// Helper function to extract error message from API response
+// Handles both string and array format (FastAPI 422 validation errors)
+const getErrorMessage = (error: unknown, defaultMessage: string): string => {
+  const err = error as { response?: { data?: { detail?: unknown } } }
+  const detail = err.response?.data?.detail
+  if (typeof detail === 'string') {
+    return detail
+  }
+  if (Array.isArray(detail) && detail.length > 0) {
+    // FastAPI 422 validation error: [{ loc: [...], msg: "...", type: "..." }]
+    const firstError = detail[0] as { msg?: string }
+    return firstError.msg || defaultMessage
+  }
+  return defaultMessage
+}
+
 const SearchRecommendPage: React.FC = () => {
   const navigate = useNavigate()
   const [urlSearchParams] = useSearchParams()
@@ -391,8 +407,7 @@ const SearchRecommendPage: React.FC = () => {
       saveJDState(jdText, jdText, features, matchResults, jdTookMs)
       message.success('JD 解析成功')
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { detail?: string } } }
-      message.error(err.response?.data?.detail || 'JD 解析失败')
+      message.error(getErrorMessage(error, 'JD 解析失败'))
     } finally {
       setParsing(false)
     }
@@ -407,7 +422,6 @@ const SearchRecommendPage: React.FC = () => {
     try {
       const response = await api.jdMatch.match({
         jd_text: jdText,
-        config: { weights: { skill: 0.4, research: 0.3, experience: 0.2, education: 0.1 }, limit: 20 },
       })
       const results = response.data.items || []
       const took = response.data.took_ms
@@ -435,8 +449,7 @@ const SearchRecommendPage: React.FC = () => {
         saveJDState(jdText, jdText, jdFeatures, results, took)
       }
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { detail?: string } } }
-      message.error(err.response?.data?.detail || '匹配失败，请检查 LLM 配置')
+      message.error(getErrorMessage(error, '匹配失败，请检查 LLM 配置'))
       setJdLoading(false)
     }
   }

@@ -26,7 +26,15 @@ from sqlalchemy.orm import selectinload
 from app.models.talent import Talent
 from app.models.school import School
 from app.models.search import SearchTalentDocument
+from app.repositories.talent_repository import TalentRepository
 from app.services.search.errors import EmptyQueryError, InvalidSearchModeError
+from app.services.llm.errors import (
+    SemanticSearchError,
+    FulltextSearchError,
+    EmbeddingServiceError,
+    LLMError,
+)
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +205,8 @@ class SearchService:
         self,
         session: AsyncSession,
         embedding_service: Any = None,
-        config: SearchConfig | None = None
+        config: SearchConfig | None = None,
+        talent_repository: TalentRepository | None = None,
     ):
         """
         初始化搜索服务
@@ -206,10 +215,12 @@ class SearchService:
             session: 数据库会话
             embedding_service: 嵌入服务（可选，用于语义搜索）
             config: 搜索配置
+            talent_repository: 人才数据仓储（可选，默认自动创建）
         """
         self.session = session
         self.embedding_service = embedding_service
         self.config = config or SearchConfig()
+        self.talent_repo = talent_repository or TalentRepository(session)
 
     async def search(
         self,
@@ -308,7 +319,7 @@ class SearchService:
         """
         # 默认搜索字段
         if fields is None:
-            fields = ["name", "title", "research_interests", "topics", "works"]
+            fields = ["name", "title", "topics", "works"]
 
         # 构建搜索条件
         pattern = f"%{query}%"
@@ -324,7 +335,6 @@ class SearchService:
         field_mapping = {
             "name": [Talent.name, Talent.name_en],
             "title": [Talent.current_title],
-            "research_interests": [Talent.research_interests],
         }
 
         # 构建基础搜索条件
@@ -344,7 +354,7 @@ class SearchService:
 
         # 添加论文标题搜索（使用 EXISTS 子查询）
         if "works" in fields:
-            # author_ids 是 text 类型存储的 JSON 数组，需要转为 jsonb
+            # 使用 Repository 的方式搜索论文标题
             work_exists = text("""
                 EXISTS (
                     SELECT 1
@@ -361,7 +371,7 @@ class SearchService:
         if search_conditions:
             query_stmt = query_stmt.where(or_(*search_conditions))
 
-        # 应用额外过滤
+        # 应用额外过滤 - 使用 Repository 的过滤器
         query_stmt = self._apply_filters(query_stmt, filters)
 
         # 获取总数
@@ -404,14 +414,20 @@ class SearchService:
 
             if doc_count == 0:
                 logger.info("SearchTalentDocument table is empty, falling back to keyword search")
-                return await self._keyword_search(query, ["name", "title", "research_interests", "topics", "works"], False, page, page_size, filters)
+                return await self._keyword_search(query, ["name", "title", "topics", "works"], False, page, page_size, filters)
 
-            # 使用 search_text 进行简单匹配
-            pattern = f"%{query}%"
+            # 构建 tsquery 搜索词（使用 OR 连接多个词）
+            # 将查询词分词并用 OR 连接，支持部分匹配
+            search_terms = query.strip().split()
+            tsquery = " | ".join(search_terms)  # OR 搜索，任一词匹配即可
+
+            # 使用 tsvector 索引进行全文搜索
             query_stmt = (
                 select(SearchTalentDocument)
                 .where(SearchTalentDocument.is_active.is_(True))
-                .where(SearchTalentDocument.search_text.ilike(pattern))
+                .where(
+                    text("search_vector @@ to_tsquery('simple', :tsquery)").bindparams(tsquery=tsquery)
+                )
             )
 
             # 应用过滤
@@ -429,6 +445,31 @@ class SearchService:
             count_query = select(func.count()).select_from(query_stmt.subquery())
             total_result = await self.session.execute(count_query)
             total = total_result.scalar() or 0
+
+            # 如果 tsquery 搜索没有结果，尝试降级到 ILIKE 搜索
+            if total == 0:
+                logger.info(f"tsquery search returned 0 results, falling back to ILIKE for query: {query}")
+                pattern = f"%{query}%"
+                query_stmt = (
+                    select(SearchTalentDocument)
+                    .where(SearchTalentDocument.is_active.is_(True))
+                    .where(SearchTalentDocument.search_text.ilike(pattern))
+                )
+
+                # 重新应用过滤
+                if filters:
+                    if "school_id" in filters:
+                        query_stmt = query_stmt.where(
+                            SearchTalentDocument.school_id == filters["school_id"]
+                        )
+                    if "role_type" in filters:
+                        query_stmt = query_stmt.where(
+                            SearchTalentDocument.role_type == filters["role_type"]
+                        )
+
+                count_query = select(func.count()).select_from(query_stmt.subquery())
+                total_result = await self.session.execute(count_query)
+                total = total_result.scalar() or 0
 
             # 分页
             offset = (page - 1) * page_size
@@ -449,7 +490,6 @@ class SearchService:
                     "school_id": doc.school_id,
                     "school_name": doc.school_name,
                     "role_type": doc.role_type,
-                    "research_interests": None,
                     "topic_tags": doc.topic_tags or [],
                     "openalex_topics": [],  # SearchTalentDocument 没有 openalex_topics，需要从 core_talent 获取
                     "works_count": doc.works_count,
@@ -462,8 +502,9 @@ class SearchService:
             return {"total": total, "items": items}
 
         except Exception as e:
+            # 全文搜索失败，降级到关键词搜索
             logger.warning(f"Fulltext search failed: {e}, falling back to keyword search")
-            return await self._keyword_search(query, ["name", "title", "research_interests", "topics", "works"], False, page, page_size, filters)
+            return await self._keyword_search(query, ["name", "title", "topics", "works"], False, page, page_size, filters)
 
     async def _semantic_search(
         self,
@@ -500,97 +541,21 @@ class SearchService:
             # 获取查询嵌入向量
             query_embedding = await self.embedding_service.get_query_embedding(embedding_text)
 
-            # 使用 pgvector 进行向量相似度搜索
-            # 将向量转换为 PostgreSQL 格式（纯数值，安全）
-            vector_str = '[' + ','.join(str(v) for v in query_embedding) + ']'
-
             # 计算偏移量
             offset = (page - 1) * page_size
 
-            # 构建基础查询
-            # 注意：向量字符串直接嵌入 SQL，因为它是纯数值，没有 SQL 注入风险
-            base_query = f"""
-                SELECT t.talent_id, t.name, t.name_en, t.current_title, t.school_id,
-                       t.role_type, t.research_interests, t.topic_tags, t.openalex_topics,
-                       t.works_count, t.cited_by_count, t.h_index, t.orcid,
-                       s.school_name,
-                       e.embedding <=> '{vector_str}'::vector AS distance
-                FROM core_talent t
-                LEFT JOIN core_school s ON t.school_id = s.school_id
-                INNER JOIN core_talent_embedding e ON t.talent_id = e.talent_id
-                WHERE 1=1
-            """
+            # 使用 Repository 进行向量相似度搜索
+            items, total = await self.talent_repo.search_by_vector_similarity(
+                query_embedding=query_embedding,
+                similarity_threshold=settings.SEARCH_SEMANTIC_THRESHOLD,
+                filters=filters,
+                limit=page_size,
+                offset=offset,
+            )
 
-            # 添加过滤条件
-            filter_params = {}
-            filter_clauses = []
-
-            if filters:
-                if "school_id" in filters:
-                    filter_clauses.append("t.school_id = :school_id")
-                    filter_params["school_id"] = filters["school_id"]
-                if "role_type" in filters:
-                    filter_clauses.append("t.role_type = :role_type")
-                    filter_params["role_type"] = filters["role_type"]
-                if "min_citations" in filters:
-                    filter_clauses.append("t.cited_by_count >= :min_citations")
-                    filter_params["min_citations"] = filters["min_citations"]
-
-            if filter_clauses:
-                base_query += " AND " + " AND ".join(filter_clauses)
-
-            # 计算总数
-            count_query = f"SELECT COUNT(*) as total FROM ({base_query}) subq"
-            count_result = await self.session.execute(text(count_query), filter_params)
-            total = count_result.scalar() or 0
-
-            # 获取分页结果
-            # 相似度阈值：distance <= 0.3 即相似度 >= 70%
-            data_query = f"""
-                {base_query}
-                AND e.embedding <=> '{vector_str}'::vector <= 0.3
-                ORDER BY distance ASC
-                LIMIT :limit OFFSET :offset
-            """
-            filter_params["limit"] = page_size
-            filter_params["offset"] = offset
-
-            result = await self.session.execute(text(data_query), filter_params)
-            rows = result.fetchall()
-
-            # 转换结果，并过滤低于阈值的结果
-            items = []
-            precise_count = 0
-            similar_count = 0
-            for row in rows:
-                similarity = 1.0 - (row.distance or 0)
-                # 再次确认相似度 >= 70%
-                if similarity >= 0.7:
-                    items.append({
-                        "talent_id": row.talent_id,
-                        "name": row.name,
-                        "name_en": row.name_en,
-                        "title": row.current_title,
-                        "school_id": row.school_id,
-                        "school_name": row.school_name,
-                        "role_type": row.role_type,
-                        "research_interests": row.research_interests,
-                        "topic_tags": row.topic_tags or [],
-                        "openalex_topics": row.openalex_topics or [],
-                        "works_count": row.works_count,
-                        "cited_by_count": row.cited_by_count,
-                        "h_index": row.h_index,
-                        "orcid": row.orcid,
-                        "similarity_score": similarity,
-                    })
-                    # 统计精准匹配和相似匹配
-                    if similarity >= 0.95:
-                        precise_count += 1
-                    else:
-                        similar_count += 1
-
-            # 更新总数为实际过滤后的数量
-            total = len(items)
+            # 统计精准匹配和相似匹配
+            precise_count = sum(1 for item in items if item.get("similarity_score", 0) >= settings.SEARCH_PRECISE_THRESHOLD)
+            similar_count = sum(1 for item in items if settings.SEARCH_SIMILAR_THRESHOLD_MIN <= item.get("similarity_score", 0) < settings.SEARCH_PRECISE_THRESHOLD)
 
             logger.info(f"Semantic search found {total} results (similarity >= 70%) for query: {query}")
 
@@ -601,9 +566,19 @@ class SearchService:
                 "similar_count": similar_count,
             }
 
+        except LLMError as e:
+            # LLM 错误：可降级到全文搜索
+            logger.warning(f"Semantic search LLM error: {e}, falling back to fulltext")
+            await self.session.rollback()
+            return await self._fulltext_search(query, page, page_size, filters)
+        except ValueError as e:
+            # 向量格式错误：可降级
+            logger.warning(f"Semantic search vector error: {e}, falling back to fulltext")
+            await self.session.rollback()
+            return await self._fulltext_search(query, page, page_size, filters)
         except Exception as e:
-            logger.error(f"Semantic search failed: {e}, falling back to fulltext")
-            # 回滚失败的事务，确保后续查询可以执行
+            # 其他未知错误：记录并降级
+            logger.error(f"Semantic search unexpected error: {e}, falling back to fulltext")
             await self.session.rollback()
             return await self._fulltext_search(query, page, page_size, filters)
 
@@ -629,7 +604,7 @@ class SearchService:
         try:
             # 并行执行全文搜索和语义搜索
             # 获取更多结果用于融合
-            extended_page_size = min(page_size * 3, 100)
+            extended_page_size = min(page_size * settings.SEARCH_HYBRID_EXTENDED_FACTOR, 100)
 
             # 检查是否有中文到英文的翻译
             english_translation = get_english_translation(query)
@@ -660,7 +635,7 @@ class SearchService:
 
             # 融合结果
             # 使用倒数排名融合 (Reciprocal Rank Fusion)
-            k = 60  # RRF 常数
+            k = settings.SEARCH_RRF_CONSTANT
             score_map = {}  # talent_id -> combined_score
             item_map = {}   # talent_id -> item data
 
@@ -668,8 +643,8 @@ class SearchService:
             for rank, item in enumerate(fulltext_result["items"], 1):
                 tid = item["talent_id"]
                 score_map[tid] = score_map.get(tid, 0) + 1.0 / (k + rank)
-                # 全文搜索匹配的给高分相似度（95%+）
-                item["similarity_score"] = 0.95
+                # 全文搜索匹配的给高分相似度
+                item["similarity_score"] = settings.SEARCH_PRECISE_THRESHOLD
                 item_map[tid] = item
 
             # 语义搜索结果（已过滤相似度 >= 70%）
@@ -693,8 +668,8 @@ class SearchService:
             )
 
             # 计算精准匹配和相似匹配数量（基于全部合并结果）
-            precise_count = sum(1 for tid in sorted_ids if item_map[tid].get("similarity_score", 0) >= 0.95)
-            similar_count = sum(1 for tid in sorted_ids if 0.7 <= item_map[tid].get("similarity_score", 0) < 0.95)
+            precise_count = sum(1 for tid in sorted_ids if item_map[tid].get("similarity_score", 0) >= settings.SEARCH_PRECISE_THRESHOLD)
+            similar_count = sum(1 for tid in sorted_ids if settings.SEARCH_SIMILAR_THRESHOLD_MIN <= item_map[tid].get("similarity_score", 0) < settings.SEARCH_PRECISE_THRESHOLD)
 
             # 分页
             offset = (page - 1) * page_size
@@ -712,9 +687,19 @@ class SearchService:
                 "similar_count": similar_count,
             }
 
+        except LLMError as e:
+            # LLM 错误：降级到全文搜索
+            logger.warning(f"Hybrid search LLM error: {e}, falling back to fulltext")
+            await self.session.rollback()
+            return await self._fulltext_search(query, page, page_size, filters)
+        except ValueError as e:
+            # 向量格式错误：降级到全文搜索
+            logger.warning(f"Hybrid search vector error: {e}, falling back to fulltext")
+            await self.session.rollback()
+            return await self._fulltext_search(query, page, page_size, filters)
         except Exception as e:
-            logger.error(f"Hybrid search failed: {e}, falling back to keyword search")
-            # 回滚失败的事务
+            # 其他未知错误：降级到关键词搜索
+            logger.error(f"Hybrid search unexpected error: {e}, falling back to keyword search")
             await self.session.rollback()
             return await self._keyword_search(query, fields, fuzzy, page, page_size, filters)
 
@@ -751,7 +736,6 @@ class SearchService:
             "school_id": talent.school_id,
             "school_name": talent.school.school_name if talent.school else None,
             "role_type": talent.role_type,
-            "research_interests": talent.research_interests,
             "topic_tags": talent.topic_tags or [],
             "openalex_topics": talent.openalex_topics or [],
             "works_count": talent.works_count,

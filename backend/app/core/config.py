@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_HOURS: int = 8
 
-    # CORS - 前端固定使用 5173 端口
-    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # CORS - 前端固定使用 2012 端口
+    CORS_ORIGINS: list[str] = ["http://localhost:2012", "http://localhost:3000"]
 
     # Rate Limiting (disabled in development)
     RATE_LIMIT_ENABLED: bool = False  # Enable in production
@@ -89,6 +89,20 @@ class Settings(BaseSettings):
     # Search Configuration (v1.4)
     SEARCH_DEFAULT_MODE: str = "keyword"  # keyword, fulltext, semantic, hybrid
     SEARCH_ENABLE_SEMANTIC: bool = True  # Enable semantic search
+
+    # Search Thresholds
+    SEARCH_SEMANTIC_THRESHOLD: float = 0.7  # Minimum similarity for semantic search
+    SEARCH_PRECISE_THRESHOLD: float = 0.95  # Threshold for "precise match" classification
+    SEARCH_SIMILAR_THRESHOLD_MIN: float = 0.7  # Minimum for "similar match" classification
+
+    # Hybrid Search
+    SEARCH_RRF_CONSTANT: int = 60  # Reciprocal Rank Fusion constant (k)
+    SEARCH_HYBRID_EXTENDED_FACTOR: int = 3  # Get extended_page_size = page_size * factor
+
+    # Recommend Thresholds
+    RECOMMEND_SIMILARITY_THRESHOLD: float = 0.6  # Minimum similarity for recommendations
+    RECOMMEND_TAG_WEIGHT: float = 0.5  # Weight for tag overlap in fallback similarity
+    RECOMMEND_RESEARCH_WEIGHT: float = 0.5  # Weight for research overlap in fallback similarity
 
     class Config:
         env_file = ".env"

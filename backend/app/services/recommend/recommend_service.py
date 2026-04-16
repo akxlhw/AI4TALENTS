@@ -11,17 +11,20 @@ Features:
 
 from __future__ import annotations
 
+import json
 import time
 import logging
-from enum import Enum
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.talent import Talent
+from app.models.embedding import TalentEmbedding
+from app.repositories.talent_repository import TalentRepository
 from app.services.llm.errors import RecommendError, InvalidReferenceError, EmptyReferenceError
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +79,7 @@ class RecommendService:
         self,
         session: AsyncSession,
         embed_service: Any = None,
+        talent_repository: TalentRepository | None = None,
     ):
         """
         初始化推荐服务
@@ -83,9 +87,11 @@ class RecommendService:
         Args:
             session: 数据库会话
             embed_service: 嵌入服务（可选）
+            talent_repository: 人才数据仓储（可选，默认自动创建）
         """
         self.session = session
         self.embed_service = embed_service
+        self.talent_repo = talent_repository or TalentRepository(session)
 
     async def get_similar(
         self,
@@ -137,17 +143,8 @@ class RecommendService:
         if not talent_ids:
             return []
 
-        # 分批查询，避免 PostgreSQL 参数上限 (32767)
-        BATCH_SIZE = 5000
-        all_talents = []
-
-        for i in range(0, len(talent_ids), BATCH_SIZE):
-            batch_ids = talent_ids[i:i + BATCH_SIZE]
-            query = select(Talent).where(Talent.talent_id.in_(batch_ids))
-            result = await self.session.execute(query)
-            all_talents.extend(result.scalars().all())
-
-        return all_talents
+        # 使用 Repository 的批量查询方法
+        return await self.talent_repo.get_by_ids(talent_ids, include_relations=True)
 
     async def _find_similar(
         self,
@@ -155,10 +152,119 @@ class RecommendService:
         limit: int,
         filters: Dict[str, Any] | None,
     ) -> List[RecommendResultItem]:
-        """查找相似人才"""
-        # 简化实现：基于相同研究方向和技能
+        """查找相似人才
+
+        使用向量相似度搜索（如果有嵌入服务）或降级到标签匹配。
+        """
         reference_ids = {t.talent_id for t in reference_talents}
 
+        # 构建排除条件
+        exclude_ids = list(reference_ids)
+        if filters and "exclude_ids" in filters:
+            exclude_ids.extend(filters["exclude_ids"])
+
+        search_filters = {
+            "exclude_ids": exclude_ids,
+        }
+        if filters:
+            if "school_ids" in filters:
+                search_filters["school_ids"] = filters["school_ids"]
+
+        # 优先使用向量相似度搜索
+        if self.embed_service is not None:
+            items = await self._find_similar_by_vector(
+                reference_talents, limit, search_filters
+            )
+            if items:
+                return items
+
+        # 降级到标签匹配
+        return await self._find_similar_by_tags(reference_talents, limit, search_filters)
+
+    async def _find_similar_by_vector(
+        self,
+        reference_talents: List[Talent],
+        limit: int,
+        filters: Dict[str, Any],
+    ) -> List[RecommendResultItem]:
+        """使用向量相似度查找相似人才"""
+        try:
+            # 获取参考人才的嵌入向量
+            reference_ids = [t.talent_id for t in reference_talents]
+            query = (
+                select(TalentEmbedding.talent_id, TalentEmbedding.embedding)
+                .where(TalentEmbedding.talent_id.in_(reference_ids))
+            )
+            result = await self.session.execute(query)
+            embeddings = result.all()
+
+            if not embeddings:
+                logger.warning("No embeddings found for reference talents")
+                return []
+
+            # 计算平均向量作为查询向量
+            import numpy as np
+            vectors = []
+            for row in embeddings:
+                # embedding 是字符串格式的向量，使用 JSON 解析
+                emb_str = row.embedding
+                try:
+                    # 尝试 JSON 解析（标准格式）
+                    vec = json.loads(emb_str)
+                    if not isinstance(vec, list):
+                        raise ValueError(f"Embedding is not a list: {type(vec)}")
+                    vectors.append(vec)
+                except json.JSONDecodeError:
+                    # 降级：尝试逗号分隔格式
+                    logger.warning(f"Failed to parse embedding as JSON, trying comma-separated format")
+                    try:
+                        # 移除可能的方括号
+                        clean_str = emb_str.strip('[]')
+                        vec = [float(x) for x in clean_str.split(',') if x.strip()]
+                        vectors.append(vec)
+                    except ValueError as e:
+                        logger.error(f"Failed to parse embedding: {e}")
+                        continue
+
+            if not vectors:
+                logger.warning("No valid embeddings found for reference talents")
+                return []
+
+            query_vector = np.mean(vectors, axis=0).tolist()
+
+            # 使用 Repository 进行向量搜索
+            items, _ = await self.talent_repo.search_by_vector_similarity(
+                query_embedding=query_vector,
+                similarity_threshold=settings.RECOMMEND_SIMILARITY_THRESHOLD,
+                filters=filters,
+                limit=limit,
+            )
+
+            # 转换为 RecommendResultItem
+            results = []
+            for item in items:
+                results.append(RecommendResultItem(
+                    talent_id=item["talent_id"],
+                    name=item["name"],
+                    title=item.get("title") or "",
+                    school_name=item.get("school_name") or "",
+                    similarity_score=item.get("similarity_score", 0),
+                    reasons=self._generate_reasons_for_similarity(item.get("similarity_score", 0)),
+                ))
+
+            return results
+
+        except Exception as e:
+            logger.warning(f"Vector similarity search failed: {e}")
+            return []
+
+    async def _find_similar_by_tags(
+        self,
+        reference_talents: List[Talent],
+        limit: int,
+        filters: Dict[str, Any],
+    ) -> List[RecommendResultItem]:
+        """使用标签重叠查找相似人才（降级方案）"""
         # 收集参考人才的标签
         all_tags = set()
         all_research = set()
@@ -172,41 +278,42 @@ class RecommendService:
         query = (
             select(Talent)
             .where(Talent.is_visible.is_(True))
-            .where(~Talent.talent_id.in_(reference_ids))
+            .where(~Talent.talent_id.in_(filters.get("exclude_ids", [])))
         )
 
-        # 应用过滤
-        if filters:
-            if "exclude_ids" in filters:
-                query = query.where(~Talent.talent_id.in_(filters["exclude_ids"]))
-            if "school_ids" in filters:
-                query = query.where(Talent.school_id.in_(filters["school_ids"]))
+        if "school_ids" in filters:
+            query = query.where(Talent.school_id.in_(filters["school_ids"]))
 
-        result = await self.session.execute(query.limit(limit * 2))
+        result = await self.session.execute(query.limit(limit * 3))
         candidates = list(result.scalars().all())
 
         # 计算相似度并排序
         items = []
         for candidate in candidates:
             similarity = self._calculate_similarity(reference_talents, candidate)
-            reasons = self.generate_reasons(
-                similarity,
-                reference_talents[0].__dict__,
-                {"openalex_topics": candidate.openalex_topics}
-            )
-
-            items.append(RecommendResultItem(
-                talent_id=candidate.talent_id,
-                name=candidate.name,
-                title=candidate.current_title or "",
-                school_name="",  # 需要join
-                similarity_score=similarity,
-                reasons=reasons,
-            ))
+            if similarity > 0:
+                items.append(RecommendResultItem(
+                    talent_id=candidate.talent_id,
+                    name=candidate.name,
+                    title=candidate.current_title or "",
+                    school_name=candidate.school.school_name if candidate.school else "",
+                    similarity_score=similarity,
+                    reasons=self._generate_reasons_for_similarity(similarity),
+                ))
 
         # 按相似度排序
         items.sort(key=lambda x: x.similarity_score, reverse=True)
         return items[:limit]
+
+    def _generate_reasons_for_similarity(self, similarity_score: float) -> List[str]:
+        """根据相似度生成推荐原因"""
+        if similarity_score >= 0.8:
+            return ["高度相似：研究方向和技能高度匹配"]
+        elif similarity_score >= 0.6:
+            return ["中等相似：部分研究方向匹配"]
+        elif similarity_score > 0:
+            return ["部分匹配：有一定相似性"]
+        return []
 
 
     def _calculate_similarity(
@@ -244,12 +351,12 @@ class RecommendService:
         # 计算标签重叠
         if ref_tags and cand_tags:
             tag_overlap = len(ref_tags & cand_tags) / len(ref_tags)
-            score += tag_overlap * 0.5
+            score += tag_overlap * settings.RECOMMEND_TAG_WEIGHT
 
         # 计算研究方向重叠
         if ref_research and cand_research:
             research_overlap = len(ref_research & cand_research) / len(ref_research)
-            score += research_overlap * 0.5
+            score += research_overlap * settings.RECOMMEND_RESEARCH_WEIGHT
 
         return score
 
@@ -270,13 +377,4 @@ class RecommendService:
         Returns:
             List[str]: 推荐原因列表
         """
-        reasons = []
-
-        if similarity_score >= 0.8:
-            reasons.append("高度相似：研究方向和技能高度匹配")
-        elif similarity_score >= 0.5:
-            reasons.append("中等相似：部分研究方向匹配")
-        elif similarity_score > 0:
-            reasons.append("部分匹配：有一定相似性")
-
-        return reasons
+        return self._generate_reasons_for_similarity(similarity_score)
