@@ -47,7 +47,7 @@ mypy app/                     # Type check
 # Frontend
 cd frontend
 npm install
-npm run dev     # Start dev server on port 5173
+npm run dev     # Start dev server on port 2012
 npm run build   # Production build
 npm run lint    # ESLint
 
@@ -207,6 +207,6 @@ Performance indexes are created via migration `023_add_performance_indexes.py`.
 
 - Both development and production use PostgreSQL
 - Default admin: `admin` / `admin123`
-- Frontend port: 5173, Backend port: 8003
+- Frontend port: 2012, Backend port: 8003
 - OpenAlex API: https://api.openalex.org
 - Always use `--reload` flag when starting backend for development

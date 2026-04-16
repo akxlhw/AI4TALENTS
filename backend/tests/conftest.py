@@ -212,6 +212,33 @@ def mock_normal_user():
     }
 
 
+@pytest.fixture
+async def test_user(test_session: AsyncSession):
+    """Create a test user in database for JD match tests."""
+    from app.models.iam import UserAccount
+    from app.core.auth import hash_password
+
+    # Check if user already exists
+    result = await test_session.execute(
+        select(UserAccount).where(UserAccount.username == "test_jd_matcher")
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        return existing
+
+    user = UserAccount(
+        username="test_jd_matcher",
+        email="test_jd@example.com",
+        password_hash=hash_password("test123"),
+        role_type="admin",
+        is_active=True,
+    )
+    test_session.add(user)
+    await test_session.flush()
+    await test_session.refresh(user)
+    return user
+
+
 # ============ Utility Fixtures ============
 
 @pytest.fixture

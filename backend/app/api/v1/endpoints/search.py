@@ -104,6 +104,9 @@ async def enhanced_search_talents(
     role_type: str | None = Query(None, description="按角色类型筛选"),
     school_id: int | None = Query(None, description="按院校筛选"),
     min_citations: int | None = Query(None, description="最低引用数"),
+    min_works: int | None = Query(None, description="最低论文数"),
+    country_code: str | None = Query(None, description="按国家代码筛选"),
+    tech_element_id: int | None = Query(None, description="按技术要素筛选"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     session: AsyncSession = Depends(get_async_session),
@@ -121,6 +124,9 @@ async def enhanced_search_talents(
     - `role_type`: Filter by role (professor, student, etc.)
     - `school_id`: Filter by school
     - `min_citations`: Minimum citation count
+    - `min_works`: Minimum number of works
+    - `country_code`: Filter by country code (e.g., 'CN', 'US')
+    - `tech_element_id`: Filter by tech element
     """
     start_time = time.time()
 
@@ -140,6 +146,12 @@ async def enhanced_search_talents(
         filters["school_id"] = school_id
     if min_citations:
         filters["min_citations"] = min_citations
+    if min_works:
+        filters["min_works"] = min_works
+    if country_code:
+        filters["country_code"] = country_code
+    if tech_element_id:
+        filters["tech_element_id"] = tech_element_id
 
     try:
         # Create embedding service for semantic/hybrid search
@@ -199,7 +211,6 @@ async def enhanced_search_talents(
                 h_index=item.get("h_index", 0),
                 topic_tags=item.get("topic_tags", []),
                 openalex_topics=item.get("openalex_topics", []),
-                research_interests=item.get("research_interests"),
                 similarity_score=item.get("similarity_score"),
                 highlight=None,
             ))

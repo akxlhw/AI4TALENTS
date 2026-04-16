@@ -943,6 +943,7 @@ class TestTalentQueryOptimization:
             role_type=RoleType.PROFESSOR.value,
             visibility_status=VisibilityStatus.ACTIVE.value,
             is_visible=True,
+            openalex_topics=["人工智能", "机器学习"],  # 添加研究主题
         )
         talent_2 = Talent(
             source_type="openalex",
@@ -951,6 +952,7 @@ class TestTalentQueryOptimization:
             role_type=RoleType.PROFESSOR.value,
             visibility_status=VisibilityStatus.ACTIVE.value,
             is_visible=True,
+            openalex_topics=["计算机视觉", "图像处理"],  # 添加研究主题
         )
         test_session.add_all([talent_1, talent_2])
         await test_session.flush()
@@ -985,12 +987,14 @@ class TestTalentQueryOptimization:
         await test_session.refresh(talent_1)
         await test_session.refresh(talent_2)
 
-        # talent_1 应该有 topic_tags（关联 tech_element_1）
+        # talent_1 应该有 topic_tags（从 openalex_topics 复制）
         assert talent_1.topic_tags is not None
         assert "人工智能" in talent_1.topic_tags
+        assert "机器学习" in talent_1.topic_tags
 
-        # talent_2 不应该有 topic_tags（关联 tech_element_2，不在任务 1 范围内）
+        # talent_2 不应该有 topic_tags 更新（关联 tech_element_2，不在任务 1 范围内）
         # 注意：由于我们只更新了 task_1 相关的人才，talent_2 不应被修改
+        # talent_2 没有关联到 task_1 的 tech_element，所以不在更新范围内
         assert talent_2.topic_tags is None or "计算机视觉" not in (talent_2.topic_tags or [])
 
     @pytest.mark.asyncio

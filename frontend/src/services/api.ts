@@ -3,7 +3,9 @@
  */
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Use relative path for API requests (Vite proxy will handle routing)
+// In production, set VITE_API_URL to the actual backend URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
@@ -38,9 +40,16 @@ apiClient.interceptors.response.use(
       return Promise.reject(error)
     }
     if (error.response?.status === 401) {
-      // Handle unauthorized
+      // Handle unauthorized - but don't redirect if already on login page
+      // or if this is a login request (to allow error message to show)
+      const isLoginPage = window.location.pathname === '/login'
+      const isLoginRequest = error.config?.url?.includes('/auth/login')
+
       localStorage.removeItem('token')
-      window.location.href = '/login'
+
+      if (!isLoginPage && !isLoginRequest) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
@@ -363,6 +372,9 @@ export const api = {
       role_type?: string
       school_id?: number
       min_citations?: number
+      min_works?: number
+      country_code?: string
+      tech_element_id?: number
       page?: number
       page_size?: number
     }) => apiClient.get('/search/v2/talents', { params }),

@@ -218,6 +218,9 @@ const SearchPage: React.FC = () => {
         role_type: roleFilter,
         school_id: schoolFilter,
         min_citations: minCitations,
+        min_works: minWorks,
+        country_code: countryFilter,
+        tech_element_id: techElementFilter,
         page: pageNum,
         page_size: pageSize,
       })

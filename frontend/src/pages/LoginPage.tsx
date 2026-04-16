@@ -137,6 +137,7 @@ const LoginPage: React.FC = () => {
                 prefix={<UserOutlined style={{ color: '#999' }} />}
                 placeholder="用户名或邮箱"
                 style={{ borderRadius: 8 }}
+                autoComplete="username"
               />
             </Form.Item>
 
@@ -148,6 +149,7 @@ const LoginPage: React.FC = () => {
                 prefix={<LockOutlined style={{ color: '#999' }} />}
                 placeholder="密码"
                 style={{ borderRadius: 8 }}
+                autoComplete="new-password"
               />
             </Form.Item>
 
@@ -173,15 +175,15 @@ const LoginPage: React.FC = () => {
           </Form>
 
           {/* Tagline */}
-          <div style={{ textAlign: 'center', paddingTop: 8 }}>
+          <div style={{ textAlign: 'center' }}>
             <Text
               style={{
                 fontSize: 13,
-                color: '#999',
+                color: '#666',
                 letterSpacing: '2px',
               }}
             >
-              智选慧才，人岗相通
+              数聚良才，智选慧才
             </Text>
           </div>
         </Space>

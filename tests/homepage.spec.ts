@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'http://localhost:5173';
+const BASE_URL = 'http://localhost:2012';
 const API_URL = 'http://localhost:8003';
 
 test.describe('首页功能测试', () => {

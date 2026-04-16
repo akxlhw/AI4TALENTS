@@ -45,7 +45,6 @@ class Talent(Base, TimestampMixin):
     # openalex_topics: Research topics from OpenAlex API (topics field)
     # Format: ["Machine Learning", "Computer Vision", "Natural Language Processing"]
     openalex_topics = Column(JSON, default=[])
-    research_interests = Column(Text, nullable=True)
 
     # Summary for display
     summary = Column(Text, nullable=True)

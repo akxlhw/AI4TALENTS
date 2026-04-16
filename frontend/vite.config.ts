@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: 2012,
     strictPort: true,  // 固化端口，如果被占用则报错而不是切换端口
     host: true,
     proxy: {

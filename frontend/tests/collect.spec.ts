@@ -9,7 +9,7 @@
  */
 import { test, expect, Page } from '@playwright/test';
 
-const BASE_URL = 'http://localhost:5173';
+const BASE_URL = 'http://localhost:2012';
 
 // 登录辅助函数
 async function login(page: Page) {

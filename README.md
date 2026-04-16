@@ -174,7 +174,7 @@ make dev-frontend
 
 ### 访问地址
 
-- 前端: http://localhost:5173
+- 前端: http://localhost:2012
 - 后端 API: http://localhost:8003
 - API 文档: http://localhost:8003/docs
 - API 文档 (ReDoc): http://localhost:8003/redoc

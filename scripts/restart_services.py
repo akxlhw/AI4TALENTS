@@ -17,7 +17,7 @@ from pathlib import Path
 
 # 配置
 BACKEND_PORT = 8003
-FRONTEND_PORT = 5173
+FRONTEND_PORT = 2012
 BACKEND_DIR = Path(__file__).parent.parent / "backend"
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 

@@ -132,7 +132,6 @@ class TalentDetail(BaseModel):
     topic_tags: list[str] = Field(default_factory=list)
     openalex_topics: list[str] = Field(default_factory=list, description="OpenAlex研究主题")
     tech_tags: list[TechTagItem] = Field(default_factory=list, description="技术要素标签")
-    research_interests: str | None = None
     summary: str | None = None
     department_name: str | None = None
     lab_name: str | None = None

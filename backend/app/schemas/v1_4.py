@@ -83,7 +83,7 @@ class MatchConfigRequest(BaseModel):
         description="Score weights"
     )
     filters: dict = Field(default_factory=dict, description="Filters")
-    limit: int = Field(default=20, ge=1, le=100, description="Max results")
+    limit: int = Field(default=50, ge=1, le=100, description="Max results")
 
 
 class MatchResultItemResponse(BaseModel):

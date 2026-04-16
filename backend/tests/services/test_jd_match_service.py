@@ -122,7 +122,7 @@ class TestJDMatchServiceMatching:
 
     @pytest.mark.asyncio
     async def test_match_returns_candidates(
-        self, test_session: AsyncSession, sample_talent: dict
+        self, test_session: AsyncSession, sample_talent: dict, test_user
     ):
         """匹配应返回候选人列表"""
         # Arrange
@@ -148,7 +148,7 @@ class TestJDMatchServiceMatching:
         result = await service.match(
             jd_text="招聘机器学习工程师",
             config=config,
-            user_id=1
+            user_id=test_user.user_id
         )
 
         # Assert
@@ -157,7 +157,7 @@ class TestJDMatchServiceMatching:
 
     @pytest.mark.asyncio
     async def test_match_respects_limit(
-        self, test_session: AsyncSession, sample_talent: dict
+        self, test_session: AsyncSession, sample_talent: dict, test_user
     ):
         """匹配应遵守数量限制"""
         # Arrange
@@ -182,7 +182,7 @@ class TestJDMatchServiceMatching:
         result = await service.match(
             jd_text="招聘机器学习工程师",
             config=config,
-            user_id=1
+            user_id=test_user.user_id
         )
 
         # Assert
@@ -190,7 +190,7 @@ class TestJDMatchServiceMatching:
 
     @pytest.mark.asyncio
     async def test_match_applies_filters(
-        self, test_session: AsyncSession, sample_talent: dict
+        self, test_session: AsyncSession, sample_talent: dict, test_user
     ):
         """匹配应应用过滤条件"""
         # Arrange
@@ -346,7 +346,7 @@ class TestJDMatchServiceSession:
 
     @pytest.mark.asyncio
     async def test_create_session(
-        self, test_session: AsyncSession
+        self, test_session: AsyncSession, test_user
     ):
         """应创建匹配会话"""
         # Arrange
@@ -366,7 +366,7 @@ class TestJDMatchServiceSession:
         result = await service.match(
             jd_text="招聘机器学习工程师",
             config=MatchConfig(weights={}, filters={}, limit=10),
-            user_id=1
+            user_id=test_user.user_id
         )
 
         # Assert
@@ -388,7 +388,7 @@ class TestJDMatchServiceErrorHandling:
 
     @pytest.mark.asyncio
     async def test_match_handles_llm_failure(
-        self, test_session: AsyncSession
+        self, test_session: AsyncSession, test_user
     ):
         """LLM 失败应抛出错误"""
         # Arrange
@@ -410,7 +410,7 @@ class TestJDMatchServiceErrorHandling:
             await service.match(
                 jd_text="招聘机器学习工程师",
                 config=config,
-                user_id=1
+                user_id=test_user.user_id
             )
 
     @pytest.mark.asyncio
@@ -430,12 +430,12 @@ class TestJDMatchServiceErrorHandling:
             embed_service=mock_embed
         )
 
-        # Act & Assert
+        # Act & Assert - empty JD raises EmptyJDError, no user_id needed
         with pytest.raises((ValueError, JDMatchError)):
             await service.match(
                 jd_text="",
                 config=MatchConfig(weights={}, filters={}, limit=10),
-                user_id=1
+                user_id=1  # Won't be used due to early validation
             )
 
 
@@ -444,7 +444,7 @@ class TestJDMatchServiceTiming:
 
     @pytest.mark.asyncio
     async def test_match_returns_timing(
-        self, test_session: AsyncSession, sample_talent: dict
+        self, test_session: AsyncSession, sample_talent: dict, test_user
     ):
         """匹配结果应包含耗时"""
         # Arrange
@@ -465,7 +465,7 @@ class TestJDMatchServiceTiming:
         result = await service.match(
             jd_text="招聘机器学习工程师",
             config=config,
-            user_id=1
+            user_id=test_user.user_id
         )
 
         # Assert

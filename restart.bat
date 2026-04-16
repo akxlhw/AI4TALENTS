@@ -21,7 +21,7 @@ echo [3/5] 启动后端服务 (端口 8003)...
 start "Talent Backend" cmd /k "cd /d %~dp0backend && python -m uvicorn app.main:app --reload --port 8003"
 timeout /t 3 /nobreak >nul
 
-echo [4/5] 启动前端服务 (端口 5173)...
+echo [4/5] 启动前端服务 (端口 2012)...
 start "Talent Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
 timeout /t 3 /nobreak >nul
 
@@ -29,7 +29,7 @@ echo.
 echo ============================================
 echo 服务已启动:
 echo   后端 API: http://localhost:8003
-echo   前端页面: http://localhost:5173
+echo   前端页面: http://localhost:2012
 echo ============================================
 echo.
 pause

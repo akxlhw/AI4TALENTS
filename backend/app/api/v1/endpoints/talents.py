@@ -167,7 +167,6 @@ async def get_talent(
         topic_tags=talent.topic_tags or [],
         openalex_topics=talent.openalex_topics or [],
         tech_tags=tech_tags,
-        research_interests=talent.research_interests,
         summary=talent.summary,
         department_name=talent.department_name,
         lab_name=talent.lab_name,
@@ -350,7 +349,7 @@ async def compare_talents(
             "h_index": t.h_index,
             "latest_active_year": t.latest_active_year,
             "topic_tags": t.topic_tags or [],
-            "research_interests": t.research_interests,
+            "openalex_topics": t.openalex_topics or [],
             "academic_age": t.role_profile.academic_age if t.role_profile else None,
         })
 
