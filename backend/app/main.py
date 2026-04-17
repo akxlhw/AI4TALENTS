@@ -54,10 +54,12 @@ def create_application() -> FastAPI:
     )
 
     # CORS middleware
+    # Note: allow_credentials=True cannot be used with allow_origins=["*"]
+    # Since we use JWT tokens in Authorization header (not cookies), we can disable credentials
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.CORS_ORIGINS,
-        allow_credentials=True,
+        allow_origins=["*"],
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )
