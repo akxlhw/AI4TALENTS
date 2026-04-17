@@ -3,9 +3,34 @@
  */
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios'
 
-// Use relative path for API requests (Vite proxy will handle routing)
-// In production, set VITE_API_URL to the actual backend URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || ''
+/**
+ * 动态获取 API 基础地址
+ *
+ * 优先级：
+ * 1. 环境变量 VITE_API_URL（生产环境手动配置）
+ * 2. 自动检测：使用当前访问地址的 host + 后端端口 8003
+ * 3. 开发环境：空字符串（使用 Vite 代理）
+ */
+function getApiBaseUrl(): string {
+  // 1. 环境变量优先（生产环境可配置）
+  const envUrl = import.meta.env.VITE_API_URL
+  if (envUrl) {
+    return envUrl
+  }
+
+  // 2. 生产环境：自动检测
+  // 如果不是 localhost/127.0.0.1，说明是通过 IP 访问
+  const { hostname, protocol } = window.location
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    // 使用当前访问的 host + 后端端口
+    return `${protocol}//${hostname}:8003`
+  }
+
+  // 3. 开发环境：使用 Vite 代理
+  return ''
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({

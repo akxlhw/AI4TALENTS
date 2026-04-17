@@ -35,8 +35,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_HOURS: int = 8
 
-    # CORS - 前端固定使用 2012 端口
-    CORS_ORIGINS: list[str] = ["http://localhost:2012", "http://localhost:3000"]
+    # CORS - 自动检测前端来源
+    # 生产环境：允许同 IP 的前端端口访问（如 http://192.168.1.x:2012）
+    # 开发环境：允许所有来源
+    CORS_ORIGINS: list[str] = ["*"]  # 简化配置，允许所有来源
 
     # Rate Limiting (disabled in development)
     RATE_LIMIT_ENABLED: bool = False  # Enable in production
