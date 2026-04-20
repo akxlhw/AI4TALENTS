@@ -438,11 +438,11 @@ class LLMGateway(LLMGatewayProtocol):
         # Determine the API key to use for embedding
         embedding_api_key = self.embedding_api_key or self.api_key
 
-        # Create HTTP client with proxy if configured
-        if self.proxy_url:
-            client = httpx.AsyncClient(proxy=self.proxy_url, timeout=self.timeout)
-        else:
-            client = httpx.AsyncClient(timeout=self.timeout)
+        # Create HTTP client using factory (handles proxy/no_proxy automatically)
+        from app.services.common.http_client import HttpClientFactory
+
+        embedding_api_url = self.api_base
+        client = HttpClientFactory.create_client_for_url(embedding_api_url, timeout=self.timeout)
 
         # MiniMax 嵌入 API 使用不同的请求格式
         async with client:

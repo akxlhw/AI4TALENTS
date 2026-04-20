@@ -182,8 +182,12 @@ class WorkFetcher:
         if self.client.email:
             headers["mailto"] = self.client.email
 
+        # Determine proxy for OpenAlex API requests
+        openalex_url = f"{OPENALEX_API_BASE}/works"
+        proxy = self.client.get_proxy_for_request(openalex_url)
+
         async with aiohttp.ClientSession(timeout=DEFAULT_TIMEOUT) as http_session:
-            async with http_session.get(url, params=params, headers=headers, proxy=self.client.proxy_url) as response:
+            async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
                 if response.status != 200:
                     return 0
                 data = await response.json()

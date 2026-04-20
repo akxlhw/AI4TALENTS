@@ -179,11 +179,11 @@ async def test_llm_connection(
 
 async def _test_deepseek(api_key: str, api_base: str) -> TestLLMResponse:
     """Test DeepSeek API connection."""
-    import httpx
+    from app.services.common.http_client import HttpClientFactory
 
     base_url = api_base or "https://api.deepseek.com"
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
         response = await client.get(
             f"{base_url}/v1/models",
             headers={"Authorization": f"Bearer {api_key}"},
@@ -204,11 +204,11 @@ async def _test_deepseek(api_key: str, api_base: str) -> TestLLMResponse:
 
 async def _test_openai(api_key: str, api_base: str) -> TestLLMResponse:
     """Test OpenAI API connection."""
-    import httpx
+    from app.services.common.http_client import HttpClientFactory
 
     base_url = api_base or "https://api.openai.com"
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
         response = await client.get(
             f"{base_url}/v1/models",
             headers={"Authorization": f"Bearer {api_key}"},
@@ -239,11 +239,11 @@ async def _test_zhipu(api_key: str, api_base: str) -> TestLLMResponse:
 
 async def _test_qwen(api_key: str, api_base: str) -> TestLLMResponse:
     """Test Qwen (Alibaba Tongyi) API connection."""
-    import httpx
+    from app.services.common.http_client import HttpClientFactory
 
     base_url = api_base or "https://dashscope.aliyuncs.com"
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
         response = await client.get(
             f"{base_url}/api/v1/services/aigc/text-generation/generation",
             headers={"Authorization": f"Bearer {api_key}"},
@@ -265,7 +265,7 @@ async def _test_qwen(api_key: str, api_base: str) -> TestLLMResponse:
 
 async def _test_minimax(api_key: str, api_base: str) -> TestLLMResponse:
     """Test MiniMax API connection."""
-    import httpx
+    from app.services.common.http_client import HttpClientFactory
 
     # MiniMax API base URL
     base_url = api_base or "https://api.minimax.chat/v1"
@@ -274,7 +274,7 @@ async def _test_minimax(api_key: str, api_base: str) -> TestLLMResponse:
     if not base_url.endswith("/v1"):
         base_url = base_url.rstrip("/") + "/v1"
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
         try:
             # MiniMax 使用 chat/completions 测试连接
             response = await client.post(
@@ -306,11 +306,6 @@ async def _test_minimax(api_key: str, api_base: str) -> TestLLMResponse:
                     success=False,
                     message=f"MiniMax API 返回状态码 {response.status_code}: {response.text[:200]}",
                 )
-        except httpx.ConnectError as e:
-            return TestLLMResponse(
-                success=False,
-                message=f"无法连接到 MiniMax API: {str(e)}",
-            )
         except Exception as e:
             return TestLLMResponse(
                 success=False,
@@ -326,9 +321,9 @@ async def _test_generic(api_key: str, api_base: str) -> TestLLMResponse:
             message="API base URL is required for custom providers",
         )
 
-    import httpx
+    from app.services.common.http_client import HttpClientFactory
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with HttpClientFactory.create_client_for_url(api_base, timeout=30.0) as client:
         try:
             response = await client.get(
                 f"{api_base}/v1/models",

@@ -216,14 +216,19 @@ class HttpClientFactory:
             else:
                 proxy = cls._proxy_url
 
+        # Set SSL verification (may be overridden by kwargs)
+        if 'verify' not in kwargs:
+            kwargs['verify'] = cls._ssl_verify
+
         if proxy:
-            logger.debug(f"Creating httpx.AsyncClient with proxy: {cls._proxy_url}")
+            logger.debug(f"Creating httpx.AsyncClient with proxy: {cls._proxy_url}, verify={kwargs.get('verify')}")
             return httpx.AsyncClient(
                 proxy=proxy,
                 timeout=timeout,
                 **kwargs,
             )
         else:
+            logger.debug(f"Creating httpx.AsyncClient with direct connection, verify={kwargs.get('verify')}")
             return httpx.AsyncClient(
                 timeout=timeout,
                 **kwargs,
