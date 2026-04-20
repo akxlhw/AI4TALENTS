@@ -136,6 +136,7 @@ async def test_llm_connection(
         provider = request.provider or "deepseek"
         api_key = request.api_key
         api_base = request.api_base or ""
+        model = request.model or ""
     else:
         # Use saved config
         config = await config_service.get_llm_config()
@@ -147,6 +148,7 @@ async def test_llm_connection(
         provider = config.provider
         api_key = config.api_key
         api_base = config.api_base
+        model = config.model
 
     if not api_key:
         return TestLLMResponse(
@@ -157,18 +159,18 @@ async def test_llm_connection(
     # Test connection based on provider
     try:
         if provider == "deepseek":
-            return await _test_deepseek(api_key, api_base)
+            return await _test_deepseek(api_key, api_base, model)
         elif provider == "openai":
-            return await _test_openai(api_key, api_base)
+            return await _test_openai(api_key, api_base, model)
         elif provider == "zhipu":
-            return await _test_zhipu(api_key, api_base)
+            return await _test_zhipu(api_key, api_base, model)
         elif provider == "qwen":
-            return await _test_qwen(api_key, api_base)
+            return await _test_qwen(api_key, api_base, model)
         elif provider == "minimax":
-            return await _test_minimax(api_key, api_base)
+            return await _test_minimax(api_key, api_base, model)
         else:
             # Generic test for custom providers
-            return await _test_generic(api_key, api_base)
+            return await _test_generic(api_key, api_base, model)
     except Exception as e:
         logger.error(f"LLM connection test failed: {e}")
         return TestLLMResponse(
@@ -177,7 +179,7 @@ async def test_llm_connection(
         )
 
 
-async def _test_deepseek(api_key: str, api_base: str) -> TestLLMResponse:
+async def _test_deepseek(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
     """Test DeepSeek API connection."""
     from app.services.common.http_client import HttpClientFactory
 
@@ -193,7 +195,7 @@ async def _test_deepseek(api_key: str, api_base: str) -> TestLLMResponse:
             return TestLLMResponse(
                 success=True,
                 message="DeepSeek API connection successful",
-                details={"provider": "deepseek", "base_url": base_url},
+                details={"provider": "deepseek", "base_url": base_url, "model": model},
             )
         else:
             return TestLLMResponse(
@@ -202,7 +204,7 @@ async def _test_deepseek(api_key: str, api_base: str) -> TestLLMResponse:
             )
 
 
-async def _test_openai(api_key: str, api_base: str) -> TestLLMResponse:
+async def _test_openai(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
     """Test OpenAI API connection."""
     from app.services.common.http_client import HttpClientFactory
 
@@ -218,7 +220,7 @@ async def _test_openai(api_key: str, api_base: str) -> TestLLMResponse:
             return TestLLMResponse(
                 success=True,
                 message="OpenAI API connection successful",
-                details={"provider": "openai", "base_url": base_url},
+                details={"provider": "openai", "base_url": base_url, "model": model},
             )
         else:
             return TestLLMResponse(
@@ -227,17 +229,17 @@ async def _test_openai(api_key: str, api_base: str) -> TestLLMResponse:
             )
 
 
-async def _test_zhipu(api_key: str, api_base: str) -> TestLLMResponse:
+async def _test_zhipu(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
     """Test Zhipu AI API connection."""
     # Zhipu uses JWT token, simplified test
     return TestLLMResponse(
         success=True,
         message="Zhipu AI configuration saved (connection test not implemented)",
-        details={"provider": "zhipu"},
+        details={"provider": "zhipu", "model": model},
     )
 
 
-async def _test_qwen(api_key: str, api_base: str) -> TestLLMResponse:
+async def _test_qwen(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
     """Test Qwen (Alibaba Tongyi) API connection."""
     from app.services.common.http_client import HttpClientFactory
 
@@ -254,7 +256,7 @@ async def _test_qwen(api_key: str, api_base: str) -> TestLLMResponse:
             return TestLLMResponse(
                 success=True,
                 message="Qwen API connection successful",
-                details={"provider": "qwen", "base_url": base_url},
+                details={"provider": "qwen", "base_url": base_url, "model": model},
             )
         else:
             return TestLLMResponse(
@@ -263,7 +265,7 @@ async def _test_qwen(api_key: str, api_base: str) -> TestLLMResponse:
             )
 
 
-async def _test_minimax(api_key: str, api_base: str) -> TestLLMResponse:
+async def _test_minimax(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
     """Test MiniMax API connection."""
     from app.services.common.http_client import HttpClientFactory
 
@@ -273,6 +275,9 @@ async def _test_minimax(api_key: str, api_base: str) -> TestLLMResponse:
     # 确保 URL 以 /v1 结尾
     if not base_url.endswith("/v1"):
         base_url = base_url.rstrip("/") + "/v1"
+
+    # Use configured model or default
+    test_model = model or "abab6.5s-chat"
 
     async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
         try:
@@ -284,7 +289,7 @@ async def _test_minimax(api_key: str, api_base: str) -> TestLLMResponse:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "abab6.5s-chat",
+                    "model": test_model,
                     "messages": [{"role": "user", "content": "hi"}],
                     "max_tokens": 1,
                 },
@@ -294,7 +299,7 @@ async def _test_minimax(api_key: str, api_base: str) -> TestLLMResponse:
                 return TestLLMResponse(
                     success=True,
                     message="MiniMax API 连接成功",
-                    details={"provider": "minimax", "base_url": base_url},
+                    details={"provider": "minimax", "base_url": base_url, "model": test_model},
                 )
             elif response.status_code == 401:
                 return TestLLMResponse(
@@ -313,7 +318,7 @@ async def _test_minimax(api_key: str, api_base: str) -> TestLLMResponse:
             )
 
 
-async def _test_generic(api_key: str, api_base: str) -> TestLLMResponse:
+async def _test_generic(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
     """Generic API connection test."""
     if not api_base:
         return TestLLMResponse(
@@ -334,7 +339,7 @@ async def _test_generic(api_key: str, api_base: str) -> TestLLMResponse:
                 return TestLLMResponse(
                     success=True,
                     message="Custom API connection successful",
-                    details={"base_url": api_base},
+                    details={"base_url": api_base, "model": model},
                 )
             else:
                 return TestLLMResponse(

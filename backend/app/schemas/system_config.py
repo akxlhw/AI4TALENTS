@@ -100,6 +100,7 @@ class TestLLMRequest(BaseModel):
     provider: str | None = Field(None, description="Provider to test (optional, uses saved config if not provided)")
     api_key: str | None = Field(None, description="API key to test (optional)")
     api_base: str | None = Field(None, description="API base URL to test (optional)")
+    model: str | None = Field(None, description="Model name to test (optional)")
 
 
 class TestLLMResponse(BaseModel):
