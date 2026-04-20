@@ -180,7 +180,7 @@ async def test_llm_connection(
 
 
 async def _test_deepseek(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
-    """Test DeepSeek API connection."""
+    """Test DeepSeek API connection using /v1/models endpoint."""
     from app.services.common.http_client import HttpClientFactory
 
     base_url = api_base or "https://api.deepseek.com"
@@ -192,20 +192,21 @@ async def _test_deepseek(api_key: str, api_base: str, model: str = "") -> TestLL
         )
 
         if response.status_code == 200:
+            model_info = f", model: {model}" if model else ""
             return TestLLMResponse(
                 success=True,
-                message="DeepSeek API connection successful",
+                message=f"DeepSeek API 连接成功{model_info}",
                 details={"provider": "deepseek", "base_url": base_url, "model": model},
             )
         else:
             return TestLLMResponse(
                 success=False,
-                message=f"DeepSeek API returned status {response.status_code}",
+                message=f"DeepSeek API 返回状态码 {response.status_code}",
             )
 
 
 async def _test_openai(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
-    """Test OpenAI API connection."""
+    """Test OpenAI API connection using /v1/models endpoint."""
     from app.services.common.http_client import HttpClientFactory
 
     base_url = api_base or "https://api.openai.com"
@@ -217,56 +218,73 @@ async def _test_openai(api_key: str, api_base: str, model: str = "") -> TestLLMR
         )
 
         if response.status_code == 200:
+            model_info = f", model: {model}" if model else ""
             return TestLLMResponse(
                 success=True,
-                message="OpenAI API connection successful",
+                message=f"OpenAI API 连接成功{model_info}",
                 details={"provider": "openai", "base_url": base_url, "model": model},
             )
         else:
             return TestLLMResponse(
                 success=False,
-                message=f"OpenAI API returned status {response.status_code}",
+                message=f"OpenAI API 返回状态码 {response.status_code}",
             )
 
 
 async def _test_zhipu(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
-    """Test Zhipu AI API connection."""
-    # Zhipu uses JWT token, simplified test
-    return TestLLMResponse(
-        success=True,
-        message="Zhipu AI configuration saved (connection test not implemented)",
-        details={"provider": "zhipu", "model": model},
-    )
-
-
-async def _test_qwen(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
-    """Test Qwen (Alibaba Tongyi) API connection."""
+    """Test Zhipu AI API connection using /v1/models endpoint."""
     from app.services.common.http_client import HttpClientFactory
 
-    base_url = api_base or "https://dashscope.aliyuncs.com"
+    base_url = api_base or "https://open.bigmodel.cn/api/paas/v4"
 
     async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
         response = await client.get(
-            f"{base_url}/api/v1/services/aigc/text-generation/generation",
+            f"{base_url}/models",
             headers={"Authorization": f"Bearer {api_key}"},
         )
 
-        # Qwen API may return different status codes
-        if response.status_code in [200, 400]:
+        if response.status_code == 200:
+            model_info = f", model: {model}" if model else ""
             return TestLLMResponse(
                 success=True,
-                message="Qwen API connection successful",
+                message=f"智谱 AI API 连接成功{model_info}",
+                details={"provider": "zhipu", "base_url": base_url, "model": model},
+            )
+        else:
+            return TestLLMResponse(
+                success=False,
+                message=f"智谱 AI API 返回状态码 {response.status_code}",
+            )
+
+
+async def _test_qwen(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
+    """Test Qwen (Alibaba Tongyi) API connection using /v1/models endpoint."""
+    from app.services.common.http_client import HttpClientFactory
+
+    base_url = api_base or "https://dashscope.aliyuncs.com/compatible-mode"
+
+    async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
+        response = await client.get(
+            f"{base_url}/v1/models",
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+
+        if response.status_code == 200:
+            model_info = f", model: {model}" if model else ""
+            return TestLLMResponse(
+                success=True,
+                message=f"通义千问 API 连接成功{model_info}",
                 details={"provider": "qwen", "base_url": base_url, "model": model},
             )
         else:
             return TestLLMResponse(
                 success=False,
-                message=f"Qwen API returned status {response.status_code}",
+                message=f"通义千问 API 返回状态码 {response.status_code}",
             )
 
 
 async def _test_minimax(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
-    """Test MiniMax API connection."""
+    """Test MiniMax API connection using /v1/models endpoint."""
     from app.services.common.http_client import HttpClientFactory
 
     # MiniMax API base URL
@@ -276,80 +294,58 @@ async def _test_minimax(api_key: str, api_base: str, model: str = "") -> TestLLM
     if not base_url.endswith("/v1"):
         base_url = base_url.rstrip("/") + "/v1"
 
-    # Use configured model or default
-    test_model = model or "abab6.5s-chat"
-
     async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
-        try:
-            # MiniMax 使用 chat/completions 测试连接
-            response = await client.post(
-                f"{base_url}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": test_model,
-                    "messages": [{"role": "user", "content": "hi"}],
-                    "max_tokens": 1,
-                },
-            )
+        response = await client.get(
+            f"{base_url}/models",
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
 
-            if response.status_code == 200:
-                return TestLLMResponse(
-                    success=True,
-                    message="MiniMax API 连接成功",
-                    details={"provider": "minimax", "base_url": base_url, "model": test_model},
-                )
-            elif response.status_code == 401:
-                return TestLLMResponse(
-                    success=False,
-                    message="MiniMax API Key 无效",
-                )
-            else:
-                return TestLLMResponse(
-                    success=False,
-                    message=f"MiniMax API 返回状态码 {response.status_code}: {response.text[:200]}",
-                )
-        except Exception as e:
+        if response.status_code == 200:
+            model_info = f", model: {model}" if model else ""
+            return TestLLMResponse(
+                success=True,
+                message=f"MiniMax API 连接成功{model_info}",
+                details={"provider": "minimax", "base_url": base_url, "model": model},
+            )
+        elif response.status_code == 401:
             return TestLLMResponse(
                 success=False,
-                message=f"连接测试失败: {str(e)}",
+                message="MiniMax API Key 无效",
+            )
+        else:
+            return TestLLMResponse(
+                success=False,
+                message=f"MiniMax API 返回状态码 {response.status_code}",
             )
 
 
 async def _test_generic(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
-    """Generic API connection test."""
+    """Generic API connection test using /v1/models endpoint."""
     if not api_base:
         return TestLLMResponse(
             success=False,
-            message="API base URL is required for custom providers",
+            message="自定义提供商需要配置 API Base URL",
         )
 
     from app.services.common.http_client import HttpClientFactory
 
     async with HttpClientFactory.create_client_for_url(api_base, timeout=30.0) as client:
-        try:
-            response = await client.get(
-                f"{api_base}/v1/models",
-                headers={"Authorization": f"Bearer {api_key}"},
-            )
+        response = await client.get(
+            f"{api_base}/v1/models",
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
 
-            if response.status_code == 200:
-                return TestLLMResponse(
-                    success=True,
-                    message="Custom API connection successful",
-                    details={"base_url": api_base, "model": model},
-                )
-            else:
-                return TestLLMResponse(
-                    success=False,
-                    message=f"API returned status {response.status_code}",
-                )
-        except Exception as e:
+        if response.status_code == 200:
+            model_info = f", model: {model}" if model else ""
+            return TestLLMResponse(
+                success=True,
+                message=f"自定义 API 连接成功{model_info}",
+                details={"base_url": api_base, "model": model},
+            )
+        else:
             return TestLLMResponse(
                 success=False,
-                message=f"Connection failed: {str(e)}",
+                message=f"自定义 API 返回状态码 {response.status_code}",
             )
 
 
