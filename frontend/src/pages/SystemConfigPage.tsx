@@ -99,6 +99,7 @@ interface ProxyConfig {
   username: string
   password_masked: string
   no_proxy: string
+  ssl_verify: boolean
 }
 
 const SystemConfigPage: React.FC = () => {
@@ -1053,6 +1054,14 @@ const SystemConfigPage: React.FC = () => {
                         placeholder="localhost,127.0.0.1,*.internal.com,10.*,192.168.*"
                         rows={2}
                       />
+                    </Form.Item>
+                    <Form.Item
+                      name="ssl_verify"
+                      label="验证 SSL 证书"
+                      valuePropName="checked"
+                      tooltip="企业代理使用自签名证书时需关闭验证。关闭后存在中间人攻击风险，请谨慎使用。"
+                    >
+                      <Switch checkedChildren="开启" unCheckedChildren="关闭" />
                     </Form.Item>
                     <Form.Item>
                       <Space>

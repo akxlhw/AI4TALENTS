@@ -467,6 +467,7 @@ export const api = {
       username?: string
       password?: string
       no_proxy?: string
+      ssl_verify?: boolean
     }) => apiClient.put('/system-config/proxy', data),
     // 测试代理连接
     testProxy: (data?: { url?: string; username?: string; password?: string }) =>

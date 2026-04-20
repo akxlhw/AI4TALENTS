@@ -49,6 +49,7 @@ class HttpClientFactory:
     _proxy_username: Optional[str] = None
     _proxy_password: Optional[str] = None
     _no_proxy: Optional[str] = None  # 不走代理的地址列表
+    _ssl_verify: bool = True  # 是否验证 SSL 证书
 
     @classmethod
     def configure(
@@ -57,6 +58,7 @@ class HttpClientFactory:
         proxy_username: Optional[str] = None,
         proxy_password: Optional[str] = None,
         no_proxy: Optional[str] = None,
+        ssl_verify: bool = True,
     ) -> None:
         """
         Configure the factory with proxy settings.
@@ -67,18 +69,21 @@ class HttpClientFactory:
             proxy_password: Proxy password (optional)
             no_proxy: Comma-separated list of addresses to bypass proxy
                       (e.g., "localhost,127.0.0.1,*.internal.com,10.*,192.168.*")
+            ssl_verify: Whether to verify SSL certificates (set False for self-signed)
         """
         cls._proxy_url = proxy_url
         cls._proxy_username = proxy_username
         cls._proxy_password = proxy_password
         cls._no_proxy = no_proxy
+        cls._ssl_verify = ssl_verify
 
         if proxy_url:
             auth_info = ""
             if proxy_username:
                 auth_info = f" (user: {proxy_username})"
             no_proxy_info = f", no_proxy: {no_proxy}" if no_proxy else ""
-            logger.info(f"HTTP client factory configured with proxy: {proxy_url}{auth_info}{no_proxy_info}")
+            ssl_info = f", ssl_verify: {ssl_verify}" if not ssl_verify else ""
+            logger.info(f"HTTP client factory configured with proxy: {proxy_url}{auth_info}{no_proxy_info}{ssl_info}")
         else:
             logger.info("HTTP client factory configured without proxy")
 
@@ -315,16 +320,25 @@ class HttpClientFactory:
         Returns:
             Configured httpx.AsyncClient instance
         """
+        # Set SSL verification (may be overridden by kwargs)
+        if 'verify' not in kwargs:
+            kwargs['verify'] = cls._ssl_verify
+
         if cls.should_use_proxy(target_url):
             # Use proxy - create client with proxy
             proxy = cls.get_aiohttp_proxy()
             if proxy:
-                logger.debug(f"Creating httpx.AsyncClient with proxy for URL: {target_url}")
+                logger.debug(f"Creating httpx.AsyncClient with proxy for URL: {target_url}, verify={kwargs.get('verify')}")
                 return httpx.AsyncClient(proxy=proxy, timeout=timeout, **kwargs)
 
         # Direct connection
         logger.debug(f"Creating httpx.AsyncClient with direct connection for URL: {target_url}")
         return httpx.AsyncClient(timeout=timeout, **kwargs)
+
+    @classmethod
+    def get_ssl_verify(cls) -> bool:
+        """Get the current SSL verify setting."""
+        return cls._ssl_verify
 
     @classmethod
     def reset(cls) -> None:
@@ -333,3 +347,4 @@ class HttpClientFactory:
         cls._proxy_username = None
         cls._proxy_password = None
         cls._no_proxy = None
+        cls._ssl_verify = True

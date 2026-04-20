@@ -58,6 +58,7 @@ class ProxyConfigRequest(BaseModel):
     username: str | None = Field(None, description="Proxy username (optional)")
     password: str | None = Field(None, description="Proxy password (optional)")
     no_proxy: str | None = Field(None, description="Addresses to bypass proxy (comma-separated, e.g., localhost,*.internal.com)")
+    ssl_verify: bool | None = Field(None, description="Verify SSL certificates (set False for self-signed certs)")
 
 
 class ProxyConfigResponse(BaseModel):
@@ -67,6 +68,7 @@ class ProxyConfigResponse(BaseModel):
     username: str
     password_masked: str  # Masked password for display
     no_proxy: str  # Addresses to bypass proxy
+    ssl_verify: bool  # Whether to verify SSL certificates
 
 
 class TestProxyRequest(BaseModel):

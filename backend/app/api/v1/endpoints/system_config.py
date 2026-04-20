@@ -377,6 +377,7 @@ async def get_proxy_config(
             "PROXY_PASSWORD", config.password
         ) if config.password else "",
         no_proxy=config.no_proxy,
+        ssl_verify=config.ssl_verify,
     )
 
 
@@ -438,6 +439,7 @@ async def test_proxy_connection(
         username = request.username
         password = request.password
         no_proxy = ""  # For ad-hoc test, no no_proxy
+        ssl_verify = True  # For ad-hoc test, use default
     else:
         config = await config_service.get_proxy_config()
         if not config.enabled:
@@ -449,6 +451,7 @@ async def test_proxy_connection(
         username = config.username
         password = config.password
         no_proxy = config.no_proxy
+        ssl_verify = config.ssl_verify
 
     if not proxy_url:
         return TestProxyResponse(
@@ -478,7 +481,7 @@ async def test_proxy_connection(
     # Test 1: External API through proxy
     external_url = "https://api.openalex.org/works?per_page=1"
     try:
-        async with httpx.AsyncClient(proxy=full_proxy_url, timeout=30.0) as client:
+        async with httpx.AsyncClient(proxy=full_proxy_url, timeout=30.0, verify=ssl_verify) as client:
             response = await client.get(external_url)
 
             if response.status_code == 200:

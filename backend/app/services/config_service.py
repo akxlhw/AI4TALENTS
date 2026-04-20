@@ -41,6 +41,7 @@ class ProxyConfig:
     username: str = ""
     password: str = ""
     no_proxy: str = ""  # 不走代理的地址列表 (逗号分隔)
+    ssl_verify: bool = True  # 是否验证 SSL 证书
 
 
 class ConfigService:
@@ -295,6 +296,7 @@ class ConfigService:
         username = await self.get_value("PROXY_USERNAME", "", use_cache)
         password = await self.get_value("PROXY_PASSWORD", "", use_cache)
         no_proxy = await self.get_value("PROXY_NO_PROXY", "", use_cache)
+        ssl_verify = await self.get_value("PROXY_SSL_VERIFY", True, use_cache)
 
         return ProxyConfig(
             enabled=bool(enabled),
@@ -302,6 +304,7 @@ class ConfigService:
             username=str(username),
             password=str(password),
             no_proxy=str(no_proxy),
+            ssl_verify=bool(ssl_verify),
         )
 
     async def update_proxy_config(self, config: dict[str, Any]) -> None:
@@ -317,13 +320,14 @@ class ConfigService:
             "username": "PROXY_USERNAME",
             "password": "PROXY_PASSWORD",
             "no_proxy": "PROXY_NO_PROXY",
+            "ssl_verify": "PROXY_SSL_VERIFY",
         }
 
         for field, key in key_mapping.items():
             if field in config:
                 value = config[field]
                 config_type = "string"
-                if field == "enabled":
+                if field in ("enabled", "ssl_verify"):
                     config_type = "bool"
 
                 await self.set_value(key, value, config_type)
