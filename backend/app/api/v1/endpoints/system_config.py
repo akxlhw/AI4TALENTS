@@ -180,143 +180,176 @@ async def test_llm_connection(
 
 
 async def _test_deepseek(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
-    """Test DeepSeek API connection using /v1/models endpoint."""
-    from app.services.common.http_client import HttpClientFactory
-
+    """Test DeepSeek API connection with model validation."""
     base_url = api_base or "https://api.deepseek.com"
-
-    async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
-        response = await client.get(
-            f"{base_url}/v1/models",
-            headers={"Authorization": f"Bearer {api_key}"},
-        )
-
-        if response.status_code == 200:
-            model_info = f", model: {model}" if model else ""
-            return TestLLMResponse(
-                success=True,
-                message=f"DeepSeek API 连接成功{model_info}",
-                details={"provider": "deepseek", "base_url": base_url, "model": model},
-            )
-        else:
-            return TestLLMResponse(
-                success=False,
-                message=f"DeepSeek API 返回状态码 {response.status_code}",
-            )
+    test_model = model or "deepseek-chat"
+    return await _test_openai_compatible(
+        api_key=api_key,
+        base_url=base_url,
+        model=test_model,
+        provider_name="DeepSeek",
+        provider_key="deepseek",
+    )
 
 
 async def _test_openai(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
-    """Test OpenAI API connection using /v1/models endpoint."""
-    from app.services.common.http_client import HttpClientFactory
-
+    """Test OpenAI API connection with model validation."""
     base_url = api_base or "https://api.openai.com"
-
-    async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
-        response = await client.get(
-            f"{base_url}/v1/models",
-            headers={"Authorization": f"Bearer {api_key}"},
-        )
-
-        if response.status_code == 200:
-            model_info = f", model: {model}" if model else ""
-            return TestLLMResponse(
-                success=True,
-                message=f"OpenAI API 连接成功{model_info}",
-                details={"provider": "openai", "base_url": base_url, "model": model},
-            )
-        else:
-            return TestLLMResponse(
-                success=False,
-                message=f"OpenAI API 返回状态码 {response.status_code}",
-            )
+    test_model = model or "gpt-3.5-turbo"
+    return await _test_openai_compatible(
+        api_key=api_key,
+        base_url=base_url,
+        model=test_model,
+        provider_name="OpenAI",
+        provider_key="openai",
+    )
 
 
 async def _test_zhipu(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
-    """Test Zhipu AI API connection using /v1/models endpoint."""
-    from app.services.common.http_client import HttpClientFactory
-
+    """Test Zhipu AI API connection with model validation."""
     base_url = api_base or "https://open.bigmodel.cn/api/paas/v4"
-
-    async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
-        response = await client.get(
-            f"{base_url}/models",
-            headers={"Authorization": f"Bearer {api_key}"},
-        )
-
-        if response.status_code == 200:
-            model_info = f", model: {model}" if model else ""
-            return TestLLMResponse(
-                success=True,
-                message=f"智谱 AI API 连接成功{model_info}",
-                details={"provider": "zhipu", "base_url": base_url, "model": model},
-            )
-        else:
-            return TestLLMResponse(
-                success=False,
-                message=f"智谱 AI API 返回状态码 {response.status_code}",
-            )
+    test_model = model or "glm-4-flash"
+    return await _test_openai_compatible(
+        api_key=api_key,
+        base_url=base_url,
+        model=test_model,
+        provider_name="智谱 AI",
+        provider_key="zhipu",
+    )
 
 
 async def _test_qwen(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
-    """Test Qwen (Alibaba Tongyi) API connection using /v1/models endpoint."""
-    from app.services.common.http_client import HttpClientFactory
-
+    """Test Qwen (Alibaba Tongyi) API connection with model validation."""
     base_url = api_base or "https://dashscope.aliyuncs.com/compatible-mode"
-
-    async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
-        response = await client.get(
-            f"{base_url}/v1/models",
-            headers={"Authorization": f"Bearer {api_key}"},
-        )
-
-        if response.status_code == 200:
-            model_info = f", model: {model}" if model else ""
-            return TestLLMResponse(
-                success=True,
-                message=f"通义千问 API 连接成功{model_info}",
-                details={"provider": "qwen", "base_url": base_url, "model": model},
-            )
-        else:
-            return TestLLMResponse(
-                success=False,
-                message=f"通义千问 API 返回状态码 {response.status_code}",
-            )
+    test_model = model or "qwen-turbo"
+    return await _test_openai_compatible(
+        api_key=api_key,
+        base_url=base_url,
+        model=test_model,
+        provider_name="通义千问",
+        provider_key="qwen",
+    )
 
 
 async def _test_minimax(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
-    """Test MiniMax API connection using /v1/models endpoint."""
-    from app.services.common.http_client import HttpClientFactory
-
-    # MiniMax API base URL
+    """Test MiniMax API connection with model validation."""
     base_url = api_base or "https://api.minimax.chat/v1"
+    test_model = model or "abab6.5s-chat"
+    provider_name = "MiniMax"
 
     # 确保 URL 以 /v1 结尾
     if not base_url.endswith("/v1"):
         base_url = base_url.rstrip("/") + "/v1"
 
+    return await _test_openai_compatible(
+        api_key=api_key,
+        base_url=base_url,
+        model=test_model,
+        provider_name=provider_name,
+        provider_key="minimax",
+    )
+
+
+async def _test_generic(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
+    """Generic API connection test with model validation."""
+    if not api_base:
+        return TestLLMResponse(
+            success=False,
+            message="自定义提供商需要配置 API Base URL",
+        )
+
+    test_model = model or "gpt-3.5-turbo"
+    return await _test_openai_compatible(
+        api_key=api_key,
+        base_url=api_base,
+        model=test_model,
+        provider_name="自定义 API",
+        provider_key="custom",
+    )
+
+
+async def _test_openai_compatible(
+    api_key: str,
+    base_url: str,
+    model: str,
+    provider_name: str,
+    provider_key: str,
+) -> TestLLMResponse:
+    """通用 OpenAI 兼容 API 测试函数。"""
+    from app.services.common.http_client import HttpClientFactory
+
     async with HttpClientFactory.create_client_for_url(base_url, timeout=30.0) as client:
-        response = await client.get(
-            f"{base_url}/models",
-            headers={"Authorization": f"Bearer {api_key}"},
+        # Step 1: Try chat completion to verify model and key
+        chat_endpoint = f"{base_url}/chat/completions" if base_url.endswith("/v1") else f"{base_url}/v1/chat/completions"
+        response = await client.post(
+            chat_endpoint,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": model, "messages": [{"role": "user", "content": "hi"}], "max_tokens": 1},
         )
 
         if response.status_code == 200:
-            model_info = f", model: {model}" if model else ""
             return TestLLMResponse(
                 success=True,
-                message=f"MiniMax API 连接成功{model_info}",
-                details={"provider": "minimax", "base_url": base_url, "model": model},
+                message=f"{provider_name} 连接成功，模型: {model}",
+                details={"provider": provider_key, "base_url": base_url, "model": model},
             )
-        elif response.status_code == 401:
+
+        # Step 2: Analyze error
+        error_data = {}
+        try:
+            error_data = response.json()
+        except Exception:
+            pass
+
+        error_msg = (
+            error_data.get("error", {}).get("message", "")
+            or error_data.get("message", "")
+            or error_data.get("error_message", "")
+            or error_data.get("base_resp", {}).get("status_msg", "")
+        )
+
+        # 401 - API Key invalid
+        if response.status_code == 401 or any(kw in error_msg.lower() for kw in ["unauthorized", "invalid api-key", "invalid api key"]):
             return TestLLMResponse(
                 success=False,
-                message="MiniMax API Key 无效",
+                message=f"{provider_name} API Key 无效或已过期",
             )
-        else:
-            return TestLLMResponse(
-                success=False,
-                message=f"MiniMax API 返回状态码 {response.status_code}",
+
+        # Model not found - try to get available models
+        model_error_keywords = ["model", "not found", "does not exist", "unknown model"]
+        if any(kw in error_msg.lower() for kw in model_error_keywords):
+            models_endpoint = f"{base_url}/models" if base_url.endswith("/v1") else f"{base_url}/v1/models"
+            models_response = await client.get(
+                models_endpoint,
+                headers={"Authorization": f"Bearer {api_key}"},
             )
+            available_models = []
+            if models_response.status_code == 200:
+                try:
+                    models_data = models_response.json()
+                    model_list = models_data.get("data", []) or models_data.get("models", [])
+                    available_models = [m.get("id") or m.get("model_id") for m in model_list if m.get("id") or m.get("model_id")]
+                except Exception:
+                    pass
+
+            if available_models:
+                return TestLLMResponse(
+                    success=False,
+                    message=f"模型 '{model}' 不存在。可用模型: {', '.join(available_models[:10])}",
+                    details={"error": error_msg, "available_models": available_models},
+                )
+            else:
+                return TestLLMResponse(
+                    success=False,
+                    message=f"模型 '{model}' 不存在，请检查模型名称是否正确",
+                    details={"error": error_msg},
+                )
+
+        # Other errors
+        return TestLLMResponse(
+            success=False,
+            message=f"{provider_name} 错误: {error_msg or f'状态码 {response.status_code}'}",
+        )
 
 
 async def _test_generic(api_key: str, api_base: str, model: str = "") -> TestLLMResponse:
