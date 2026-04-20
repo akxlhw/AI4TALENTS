@@ -6,16 +6,42 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.router import api_router
 from app.core.cache import close_cache_connection, get_cache_connection
 from app.core.config import settings
-from app.core.database import async_engine
+from app.core.database import async_engine, async_session_factory
 from app.core.logging_config import get_logger, setup_logging
 
 # Setup logging first
 setup_logging()
 logger = get_logger(__name__)
+
+
+async def init_proxy_config() -> None:
+    """Initialize proxy configuration from database."""
+    from app.services.config_service import ConfigService
+    from app.services.common.http_client import HttpClientFactory
+
+    try:
+        async with async_session_factory() as session:
+            config_service = ConfigService(session)
+            proxy_config = await config_service.get_proxy_config()
+
+            if proxy_config.enabled and proxy_config.url:
+                HttpClientFactory.configure(
+                    proxy_url=proxy_config.url,
+                    proxy_username=proxy_config.username or None,
+                    proxy_password=proxy_config.password or None,
+                    no_proxy=proxy_config.no_proxy or None,
+                    ssl_verify=proxy_config.ssl_verify,
+                )
+                logger.info(f"Proxy configuration loaded: {proxy_config.url}")
+            else:
+                logger.info("Proxy not enabled, using direct connection")
+    except Exception as e:
+        logger.warning(f"Failed to load proxy configuration: {e}")
 
 
 @asynccontextmanager
@@ -32,6 +58,9 @@ async def lifespan(app: FastAPI):
         logger.info("Cache layer enabled: Redis connected")
     else:
         logger.info("Cache layer disabled: running in direct database mode")
+
+    # Initialize proxy configuration
+    await init_proxy_config()
 
     yield
 

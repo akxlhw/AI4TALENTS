@@ -392,6 +392,8 @@ async def update_proxy_config(
     current_user: dict = Depends(require_admin_user),
 ):
     """Update proxy configuration."""
+    from app.services.common.http_client import HttpClientFactory
+
     config_service = ConfigService(session)
 
     # Only update provided fields
@@ -404,6 +406,21 @@ async def update_proxy_config(
 
     # Clear cache to force refresh
     ConfigService.clear_cache()
+
+    # Reload proxy config and refresh HttpClientFactory
+    proxy_config = await config_service.get_proxy_config(use_cache=False)
+    if proxy_config.enabled and proxy_config.url:
+        HttpClientFactory.configure(
+            proxy_url=proxy_config.url,
+            proxy_username=proxy_config.username or None,
+            proxy_password=proxy_config.password or None,
+            no_proxy=proxy_config.no_proxy or None,
+            ssl_verify=proxy_config.ssl_verify,
+        )
+        logger.info(f"HttpClientFactory refreshed with proxy: {proxy_config.url}, no_proxy: {proxy_config.no_proxy}")
+    else:
+        HttpClientFactory.configure()  # Reset to no proxy
+        logger.info("HttpClientFactory reset to direct connection")
 
     logger.info(f"Proxy configuration updated by user {current_user.get('user_id')}")
 
