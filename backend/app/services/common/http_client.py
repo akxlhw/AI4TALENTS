@@ -135,7 +135,15 @@ class HttpClientFactory:
         timeout: float = 30.0,
         **kwargs,
     ) -> httpx.AsyncClient:
-        """Create an HTTP client configured for a specific target URL."""
+        """Create an HTTP client configured for a specific target URL.
+
+        Note: trust_env=False is set to prevent httpx from reading system
+        environment variables (HTTP_PROXY, HTTPS_PROXY, NO_PROXY), ensuring
+        our own proxy/no_proxy configuration takes full control.
+        """
+        # Disable httpx's automatic proxy detection from environment variables
+        kwargs['trust_env'] = False
+
         if 'verify' not in kwargs:
             kwargs['verify'] = cls._ssl_verify
 
