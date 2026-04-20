@@ -271,9 +271,10 @@ async def _run_embedding_generation(force: bool, batch_size: int):
                 model=llm_config.model or "deepseek-chat",
                 embedding_model=llm_config.embedding_model,  # 使用用户配置
                 timeout=llm_config.timeout or 60,
+                provider=llm_config.provider,
             )
 
-            logger.info(f"LLMGateway provider detected: {llm_gateway.provider}")
+            logger.info(f"LLMGateway provider: {llm_gateway.provider}")
 
             # Get talent IDs
             query = select(Talent.talent_id).where(

@@ -169,6 +169,7 @@ async def enhanced_search_talents(
                     model=llm_config.model or "deepseek-chat",
                     embedding_model=llm_config.embedding_model or "deepseek-embedding",
                     timeout=llm_config.timeout or 60,
+                    provider=llm_config.provider,
                 )
                 from app.services.embedding.embedding_service import EmbeddingService
                 embed_service = EmbeddingService(

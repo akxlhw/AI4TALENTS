@@ -67,6 +67,7 @@ class LLMGateway(LLMGatewayProtocol):
         timeout: float | None = None,
         enable_fallback: bool = True,
         cache: Any = None,
+        provider: str | None = None,
     ):
         """
         初始化 LLM 网关
@@ -81,6 +82,7 @@ class LLMGateway(LLMGatewayProtocol):
             timeout: 超时时间（秒）
             enable_fallback: 是否启用降级策略
             cache: 缓存管理器
+            provider: 提供商名称（minimax/deepseek/openai/zhipu/qwen/custom），可选，不传则从 URL 推断
         """
         from app.services.common.http_client import HttpClientFactory
 
@@ -94,8 +96,9 @@ class LLMGateway(LLMGatewayProtocol):
         self.enable_fallback = enable_fallback
         self.cache = cache
 
-        # Provider name for logging/metrics
-        self.provider = self._detect_provider()
+        # Provider: use explicit config or detect from URL
+        self.provider = provider if provider else self._detect_provider()
+        logger.info(f"LLM Gateway initialized with provider: {self.provider}")
 
         # Create HTTP client using factory (handles proxy/no_proxy automatically)
         http_client = HttpClientFactory.create_client_for_url(self.api_base, timeout=self.timeout)
@@ -606,7 +609,7 @@ def create_llm_gateway(
     注意：代理配置由 HttpClientFactory 全局管理，在应用启动时配置。
 
     Args:
-        provider: 提供商名称
+        provider: 提供商名称（minimax/deepseek/openai/zhipu/qwen/custom）
         api_key: API 密钥
         api_base: API 基础 URL
         embedding_api_key: 嵌入服务独立 API Key
@@ -636,4 +639,5 @@ def create_llm_gateway(
         embedding_api_base=embedding_api_base,
         timeout=kwargs.get('timeout') or settings.LLM_TIMEOUT,
         enable_fallback=kwargs.get('enable_fallback', settings.LLM_ENABLE_FALLBACK),
+        provider=provider,
     )

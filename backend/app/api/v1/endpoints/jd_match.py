@@ -58,6 +58,7 @@ async def get_llm_gateway(session: AsyncSession) -> LLMGateway:
         embedding_model=llm_config.embedding_model or "deepseek-embedding",
         timeout=llm_config.timeout or 60,
         enable_fallback=settings.LLM_ENABLE_FALLBACK,
+        provider=llm_config.provider,
     )
 
 
