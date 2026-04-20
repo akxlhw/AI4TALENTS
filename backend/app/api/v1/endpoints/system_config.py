@@ -527,7 +527,7 @@ async def test_proxy_connection(
     # Test 1: External API through proxy
     external_url = "https://api.openalex.org/works?per_page=1"
     try:
-        async with httpx.AsyncClient(proxy=full_proxy_url, timeout=30.0, verify=ssl_verify) as client:
+        async with httpx.AsyncClient(proxy=full_proxy_url, timeout=30.0, verify=ssl_verify, trust_env=False) as client:
             response = await client.get(external_url)
 
             if response.status_code == 200:
@@ -605,7 +605,7 @@ async def test_proxy_connection(
 
             try:
                 # Test direct connection (no proxy for internal URLs)
-                async with httpx.AsyncClient(timeout=10.0) as client:
+                async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
                     response = await client.get(internal_url)
 
                     if response.status_code in [200, 401, 403, 404]:
