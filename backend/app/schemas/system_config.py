@@ -108,3 +108,18 @@ class TestLLMResponse(BaseModel):
     success: bool
     message: str
     details: dict | None = None
+
+
+class TestEmbeddingRequest(BaseModel):
+    """Request for testing embedding model connection."""
+    provider: str | None = Field(None, description="Provider to test (optional, uses saved config if not provided)")
+    api_key: str | None = Field(None, description="API key to test (optional)")
+    api_base: str | None = Field(None, description="API base URL to test (optional)")
+    embedding_model: str | None = Field(None, description="Embedding model name to test (optional)")
+
+
+class TestEmbeddingResponse(BaseModel):
+    """Response for testing embedding connection."""
+    success: bool
+    message: str
+    details: dict | None = None

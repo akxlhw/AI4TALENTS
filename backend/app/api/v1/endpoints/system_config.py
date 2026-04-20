@@ -19,6 +19,8 @@ from app.schemas.system_config import (
     SystemConfigListResponse,
     TestLLMRequest,
     TestLLMResponse,
+    TestEmbeddingRequest,
+    TestEmbeddingResponse,
     TestProxyRequest,
     TestProxyResponse,
     TestProxyResult,
@@ -380,6 +382,244 @@ async def _test_generic(api_key: str, api_base: str, model: str = "") -> TestLLM
                 success=False,
                 message=f"自定义 API 返回状态码 {response.status_code}",
             )
+
+
+# ========== Embedding Test Endpoints ==========
+
+@router.post(
+    "/test-embedding",
+    response_model=TestEmbeddingResponse,
+    summary="测试嵌入模型连接",
+    description="测试嵌入模型 API 连接是否正常"
+)
+async def test_embedding_connection(
+    request: TestEmbeddingRequest | None = None,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_admin_user),
+):
+    """Test embedding model connection."""
+    config_service = ConfigService(session)
+
+    # Get saved config or use provided values
+    if request and request.api_key:
+        provider = request.provider or "deepseek"
+        api_key = request.api_key
+        api_base = request.api_base or ""
+        embedding_model = request.embedding_model or ""
+    else:
+        config = await config_service.get_llm_config()
+        if not config.enabled:
+            return TestEmbeddingResponse(
+                success=False,
+                message="LLM 未启用，请先启用 LLM 功能",
+            )
+        provider = config.provider
+        api_key = config.api_key
+        # Use embedding_api_base if configured, otherwise use main api_base
+        api_base = config.embedding_api_base or config.api_base
+        embedding_model = config.embedding_model
+
+    if not api_key:
+        return TestEmbeddingResponse(
+            success=False,
+            message="API Key 未配置",
+        )
+
+    if not embedding_model:
+        return TestEmbeddingResponse(
+            success=False,
+            message="嵌入模型名称未配置，请先在系统配置中设置嵌入模型名称",
+        )
+
+    # Test embedding connection
+    try:
+        return await _test_embedding(api_key, api_base, embedding_model, provider)
+    except Exception as e:
+        logger.error(f"Embedding connection test failed: {e}")
+        return TestEmbeddingResponse(
+            success=False,
+            message=f"连接测试失败: {str(e)}",
+        )
+
+
+async def _test_embedding(
+    api_key: str,
+    api_base: str,
+    embedding_model: str,
+    provider: str,
+) -> TestEmbeddingResponse:
+    """Test embedding model connection."""
+    from app.services.common.http_client import HttpClientFactory
+
+    # Determine base URL based on provider
+    if not api_base:
+        if provider == "deepseek":
+            api_base = "https://api.deepseek.com"
+        elif provider == "openai":
+            api_base = "https://api.openai.com"
+        elif provider == "zhipu":
+            api_base = "https://open.bigmodel.cn/api/paas/v4"
+        elif provider == "qwen":
+            api_base = "https://dashscope.aliyuncs.com/compatible-mode"
+        elif provider == "minimax":
+            api_base = "https://api.minimax.chat/v1"
+        else:
+            return TestEmbeddingResponse(
+                success=False,
+                message="自定义提供商需要配置 API Base URL",
+            )
+
+    # MiniMax uses different embedding API format
+    if provider == "minimax":
+        return await _test_embedding_minimax(api_key, api_base, embedding_model)
+
+    # Standard OpenAI-compatible embedding API
+    async with HttpClientFactory.create_client_for_url(api_base, timeout=30.0) as client:
+        # Build endpoint URL
+        if api_base.endswith("/v1"):
+            endpoint = f"{api_base}/embeddings"
+        else:
+            endpoint = f"{api_base}/v1/embeddings"
+
+        response = await client.post(
+            endpoint,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": embedding_model,
+                "input": "test",
+            },
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            # Check if we got valid embedding
+            embedding = None
+            if "data" in data and len(data["data"]) > 0:
+                embedding = data["data"][0].get("embedding", [])
+            elif "vectors" in data and len(data["vectors"]) > 0:
+                embedding = data["vectors"][0]
+
+            if embedding and len(embedding) > 0:
+                return TestEmbeddingResponse(
+                    success=True,
+                    message=f"嵌入模型连接成功，模型: {embedding_model}，向量维度: {len(embedding)}",
+                    details={
+                        "provider": provider,
+                        "base_url": api_base,
+                        "model": embedding_model,
+                        "dimensions": len(embedding),
+                    },
+                )
+            else:
+                return TestEmbeddingResponse(
+                    success=False,
+                    message="API 返回成功但未获取到有效向量",
+                )
+
+        # Analyze error
+        error_data = {}
+        try:
+            error_data = response.json()
+        except Exception:
+            pass
+
+        error_msg = (
+            error_data.get("error", {}).get("message", "")
+            or error_data.get("message", "")
+            or error_data.get("error_message", "")
+        )
+
+        # 401 - API Key invalid
+        if response.status_code == 401 or "unauthorized" in error_msg.lower() or "invalid" in error_msg.lower():
+            return TestEmbeddingResponse(
+                success=False,
+                message="API Key 无效或已过期",
+            )
+
+        # Model not found
+        if "model" in error_msg.lower() or "not found" in error_msg.lower():
+            return TestEmbeddingResponse(
+                success=False,
+                message=f"嵌入模型 '{embedding_model}' 不存在，请检查模型名称是否正确",
+                details={"error": error_msg},
+            )
+
+        return TestEmbeddingResponse(
+            success=False,
+            message=f"嵌入 API 错误: {error_msg or f'状态码 {response.status_code}'}",
+        )
+
+
+async def _test_embedding_minimax(
+    api_key: str,
+    api_base: str,
+    embedding_model: str,
+) -> TestEmbeddingResponse:
+    """Test MiniMax embedding model connection."""
+    from app.services.common.http_client import HttpClientFactory
+
+    # Ensure URL ends with /v1
+    if not api_base.endswith("/v1"):
+        api_base = api_base.rstrip("/") + "/v1"
+
+    # Default model for MiniMax
+    model = embedding_model or "embo-01"
+
+    async with HttpClientFactory.create_client_for_url(api_base, timeout=30.0) as client:
+        response = await client.post(
+            f"{api_base}/embeddings",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "texts": ["test"],
+                "type": "db",
+            },
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            vectors = data.get("vectors", [])
+            if vectors and len(vectors) > 0:
+                return TestEmbeddingResponse(
+                    success=True,
+                    message=f"MiniMax 嵌入模型连接成功，模型: {model}，向量维度: {len(vectors[0])}",
+                    details={
+                        "provider": "minimax",
+                        "base_url": api_base,
+                        "model": model,
+                        "dimensions": len(vectors[0]),
+                    },
+                )
+            else:
+                base_resp = data.get("base_resp", {})
+                status_msg = base_resp.get("status_msg", "Unknown error")
+                return TestEmbeddingResponse(
+                    success=False,
+                    message=f"MiniMax 返回错误: {status_msg}",
+                )
+
+        # Handle error
+        error_data = {}
+        try:
+            error_data = response.json()
+        except Exception:
+            pass
+
+        error_msg = (
+            error_data.get("base_resp", {}).get("status_msg", "")
+            or error_data.get("message", "")
+        )
+
+        if response.status_code == 401 or "unauthorized" in str(error_data).lower():
+            return TestEmbeddingResponse(
+                success=False,
+                message="MiniMax API Key 无效或已过期",
+            )
+
+        return TestEmbeddingResponse(
+            success=False,
+            message=f"MiniMax 嵌入 API 错误: {error_msg or f'状态码 {response.status_code}'}",
+        )
 
 
 # ========== Proxy Configuration Endpoints ==========

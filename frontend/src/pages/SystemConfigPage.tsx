@@ -142,6 +142,8 @@ const SystemConfigPage: React.FC = () => {
   const [llmLoading, setLLMLoading] = useState(false)
   const [testingLLM, setTestingLLM] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [testingEmbedding, setTestingEmbedding] = useState(false)
+  const [embeddingTestResult, setEmbeddingTestResult] = useState<{ success: boolean; message: string } | null>(null)
 
   // ========== Proxy Config State ==========
   const [proxyConfig, setProxyConfig] = useState<ProxyConfig | null>(null)
@@ -431,6 +433,29 @@ const SystemConfigPage: React.FC = () => {
       message.error(errorMsg)
     } finally {
       setTestingLLM(false)
+    }
+  }
+
+  const handleTestEmbedding = async () => {
+    setTestingEmbedding(true)
+    setEmbeddingTestResult(null)
+    try {
+      const response = await api.systemConfig.testEmbedding()
+      setEmbeddingTestResult({
+        success: response.data.success,
+        message: response.data.message,
+      })
+      if (response.data.success) {
+        message.success('嵌入模型连接测试成功')
+      } else {
+        message.warning(response.data.message)
+      }
+    } catch (error) {
+      const errorMsg = getErrorMessage(error, '嵌入模型连接测试失败')
+      setEmbeddingTestResult({ success: false, message: errorMsg })
+      message.error(errorMsg)
+    } finally {
+      setTestingEmbedding(false)
     }
   }
 
@@ -982,17 +1007,28 @@ const SystemConfigPage: React.FC = () => {
                     <Form.Item>
                       <Space>
                         <Button type="primary" htmlType="submit" loading={llmLoading}>保存配置</Button>
-                        <Button onClick={handleTestLLM} loading={testingLLM} icon={<ApiOutlined />}>测试连接</Button>
+                        <Button onClick={handleTestLLM} loading={testingLLM} icon={<ApiOutlined />}>测试对话连接</Button>
+                        <Button onClick={handleTestEmbedding} loading={testingEmbedding} icon={<ApiOutlined />}>测试嵌入连接</Button>
                       </Space>
                     </Form.Item>
                   </Form>
                   {testResult && (
                     <Alert
-                      message={testResult.success ? '连接成功' : '连接失败'}
+                      message={testResult.success ? '对话模型连接成功' : '对话模型连接失败'}
                       description={testResult.message}
                       type={testResult.success ? 'success' : 'error'}
                       showIcon
                       icon={testResult.success ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+                      style={{ marginTop: 16 }}
+                    />
+                  )}
+                  {embeddingTestResult && (
+                    <Alert
+                      message={embeddingTestResult.success ? '嵌入模型连接成功' : '嵌入模型连接失败'}
+                      description={embeddingTestResult.message}
+                      type={embeddingTestResult.success ? 'success' : 'error'}
+                      showIcon
+                      icon={embeddingTestResult.success ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
                       style={{ marginTop: 16 }}
                     />
                   )}

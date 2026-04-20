@@ -478,6 +478,9 @@ export const api = {
     // 测试 LLM 连接
     testLLM: (data?: { provider?: string; api_key?: string; api_base?: string }) =>
       apiClient.post('/system-config/test-llm', data || {}),
+    // 测试嵌入模型连接
+    testEmbedding: (data?: { provider?: string; api_key?: string; api_base?: string; embedding_model?: string }) =>
+      apiClient.post('/system-config/test-embedding', data || {}),
   },
 
   // v1.4 Embeddings - 向量嵌入
