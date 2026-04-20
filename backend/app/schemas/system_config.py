@@ -34,6 +34,7 @@ class LLMConfigRequest(BaseModel):
     model: str | None = Field(None, description="Chat model name")
     embedding_model: str | None = Field(None, description="Embedding model name")
     embedding_api_base: str | None = Field(None, description="Embedding API base URL (optional)")
+    embedding_api_key: str | None = Field(None, description="Embedding API key (optional, uses main API key if not provided)")
     timeout: int | None = Field(None, ge=1, le=600, description="Request timeout in seconds")
 
 
@@ -46,7 +47,50 @@ class LLMConfigResponse(BaseModel):
     model: str
     embedding_model: str
     embedding_api_base: str
+    embedding_api_key_masked: str  # Masked embedding API key for display
     timeout: int
+
+
+class ProxyConfigRequest(BaseModel):
+    """Request for updating proxy configuration."""
+    enabled: bool | None = Field(None, description="Enable HTTP proxy")
+    url: str | None = Field(None, description="Proxy server URL (e.g., http://proxy.company.com:8080)")
+    username: str | None = Field(None, description="Proxy username (optional)")
+    password: str | None = Field(None, description="Proxy password (optional)")
+    no_proxy: str | None = Field(None, description="Addresses to bypass proxy (comma-separated, e.g., localhost,*.internal.com)")
+
+
+class ProxyConfigResponse(BaseModel):
+    """Response for proxy configuration."""
+    enabled: bool
+    url: str
+    username: str
+    password_masked: str  # Masked password for display
+    no_proxy: str  # Addresses to bypass proxy
+
+
+class TestProxyRequest(BaseModel):
+    """Request for testing proxy connection."""
+    url: str | None = Field(None, description="Proxy URL to test (optional, uses saved config if not provided)")
+    username: str | None = Field(None, description="Proxy username (optional)")
+    password: str | None = Field(None, description="Proxy password (optional)")
+    test_internal_url: str | None = Field(None, description="Internal URL to test (optional, for no_proxy validation)")
+
+
+class TestProxyResult(BaseModel):
+    """Result of a single proxy test."""
+    url: str
+    success: bool
+    message: str
+    used_proxy: bool = True
+
+
+class TestProxyResponse(BaseModel):
+    """Response for testing proxy connection."""
+    success: bool
+    message: str
+    details: dict | None = None
+    results: list[TestProxyResult] | None = Field(None, description="Individual test results")
 
 
 class TestLLMRequest(BaseModel):

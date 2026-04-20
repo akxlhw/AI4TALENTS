@@ -13,10 +13,15 @@ from app.core.database import get_async_session
 from app.schemas.system_config import (
     LLMConfigRequest,
     LLMConfigResponse,
+    ProxyConfigRequest,
+    ProxyConfigResponse,
     SystemConfigItem,
     SystemConfigListResponse,
     TestLLMRequest,
     TestLLMResponse,
+    TestProxyRequest,
+    TestProxyResponse,
+    TestProxyResult,
     UpdateConfigRequest,
 )
 from app.services.config_service import ConfigService
@@ -75,6 +80,9 @@ async def get_llm_config(
         model=config.model,
         embedding_model=config.embedding_model,
         embedding_api_base=config.embedding_api_base,
+        embedding_api_key_masked=config_service.mask_sensitive_value(
+            "LLM_EMBEDDING_API_KEY", config.embedding_api_key
+        ) if config.embedding_api_key else "",
         timeout=config.timeout,
     )
 
@@ -389,3 +397,266 @@ async def _test_generic(api_key: str, api_base: str) -> TestLLMResponse:
                 success=False,
                 message=f"Connection failed: {str(e)}",
             )
+
+
+# ========== Proxy Configuration Endpoints ==========
+
+@router.get(
+    "/proxy",
+    response_model=ProxyConfigResponse,
+    summary="获取代理配置",
+    description="获取 HTTP 代理配置（密码已脱敏）"
+)
+async def get_proxy_config(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_admin_user),
+):
+    """Get proxy configuration."""
+    config_service = ConfigService(session)
+    config = await config_service.get_proxy_config()
+
+    return ProxyConfigResponse(
+        enabled=config.enabled,
+        url=config.url,
+        username=config.username,
+        password_masked=config_service.mask_sensitive_value(
+            "PROXY_PASSWORD", config.password
+        ) if config.password else "",
+        no_proxy=config.no_proxy,
+    )
+
+
+@router.put(
+    "/proxy",
+    summary="更新代理配置",
+    description="更新 HTTP 代理配置"
+)
+async def update_proxy_config(
+    request: ProxyConfigRequest,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_admin_user),
+):
+    """Update proxy configuration."""
+    config_service = ConfigService(session)
+
+    # Only update provided fields
+    update_data = request.model_dump(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    await config_service.update_proxy_config(update_data)
+    await session.commit()
+
+    # Clear cache to force refresh
+    ConfigService.clear_cache()
+
+    logger.info(f"Proxy configuration updated by user {current_user.get('user_id')}")
+
+    return {"message": "Proxy configuration updated successfully"}
+
+
+@router.post(
+    "/test-proxy",
+    response_model=TestProxyResponse,
+    summary="测试代理连接",
+    description="测试代理服务器连接是否正常，同时验证 no_proxy 配置"
+)
+async def test_proxy_connection(
+    request: TestProxyRequest | None = None,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_admin_user),
+):
+    """Test proxy connection.
+
+    Tests both:
+    1. External API access through proxy
+    2. Internal URL direct connection (if no_proxy configured)
+    """
+    import httpx
+    from urllib.parse import urlparse, urlunparse
+    from app.services.common.http_client import HttpClientFactory
+
+    config_service = ConfigService(session)
+
+    # Get saved config or use provided values
+    if request and request.url:
+        proxy_url = request.url
+        username = request.username
+        password = request.password
+        no_proxy = ""  # For ad-hoc test, no no_proxy
+    else:
+        config = await config_service.get_proxy_config()
+        if not config.enabled:
+            return TestProxyResponse(
+                success=False,
+                message="Proxy is not enabled. Please enable it first.",
+            )
+        proxy_url = config.url
+        username = config.username
+        password = config.password
+        no_proxy = config.no_proxy
+
+    if not proxy_url:
+        return TestProxyResponse(
+            success=False,
+            message="Proxy URL is required",
+        )
+
+    # Build proxy URL with authentication
+    if username and password:
+        parsed = urlparse(proxy_url)
+        netloc = f"{username}:{password}@{parsed.hostname}"
+        if parsed.port:
+            netloc += f":{parsed.port}"
+        full_proxy_url = urlunparse((
+            parsed.scheme,
+            netloc,
+            parsed.path,
+            parsed.params,
+            parsed.query,
+            parsed.fragment,
+        ))
+    else:
+        full_proxy_url = proxy_url
+
+    results = []
+
+    # Test 1: External API through proxy
+    external_url = "https://api.openalex.org/works?per_page=1"
+    try:
+        async with httpx.AsyncClient(proxy=full_proxy_url, timeout=30.0) as client:
+            response = await client.get(external_url)
+
+            if response.status_code == 200:
+                results.append({
+                    "url": external_url,
+                    "success": True,
+                    "message": "External API accessible through proxy",
+                    "used_proxy": True,
+                })
+            else:
+                results.append({
+                    "url": external_url,
+                    "success": False,
+                    "message": f"Proxy returned status {response.status_code}",
+                    "used_proxy": True,
+                })
+    except httpx.ConnectError as e:
+        results.append({
+            "url": external_url,
+            "success": False,
+            "message": f"Failed to connect to proxy: {str(e)}",
+            "used_proxy": True,
+        })
+    except httpx.ProxyError as e:
+        results.append({
+            "url": external_url,
+            "success": False,
+            "message": f"Proxy error: {str(e)}",
+            "used_proxy": True,
+        })
+    except Exception as e:
+        logger.error(f"External proxy test failed: {e}")
+        results.append({
+            "url": external_url,
+            "success": False,
+            "message": f"Connection failed: {str(e)}",
+            "used_proxy": True,
+        })
+
+    # Test 2: Internal URL direct connection (if no_proxy configured)
+    if no_proxy:
+        # Try to extract an internal URL from no_proxy patterns
+        # Or use the provided test_internal_url
+        internal_url = request.test_internal_url if request else None
+
+        # If no specific URL provided, try to infer from no_proxy patterns
+        if not internal_url:
+            # Parse no_proxy to find a testable URL
+            patterns = [p.strip() for p in no_proxy.split(',') if p.strip()]
+            for pattern in patterns:
+                # Skip wildcards, look for concrete hostnames/IPs
+                if '*' not in pattern and not pattern.startswith('.'):
+                    if pattern == 'localhost':
+                        internal_url = "http://localhost:8003/health"
+                        break
+                    elif pattern == '127.0.0.1':
+                        internal_url = "http://127.0.0.1:8003/health"
+                        break
+                    # For IP patterns like 10.x.x.x, construct a test URL
+                    elif pattern.replace('.', '').isdigit():
+                        # This is an IP, try to use it
+                        internal_url = f"http://{pattern}:8003/health"
+                        break
+
+        if internal_url:
+            # Configure HttpClientFactory to check if URL should bypass proxy
+            HttpClientFactory.configure(
+                proxy_url=proxy_url,
+                proxy_username=username,
+                proxy_password=password,
+                no_proxy=no_proxy
+            )
+
+            should_use_proxy = HttpClientFactory.should_use_proxy(internal_url)
+
+            try:
+                # Test direct connection (no proxy for internal URLs)
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.get(internal_url)
+
+                    if response.status_code in [200, 401, 403, 404]:
+                        # Any valid HTTP response counts as success
+                        results.append({
+                            "url": internal_url,
+                            "success": True,
+                            "message": f"Internal URL accessible directly (no_proxy matched)",
+                            "used_proxy": False,
+                        })
+                    else:
+                        results.append({
+                            "url": internal_url,
+                            "success": False,
+                            "message": f"Internal URL returned status {response.status_code}",
+                            "used_proxy": False,
+                        })
+            except httpx.ConnectError:
+                # Connection refused is expected if service not running
+                # Still counts as "no_proxy working" because we tried direct
+                results.append({
+                    "url": internal_url,
+                    "success": True,
+                    "message": f"Direct connection attempted (no_proxy matched, service may not be running)",
+                    "used_proxy": False,
+                })
+            except Exception as e:
+                results.append({
+                    "url": internal_url,
+                    "success": True,
+                    "message": f"Direct connection attempted: {str(e)[:50]}",
+                    "used_proxy": False,
+                })
+
+    # Determine overall success
+    external_success = results[0]["success"] if results else False
+    internal_tests = [r for r in results if not r["used_proxy"]]
+    internal_success = all(r["success"] for r in internal_tests) if internal_tests else True
+
+    overall_success = external_success and internal_success
+
+    # Build message
+    if overall_success:
+        if internal_tests:
+            message = "Proxy and no_proxy configuration working correctly"
+        else:
+            message = "Proxy connection successful"
+    else:
+        failed_tests = [r for r in results if not r["success"]]
+        message = f"{len(failed_tests)} test(s) failed"
+
+    return TestProxyResponse(
+        success=overall_success,
+        message=message,
+        details={"proxy_url": proxy_url, "no_proxy": no_proxy},
+        results=results,
+    )

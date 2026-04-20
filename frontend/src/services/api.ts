@@ -454,8 +454,23 @@ export const api = {
       model?: string
       embedding_model?: string
       embedding_api_base?: string
+      embedding_api_key?: string
       timeout?: number
     }) => apiClient.put('/system-config/llm', data),
+    // 获取代理配置
+    getProxyConfig: () =>
+      apiClient.get('/system-config/proxy'),
+    // 更新代理配置
+    updateProxyConfig: (data: {
+      enabled?: boolean
+      url?: string
+      username?: string
+      password?: string
+      no_proxy?: string
+    }) => apiClient.put('/system-config/proxy', data),
+    // 测试代理连接
+    testProxy: (data?: { url?: string; username?: string; password?: string }) =>
+      apiClient.post('/system-config/test-proxy', data || {}),
     // 更新单个配置
     updateConfig: (key: string, value: string | number | boolean) =>
       apiClient.put(`/system-config/${key}`, { value }),

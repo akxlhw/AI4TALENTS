@@ -29,7 +29,18 @@ class LLMConfig:
     model: str = "deepseek-chat"
     embedding_model: str = ""
     embedding_api_base: str = ""  # 单独的嵌入 API 地址（可选）
+    embedding_api_key: str = ""  # 单独的嵌入 API Key（可选）
     timeout: int = 60
+
+
+@dataclass
+class ProxyConfig:
+    """Proxy configuration settings."""
+    enabled: bool = False
+    url: str = ""
+    username: str = ""
+    password: str = ""
+    no_proxy: str = ""  # 不走代理的地址列表 (逗号分隔)
 
 
 class ConfigService:
@@ -48,7 +59,7 @@ class ConfigService:
     _cache_ttl: int = 300  # 5 minutes default TTL
 
     # Sensitive keys that should be masked
-    SENSITIVE_KEYS = {"LLM_API_KEY"}
+    SENSITIVE_KEYS = {"LLM_API_KEY", "PROXY_PASSWORD", "LLM_EMBEDDING_API_KEY"}
 
     @classmethod
     def mask_sensitive_value(cls, key: str, value: str) -> str:
@@ -222,6 +233,7 @@ class ConfigService:
         model = await self.get_value("LLM_MODEL", "deepseek-chat", use_cache)
         embedding_model = await self.get_value("LLM_EMBEDDING_MODEL", "", use_cache)
         embedding_api_base = await self.get_value("LLM_EMBEDDING_API_BASE", "", use_cache)
+        embedding_api_key = await self.get_value("LLM_EMBEDDING_API_KEY", "", use_cache)
         timeout = await self.get_value("LLM_TIMEOUT", 60, use_cache)
 
         return LLMConfig(
@@ -232,6 +244,7 @@ class ConfigService:
             model=str(model),
             embedding_model=str(embedding_model),
             embedding_api_base=str(embedding_api_base),
+            embedding_api_key=str(embedding_api_key),
             timeout=int(timeout),
         )
 
@@ -250,6 +263,7 @@ class ConfigService:
             "model": "LLM_MODEL",
             "embedding_model": "LLM_EMBEDDING_MODEL",
             "embedding_api_base": "LLM_EMBEDDING_API_BASE",
+            "embedding_api_key": "LLM_EMBEDDING_API_KEY",
             "timeout": "LLM_TIMEOUT",
         }
 
@@ -261,6 +275,56 @@ class ConfigService:
                     config_type = "bool"
                 elif field == "timeout":
                     config_type = "int"
+
+                await self.set_value(key, value, config_type)
+
+        await self.session.commit()
+
+    async def get_proxy_config(self, use_cache: bool = True) -> ProxyConfig:
+        """
+        Get proxy configuration.
+
+        Args:
+            use_cache: Whether to use cache
+
+        Returns:
+            ProxyConfig object
+        """
+        enabled = await self.get_value("PROXY_ENABLED", False, use_cache)
+        url = await self.get_value("PROXY_URL", "", use_cache)
+        username = await self.get_value("PROXY_USERNAME", "", use_cache)
+        password = await self.get_value("PROXY_PASSWORD", "", use_cache)
+        no_proxy = await self.get_value("PROXY_NO_PROXY", "", use_cache)
+
+        return ProxyConfig(
+            enabled=bool(enabled),
+            url=str(url),
+            username=str(username),
+            password=str(password),
+            no_proxy=str(no_proxy),
+        )
+
+    async def update_proxy_config(self, config: dict[str, Any]) -> None:
+        """
+        Update proxy configuration.
+
+        Args:
+            config: Dictionary of proxy configuration values
+        """
+        key_mapping = {
+            "enabled": "PROXY_ENABLED",
+            "url": "PROXY_URL",
+            "username": "PROXY_USERNAME",
+            "password": "PROXY_PASSWORD",
+            "no_proxy": "PROXY_NO_PROXY",
+        }
+
+        for field, key in key_mapping.items():
+            if field in config:
+                value = config[field]
+                config_type = "string"
+                if field == "enabled":
+                    config_type = "bool"
 
                 await self.set_value(key, value, config_type)
 

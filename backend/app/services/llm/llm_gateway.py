@@ -7,6 +7,8 @@ Features:
 - Embedding generation
 - Error handling with retry
 - Fallback to rule-based parsing
+- Proxy support for enterprise intranet
+- Independent embedding API key support
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ import logging
 import time
 from typing import List, Optional, Any
 
+import httpx
 from openai import AsyncOpenAI, APIError, RateLimitError, APIConnectionError
 
 from app.services.llm.protocols import LLMGatewayProtocol, JDFeatures, EmbeddingResult
@@ -49,6 +52,8 @@ class LLMGateway(LLMGatewayProtocol):
     """LLM 网关实现
 
     支持 DeepSeek、OpenAI 等兼容 OpenAI API 的服务。
+    支持企业内网代理访问（通过 HttpClientFactory 统一管理）。
+    支持独立的嵌入 API Key 和地址。
     """
 
     def __init__(
@@ -57,6 +62,8 @@ class LLMGateway(LLMGatewayProtocol):
         api_base: str | None = None,
         model: str | None = None,
         embedding_model: str | None = None,
+        embedding_api_key: str | None = None,
+        embedding_api_base: str | None = None,
         timeout: float | None = None,
         enable_fallback: bool = True,
         cache: Any = None,
@@ -69,14 +76,20 @@ class LLMGateway(LLMGatewayProtocol):
             api_base: API 基础 URL
             model: 聊天模型名称
             embedding_model: 嵌入模型名称
+            embedding_api_key: 嵌入服务独立 API Key（可选，留空则使用 api_key）
+            embedding_api_base: 嵌入服务独立 API 地址（可选）
             timeout: 超时时间（秒）
             enable_fallback: 是否启用降级策略
             cache: 缓存管理器
         """
+        from app.services.common.http_client import HttpClientFactory
+
         self.api_key = api_key or settings.LLM_API_KEY
         self.api_base = api_base or settings.LLM_API_BASE
         self.model = model or settings.LLM_MODEL
         self.embedding_model = embedding_model or settings.LLM_EMBEDDING_MODEL
+        self.embedding_api_key = embedding_api_key or ""
+        self.embedding_api_base = embedding_api_base or ""
         self.timeout = timeout or settings.LLM_TIMEOUT
         self.enable_fallback = enable_fallback
         self.cache = cache
@@ -84,12 +97,43 @@ class LLMGateway(LLMGatewayProtocol):
         # Provider name for logging/metrics
         self.provider = self._detect_provider()
 
-        # Initialize OpenAI client
+        # Create HTTP client using factory (handles proxy/no_proxy automatically)
+        http_client = HttpClientFactory.create_client_for_url(self.api_base, timeout=self.timeout)
+        if HttpClientFactory.should_use_proxy(self.api_base):
+            logger.info(f"LLM Gateway using proxy for: {self.api_base}")
+        else:
+            logger.info(f"LLM Gateway using direct connection for: {self.api_base}")
+
+        # Initialize main OpenAI client
         self.client = AsyncOpenAI(
             api_key=self.api_key,
             base_url=self.api_base,
             timeout=self.timeout,
+            http_client=http_client,
         )
+
+        # Initialize embedding client (may use different API key/base)
+        if self.embedding_api_key or self.embedding_api_base:
+            logger.info("LLM Gateway using separate embedding client")
+            embedding_api_url = self.embedding_api_base or self.api_base
+
+            # Create HTTP client for embedding API using factory
+            embedding_http_client = HttpClientFactory.create_client_for_url(
+                embedding_api_url, timeout=self.timeout
+            )
+            if HttpClientFactory.should_use_proxy(embedding_api_url):
+                logger.info(f"Embedding client using proxy for: {embedding_api_url}")
+            else:
+                logger.info(f"Embedding client using direct connection for: {embedding_api_url}")
+
+            self.embedding_client = AsyncOpenAI(
+                api_key=self.embedding_api_key or self.api_key,
+                base_url=self.embedding_api_base or self.api_base,
+                timeout=self.timeout,
+                http_client=embedding_http_client,
+            )
+        else:
+            self.embedding_client = self.client
 
     def _detect_provider(self) -> str:
         """检测 LLM 提供商"""
@@ -275,7 +319,7 @@ class LLMGateway(LLMGatewayProtocol):
                     tokens_used=0
                 )
 
-            response = await self.client.embeddings.create(
+            response = await self.embedding_client.embeddings.create(
                 model=self.embedding_model,
                 input=text,
             )
@@ -335,7 +379,7 @@ class LLMGateway(LLMGatewayProtocol):
                 logger.info("Using MiniMax-specific embedding API")
                 return await self._generate_embedding_batch_minimax(texts)
 
-            response = await self.client.embeddings.create(
+            response = await self.embedding_client.embeddings.create(
                 model=self.embedding_model,
                 input=texts,
             )
@@ -387,13 +431,21 @@ class LLMGateway(LLMGatewayProtocol):
         - RPM 限制约 60，即每秒 1 个请求
         - 批次间延迟 1 秒足以满足速率限制
         """
-        import httpx
         import asyncio
 
         start_time = time.time()
 
+        # Determine the API key to use for embedding
+        embedding_api_key = self.embedding_api_key or self.api_key
+
+        # Create HTTP client with proxy if configured
+        if self.proxy_url:
+            client = httpx.AsyncClient(proxy=self.proxy_url, timeout=self.timeout)
+        else:
+            client = httpx.AsyncClient(timeout=self.timeout)
+
         # MiniMax 嵌入 API 使用不同的请求格式
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with client:
             # MiniMax 的嵌入模型名称
             model = self.embedding_model
             if not model or model.lower() in ["minimax", "embo-01", "abab-embedding-001"]:
@@ -422,7 +474,7 @@ class LLMGateway(LLMGatewayProtocol):
                         response = await client.post(
                             f"{self.api_base}/embeddings",
                             headers={
-                                "Authorization": f"Bearer {self.api_key}",
+                                "Authorization": f"Bearer {embedding_api_key}",
                                 "Content-Type": "application/json",
                             },
                             json={
@@ -544,15 +596,21 @@ def create_llm_gateway(
     provider: str | None = None,
     api_key: str | None = None,
     api_base: str | None = None,
+    embedding_api_key: str | None = None,
+    embedding_api_base: str | None = None,
     **kwargs
 ) -> LLMGateway | None:
     """
     工厂函数：创建 LLM 网关
 
+    注意：代理配置由 HttpClientFactory 全局管理，在应用启动时配置。
+
     Args:
         provider: 提供商名称
         api_key: API 密钥
         api_base: API 基础 URL
+        embedding_api_key: 嵌入服务独立 API Key
+        embedding_api_base: 嵌入服务独立 API 地址
         **kwargs: 其他参数
 
     Returns:
@@ -574,6 +632,8 @@ def create_llm_gateway(
         api_base=api_base or settings.LLM_API_BASE,
         model=kwargs.get('model') or settings.LLM_MODEL,
         embedding_model=kwargs.get('embedding_model') or settings.LLM_EMBEDDING_MODEL,
+        embedding_api_key=embedding_api_key,
+        embedding_api_base=embedding_api_base,
         timeout=kwargs.get('timeout') or settings.LLM_TIMEOUT,
         enable_fallback=kwargs.get('enable_fallback', settings.LLM_ENABLE_FALLBACK),
     )

@@ -5,6 +5,7 @@ OpenAlex 数据采集器 - 负责从 API 获取数据并存入原始数据层
 from __future__ import annotations
 
 import asyncio
+import fnmatch
 import json
 import logging
 from datetime import datetime, timezone
@@ -73,17 +74,35 @@ class OpenAlexClient:
 
     Note: This is a lightweight config holder. Actual HTTP requests are made
     directly by the Fetcher classes using aiohttp for better async control.
+    Proxy configuration is managed by HttpClientFactory.
     """
 
     def __init__(self, email: str | None = None):
         self.email = email
         self.base_url = OPENALEX_API_BASE
 
+    def get_proxy_for_request(self, url: str) -> str | None:
+        """
+        Get proxy URL for a specific request using HttpClientFactory.
+
+        Args:
+            url: Target URL
+
+        Returns:
+            Proxy URL string or None for direct connection
+        """
+        from app.services.common.http_client import HttpClientFactory
+        return HttpClientFactory.get_proxy_for_url(url)
+
 
 class WorkFetcher:
     """Fetcher for works from OpenAlex"""
 
-    def __init__(self, session: AsyncSession, client: OpenAlexClient | None = None):
+    def __init__(
+        self,
+        session: AsyncSession,
+        client: OpenAlexClient | None = None
+    ):
         self.session = session
         self.client = client or OpenAlexClient()
         self.repo = RawWorkRepository(session)
@@ -94,7 +113,8 @@ class WorkFetcher:
         http_session: aiohttp.ClientSession,
         url: str,
         params: dict,
-        headers: dict
+        headers: dict,
+        proxy: str | None = None
     ) -> dict:
         """带重试的单页获取
 
@@ -103,6 +123,7 @@ class WorkFetcher:
             url: 请求 URL
             params: 请求参数
             headers: 请求头
+            proxy: 代理服务器 URL
 
         Returns:
             JSON 响应数据
@@ -110,7 +131,7 @@ class WorkFetcher:
         Raises:
             RetryableError: 可重试的错误（速率限制、临时网络问题）
         """
-        async with http_session.get(url, params=params, headers=headers) as response:
+        async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
             if response.status == 429:
                 # 速率限制，触发重试
                 raise RetryableError("Rate limited (HTTP 429)")
@@ -162,7 +183,7 @@ class WorkFetcher:
             headers["mailto"] = self.client.email
 
         async with aiohttp.ClientSession(timeout=DEFAULT_TIMEOUT) as http_session:
-            async with http_session.get(url, params=params, headers=headers) as response:
+            async with http_session.get(url, params=params, headers=headers, proxy=self.client.proxy_url) as response:
                 if response.status != 200:
                     return 0
                 data = await response.json()
@@ -184,6 +205,10 @@ class WorkFetcher:
         if not venue.openalex_source_id:
             progress.current_step = f"Venue {venue.venue_name} has no OpenAlex source ID"
             return progress
+
+        # Determine proxy for OpenAlex API requests
+        openalex_url = f"{OPENALEX_API_BASE}/works"
+        proxy = self.client.get_proxy_for_request(openalex_url)
 
         async with aiohttp.ClientSession(timeout=DEFAULT_TIMEOUT) as http_session:
             cursor = "*"
@@ -220,7 +245,7 @@ class WorkFetcher:
 
                 # 使用带重试的请求方法
                 try:
-                    data = await self._fetch_page_with_retry(http_session, url, params, headers)
+                    data = await self._fetch_page_with_retry(http_session, url, params, headers, proxy)
                 except Exception as e:
                     logger.warning(f"Failed to fetch page after retries: {e}")
                     progress.failed += 1
@@ -302,8 +327,9 @@ class WorkFetcher:
             headers["mailto"] = self.client.email
 
         works = []
+        proxy = self.client.get_proxy_for_request(url)
         async with aiohttp.ClientSession() as http_session:
-            async with http_session.get(url, params=params, headers=headers) as response:
+            async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
                 if response.status != 200:
                     logger.warning(f"Failed to fetch works for author {openalex_author_id}: HTTP {response.status}")
                     return works
@@ -337,7 +363,11 @@ class WorkFetcher:
 class AuthorFetcher:
     """Fetcher for authors from OpenAlex"""
 
-    def __init__(self, session: AsyncSession, client: OpenAlexClient | None = None):
+    def __init__(
+        self,
+        session: AsyncSession,
+        client: OpenAlexClient | None = None
+    ):
         self.session = session
         self.client = client or OpenAlexClient()
         self.repo = RawAuthorRepository(session)
@@ -361,6 +391,9 @@ class AuthorFetcher:
 
         logger.info(f"其中 {len(missing_ids)} 位需要从 API 获取，{len(author_ids) - len(missing_ids)} 位已存在")
 
+        # Determine proxy for OpenAlex API
+        openalex_url = f"{OPENALEX_API_BASE}/authors"
+        proxy = self.client.get_proxy_for_request(openalex_url)
         async with aiohttp.ClientSession() as http_session:
             batch_size = 50
             total_batches = (len(missing_ids) + batch_size - 1) // batch_size
@@ -380,7 +413,7 @@ class AuthorFetcher:
                     if self.client.email:
                         headers["mailto"] = self.client.email
 
-                    async with http_session.get(url, params=params, headers=headers) as response:
+                    async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
                         if response.status != 200:
                             logger.warning(f"批次 {batch_num}/{total_batches} 请求失败: HTTP {response.status}")
                             progress.failed += len(batch)
@@ -439,7 +472,11 @@ class AuthorFetcher:
 class InstitutionFetcher:
     """Fetcher for institutions from OpenAlex"""
 
-    def __init__(self, session: AsyncSession, client: OpenAlexClient | None = None):
+    def __init__(
+        self,
+        session: AsyncSession,
+        client: OpenAlexClient | None = None
+    ):
         self.session = session
         self.client = client or OpenAlexClient()
         self.repo = RawInstitutionRepository(session)
@@ -463,6 +500,9 @@ class InstitutionFetcher:
 
         logger.info(f"其中 {len(missing_ids)} 个需要从 API 获取，{len(institution_ids) - len(missing_ids)} 个已存在")
 
+        # Determine proxy for OpenAlex API
+        openalex_url = f"{OPENALEX_API_BASE}/institutions"
+        proxy = self.client.get_proxy_for_request(openalex_url)
         async with aiohttp.ClientSession() as http_session:
             batch_size = 50
             total_batches = (len(missing_ids) + batch_size - 1) // batch_size
@@ -482,7 +522,7 @@ class InstitutionFetcher:
                     if self.client.email:
                         headers["mailto"] = self.client.email
 
-                    async with http_session.get(url, params=params, headers=headers) as response:
+                    async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
                         if response.status != 200:
                             logger.warning(f"批次 {batch_num}/{total_batches} 请求失败: HTTP {response.status}")
                             progress.failed += len(batch)
