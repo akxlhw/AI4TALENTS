@@ -116,52 +116,6 @@ async def update_llm_config(
     return {"message": "LLM configuration updated successfully"}
 
 
-@router.put(
-    "/{key}",
-    response_model=SystemConfigItem,
-    summary="更新单个配置项",
-    description="更新指定配置项的值"
-)
-async def update_config(
-    key: str,
-    request: UpdateConfigRequest,
-    session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
-):
-    """Update a single configuration value."""
-    config_service = ConfigService(session)
-
-    # Determine config type from value type
-    if isinstance(request.value, bool):
-        config_type = "bool"
-    elif isinstance(request.value, int):
-        config_type = "int"
-    elif isinstance(request.value, float):
-        config_type = "float"
-    else:
-        config_type = "string"
-
-    config = await config_service.set_value(key, request.value, config_type)
-    await session.commit()
-
-    # Clear cache for this key
-    if key in ConfigService._cache:
-        del ConfigService._cache[key]
-
-    logger.info(f"Configuration {key} updated by user {current_user.get('user_id')}")
-
-    return SystemConfigItem(
-        key=config.config_key,
-        value=config_service._coerce_value(config.config_value, config.config_type),
-        display_value=config_service.mask_sensitive_value(
-            config.config_key, config.config_value or ""
-        ) if config.is_sensitive else config.config_value,
-        type=config.config_type,
-        is_sensitive=config.is_sensitive,
-        description=config.description,
-    )
-
-
 @router.post(
     "/test-llm",
     response_model=TestLLMResponse,
@@ -659,4 +613,54 @@ async def test_proxy_connection(
         message=message,
         details={"proxy_url": proxy_url, "no_proxy": no_proxy},
         results=results,
+    )
+
+
+# ========== Generic Configuration Endpoints ==========
+# NOTE: Must be defined AFTER specific paths like /llm, /proxy
+# to avoid route conflicts (FastAPI matches routes in order)
+
+@router.put(
+    "/{key}",
+    response_model=SystemConfigItem,
+    summary="更新单个配置项",
+    description="更新指定配置项的值"
+)
+async def update_config(
+    key: str,
+    request: UpdateConfigRequest,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_admin_user),
+):
+    """Update a single configuration value."""
+    config_service = ConfigService(session)
+
+    # Determine config type from value type
+    if isinstance(request.value, bool):
+        config_type = "bool"
+    elif isinstance(request.value, int):
+        config_type = "int"
+    elif isinstance(request.value, float):
+        config_type = "float"
+    else:
+        config_type = "string"
+
+    config = await config_service.set_value(key, request.value, config_type)
+    await session.commit()
+
+    # Clear cache for this key
+    if key in ConfigService._cache:
+        del ConfigService._cache[key]
+
+    logger.info(f"Configuration {key} updated by user {current_user.get('user_id')}")
+
+    return SystemConfigItem(
+        key=config.config_key,
+        value=config_service._coerce_value(config.config_value, config.config_type),
+        display_value=config_service.mask_sensitive_value(
+            config.config_key, config.config_value or ""
+        ) if config.is_sensitive else config.config_value,
+        type=config.config_type,
+        is_sensitive=config.is_sensitive,
+        description=config.description,
     )
