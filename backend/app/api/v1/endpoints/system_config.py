@@ -186,12 +186,16 @@ async def _test_chat_model(
     # Normalize API base URL (remove trailing slash to avoid double slashes)
     api_base = api_base.rstrip("/")
 
+    logger.info(f"[Chat Test] Starting: api_format={api_format}, model={model}, base={api_base}")
+
     async with HttpClientFactory.create_client_for_url(api_base, timeout=30.0) as client:
         # Build endpoint URL
         if api_base.endswith("/v1"):
             chat_endpoint = f"{api_base}/chat/completions"
         else:
             chat_endpoint = f"{api_base}/v1/chat/completions"
+
+        logger.debug(f"[Chat Test] Endpoint: {chat_endpoint}")
 
         # Build request body
         if api_format == "minimax":
@@ -209,13 +213,18 @@ async def _test_chat_model(
                 "max_tokens": 1,
             }
 
+        logger.debug(f"[Chat Test] Request body: {request_body}")
+
         response = await client.post(
             chat_endpoint,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json=request_body,
         )
 
+        logger.info(f"[Chat Test] Response: status={response.status_code}")
+
         if response.status_code == 200:
+            logger.info(f"[Chat Test] Success: model={model}")
             return TestLLMResponse(
                 success=True,
                 message=f"对话模型连接成功，模型: {model}",
@@ -234,6 +243,8 @@ async def _test_chat_model(
             or error_data.get("message", "")
             or error_data.get("error_message", "")
         )
+
+        logger.warning(f"[Chat Test] Failed: status={response.status_code}, error={error_msg or error_data}")
 
         # 401 - API Key invalid
         if response.status_code == 401 or "unauthorized" in error_msg.lower() or "invalid" in error_msg.lower():
@@ -331,6 +342,8 @@ async def _test_embedding_model(
     # Normalize API base URL (remove trailing slash to avoid double slashes)
     api_base = api_base.rstrip("/")
 
+    logger.info(f"[Embedding Test] Starting: api_format={api_format}, model={embedding_model}, base={api_base}")
+
     async with HttpClientFactory.create_client_for_url(api_base, timeout=30.0) as client:
         # MiniMax uses different embedding API format
         if api_format == "minimax":
@@ -338,26 +351,31 @@ async def _test_embedding_model(
             if not api_base.endswith("/v1"):
                 api_base = api_base + "/v1"
 
-            response = await client.post(
-                f"{api_base}/embeddings",
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json={
-                    "model": embedding_model or "embo-01",
-                    "texts": ["test"],
-                    "type": "db",
-                },
-            )
+            endpoint = f"{api_base}/embeddings"
+            request_body = {
+                "model": embedding_model or "embo-01",
+                "texts": ["test"],
+                "type": "db",
+            }
+            logger.debug(f"[Embedding Test] MiniMax endpoint: {endpoint}")
         else:
             # OpenAI-compatible embedding API
             endpoint = f"{api_base}/embeddings" if api_base.endswith("/v1") else f"{api_base}/v1/embeddings"
-            response = await client.post(
-                endpoint,
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json={
-                    "model": embedding_model,
-                    "input": "test",
-                },
-            )
+            request_body = {
+                "model": embedding_model,
+                "input": "test",
+            }
+            logger.debug(f"[Embedding Test] OpenAI endpoint: {endpoint}")
+
+        logger.debug(f"[Embedding Test] Request body: {request_body}")
+
+        response = await client.post(
+            endpoint,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=request_body,
+        )
+
+        logger.info(f"[Embedding Test] Response: status={response.status_code}")
 
         if response.status_code == 200:
             data = response.json()
@@ -369,6 +387,7 @@ async def _test_embedding_model(
                 embedding = data["vectors"][0]
 
             if embedding and len(embedding) > 0:
+                logger.info(f"[Embedding Test] Success: model={embedding_model}, dimensions={len(embedding)}")
                 return TestEmbeddingResponse(
                     success=True,
                     message=f"嵌入模型连接成功，模型: {embedding_model}，向量维度: {len(embedding)}",
@@ -380,6 +399,7 @@ async def _test_embedding_model(
                     },
                 )
             else:
+                logger.warning(f"[Embedding Test] No embedding in response: {data}")
                 return TestEmbeddingResponse(
                     success=False,
                     message="API 返回成功但未获取到有效向量",
@@ -398,6 +418,8 @@ async def _test_embedding_model(
             or error_data.get("error_message", "")
             or error_data.get("base_resp", {}).get("status_msg", "")
         )
+
+        logger.warning(f"[Embedding Test] Failed: status={response.status_code}, error={error_msg or error_data}")
 
         # 401 - API Key invalid
         if response.status_code == 401 or "unauthorized" in str(error_data).lower():

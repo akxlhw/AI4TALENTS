@@ -244,7 +244,7 @@ class ConfigService:
         embedding_api_format = await self.get_value("LLM_EMBEDDING_API_FORMAT", "", use_cache)
         timeout = await self.get_value("LLM_TIMEOUT", 60, use_cache)
 
-        return LLMConfig(
+        config = LLMConfig(
             enabled=bool(enabled),
             api_format=str(api_format),
             api_key=str(api_key),
@@ -256,6 +256,16 @@ class ConfigService:
             embedding_api_format=str(embedding_api_format),
             timeout=int(timeout),
         )
+
+        # Log key config info (mask sensitive values)
+        logger.debug(
+            f"[LLM Config] Loaded: enabled={config.enabled}, "
+            f"api_format={config.api_format}, model={config.model}, "
+            f"api_base={config.api_base}, embedding_model={config.embedding_model}, "
+            f"embedding_api_format={config.embedding_api_format or config.api_format}"
+        )
+
+        return config
 
     async def update_llm_config(self, config: dict[str, Any]) -> None:
         """
@@ -277,6 +287,12 @@ class ConfigService:
             "timeout": "LLM_TIMEOUT",
         }
 
+        # Log non-sensitive config updates
+        safe_fields = {"enabled", "api_format", "api_base", "model", "embedding_model",
+                       "embedding_api_base", "embedding_api_format", "timeout"}
+        logged_updates = {k: v for k, v in config.items() if k in safe_fields}
+        logger.debug(f"[LLM Config] Updating: {logged_updates}")
+
         for field, key in key_mapping.items():
             if field in config:
                 value = config[field]
@@ -289,6 +305,7 @@ class ConfigService:
                 await self.set_value(key, value, config_type)
 
         await self.session.commit()
+        logger.info("[LLM Config] Configuration saved to database")
 
     async def get_proxy_config(self, use_cache: bool = True) -> ProxyConfig:
         """
