@@ -936,105 +936,91 @@ const SystemConfigPage: React.FC = () => {
                     onFinish={handleSaveLLMConfig}
                     initialValues={{ enabled: false, embedding_enabled: false, api_format: 'openai', timeout: 60 }}
                   >
-                    <Row gutter={24}>
+                    <Row gutter={48}>
+                      {/* 左侧：对话模型配置 */}
                       <Col span={12}>
+                        <Title level={5} style={{ marginBottom: 8 }}>对话模型</Title>
+                        <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+                          用于 JD 解析、推荐理由生成
+                        </Text>
                         <Form.Item
                           name="enabled"
-                          label="启用对话模型"
+                          label="启用"
                           valuePropName="checked"
-                          tooltip="用于 JD 解析、推荐理由生成等功能"
                         >
                           <Switch checkedChildren="开启" unCheckedChildren="关闭" />
                         </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item
-                          name="embedding_enabled"
-                          label="启用嵌入模型"
-                          valuePropName="checked"
-                          tooltip="用于语义搜索、相似人才推荐等功能"
-                        >
-                          <Switch checkedChildren="开启" unCheckedChildren="关闭" />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Row gutter={24}>
-                      <Col span={12}>
                         <Form.Item
                           name="api_format"
                           label="API 格式"
-                          tooltip="openai: OpenAI 兼容格式 (DeepSeek/Qwen/Zhipu/vLLM/Ollama)；minimax: MiniMax 专用格式"
+                          tooltip="openai: OpenAI 兼容格式；minimax: MiniMax 专用格式"
                         >
                           <Select options={[
                             { value: 'openai', label: 'OpenAI 兼容格式' },
                             { value: 'minimax', label: 'MiniMax 格式' },
                           ]} />
                         </Form.Item>
+                        <Form.Item name="api_key" label="API Key">
+                          <Input.Password placeholder={llmConfig?.api_key_masked || '请输入 API Key'} />
+                        </Form.Item>
+                        <Form.Item name="api_base" label="API 地址">
+                          <Input placeholder="如 https://api.deepseek.com/v1" />
+                        </Form.Item>
+                        <Form.Item name="model" label="模型名称">
+                          <Input placeholder="如 deepseek-chat, gpt-4o" />
+                        </Form.Item>
+                        <Form.Item>
+                          <Button onClick={handleTestLLM} loading={testingLLM} icon={<ApiOutlined />}>测试连接</Button>
+                        </Form.Item>
                       </Col>
+
+                      {/* 右侧：嵌入模型配置 */}
+                      <Col span={12}>
+                        <Title level={5} style={{ marginBottom: 8 }}>嵌入模型</Title>
+                        <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+                          用于语义搜索、相似人才推荐
+                        </Text>
+                        <Form.Item
+                          name="embedding_enabled"
+                          label="启用"
+                          valuePropName="checked"
+                        >
+                          <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+                        </Form.Item>
+                        <Form.Item
+                          name="embedding_api_format"
+                          label="API 格式"
+                          tooltip="嵌入模型的 API 格式，留空则使用对话模型的 API 格式"
+                        >
+                          <Select allowClear placeholder="留空使用对话模型格式" options={[
+                            { value: 'openai', label: 'OpenAI 兼容格式' },
+                            { value: 'minimax', label: 'MiniMax 格式' },
+                          ]} />
+                        </Form.Item>
+                        <Form.Item name="embedding_api_key" label="API Key">
+                          <Input.Password placeholder={llmConfig?.embedding_api_key_masked || '请输入 API Key'} />
+                        </Form.Item>
+                        <Form.Item name="embedding_api_base" label="API 地址">
+                          <Input placeholder="如 https://api.openai.com/v1" />
+                        </Form.Item>
+                        <Form.Item name="embedding_model" label="模型名称">
+                          <Input placeholder="如 text-embedding-3-small, bge-m3" />
+                        </Form.Item>
+                        <Form.Item>
+                          <Button onClick={handleTestEmbedding} loading={testingEmbedding} icon={<ApiOutlined />}>测试连接</Button>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    {/* 公共配置 */}
+                    <Row gutter={24} style={{ marginTop: 16 }}>
                       <Col span={12}>
                         <Form.Item name="timeout" label="超时时间（秒）">
                           <InputNumber min={10} max={300} style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>
                     </Row>
-                    <Row gutter={24}>
-                      <Col span={12}>
-                        <Form.Item name="api_key" label="API Key">
-                          <Input.Password placeholder={llmConfig?.api_key_masked || '请输入 API Key'} />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item name="api_base" label="API 地址">
-                          <Input placeholder="如 https://api.deepseek.com/v1" />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Row gutter={24}>
-                      <Col span={12}>
-                        <Form.Item name="model" label="对话模型">
-                          <Input placeholder="如 deepseek-chat, gpt-4o" />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item name="embedding_model" label="嵌入模型">
-                          <Input placeholder="如 text-embedding-3-small" />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Row gutter={24}>
-                      <Col span={12}>
-                        <Form.Item
-                          name="embedding_api_base"
-                          label="嵌入 API 地址"
-                          tooltip="如果嵌入模型使用不同的 API 服务，请填写此地址。留空则使用上方的 API 地址。"
-                        >
-                          <Input placeholder="如 https://api.openai.com/v1" />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item
-                          name="embedding_api_key"
-                          label="嵌入 API Key"
-                          tooltip="如果嵌入服务使用不同的 API Key，请填写此字段。留空则使用对话 API Key。"
-                        >
-                          <Input.Password placeholder={llmConfig?.embedding_api_key_masked || '留空使用对话 API Key'} />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Row gutter={24}>
-                      <Col span={12}>
-                        <Form.Item
-                          name="embedding_api_format"
-                          label="嵌入 API 格式"
-                          tooltip="嵌入模型的 API 格式。留空则使用对话模型的 API 格式。"
-                        >
-                          <Select allowClear placeholder="留空使用对话 API 格式" options={[
-                            { value: 'openai', label: 'OpenAI 兼容格式' },
-                            { value: 'minimax', label: 'MiniMax 格式' },
-                          ]} />
-                        </Form.Item>
-                      </Col>
-                    </Row>
+
                     <Form.Item>
                       <Space>
                         <Button type="primary" htmlType="submit" loading={llmLoading}>保存配置</Button>

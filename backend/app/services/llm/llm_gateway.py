@@ -96,6 +96,7 @@ class LLMGateway(LLMGatewayProtocol):
         self.api_base = (api_base or settings.LLM_API_BASE).rstrip("/")
         self.model = model or settings.LLM_MODEL
         self.embedding_model = embedding_model or settings.LLM_EMBEDDING_MODEL
+        # Embedding config - independent from chat model, no fallback
         self.embedding_api_key = embedding_api_key or ""
         self.embedding_api_base = (embedding_api_base or "").rstrip("/")
         self.timeout = timeout or settings.LLM_TIMEOUT
@@ -124,28 +125,28 @@ class LLMGateway(LLMGatewayProtocol):
             http_client=http_client,
         )
 
-        # Initialize embedding client (may use different API key/base)
-        if self.embedding_api_key or self.embedding_api_base:
-            logger.info("LLM Gateway using separate embedding client")
-            embedding_api_url = self.embedding_api_base or self.api_base
-
+        # Initialize embedding client (requires embedding_api_base, API key can be empty for local deployment)
+        if self.embedding_api_base:
+            logger.info(f"LLM Gateway using embedding client: {self.embedding_api_base}")
             # Create HTTP client for embedding API using factory
             embedding_http_client = HttpClientFactory.create_client_for_url(
-                embedding_api_url, timeout=self.timeout
+                self.embedding_api_base, timeout=self.timeout
             )
-            if HttpClientFactory.should_use_proxy(embedding_api_url):
-                logger.info(f"Embedding client using proxy for: {embedding_api_url}")
+            if HttpClientFactory.should_use_proxy(self.embedding_api_base):
+                logger.info(f"Embedding client using proxy for: {self.embedding_api_base}")
             else:
-                logger.info(f"Embedding client using direct connection for: {embedding_api_url}")
+                logger.info(f"Embedding client using direct connection for: {self.embedding_api_base}")
 
             self.embedding_client = AsyncOpenAI(
-                api_key=self.embedding_api_key or self.api_key,
-                base_url=self.embedding_api_base or self.api_base,
+                api_key=self.embedding_api_key or "no-key",  # Local deployment may not need key
+                base_url=self.embedding_api_base,
                 timeout=self.timeout,
                 http_client=embedding_http_client,
             )
         else:
-            self.embedding_client = self.client
+            # No embedding client if not configured
+            self.embedding_client = None
+            logger.info("LLM Gateway: embedding client not configured (no embedding_api_base)")
 
     @with_retry(max_retries=5)
     @with_timeout(timeout_seconds=60.0)
@@ -304,6 +305,12 @@ class LLMGateway(LLMGatewayProtocol):
         Raises:
             LLMError: LLM API 调用失败
         """
+        if not self.embedding_client:
+            raise LLMError(
+                LLMErrorType.CONFIG_ERROR,
+                "嵌入模型未配置。请配置嵌入 API Key 和 API 地址。"
+            )
+
         try:
             start_time = time.time()
 
@@ -365,6 +372,12 @@ class LLMGateway(LLMGatewayProtocol):
         """
         if not texts:
             return []
+
+        if not self.embedding_client:
+            raise LLMError(
+                LLMErrorType.CONFIG_ERROR,
+                "嵌入模型未配置。请配置嵌入 API Key 和 API 地址。"
+            )
 
         try:
             start_time = time.time()

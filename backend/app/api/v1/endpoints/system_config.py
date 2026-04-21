@@ -298,14 +298,14 @@ async def test_embedding_connection(
                 message="嵌入模型未启用，请先启用嵌入模型功能",
             )
         api_format = config.embedding_api_format or config.api_format
-        api_key = config.embedding_api_key or config.api_key
-        api_base = config.embedding_api_base or config.api_base
+        api_key = config.embedding_api_key or ""  # 可以为空（本地部署）
+        api_base = config.embedding_api_base
         embedding_model = config.embedding_model
 
-    if not api_key:
+    if not api_base:
         return TestEmbeddingResponse(
             success=False,
-            message="API Key 未配置",
+            message="嵌入 API 地址未配置，请配置嵌入模型的 API 地址",
         )
 
     if not embedding_model:

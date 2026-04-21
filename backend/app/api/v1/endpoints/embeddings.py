@@ -155,14 +155,20 @@ async def trigger_generation(
     if not llm_config.embedding_model:
         raise HTTPException(
             status_code=400,
-            detail="嵌入模型未配置。请在系统配置中设置嵌入模型名称（如 text-embedding-3-small）。"
+            detail="嵌入模型未配置。请在系统配置中设置嵌入模型名称（如 text-embedding-3-small, bge-m3）。"
         )
 
-    # 检查嵌入 API 地址
-    if not llm_config.embedding_api_base and not llm_config.api_base:
+    # 检查嵌入 API 配置（独立配置，不复用对话模型配置）
+    if not llm_config.embedding_api_key:
         raise HTTPException(
             status_code=400,
-            detail="嵌入 API 地址未配置。请在系统配置中设置「嵌入 API 地址」或「API 地址」。"
+            detail="嵌入 API Key 未配置。请在系统配置中设置嵌入模型的 API Key。"
+        )
+
+    if not llm_config.embedding_api_base:
+        raise HTTPException(
+            status_code=400,
+            detail="嵌入 API 地址未配置。请在系统配置中设置嵌入模型的 API 地址。"
         )
 
     # Count talents
@@ -238,28 +244,25 @@ async def _run_embedding_generation(force: bool, batch_size: int):
             config_service = ConfigService(session)
             llm_config = await config_service.get_llm_config()
 
-            if not llm_config.enabled or not llm_config.api_key:
+            # 检查嵌入模型是否启用
+            if not llm_config.embedding_enabled:
                 _embedding_progress["status"] = "error"
-                _embedding_progress["error_message"] = "LLM 未启用或 API Key 未配置"
+                _embedding_progress["error_message"] = "嵌入模型未启用。请先启用嵌入模型功能。"
                 return
 
-            # 检查嵌入模型配置
+            # 检查嵌入模型配置（独立配置，不复用对话模型配置）
             if not llm_config.embedding_model:
                 _embedding_progress["status"] = "error"
-                _embedding_progress["error_message"] = "嵌入模型未配置。请在系统配置中设置嵌入模型名称。"
+                _embedding_progress["error_message"] = "嵌入模型名称未配置。请配置嵌入模型名称。"
                 return
 
-            # 检查嵌入 API 地址
-            if not llm_config.embedding_api_base and not llm_config.api_base:
+            if not llm_config.embedding_api_base:
                 _embedding_progress["status"] = "error"
-                _embedding_progress["error_message"] = "嵌入 API 地址未配置。请配置「嵌入 API 地址」或「API 地址」。"
+                _embedding_progress["error_message"] = "嵌入 API 地址未配置。请配置嵌入模型的 API 地址。"
                 return
 
             # Create LLM gateway with database config
-            # 使用用户配置的 embedding_api_base 或 api_base
-            embedding_api_base = llm_config.embedding_api_base or llm_config.api_base
-
-            logger.info(f"Creating LLMGateway with api_base={embedding_api_base}, embedding_model={llm_config.embedding_model}")
+            logger.info(f"Creating LLMGateway with embedding_api_base={llm_config.embedding_api_base}, embedding_model={llm_config.embedding_model}")
 
             llm_gateway = LLMGateway(
                 api_key=llm_config.api_key,
