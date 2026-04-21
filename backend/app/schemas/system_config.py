@@ -27,7 +27,8 @@ class UpdateConfigRequest(BaseModel):
 
 class LLMConfigRequest(BaseModel):
     """Request for updating LLM configuration."""
-    enabled: bool | None = Field(None, description="Enable LLM functionality")
+    enabled: bool | None = Field(None, description="Enable chat model functionality")
+    embedding_enabled: bool | None = Field(None, description="Enable embedding model functionality")
     api_format: str | None = Field(None, description="API format (openai/minimax)")
     api_key: str | None = Field(None, description="API key")
     api_base: str | None = Field(None, description="API base URL")
@@ -42,6 +43,7 @@ class LLMConfigRequest(BaseModel):
 class LLMConfigResponse(BaseModel):
     """Response for LLM configuration."""
     enabled: bool
+    embedding_enabled: bool
     api_format: str
     api_key_masked: str  # Masked API key for display
     api_base: str

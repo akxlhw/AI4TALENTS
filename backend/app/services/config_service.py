@@ -27,7 +27,8 @@ class LLMConfig:
     - openai: OpenAI-compatible format (DeepSeek, Qwen, Zhipu, vLLM, Ollama, LocalAI)
     - minimax: MiniMax-specific format
     """
-    enabled: bool = False
+    enabled: bool = False  # 对话模型启用开关
+    embedding_enabled: bool = False  # 嵌入模型启用开关
     api_format: str = "openai"  # API 格式: openai / minimax
     api_key: str = ""
     api_base: str = ""
@@ -234,6 +235,7 @@ class ConfigService:
         """
         # Get all LLM config values
         enabled = await self.get_value("LLM_ENABLED", False, use_cache)
+        embedding_enabled = await self.get_value("LLM_EMBEDDING_ENABLED", False, use_cache)
         api_format = await self.get_value("LLM_API_FORMAT", "openai", use_cache)
         api_key = await self.get_value("LLM_API_KEY", "", use_cache)
         api_base = await self.get_value("LLM_API_BASE", "", use_cache)
@@ -246,6 +248,7 @@ class ConfigService:
 
         config = LLMConfig(
             enabled=bool(enabled),
+            embedding_enabled=bool(embedding_enabled),
             api_format=str(api_format),
             api_key=str(api_key),
             api_base=str(api_base),
@@ -259,7 +262,7 @@ class ConfigService:
 
         # Log key config info (mask sensitive values)
         logger.debug(
-            f"[LLM Config] Loaded: enabled={config.enabled}, "
+            f"[LLM Config] Loaded: chat_enabled={config.enabled}, embedding_enabled={config.embedding_enabled}, "
             f"api_format={config.api_format}, model={config.model}, "
             f"api_base={config.api_base}, embedding_model={config.embedding_model}, "
             f"embedding_api_format={config.embedding_api_format or config.api_format}"
@@ -276,6 +279,7 @@ class ConfigService:
         """
         key_mapping = {
             "enabled": "LLM_ENABLED",
+            "embedding_enabled": "LLM_EMBEDDING_ENABLED",
             "api_format": "LLM_API_FORMAT",
             "api_key": "LLM_API_KEY",
             "api_base": "LLM_API_BASE",
@@ -288,7 +292,7 @@ class ConfigService:
         }
 
         # Log non-sensitive config updates
-        safe_fields = {"enabled", "api_format", "api_base", "model", "embedding_model",
+        safe_fields = {"enabled", "embedding_enabled", "api_format", "api_base", "model", "embedding_model",
                        "embedding_api_base", "embedding_api_format", "timeout"}
         logged_updates = {k: v for k, v in config.items() if k in safe_fields}
         logger.debug(f"[LLM Config] Updating: {logged_updates}")
@@ -297,7 +301,7 @@ class ConfigService:
             if field in config:
                 value = config[field]
                 config_type = "string"
-                if field == "enabled":
+                if field in ("enabled", "embedding_enabled"):
                     config_type = "bool"
                 elif field == "timeout":
                     config_type = "int"

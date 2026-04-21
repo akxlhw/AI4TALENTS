@@ -74,6 +74,7 @@ async def get_llm_config(
 
     return LLMConfigResponse(
         enabled=config.enabled,
+        embedding_enabled=config.embedding_enabled,
         api_format=config.api_format,
         api_key_masked=config_service.mask_sensitive_value(
             "LLM_API_KEY", config.api_key

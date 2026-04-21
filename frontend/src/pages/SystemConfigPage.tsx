@@ -82,6 +82,7 @@ const getErrorMessage = (error: unknown, defaultMsg: string): string => {
 // LLM Config type
 interface LLMConfig {
   enabled: boolean
+  embedding_enabled: boolean
   api_format: string
   api_key_masked: string
   api_base: string
@@ -933,14 +934,31 @@ const SystemConfigPage: React.FC = () => {
                     form={llmForm}
                     layout="vertical"
                     onFinish={handleSaveLLMConfig}
-                    initialValues={{ enabled: false, api_format: 'openai', timeout: 60 }}
+                    initialValues={{ enabled: false, embedding_enabled: false, api_format: 'openai', timeout: 60 }}
                   >
                     <Row gutter={24}>
                       <Col span={12}>
-                        <Form.Item name="enabled" label="启用 LLM" valuePropName="checked">
+                        <Form.Item
+                          name="enabled"
+                          label="启用对话模型"
+                          valuePropName="checked"
+                          tooltip="用于 JD 解析、推荐理由生成等功能"
+                        >
                           <Switch checkedChildren="开启" unCheckedChildren="关闭" />
                         </Form.Item>
                       </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          name="embedding_enabled"
+                          label="启用嵌入模型"
+                          valuePropName="checked"
+                          tooltip="用于语义搜索、相似人才推荐等功能"
+                        >
+                          <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={24}>
                       <Col span={12}>
                         <Form.Item
                           name="api_format"
@@ -951,6 +969,11 @@ const SystemConfigPage: React.FC = () => {
                             { value: 'openai', label: 'OpenAI 兼容格式' },
                             { value: 'minimax', label: 'MiniMax 格式' },
                           ]} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name="timeout" label="超时时间（秒）">
+                          <InputNumber min={10} max={300} style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -1009,11 +1032,6 @@ const SystemConfigPage: React.FC = () => {
                             { value: 'openai', label: 'OpenAI 兼容格式' },
                             { value: 'minimax', label: 'MiniMax 格式' },
                           ]} />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item name="timeout" label="超时时间（秒）">
-                          <InputNumber min={10} max={300} style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>
                     </Row>
