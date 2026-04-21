@@ -158,13 +158,7 @@ async def trigger_generation(
             detail="嵌入模型未配置。请在系统配置中设置嵌入模型名称（如 text-embedding-3-small, bge-m3）。"
         )
 
-    # 检查嵌入 API 配置（独立配置，不复用对话模型配置）
-    if not llm_config.embedding_api_key:
-        raise HTTPException(
-            status_code=400,
-            detail="嵌入 API Key 未配置。请在系统配置中设置嵌入模型的 API Key。"
-        )
-
+    # 检查嵌入 API 地址（API Key 可以为空，本地部署不需要）
     if not llm_config.embedding_api_base:
         raise HTTPException(
             status_code=400,
