@@ -158,14 +158,12 @@ async def trigger_generation(
             detail="嵌入模型未配置。请在系统配置中设置嵌入模型名称（如 text-embedding-3-small）。"
         )
 
-    # 检查嵌入 API 地址（DeepSeek 不支持嵌入，必须单独配置）
+    # 检查嵌入 API 地址
     if not llm_config.embedding_api_base and not llm_config.api_base:
-        provider = llm_config.provider or "deepseek"
-        if provider == "deepseek":
-            raise HTTPException(
-                status_code=400,
-                detail="DeepSeek 不支持嵌入功能。请在系统配置中设置「嵌入 API 地址」（如 OpenAI API 地址）和「嵌入模型」。"
-            )
+        raise HTTPException(
+            status_code=400,
+            detail="嵌入 API 地址未配置。请在系统配置中设置「嵌入 API 地址」或「API 地址」。"
+        )
 
     # Count talents
     total_result = await session.execute(
@@ -253,11 +251,9 @@ async def _run_embedding_generation(force: bool, batch_size: int):
 
             # 检查嵌入 API 地址
             if not llm_config.embedding_api_base and not llm_config.api_base:
-                provider = llm_config.provider or "deepseek"
-                if provider == "deepseek":
-                    _embedding_progress["status"] = "error"
-                    _embedding_progress["error_message"] = "DeepSeek 不支持嵌入功能。请配置「嵌入 API 地址」。"
-                    return
+                _embedding_progress["status"] = "error"
+                _embedding_progress["error_message"] = "嵌入 API 地址未配置。请配置「嵌入 API 地址」或「API 地址」。"
+                return
 
             # Create LLM gateway with database config
             # 使用用户配置的 embedding_api_base 或 api_base
@@ -267,14 +263,17 @@ async def _run_embedding_generation(force: bool, batch_size: int):
 
             llm_gateway = LLMGateway(
                 api_key=llm_config.api_key,
-                api_base=embedding_api_base,
-                model=llm_config.model or "deepseek-chat",
-                embedding_model=llm_config.embedding_model,  # 使用用户配置
+                api_base=llm_config.api_base,
+                model=llm_config.model,
+                embedding_model=llm_config.embedding_model,
+                embedding_api_base=llm_config.embedding_api_base,
+                embedding_api_key=llm_config.embedding_api_key,
                 timeout=llm_config.timeout or 60,
-                provider=llm_config.provider,
+                api_format=llm_config.api_format,
+                embedding_api_format=llm_config.embedding_api_format,
             )
 
-            logger.info(f"LLMGateway provider: {llm_gateway.provider}")
+            logger.info(f"LLMGateway api_format={llm_gateway.api_format}, embedding_api_format={llm_gateway.embedding_api_format}")
 
             # Get talent IDs
             query = select(Talent.talent_id).where(

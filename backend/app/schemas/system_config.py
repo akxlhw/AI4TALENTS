@@ -28,26 +28,28 @@ class UpdateConfigRequest(BaseModel):
 class LLMConfigRequest(BaseModel):
     """Request for updating LLM configuration."""
     enabled: bool | None = Field(None, description="Enable LLM functionality")
-    provider: str | None = Field(None, description="LLM provider (deepseek/openai/zhipu/qwen/minimax/custom)")
+    api_format: str | None = Field(None, description="API format (openai/minimax)")
     api_key: str | None = Field(None, description="API key")
     api_base: str | None = Field(None, description="API base URL")
     model: str | None = Field(None, description="Chat model name")
     embedding_model: str | None = Field(None, description="Embedding model name")
     embedding_api_base: str | None = Field(None, description="Embedding API base URL (optional)")
     embedding_api_key: str | None = Field(None, description="Embedding API key (optional, uses main API key if not provided)")
+    embedding_api_format: str | None = Field(None, description="Embedding API format (openai/minimax), defaults to api_format")
     timeout: int | None = Field(None, ge=1, le=600, description="Request timeout in seconds")
 
 
 class LLMConfigResponse(BaseModel):
     """Response for LLM configuration."""
     enabled: bool
-    provider: str
+    api_format: str
     api_key_masked: str  # Masked API key for display
     api_base: str
     model: str
     embedding_model: str
     embedding_api_base: str
     embedding_api_key_masked: str  # Masked embedding API key for display
+    embedding_api_format: str
     timeout: int
 
 
@@ -97,7 +99,7 @@ class TestProxyResponse(BaseModel):
 
 class TestLLMRequest(BaseModel):
     """Request for testing LLM connection."""
-    provider: str | None = Field(None, description="Provider to test (optional, uses saved config if not provided)")
+    api_format: str | None = Field(None, description="API format (openai/minimax)")
     api_key: str | None = Field(None, description="API key to test (optional)")
     api_base: str | None = Field(None, description="API base URL to test (optional)")
     model: str | None = Field(None, description="Model name to test (optional)")
@@ -112,7 +114,7 @@ class TestLLMResponse(BaseModel):
 
 class TestEmbeddingRequest(BaseModel):
     """Request for testing embedding model connection."""
-    provider: str | None = Field(None, description="Provider to test (optional, uses saved config if not provided)")
+    api_format: str | None = Field(None, description="API format (openai/minimax)")
     api_key: str | None = Field(None, description="API key to test (optional)")
     api_base: str | None = Field(None, description="API base URL to test (optional)")
     embedding_model: str | None = Field(None, description="Embedding model name to test (optional)")

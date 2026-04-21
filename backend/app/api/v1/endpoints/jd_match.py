@@ -53,12 +53,13 @@ async def get_llm_gateway(session: AsyncSession) -> LLMGateway:
 
     return LLMGateway(
         api_key=llm_config.api_key,
-        api_base=llm_config.api_base or "https://api.deepseek.com/v1",
-        model=llm_config.model or "deepseek-chat",
-        embedding_model=llm_config.embedding_model or "deepseek-embedding",
+        api_base=llm_config.api_base,
+        model=llm_config.model,
+        embedding_model=llm_config.embedding_model,
         timeout=llm_config.timeout or 60,
         enable_fallback=settings.LLM_ENABLE_FALLBACK,
-        provider=llm_config.provider,
+        api_format=llm_config.api_format,
+        embedding_api_format=llm_config.embedding_api_format,
     )
 
 

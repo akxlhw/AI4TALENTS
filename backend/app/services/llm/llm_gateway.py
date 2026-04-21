@@ -51,7 +51,10 @@ JD_PARSE_PROMPT = """你是一个专业的招聘助手。请分析以下职位�
 class LLMGateway(LLMGatewayProtocol):
     """LLM 网关实现
 
-    支持 DeepSeek、OpenAI 等兼容 OpenAI API 的服务。
+    支持多种 API 格式：
+    - openai: OpenAI 兼容格式 (DeepSeek, Qwen, Zhipu, vLLM, Ollama, LocalAI)
+    - minimax: MiniMax 专用格式
+
     支持企业内网代理访问（通过 HttpClientFactory 统一管理）。
     支持独立的嵌入 API Key 和地址。
     """
@@ -67,7 +70,8 @@ class LLMGateway(LLMGatewayProtocol):
         timeout: float | None = None,
         enable_fallback: bool = True,
         cache: Any = None,
-        provider: str | None = None,
+        api_format: str = "openai",
+        embedding_api_format: str = "",
     ):
         """
         初始化 LLM 网关
@@ -82,7 +86,8 @@ class LLMGateway(LLMGatewayProtocol):
             timeout: 超时时间（秒）
             enable_fallback: 是否启用降级策略
             cache: 缓存管理器
-            provider: 提供商名称（minimax/deepseek/openai/zhipu/qwen/custom），可选，不传则从 URL 推断
+            api_format: API 格式 (openai / minimax)
+            embedding_api_format: 嵌入 API 格式，留空则使用 api_format
         """
         from app.services.common.http_client import HttpClientFactory
 
@@ -96,9 +101,12 @@ class LLMGateway(LLMGatewayProtocol):
         self.enable_fallback = enable_fallback
         self.cache = cache
 
-        # Provider: use explicit config or detect from URL
-        self.provider = provider if provider else self._detect_provider()
-        logger.info(f"LLM Gateway initialized with provider: {self.provider}")
+        # API format: openai or minimax
+        self.api_format = api_format
+        # Embedding API format: defaults to chat api_format if not specified
+        self.embedding_api_format = embedding_api_format or api_format
+
+        logger.info(f"LLM Gateway initialized: api_format={self.api_format}, embedding_api_format={self.embedding_api_format}")
 
         # Create HTTP client using factory (handles proxy/no_proxy automatically)
         http_client = HttpClientFactory.create_client_for_url(self.api_base, timeout=self.timeout)
@@ -138,21 +146,6 @@ class LLMGateway(LLMGatewayProtocol):
         else:
             self.embedding_client = self.client
 
-    def _detect_provider(self) -> str:
-        """检测 LLM 提供商"""
-        url_lower = self.api_base.lower()
-        if "deepseek" in url_lower:
-            return "deepseek"
-        elif "openai" in url_lower:
-            return "openai"
-        elif "zhipu" in url_lower:
-            return "zhipu"
-        elif "dashscope" in url_lower or "qwen" in url_lower:
-            return "qwen"
-        elif "minimax" in url_lower:
-            return "minimax"
-        return "custom"
-
     @with_retry(max_retries=5)
     @with_timeout(timeout_seconds=60.0)
     async def parse_jd(self, jd_text: str) -> JDFeatures:
@@ -188,8 +181,8 @@ class LLMGateway(LLMGatewayProtocol):
                 "temperature": 0.1,  # 低温度保证稳定性
             }
 
-            # 只有非 MiniMax 提供商才使用 response_format
-            if self.provider != "minimax":
+            # 只有 OpenAI 格式才支持 response_format
+            if self.api_format == "openai":
                 request_params["response_format"] = {"type": "json_object"}
 
             response = await self.client.chat.completions.create(**request_params)
@@ -207,7 +200,7 @@ class LLMGateway(LLMGatewayProtocol):
                 )
 
             # MiniMax 可能返回包含额外文本的响应，需要提取 JSON 部分
-            if self.provider == "minimax":
+            if self.api_format == "minimax":
                 # 尝试找到 JSON 对象的开始和结束位置
                 json_start = content.find('{')
                 json_end = content.rfind('}')
@@ -314,7 +307,7 @@ class LLMGateway(LLMGatewayProtocol):
             start_time = time.time()
 
             # MiniMax 使用不同的 API 格式
-            if self.provider == "minimax":
+            if self.embedding_api_format == "minimax":
                 results = await self._generate_embedding_batch_minimax([text])
                 return results[0] if results else EmbeddingResult(
                     embedding=[],
@@ -375,10 +368,10 @@ class LLMGateway(LLMGatewayProtocol):
         try:
             start_time = time.time()
 
-            logger.info(f"Calling embedding API: model={self.embedding_model}, texts_count={len(texts)}, provider={self.provider}")
+            logger.info(f"Calling embedding API: model={self.embedding_model}, texts_count={len(texts)}, api_format={self.embedding_api_format}")
 
             # MiniMax 使用不同的 API 格式
-            if self.provider == "minimax":
+            if self.embedding_api_format == "minimax":
                 logger.info("Using MiniMax-specific embedding API")
                 return await self._generate_embedding_batch_minimax(texts)
 
@@ -596,11 +589,12 @@ class LLMGateway(LLMGatewayProtocol):
 
 
 def create_llm_gateway(
-    provider: str | None = None,
+    api_format: str = "openai",
     api_key: str | None = None,
     api_base: str | None = None,
     embedding_api_key: str | None = None,
     embedding_api_base: str | None = None,
+    embedding_api_format: str = "",
     **kwargs
 ) -> LLMGateway | None:
     """
@@ -609,11 +603,12 @@ def create_llm_gateway(
     注意：代理配置由 HttpClientFactory 全局管理，在应用启动时配置。
 
     Args:
-        provider: 提供商名称（minimax/deepseek/openai/zhipu/qwen/custom）
+        api_format: API 格式 (openai / minimax)
         api_key: API 密钥
         api_base: API 基础 URL
         embedding_api_key: 嵌入服务独立 API Key
         embedding_api_base: 嵌入服务独立 API 地址
+        embedding_api_format: 嵌入 API 格式，留空则使用 api_format
         **kwargs: 其他参数
 
     Returns:
@@ -639,5 +634,6 @@ def create_llm_gateway(
         embedding_api_base=embedding_api_base,
         timeout=kwargs.get('timeout') or settings.LLM_TIMEOUT,
         enable_fallback=kwargs.get('enable_fallback', settings.LLM_ENABLE_FALLBACK),
-        provider=provider,
+        api_format=api_format,
+        embedding_api_format=embedding_api_format,
     )

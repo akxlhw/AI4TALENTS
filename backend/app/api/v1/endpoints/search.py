@@ -165,11 +165,12 @@ async def enhanced_search_talents(
                 # Create LLM gateway with database config
                 llm_gateway = LLMGateway(
                     api_key=llm_config.api_key,
-                    api_base=llm_config.api_base or "https://api.deepseek.com/v1",
-                    model=llm_config.model or "deepseek-chat",
-                    embedding_model=llm_config.embedding_model or "deepseek-embedding",
+                    api_base=llm_config.api_base,
+                    model=llm_config.model,
+                    embedding_model=llm_config.embedding_model,
                     timeout=llm_config.timeout or 60,
-                    provider=llm_config.provider,
+                    api_format=llm_config.api_format,
+                    embedding_api_format=llm_config.embedding_api_format,
                 )
                 from app.services.embedding.embedding_service import EmbeddingService
                 embed_service = EmbeddingService(

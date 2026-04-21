@@ -82,13 +82,14 @@ const getErrorMessage = (error: unknown, defaultMsg: string): string => {
 // LLM Config type
 interface LLMConfig {
   enabled: boolean
-  provider: string
+  api_format: string
   api_key_masked: string
   api_base: string
   model: string
   embedding_model: string
   embedding_api_base: string
   embedding_api_key_masked: string
+  embedding_api_format: string
   timeout: number
 }
 
@@ -932,7 +933,7 @@ const SystemConfigPage: React.FC = () => {
                     form={llmForm}
                     layout="vertical"
                     onFinish={handleSaveLLMConfig}
-                    initialValues={{ enabled: false, provider: 'deepseek', model: 'deepseek-chat', timeout: 60 }}
+                    initialValues={{ enabled: false, api_format: 'openai', timeout: 60 }}
                   >
                     <Row gutter={24}>
                       <Col span={12}>
@@ -941,14 +942,14 @@ const SystemConfigPage: React.FC = () => {
                         </Form.Item>
                       </Col>
                       <Col span={12}>
-                        <Form.Item name="provider" label="服务商">
+                        <Form.Item
+                          name="api_format"
+                          label="API 格式"
+                          tooltip="openai: OpenAI 兼容格式 (DeepSeek/Qwen/Zhipu/vLLM/Ollama)；minimax: MiniMax 专用格式"
+                        >
                           <Select options={[
-                            { value: 'deepseek', label: 'DeepSeek' },
-                            { value: 'openai', label: 'OpenAI' },
-                            { value: 'zhipu', label: '智谱 AI' },
-                            { value: 'qwen', label: '通义千问' },
-                            { value: 'minimax', label: 'MiniMax' },
-                            { value: 'custom', label: '自定义' },
+                            { value: 'openai', label: 'OpenAI 兼容格式' },
+                            { value: 'minimax', label: 'MiniMax 格式' },
                           ]} />
                         </Form.Item>
                       </Col>
@@ -960,8 +961,8 @@ const SystemConfigPage: React.FC = () => {
                         </Form.Item>
                       </Col>
                       <Col span={12}>
-                        <Form.Item name="api_base" label="API 地址（可选）">
-                          <Input placeholder="留空使用默认地址" />
+                        <Form.Item name="api_base" label="API 地址">
+                          <Input placeholder="如 https://api.deepseek.com/v1" />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -998,6 +999,18 @@ const SystemConfigPage: React.FC = () => {
                       </Col>
                     </Row>
                     <Row gutter={24}>
+                      <Col span={12}>
+                        <Form.Item
+                          name="embedding_api_format"
+                          label="嵌入 API 格式"
+                          tooltip="嵌入模型的 API 格式。留空则使用对话模型的 API 格式。"
+                        >
+                          <Select allowClear placeholder="留空使用对话 API 格式" options={[
+                            { value: 'openai', label: 'OpenAI 兼容格式' },
+                            { value: 'minimax', label: 'MiniMax 格式' },
+                          ]} />
+                        </Form.Item>
+                      </Col>
                       <Col span={12}>
                         <Form.Item name="timeout" label="超时时间（秒）">
                           <InputNumber min={10} max={300} style={{ width: '100%' }} />

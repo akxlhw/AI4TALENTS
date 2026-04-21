@@ -21,15 +21,21 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class LLMConfig:
-    """LLM configuration settings."""
+    """LLM configuration settings.
+
+    API Format determines the request/response format:
+    - openai: OpenAI-compatible format (DeepSeek, Qwen, Zhipu, vLLM, Ollama, LocalAI)
+    - minimax: MiniMax-specific format
+    """
     enabled: bool = False
-    provider: str = "deepseek"
+    api_format: str = "openai"  # API 格式: openai / minimax
     api_key: str = ""
     api_base: str = ""
-    model: str = "deepseek-chat"
+    model: str = ""
     embedding_model: str = ""
     embedding_api_base: str = ""  # 单独的嵌入 API 地址（可选）
     embedding_api_key: str = ""  # 单独的嵌入 API Key（可选）
+    embedding_api_format: str = ""  # 嵌入 API 格式，留空则使用 api_format
     timeout: int = 60
 
 
@@ -228,24 +234,26 @@ class ConfigService:
         """
         # Get all LLM config values
         enabled = await self.get_value("LLM_ENABLED", False, use_cache)
-        provider = await self.get_value("LLM_PROVIDER", "deepseek", use_cache)
+        api_format = await self.get_value("LLM_API_FORMAT", "openai", use_cache)
         api_key = await self.get_value("LLM_API_KEY", "", use_cache)
         api_base = await self.get_value("LLM_API_BASE", "", use_cache)
-        model = await self.get_value("LLM_MODEL", "deepseek-chat", use_cache)
+        model = await self.get_value("LLM_MODEL", "", use_cache)
         embedding_model = await self.get_value("LLM_EMBEDDING_MODEL", "", use_cache)
         embedding_api_base = await self.get_value("LLM_EMBEDDING_API_BASE", "", use_cache)
         embedding_api_key = await self.get_value("LLM_EMBEDDING_API_KEY", "", use_cache)
+        embedding_api_format = await self.get_value("LLM_EMBEDDING_API_FORMAT", "", use_cache)
         timeout = await self.get_value("LLM_TIMEOUT", 60, use_cache)
 
         return LLMConfig(
             enabled=bool(enabled),
-            provider=str(provider),
+            api_format=str(api_format),
             api_key=str(api_key),
             api_base=str(api_base),
             model=str(model),
             embedding_model=str(embedding_model),
             embedding_api_base=str(embedding_api_base),
             embedding_api_key=str(embedding_api_key),
+            embedding_api_format=str(embedding_api_format),
             timeout=int(timeout),
         )
 
@@ -258,13 +266,14 @@ class ConfigService:
         """
         key_mapping = {
             "enabled": "LLM_ENABLED",
-            "provider": "LLM_PROVIDER",
+            "api_format": "LLM_API_FORMAT",
             "api_key": "LLM_API_KEY",
             "api_base": "LLM_API_BASE",
             "model": "LLM_MODEL",
             "embedding_model": "LLM_EMBEDDING_MODEL",
             "embedding_api_base": "LLM_EMBEDDING_API_BASE",
             "embedding_api_key": "LLM_EMBEDDING_API_KEY",
+            "embedding_api_format": "LLM_EMBEDDING_API_FORMAT",
             "timeout": "LLM_TIMEOUT",
         }
 
