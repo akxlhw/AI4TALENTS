@@ -91,6 +91,7 @@ interface LLMConfig {
   embedding_api_base: string
   embedding_api_key_masked: string
   embedding_api_format: string
+  embedding_dimension: number
   timeout: number
 }
 
@@ -934,7 +935,7 @@ const SystemConfigPage: React.FC = () => {
                     form={llmForm}
                     layout="vertical"
                     onFinish={handleSaveLLMConfig}
-                    initialValues={{ enabled: false, embedding_enabled: false, api_format: 'openai', timeout: 60 }}
+                    initialValues={{ enabled: false, embedding_enabled: false, api_format: 'openai', embedding_dimension: 1024, timeout: 60 }}
                   >
                     <Row gutter={48}>
                       {/* 左侧：对话模型配置 */}
@@ -1005,6 +1006,13 @@ const SystemConfigPage: React.FC = () => {
                         </Form.Item>
                         <Form.Item name="embedding_model" label="模型名称">
                           <Input placeholder="如 text-embedding-3-small, bge-m3" />
+                        </Form.Item>
+                        <Form.Item
+                          name="embedding_dimension"
+                          label="向量维度"
+                          tooltip="嵌入模型输出的向量维度。常见值：OpenAI 1536，千问/BGE 1024"
+                        >
+                          <InputNumber min={128} max={4096} style={{ width: '100%' }} placeholder="1024" />
                         </Form.Item>
                         <Form.Item>
                           <Button onClick={handleTestEmbedding} loading={testingEmbedding} icon={<ApiOutlined />}>测试连接</Button>

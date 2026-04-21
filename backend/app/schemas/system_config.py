@@ -35,8 +35,9 @@ class LLMConfigRequest(BaseModel):
     model: str | None = Field(None, description="Chat model name")
     embedding_model: str | None = Field(None, description="Embedding model name")
     embedding_api_base: str | None = Field(None, description="Embedding API base URL (optional)")
-    embedding_api_key: str | None = Field(None, description="Embedding API key (optional, uses main API key if not provided)")
+    embedding_api_key: str | None = Field(None, description="Embedding API key (optional)")
     embedding_api_format: str | None = Field(None, description="Embedding API format (openai/minimax), defaults to api_format")
+    embedding_dimension: int | None = Field(None, ge=128, le=4096, description="Embedding vector dimension (128-4096)")
     timeout: int | None = Field(None, ge=1, le=600, description="Request timeout in seconds")
 
 
@@ -52,6 +53,7 @@ class LLMConfigResponse(BaseModel):
     embedding_api_base: str
     embedding_api_key_masked: str  # Masked embedding API key for display
     embedding_api_format: str
+    embedding_dimension: int
     timeout: int
 
 

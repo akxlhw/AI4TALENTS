@@ -37,6 +37,7 @@ class LLMConfig:
     embedding_api_base: str = ""  # 单独的嵌入 API 地址（可选）
     embedding_api_key: str = ""  # 单独的嵌入 API Key（可选）
     embedding_api_format: str = ""  # 嵌入 API 格式，留空则使用 api_format
+    embedding_dimension: int = 1024  # 嵌入向量维度 (128-4096)
     timeout: int = 60
 
 
@@ -244,6 +245,7 @@ class ConfigService:
         embedding_api_base = await self.get_value("LLM_EMBEDDING_API_BASE", "", use_cache)
         embedding_api_key = await self.get_value("LLM_EMBEDDING_API_KEY", "", use_cache)
         embedding_api_format = await self.get_value("LLM_EMBEDDING_API_FORMAT", "", use_cache)
+        embedding_dimension = await self.get_value("LLM_EMBEDDING_DIMENSION", 1024, use_cache)
         timeout = await self.get_value("LLM_TIMEOUT", 60, use_cache)
 
         config = LLMConfig(
@@ -257,6 +259,7 @@ class ConfigService:
             embedding_api_base=str(embedding_api_base),
             embedding_api_key=str(embedding_api_key),
             embedding_api_format=str(embedding_api_format),
+            embedding_dimension=int(embedding_dimension),
             timeout=int(timeout),
         )
 
@@ -265,7 +268,8 @@ class ConfigService:
             f"[LLM Config] Loaded: chat_enabled={config.enabled}, embedding_enabled={config.embedding_enabled}, "
             f"api_format={config.api_format}, model={config.model}, "
             f"api_base={config.api_base}, embedding_model={config.embedding_model}, "
-            f"embedding_api_format={config.embedding_api_format or config.api_format}"
+            f"embedding_api_format={config.embedding_api_format or config.api_format}, "
+            f"embedding_dimension={config.embedding_dimension}"
         )
 
         return config
@@ -288,12 +292,13 @@ class ConfigService:
             "embedding_api_base": "LLM_EMBEDDING_API_BASE",
             "embedding_api_key": "LLM_EMBEDDING_API_KEY",
             "embedding_api_format": "LLM_EMBEDDING_API_FORMAT",
+            "embedding_dimension": "LLM_EMBEDDING_DIMENSION",
             "timeout": "LLM_TIMEOUT",
         }
 
         # Log non-sensitive config updates
         safe_fields = {"enabled", "embedding_enabled", "api_format", "api_base", "model", "embedding_model",
-                       "embedding_api_base", "embedding_api_format", "timeout"}
+                       "embedding_api_base", "embedding_api_format", "embedding_dimension", "timeout"}
         logged_updates = {k: v for k, v in config.items() if k in safe_fields}
         logger.debug(f"[LLM Config] Updating: {logged_updates}")
 
@@ -303,7 +308,7 @@ class ConfigService:
                 config_type = "string"
                 if field in ("enabled", "embedding_enabled"):
                     config_type = "bool"
-                elif field == "timeout":
+                elif field in ("timeout", "embedding_dimension"):
                     config_type = "int"
 
                 await self.set_value(key, value, config_type)

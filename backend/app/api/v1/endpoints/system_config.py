@@ -87,6 +87,7 @@ async def get_llm_config(
             "LLM_EMBEDDING_API_KEY", config.embedding_api_key
         ) if config.embedding_api_key else "",
         embedding_api_format=config.embedding_api_format,
+        embedding_dimension=config.embedding_dimension,
         timeout=config.timeout,
     )
 
