@@ -1022,11 +1022,7 @@ const SystemConfigPage: React.FC = () => {
                     </Row>
 
                     <Form.Item>
-                      <Space>
-                        <Button type="primary" htmlType="submit" loading={llmLoading}>保存配置</Button>
-                        <Button onClick={handleTestLLM} loading={testingLLM} icon={<ApiOutlined />}>测试对话连接</Button>
-                        <Button onClick={handleTestEmbedding} loading={testingEmbedding} icon={<ApiOutlined />}>测试嵌入连接</Button>
-                      </Space>
+                      <Button type="primary" htmlType="submit" loading={llmLoading}>保存配置</Button>
                     </Form.Item>
                   </Form>
                   {testResult && (
