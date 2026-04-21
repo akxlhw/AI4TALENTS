@@ -183,6 +183,9 @@ async def _test_chat_model(
     """Test chat model connection."""
     from app.services.common.http_client import HttpClientFactory
 
+    # Normalize API base URL (remove trailing slash to avoid double slashes)
+    api_base = api_base.rstrip("/")
+
     async with HttpClientFactory.create_client_for_url(api_base, timeout=30.0) as client:
         # Build endpoint URL
         if api_base.endswith("/v1"):
@@ -325,12 +328,15 @@ async def _test_embedding_model(
             message="API Base URL 未配置",
         )
 
+    # Normalize API base URL (remove trailing slash to avoid double slashes)
+    api_base = api_base.rstrip("/")
+
     async with HttpClientFactory.create_client_for_url(api_base, timeout=30.0) as client:
         # MiniMax uses different embedding API format
         if api_format == "minimax":
             # Ensure URL ends with /v1
             if not api_base.endswith("/v1"):
-                api_base = api_base.rstrip("/") + "/v1"
+                api_base = api_base + "/v1"
 
             response = await client.post(
                 f"{api_base}/embeddings",

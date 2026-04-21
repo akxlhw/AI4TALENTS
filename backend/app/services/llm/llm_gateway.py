@@ -92,11 +92,12 @@ class LLMGateway(LLMGatewayProtocol):
         from app.services.common.http_client import HttpClientFactory
 
         self.api_key = api_key or settings.LLM_API_KEY
-        self.api_base = api_base or settings.LLM_API_BASE
+        # Normalize base URLs (remove trailing slash to avoid double slashes in URL concatenation)
+        self.api_base = (api_base or settings.LLM_API_BASE).rstrip("/")
         self.model = model or settings.LLM_MODEL
         self.embedding_model = embedding_model or settings.LLM_EMBEDDING_MODEL
         self.embedding_api_key = embedding_api_key or ""
-        self.embedding_api_base = embedding_api_base or ""
+        self.embedding_api_base = (embedding_api_base or "").rstrip("/")
         self.timeout = timeout or settings.LLM_TIMEOUT
         self.enable_fallback = enable_fallback
         self.cache = cache
