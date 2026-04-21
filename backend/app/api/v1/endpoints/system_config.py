@@ -216,9 +216,14 @@ async def _test_chat_model(
 
         logger.debug(f"[Chat Test] Request body: {request_body}")
 
+        # Build headers - only add Authorization if api_key is not empty
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
         response = await client.post(
             chat_endpoint,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            headers=headers,
             json=request_body,
         )
 
@@ -370,9 +375,14 @@ async def _test_embedding_model(
 
         logger.debug(f"[Embedding Test] Request body: {request_body}")
 
+        # Build headers - only add Authorization if api_key is not empty
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
         response = await client.post(
             endpoint,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            headers=headers,
             json=request_body,
         )
 
