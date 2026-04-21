@@ -145,7 +145,7 @@ async def test_llm_connection(
         if not config.enabled:
             return TestLLMResponse(
                 success=False,
-                message="LLM 未启用，请先启用 LLM 功能",
+                message="对话模型未启用，请先启用对话模型功能",
             )
         api_format = config.api_format
         api_key = config.api_key
@@ -292,10 +292,10 @@ async def test_embedding_connection(
         embedding_model = request.embedding_model or ""
     else:
         config = await config_service.get_llm_config()
-        if not config.enabled:
+        if not config.embedding_enabled:
             return TestEmbeddingResponse(
                 success=False,
-                message="LLM 未启用，请先启用 LLM 功能",
+                message="嵌入模型未启用，请先启用嵌入模型功能",
             )
         api_format = config.embedding_api_format or config.api_format
         api_key = config.embedding_api_key or config.api_key
