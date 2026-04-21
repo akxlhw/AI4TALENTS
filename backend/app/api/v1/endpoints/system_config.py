@@ -105,20 +105,53 @@ async def update_llm_config(
     """Update LLM configuration."""
     config_service = ConfigService(session)
 
+    # Get current config to check dimension change
+    current_config = await config_service.get_llm_config()
+    current_dimension = current_config.embedding_dimension
+
     # Only update provided fields
     update_data = request.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
 
+    # Check if dimension is changing
+    new_dimension = update_data.get("embedding_dimension")
+    dimension_changed = new_dimension is not None and new_dimension != current_dimension
+
     await config_service.update_llm_config(update_data)
     await session.commit()
+
+    # Handle dimension change - modify database vector column
+    if dimension_changed:
+        logger.info(f"[LLM Config] Dimension changed: {current_dimension} -> {new_dimension}, modifying database column")
+
+        from sqlalchemy import text
+
+        # Execute DDL to modify vector column
+        # Note: This will clear all existing embeddings
+        await session.execute(text("DROP INDEX IF EXISTS ix_talent_embedding_vector"))
+        await session.execute(text("DELETE FROM core_talent_embedding"))
+        await session.execute(text(f"ALTER TABLE core_talent_embedding ALTER COLUMN embedding TYPE vector({new_dimension})"))
+        await session.execute(text(f"""
+            CREATE INDEX ix_talent_embedding_vector
+            ON core_talent_embedding
+            USING ivfflat (embedding vector_cosine_ops)
+            WITH (lists = 100)
+        """))
+        await session.commit()
+
+        logger.info(f"[LLM Config] Vector column modified to vector({new_dimension}), existing embeddings cleared")
 
     # Clear cache to force refresh
     ConfigService.clear_cache()
 
     logger.info(f"LLM configuration updated by user {current_user.get('user_id')}")
 
-    return {"message": "LLM configuration updated successfully"}
+    result = {"message": "LLM configuration updated successfully"}
+    if dimension_changed:
+        result["warning"] = f"向量维度已从 {current_dimension} 变更为 {new_dimension}，现有向量数据已清空，请重新生成向量"
+
+    return result
 
 
 @router.post(

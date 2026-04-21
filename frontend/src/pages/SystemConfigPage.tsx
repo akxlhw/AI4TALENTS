@@ -406,8 +406,12 @@ const SystemConfigPage: React.FC = () => {
     try {
       const values = await llmForm.validateFields()
       setLLMLoading(true)
-      await api.systemConfig.updateLLMConfig(values)
+      const response = await api.systemConfig.updateLLMConfig(values)
       message.success('LLM 配置已保存')
+      // Show warning if dimension changed
+      if (response.data?.warning) {
+        message.warning(response.data.warning, 6)
+      }
       loadLLMConfig()
     } catch (error) {
       message.error(getErrorMessage(error, '保存失败'))
@@ -1010,7 +1014,7 @@ const SystemConfigPage: React.FC = () => {
                         <Form.Item
                           name="embedding_dimension"
                           label="向量维度"
-                          tooltip="嵌入模型输出的向量维度。常见值：OpenAI 1536，千问/BGE 1024"
+                          tooltip="嵌入模型输出的向量维度。常见值：OpenAI 1536，千问/BGE 1024。注意：修改维度会清空现有向量数据"
                         >
                           <InputNumber min={128} max={4096} style={{ width: '100%' }} placeholder="1024" />
                         </Form.Item>
