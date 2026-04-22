@@ -256,10 +256,10 @@ const SearchRecommendPage: React.FC = () => {
   }, [])
 
   // ========== Search Functions ==========
-  const loadAllTalents = async () => {
+  const loadAllTalents = async (pageNum: number = 1) => {
     setSearchLoading(true)
     try {
-      const response = await api.talents.list({ page: 1, page_size: pageSize })
+      const response = await api.talents.list({ page: pageNum, page_size: pageSize })
       const items: SearchTalent[] = (response.data.items || []).map((item: SearchTalent) => ({
         talent_id: item.talent_id,
         name: item.name,
@@ -277,7 +277,7 @@ const SearchRecommendPage: React.FC = () => {
       setResults(items)
       setTotal(response.data.total || items.length)
       setTookMs(null)
-      setPage(1)
+      setPage(pageNum)
     } catch {
       message.error('加载人才列表失败')
     } finally {
@@ -286,7 +286,7 @@ const SearchRecommendPage: React.FC = () => {
   }
 
   const performSearch = async (searchQuery: string, pageNum: number) => {
-    if (!searchQuery.trim()) return loadAllTalents()
+    if (!searchQuery.trim()) return loadAllTalents(pageNum)
     setSearchLoading(true)
     setTookMs(null)
     setSearchModeUsed(null)
