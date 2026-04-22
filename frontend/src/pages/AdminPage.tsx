@@ -25,6 +25,7 @@ import {
 } from '@ant-design/icons'
 import { api } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
+import { formatUTCToLocal } from '../utils/datetime'
 
 const { Text } = Typography
 
@@ -233,8 +234,8 @@ const AdminPage: React.FC = () => {
       dataIndex: 'default_view',
       key: 'default_view',
       render: (view: string) => (
-        <Tag color={view === 'tech_element' ? 'blue' : 'green'}>
-          {view === 'tech_element' ? '技术要素' : '国家院校'}
+        <Tag color={view === 'tech_domain' ? 'blue' : 'green'}>
+          {view === 'tech_domain' ? '技术领域' : '国家院校'}
         </Tag>
       ),
     },
@@ -242,8 +243,7 @@ const AdminPage: React.FC = () => {
       title: '最后登录',
       dataIndex: 'last_login_at',
       key: 'last_login_at',
-      render: (date: string | null) =>
-        date ? new Date(date).toLocaleString() : '-',
+      render: (date: string | null) => formatUTCToLocal(date),
     },
     {
       title: '操作',
@@ -371,7 +371,7 @@ const AdminPage: React.FC = () => {
           <Form.Item name="default_view" label="默认视角">
             <Select
               options={[
-                { value: 'tech_element', label: '技术要素' },
+                { value: 'tech_domain', label: '技术领域' },
                 { value: 'country_school', label: '国家院校' },
               ]}
             />
@@ -419,8 +419,8 @@ const AdminPage: React.FC = () => {
                                 ? '学校'
                                 : scope.scope_type === 'country'
                                 ? '国家'
-                                : scope.scope_type === 'tech_element'
-                                ? '技术要素'
+                                : scope.scope_type === 'tech_domain'
+                                ? '技术领域'
                                 : '全部'}
                             </Tag>
                             <Text>{scope.scope_value}</Text>
@@ -428,9 +428,9 @@ const AdminPage: React.FC = () => {
                         }
                         description={
                           <Text type="secondary">
-                            授予于 {new Date(scope.granted_at).toLocaleString()}
+                            授予于 {formatUTCToLocal(scope.granted_at)}
                             {scope.expires_at &&
-                              ` | 过期: ${new Date(scope.expires_at).toLocaleString()}`}
+                              ` | 过期: ${formatUTCToLocal(scope.expires_at)}`}
                           </Text>
                         }
                       />
@@ -454,7 +454,7 @@ const AdminPage: React.FC = () => {
                       options={[
                         { value: 'school', label: '学校' },
                         { value: 'country', label: '国家' },
-                        { value: 'tech_element', label: '技术要素' },
+                        { value: 'tech_domain', label: '技术领域' },
                         { value: 'all', label: '全部' },
                       ]}
                     />
@@ -463,7 +463,7 @@ const AdminPage: React.FC = () => {
                     name="scope_value"
                     label="权限值"
                     rules={[{ required: true }]}
-                    extra="学校ID、国家代码(如US、CN)、技术要素ID 或 * (全部)"
+                    extra="学校ID、国家代码(如US、CN)、技术领域ID 或 * (全部)"
                   >
                     <Input placeholder="如: 1, US, 1, *" />
                   </Form.Item>

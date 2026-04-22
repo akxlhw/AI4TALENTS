@@ -4,7 +4,7 @@
 功能：
 1. 清空所有业务数据表
 2. 重新运行数据库迁移
-3. 初始化基础数据（管理员、技术要素）
+3. 初始化基础数据（管理员、技术领域）
 
 使用方法：
     python scripts/init_system.py              # 交互式确认
@@ -29,7 +29,7 @@ from app.core.database import AsyncSessionLocal
 from app.core.auth import hash_password
 from app.models.enums import UserRoleType, ScopeType
 from app.models.iam import UserAccount, UserSchoolScope
-from app.models.tech_element import TechElement
+from app.models.tech_domain import TechDomain
 from app.models.statistics import OverviewStatSnapshot
 from app.models.venue import Venue, VenueTechBinding
 
@@ -85,52 +85,52 @@ BUSINESS_TABLES = [
 # 注意：期刊配置(config_venue, config_venue_tech_binding)永不清空，需要保留
 CONFIG_TABLES = [
     "iam_user_school_scope",
-    "core_tech_element",
+    "core_tech_domain",
     "iam_user_account",
 ]
 
-# 初始技术要素数据（6大技术要素）
-TECH_ELEMENTS_DATA = [
+# 初始技术领域数据（6大技术领域）
+TECH_DOMAINS_DATA = [
     {
-        "element_code": "ai",
-        "element_name": "人工智能",
-        "element_name_en": "Artificial Intelligence",
-        "element_desc": "人工智能相关技术",
+        "domain_code": "ai",
+        "domain_name": "人工智能",
+        "domain_name_en": "Artificial Intelligence",
+        "domain_desc": "人工智能相关技术",
         "sort_order": 1,
     },
     {
-        "element_code": "robotics",
-        "element_name": "机器人",
-        "element_name_en": "Robotics",
-        "element_desc": "机器人技术相关领域",
+        "domain_code": "robotics",
+        "domain_name": "机器人",
+        "domain_name_en": "Robotics",
+        "domain_desc": "机器人技术相关领域",
         "sort_order": 2,
     },
     {
-        "element_code": "data_science",
-        "element_name": "数据科学",
-        "element_name_en": "Data Science",
-        "element_desc": "数据科学与分析",
+        "domain_code": "data_science",
+        "domain_name": "数据科学",
+        "domain_name_en": "Data Science",
+        "domain_desc": "数据科学与分析",
         "sort_order": 3,
     },
     {
-        "element_code": "networks",
-        "element_name": "网络与通信",
-        "element_name_en": "Networks & Communications",
-        "element_desc": "计算机网络与通信技术",
+        "domain_code": "networks",
+        "domain_name": "网络与通信",
+        "domain_name_en": "Networks & Communications",
+        "domain_desc": "计算机网络与通信技术",
         "sort_order": 4,
     },
     {
-        "element_code": "systems",
-        "element_name": "系统与软件",
-        "element_name_en": "Systems & Software",
-        "element_desc": "计算机系统与软件工程",
+        "domain_code": "systems",
+        "domain_name": "系统与软件",
+        "domain_name_en": "Systems & Software",
+        "domain_desc": "计算机系统与软件工程",
         "sort_order": 5,
     },
     {
-        "element_code": "security",
-        "element_name": "信息安全",
-        "element_name_en": "Information Security",
-        "element_desc": "信息安全与密码学",
+        "domain_code": "security",
+        "domain_name": "信息安全",
+        "domain_name_en": "Information Security",
+        "domain_desc": "信息安全与密码学",
         "sort_order": 6,
     },
 ]
@@ -220,10 +220,10 @@ KNOWN_OPENALEX_SOURCES = {
     "tkde": "S2766213291",
 }
 
-# 技术要素与顶会顶刊映射数据
+# 技术领域与顶会顶刊映射数据
 VENUE_DATA = [
     {
-        "element_code": "ai",
+        "domain_code": "ai",
         "venues": [
             {"id": "NeurIPS", "name": "Neural Information Processing Systems", "type": "conference"},
             {"id": "ICML", "name": "International Conference on Machine Learning", "type": "conference"},
@@ -241,7 +241,7 @@ VENUE_DATA = [
         ]
     },
     {
-        "element_code": "robotics",
+        "domain_code": "robotics",
         "venues": [
             {"id": "ICRA", "name": "International Conference on Robotics and Automation", "type": "conference"},
             {"id": "IROS", "name": "International Conference on Intelligent Robots and Systems", "type": "conference"},
@@ -253,7 +253,7 @@ VENUE_DATA = [
         ]
     },
     {
-        "element_code": "data_science",
+        "domain_code": "data_science",
         "venues": [
             {"id": "KDD", "name": "ACM SIGKDD Conference on Knowledge Discovery and Data Mining", "type": "conference"},
             {"id": "SIGMOD", "name": "ACM SIGMOD International Conference on Management of Data", "type": "conference"},
@@ -266,7 +266,7 @@ VENUE_DATA = [
         ]
     },
     {
-        "element_code": "networks",
+        "domain_code": "networks",
         "venues": [
             {"id": "SIGCOMM", "name": "ACM SIGCOMM Conference", "type": "conference"},
             {"id": "MobiCom", "name": "ACM International Conference on Mobile Computing and Networking", "type": "conference"},
@@ -278,7 +278,7 @@ VENUE_DATA = [
         ]
     },
     {
-        "element_code": "systems",
+        "domain_code": "systems",
         "venues": [
             {"id": "OSDI", "name": "USENIX Symposium on Operating Systems Design and Implementation", "type": "conference"},
             {"id": "SOSP", "name": "ACM Symposium on Operating Systems Principles", "type": "conference"},
@@ -292,7 +292,7 @@ VENUE_DATA = [
         ]
     },
     {
-        "element_code": "security",
+        "domain_code": "security",
         "venues": [
             {"id": "CCS", "name": "ACM Conference on Computer and Communications Security", "type": "conference"},
             {"id": "USENIX Security", "name": "USENIX Security Symposium", "type": "conference"},
@@ -312,7 +312,7 @@ async def truncate_tables(full_reset: bool = False):
     """清空业务数据表
 
     Args:
-        full_reset: 是否同时清空基础配置表（用户、技术要素等）
+        full_reset: 是否同时清空基础配置表（用户、技术领域等）
     """
     print("\n" + "="*60)
     print("Step 1: 清空数据表")
@@ -444,25 +444,25 @@ async def seed_admin_user():
         print("  [OK] 演示用户: demo / demo123")
 
 
-async def seed_tech_elements():
-    """初始化技术要素"""
+async def seed_tech_domains():
+    """初始化技术领域"""
     print("\n" + "="*60)
-    print("Step 4: 初始化技术要素")
+    print("Step 4: 初始化技术领域")
     print("="*60)
 
     async with AsyncSessionLocal() as session:
         from sqlalchemy import select
 
         # 检查是否已存在
-        result = await session.execute(select(TechElement).limit(1))
+        result = await session.execute(select(TechDomain).limit(1))
         if result.scalar_one_or_none():
-            print("  技术要素已存在，跳过创建")
+            print("  技术领域已存在，跳过创建")
             return
 
-        for element_data in TECH_ELEMENTS_DATA:
-            element = TechElement(**element_data)
-            session.add(element)
-            print(f"  [OK] {element_data['element_name']}")
+        for domain_data in TECH_DOMAINS_DATA:
+            domain = TechDomain(**domain_data)
+            session.add(domain)
+            print(f"  [OK] {domain_data['domain_name']}")
 
         await session.commit()
 
@@ -476,18 +476,18 @@ async def seed_venues():
     from sqlalchemy import select
 
     async with AsyncSessionLocal() as session:
-        # 获取所有技术要素
-        result = await session.execute(select(TechElement))
-        tech_elements = {e.element_code: e for e in result.scalars().all()}
+        # 获取所有技术领域
+        result = await session.execute(select(TechDomain))
+        tech_domains = {d.domain_code: d for d in result.scalars().all()}
 
         stats = {"venues_created": 0, "bindings_created": 0}
 
-        for element_data in VENUE_DATA:
-            element_code = element_data["element_code"]
-            venues_data = element_data["venues"]
+        for domain_data in VENUE_DATA:
+            domain_code = domain_data["domain_code"]
+            venues_data = domain_data["venues"]
 
-            tech_element = tech_elements.get(element_code)
-            if not tech_element:
+            tech_domain = tech_domains.get(domain_code)
+            if not tech_domain:
                 continue
 
             for idx, venue_info in enumerate(venues_data):
@@ -520,7 +520,7 @@ async def seed_venues():
                 result = await session.execute(
                     select(VenueTechBinding).where(
                         VenueTechBinding.venue_id == venue.venue_id,
-                        VenueTechBinding.tech_element_id == tech_element.tech_element_id
+                        VenueTechBinding.tech_domain_id == tech_domain.tech_domain_id
                     )
                 )
                 binding = result.scalar_one_or_none()
@@ -528,7 +528,7 @@ async def seed_venues():
                 if not binding:
                     binding = VenueTechBinding(
                         venue_id=venue.venue_id,
-                        tech_element_id=tech_element.tech_element_id,
+                        tech_domain_id=tech_domain.tech_domain_id,
                         priority=idx,
                         collect_status="pending",
                         is_enabled=True,
@@ -536,7 +536,7 @@ async def seed_venues():
                     session.add(binding)
                     stats["bindings_created"] += 1
 
-            print(f"  [OK] {tech_element.element_name}: {len(venues_data)} 个期刊")
+            print(f"  [OK] {tech_domain.domain_name}: {len(venues_data)} 个期刊")
 
         await session.commit()
         print(f"\n  Venue 创建: {stats['venues_created']}, 绑定创建: {stats['bindings_created']}")
@@ -561,9 +561,9 @@ async def seed_statistics_snapshot():
 
         version = f"v1.0_{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
-        # 获取技术要素数量
-        result = await session.execute(select(TechElement))
-        tech_element_count = len(result.scalars().all())
+        # 获取技术领域数量
+        result = await session.execute(select(TechDomain))
+        tech_domain_count = len(result.scalars().all())
 
         snapshot = OverviewStatSnapshot(
             stat_version=version,
@@ -573,21 +573,21 @@ async def seed_statistics_snapshot():
             student_count=0,
             talent_count=0,
             country_count=0,
-            tech_element_count=tech_element_count,
+            tech_domain_count=tech_domain_count,
             tech_direction_count=0,
             is_active=1,
         )
         session.add(snapshot)
         await session.commit()
         print(f"  [OK] 初始快照: {version}")
-        print(f"  [OK] 技术要素数: {tech_element_count}")
+        print(f"  [OK] 技术领域数: {tech_domain_count}")
 
 
 async def init_system(full_reset: bool = False):
     """执行完整初始化流程
 
     Args:
-        full_reset: 是否执行全量重置（清空用户、技术要素等基础数据）
+        full_reset: 是否执行全量重置（清空用户、技术领域等基础数据）
     """
     print("\n" + "="*60)
     print("智能人才库 - 系统数据初始化")
@@ -606,8 +606,8 @@ async def init_system(full_reset: bool = False):
         # 3. 初始化用户
         await seed_admin_user()
 
-        # 4. 初始化技术要素
-        await seed_tech_elements()
+        # 4. 初始化技术领域
+        await seed_tech_domains()
 
         # 5. 初始化顶刊顶会
         await seed_venues()
@@ -629,7 +629,7 @@ async def init_system(full_reset: bool = False):
         print("  演示用户: demo / demo123")
         print("\n[!] 生产环境请及时修改默认密码!")
     else:
-        print("\n[提示] 已清空业务数据，用户和技术要素配置保留")
+        print("\n[提示] 已清空业务数据，用户和技术领域配置保留")
         print("[提示] 国家信息已改为常量定义，存储在 app/constants/countries.py")
 
 
@@ -641,7 +641,7 @@ def main():
 示例:
     python scripts/init_system.py              # 交互式确认（仅清空业务数据）
     python scripts/init_system.py --force      # 跳过确认（仅清空业务数据）
-    python scripts/init_system.py --full       # 全量重置（包含用户、技术要素）
+    python scripts/init_system.py --full       # 全量重置（包含用户、技术领域）
     python scripts/init_system.py --full --force  # 全量重置跳过确认
 
 注意: 国家数据已改为常量定义，存储在 app/constants/countries.py
@@ -655,7 +655,7 @@ def main():
     parser.add_argument(
         "--full",
         action="store_true",
-        help="全量重置（清空用户、技术要素等基础数据）"
+        help="全量重置（清空用户、技术领域等基础数据）"
     )
 
     args = parser.parse_args()
@@ -663,7 +663,7 @@ def main():
     # 确认提示
     if not args.force:
         if args.full:
-            print("\n[!] 警告: 此操作将清空所有数据（包括用户、技术要素）!")
+            print("\n[!] 警告: 此操作将清空所有数据（包括用户、技术领域）!")
         else:
             print("\n[!] 警告: 此操作将清空所有业务数据!")
         confirm = input("\n确认执行? (y/N): ").strip().lower()

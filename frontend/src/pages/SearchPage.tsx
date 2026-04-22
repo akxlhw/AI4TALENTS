@@ -44,8 +44,10 @@ import ColumnSettings from '../components/ColumnSettings'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useSearchTemplates } from '../hooks/useSearchTemplates'
 import { useColumnConfig } from '../hooks/useColumnConfig'
+import { useSearchFilters, useSortState } from '../hooks/useSearchFilters'
 import { getRoleTypeConfig } from '../constants/roleType'
-import type { SearchTalent, TechElement, SearchMode, EnhancedSearchResult } from '../types'
+import { formatNumber } from '../utils/format'
+import type { SearchTalent, TechDomain, SearchMode, EnhancedSearchResult } from '../types'
 
 const { Title, Text } = Typography
 const { Search } = Input
@@ -79,21 +81,40 @@ const SearchPage: React.FC = () => {
   const [searchMode, setSearchMode] = useState<SearchMode>('keyword')
   const [tookMs, setTookMs] = useState<number | null>(null)
 
-  // Filter state - Original
-  const [roleFilter, setRoleFilter] = useState<string | undefined>()
-  const [schoolFilter, setSchoolFilter] = useState<number | undefined>()
-  const [minWorks, setMinWorks] = useState<number | undefined>()
-  const [minCitations, setMinCitations] = useState<number | undefined>()
-
-  // Filter state - New for v1.1
-  const [countryFilter, setCountryFilter] = useState<string | undefined>()
-  const [techElementFilter, setTechElementFilter] = useState<number | undefined>()
-  const [isGraduatedFilter, setIsGraduatedFilter] = useState<string | undefined>()
-  const [confirmStatusFilter, setConfirmStatusFilter] = useState<string | undefined>()
+  // Unified filter state
+  const {
+    filters,
+    setFilter,
+    resetFilters,
+    hasActiveFilters,
+    toApiParams,
+  } = useSearchFilters()
 
   // Sort state
-  const [sortBy, setSortBy] = useState<string>('cited_by_count')
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
+  const { sortState, setSortBy: handleSortChange } = useSortState()
+  const { sortBy, sortOrder } = sortState
+
+  // Destructure filters for backward compatibility with existing UI components
+  const {
+    role: roleFilter,
+    school: schoolFilter,
+    country: countryFilter,
+    techDomain: techDomainFilter,
+    minWorks,
+    minCitations,
+    isGraduated: isGraduatedFilter,
+    confirmStatus: confirmStatusFilter,
+  } = filters
+
+  // Setter aliases for backward compatibility
+  const setRoleFilter = (val: string | undefined) => setFilter('role', val)
+  const setSchoolFilter = (val: number | undefined) => setFilter('school', val)
+  const setCountryFilter = (val: string | undefined) => setFilter('country', val)
+  const setTechDomainFilter = (val: number | undefined) => setFilter('techDomain', val)
+  const setMinWorks = (val: number | undefined) => setFilter('minWorks', val)
+  const setMinCitations = (val: number | undefined) => setFilter('minCitations', val)
+  const setIsGraduatedFilter = (val: string | undefined) => setFilter('isGraduated', val)
+  const setConfirmStatusFilter = (val: string | undefined) => setFilter('confirmStatus', val)
 
   // Selection state
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
@@ -135,19 +156,19 @@ const SearchPage: React.FC = () => {
   // Data for dropdowns
   const [schools, setSchools] = useState<School[]>([])
   const [countries, setCountries] = useState<Country[]>([])
-  const [techElements, setTechElements] = useState<TechElement[]>([])
+  const [techDomains, setTechDomains] = useState<TechDomain[]>([])
 
   // Load reference data
   const loadReferenceData = useCallback(async () => {
     try {
-      const [schoolsRes, countriesRes, techElementsRes] = await Promise.all([
+      const [schoolsRes, countriesRes, techDomainsRes] = await Promise.all([
         api.schools.list({}),
         api.countries.list(),
-        api.techElements.list(),
+        api.techDomains.list(),
       ])
       setSchools(schoolsRes.data.items || [])
       setCountries(countriesRes.data.items || [])
-      setTechElements(techElementsRes.data.items || [])
+      setTechDomains(techDomainsRes.data.items || [])
     } catch (err) {
       console.error('Failed to load reference data:', err)
     }
@@ -215,12 +236,7 @@ const SearchPage: React.FC = () => {
       const response = await api.enhancedSearch.search({
         q: searchQuery.trim(),
         mode: searchMode,
-        role_type: roleFilter,
-        school_id: schoolFilter,
-        min_citations: minCitations,
-        min_works: minWorks,
-        country_code: countryFilter,
-        tech_element_id: techElementFilter,
+        ...toApiParams(),
         page: pageNum,
         page_size: pageSize,
       })
@@ -273,16 +289,8 @@ const SearchPage: React.FC = () => {
   }
 
   const handleResetFilters = () => {
-    setRoleFilter(undefined)
-    setSchoolFilter(undefined)
-    setMinWorks(undefined)
-    setMinCitations(undefined)
-    setCountryFilter(undefined)
-    setTechElementFilter(undefined)
-    setIsGraduatedFilter(undefined)
-    setConfirmStatusFilter(undefined)
-    setSortBy('cited_by_count')
-    setSortOrder('desc')
+    resetFilters()
+    handleSortChange('cited_by_count')  // This will set sort to desc
     performSearch(query, 1)
   }
 
@@ -422,7 +430,7 @@ const SearchPage: React.FC = () => {
   // Options for dropdowns
   const countryOptions = countries.map(c => ({ value: c.country_code, label: c.country_name_cn }))
   const schoolOptions = schools.map(s => ({ value: s.school_id, label: s.school_name }))
-  const techElementOptions = techElements.map(e => ({ value: e.tech_element_id, label: e.element_name }))
+  const techDomainOptions = techDomains.map(d => ({ value: d.tech_domain_id, label: d.domain_name }))
 
   const isGraduatedOptions = [
     { value: 'yes', label: '已毕业' },
@@ -497,7 +505,7 @@ const SearchPage: React.FC = () => {
       key: 'cited_by_count',
       width: 100,
       align: 'right' as const,
-      render: (count: number) => count.toLocaleString(),
+      render: (count: number) => formatNumber(count),
       sorter: true,
     },
     {
@@ -523,10 +531,6 @@ const SearchPage: React.FC = () => {
 
   // Filter columns based on user settings
   const columns = allColumns.filter(col => isColumnVisible(col.key as string))
-
-  // Check if any filter is active
-  const hasActiveFilters = roleFilter || schoolFilter || minWorks || minCitations ||
-    countryFilter || techElementFilter || isGraduatedFilter || confirmStatusFilter
 
   return (
     <div>
@@ -634,16 +638,16 @@ const SearchPage: React.FC = () => {
             <Space size={8} wrap>
               <Text type="secondary">筛选:</Text>
 
-              {/* 技术要素 */}
+              {/* 技术领域 */}
               <Select
-                placeholder="技术要素"
-                value={techElementFilter}
-                onChange={(val) => { setTechElementFilter(val); handleFilterChange(); }}
+                placeholder="技术领域"
+                value={techDomainFilter}
+                onChange={(val) => { setTechDomainFilter(val); handleFilterChange(); }}
                 allowClear
                 showSearch
                 optionFilterProp="label"
                 style={{ width: 140 }}
-                options={techElementOptions}
+                options={techDomainOptions}
               />
 
               {/* 国家 */}
@@ -846,7 +850,7 @@ const SearchPage: React.FC = () => {
           <Text type="secondary" style={{ fontSize: 12 }}>
             当前筛选: {[
               roleFilter && `角色=${roleFilter}`,
-              techElementFilter && `技术要素`,
+              techDomainFilter && `技术领域`,
               countryFilter && `国家`,
               schoolFilter && `学校`,
               minWorks && `论文≥${minWorks}`,

@@ -2,7 +2,7 @@
  * SearchFilterPanel - 搜索筛选面板组件
  *
  * 职责：
- * - 渲染所有筛选项（角色、学校、国家、技术要素等）
+ * - 渲染所有筛选项（角色、学校、国家、技术领域等）
  * - 提供重置功能
  * - 列设置和模板按钮
  */
@@ -16,7 +16,7 @@ export interface SearchFilterValues {
   role?: string
   school_id?: number
   country_id?: number
-  tech_element_id?: number
+  tech_domain_id?: number
   tech_direction_id?: number
   min_works?: number
   min_citations?: number
@@ -30,7 +30,7 @@ export interface SearchFilterPanelProps {
   // 下拉选项
   schoolOptions: DropdownOption[]
   countryOptions: DropdownOption[]
-  techElementOptions: DropdownOption[]
+  techDomainOptions: DropdownOption[]
   directionOptions: DropdownOption[]
   // 回调
   onFilterChange: (key: keyof SearchFilterValues, value: string | number | undefined) => void
@@ -73,7 +73,7 @@ const SearchFilterPanel: React.FC<SearchFilterPanelProps> = ({
   filters,
   schoolOptions,
   countryOptions,
-  techElementOptions,
+  techDomainOptions,
   directionOptions,
   onFilterChange,
   onResetFilters,
@@ -88,14 +88,14 @@ const SearchFilterPanel: React.FC<SearchFilterPanelProps> = ({
         <Space size={8} wrap>
           <Text type="secondary">筛选:</Text>
 
-          {/* 技术要素 */}
+          {/* 技术领域 */}
           <Select
-            placeholder="技术要素"
-            value={filters.tech_element_id}
+            placeholder="技术领域"
+            value={filters.tech_domain_id}
             onChange={(val) => {
-              onFilterChange('tech_element_id', val)
+              onFilterChange('tech_domain_id', val)
               // 清空技术方向
-              if (val !== filters.tech_element_id) {
+              if (val !== filters.tech_domain_id) {
                 onFilterChange('tech_direction_id', undefined)
               }
             }}
@@ -103,7 +103,7 @@ const SearchFilterPanel: React.FC<SearchFilterPanelProps> = ({
             showSearch
             optionFilterProp="label"
             style={{ width: 140 }}
-            options={techElementOptions}
+            options={techDomainOptions}
           />
 
           {/* 技术方向 */}
@@ -114,7 +114,7 @@ const SearchFilterPanel: React.FC<SearchFilterPanelProps> = ({
             allowClear
             style={{ width: 140 }}
             options={directionOptions}
-            disabled={!filters.tech_element_id}
+            disabled={!filters.tech_domain_id}
           />
 
           {/* 国家 */}

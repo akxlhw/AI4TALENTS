@@ -14,7 +14,7 @@ class OverviewStats(BaseModel):
     student_count: int = Field(description="Total number of students")
     talent_count: int = Field(description="Total number of talents")
     country_count: int = Field(default=0, description="Total number of countries")
-    tech_element_count: int = Field(default=0, description="Total number of tech elements")
+    tech_domain_count: int = Field(default=0, description="Total number of tech domains")
     tech_direction_count: int = Field(default=0, description="Total number of tech directions")
 
 
@@ -107,8 +107,8 @@ class TalentSummary(BaseModel):
 class TechTagItem(BaseModel):
     """Tech tag for talent."""
 
-    tech_element_id: int
-    tech_element_name: str
+    tech_domain_id: int
+    tech_domain_name: str
     tech_direction_id: int | None = None
     tech_direction_name: str | None = None
 
@@ -131,7 +131,7 @@ class TalentDetail(BaseModel):
     latest_active_year: int | None = None
     topic_tags: list[str] = Field(default_factory=list)
     openalex_topics: list[str] = Field(default_factory=list, description="OpenAlex研究主题")
-    tech_tags: list[TechTagItem] = Field(default_factory=list, description="技术要素标签")
+    tech_tags: list[TechTagItem] = Field(default_factory=list, description="技术领域标签")
     summary: str | None = None
     department_name: str | None = None
     lab_name: str | None = None

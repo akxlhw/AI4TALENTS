@@ -48,6 +48,7 @@ class SemanticSearchResult(BaseModel):
     topic_tags: List[str] = Field(default_factory=list)
     openalex_topics: List[str] = Field(default_factory=list, description="OpenAlex research topics")
     similarity_score: Optional[float] = Field(default=None, description="Similarity score for semantic search")
+    match_sources: List[str] = Field(default_factory=list, description="How this result was matched: fulltext, semantic_research, semantic_papers")
     highlight: Optional[str] = None
 
 
@@ -62,6 +63,8 @@ class EnhancedSearchResponse(BaseModel):
     took_ms: float = Field(description="Query execution time in milliseconds")
     precise_count: int = Field(default=0, description="Number of precise matches (similarity >= 0.95)")
     similar_count: int = Field(default=0, description="Number of similar matches (0.7 <= similarity < 0.95)")
+    fulltext_count: int = Field(default=0, description="Number of fulltext matches")
+    semantic_count: int = Field(default=0, description="Number of semantic matches")
 
 
 # ============ JD Match Schemas ============

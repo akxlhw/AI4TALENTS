@@ -134,11 +134,11 @@ class RawInstitution(Base, TimestampMixin):
 
 
 class AuthorTechBelong(Base, TimestampMixin):
-    """作者-技术要素归属关系表"""
+    """作者-技术领域归属关系表"""
 
     __tablename__ = "rel_author_tech_belong"
     __table_args__ = (
-        Index('ix_author_tech_author_tech', 'openalex_author_id', 'tech_element_id', unique=True),
+        Index('ix_author_tech_author_domain', 'openalex_author_id', 'tech_domain_id', unique=True),
     )
 
     belong_id = Column(Integer, primary_key=True, index=True)
@@ -149,8 +149,8 @@ class AuthorTechBelong(Base, TimestampMixin):
     # After normalization, link to std_author
     std_author_id = Column(Integer, nullable=True, index=True)
 
-    # Tech element reference
-    tech_element_id = Column(Integer, ForeignKey("core_tech_element.tech_element_id"), nullable=False, index=True)
+    # Tech domain reference
+    tech_domain_id = Column(Integer, ForeignKey("core_tech_domain.tech_domain_id"), nullable=False, index=True)
 
     # Source venue where this relationship was established
     source_venue_id = Column(Integer, ForeignKey("config_venue.venue_id"), nullable=True)
@@ -164,8 +164,8 @@ class AuthorTechBelong(Base, TimestampMixin):
     source_task_id = Column(Integer, ForeignKey("sync_collect_task.task_id"), nullable=True)
 
     # Relationships
-    tech_element = relationship("TechElement")
+    tech_domain = relationship("TechDomain")
     venue = relationship("Venue")
 
     def __repr__(self):
-        return f"<AuthorTechBelong(author={self.openalex_author_id}, tech={self.tech_element_id})>"
+        return f"<AuthorTechBelong(author={self.openalex_author_id}, domain={self.tech_domain_id})>"

@@ -13,7 +13,7 @@ from app.core.database import Base, async_engine
 from app.models.enums import RoleType, VisibilityStatus
 from app.models.school import School
 from app.models.talent import Talent
-from app.models.tech_element import TechDirection, TechElement, TalentTechTag
+from app.models.tech_domain import TechDirection, TechDomain, TalentTechTag
 
 
 @pytest.fixture
@@ -178,24 +178,24 @@ class TestCursorPagination:
             assert t.school_id == data["school"].school_id
 
 
-class TestTechElementCursorPagination:
-    """Tests for cursor pagination on tech element talent lists."""
+class TestTechDomainCursorPagination:
+    """Tests for cursor pagination on tech domain talent lists."""
 
     @pytest.fixture
-    async def setup_tech_element_data(self, test_session: AsyncSession):
-        """Create test data for tech element pagination."""
-        # Create tech element
-        element = TechElement(
-            element_code="AI",
-            element_name="人工智能",
+    async def setup_tech_domain_data(self, test_session: AsyncSession):
+        """Create test data for tech domain pagination."""
+        # Create tech domain
+        domain = TechDomain(
+            domain_code="AI",
+            domain_name="人工智能",
             is_enabled=True,
         )
-        test_session.add(element)
+        test_session.add(domain)
         await test_session.flush()
 
         # Create tech direction
         direction = TechDirection(
-            tech_element_id=element.tech_element_id,
+            tech_domain_id=domain.tech_domain_id,
             direction_code="AI-ML",
             direction_name="机器学习",
             is_enabled=True,
@@ -234,7 +234,7 @@ class TestTechElementCursorPagination:
         for talent in talents:
             tag = TalentTechTag(
                 talent_id=talent.talent_id,
-                tech_element_id=element.tech_element_id,
+                tech_domain_id=domain.tech_domain_id,
                 tech_direction_id=direction.tech_direction_id,
                 is_enabled=True,
             )
@@ -243,25 +243,25 @@ class TestTechElementCursorPagination:
         await test_session.commit()
 
         return {
-            "element": element,
+            "domain": domain,
             "direction": direction,
             "school": school,
             "talents": talents,
         }
 
     @pytest.mark.asyncio
-    async def test_tech_element_talents_cursor_pagination(
-        self, test_session: AsyncSession, setup_tech_element_data
+    async def test_tech_domain_talents_cursor_pagination(
+        self, test_session: AsyncSession, setup_tech_domain_data
     ):
-        """Test cursor pagination on tech element talent list."""
-        from app.repositories.tech_element_repository import TechElementRepository
+        """Test cursor pagination on tech domain talent list."""
+        from app.repositories.tech_domain_repository import TechDomainRepository
 
-        repo = TechElementRepository(test_session)
-        data = setup_tech_element_data
+        repo = TechDomainRepository(test_session)
+        data = setup_tech_domain_data
 
         # Get first page
         talents, next_cursor = await repo.get_talent_list_by_cursor(
-            element_id=data["element"].tech_element_id,
+            domain_id=data["domain"].tech_domain_id,
             page_size=10,
         )
 
@@ -270,7 +270,7 @@ class TestTechElementCursorPagination:
 
         # Get second page
         talents2, next_cursor2 = await repo.get_talent_list_by_cursor(
-            element_id=data["element"].tech_element_id,
+            domain_id=data["domain"].tech_domain_id,
             cursor=next_cursor,
             page_size=10,
         )

@@ -46,9 +46,9 @@ const CollectTaskTable: React.FC<CollectTaskTableProps> = ({
       width: 220,
     },
     {
-      title: '技术要素',
-      dataIndex: 'tech_element_name',
-      key: 'tech_element_name',
+      title: '技术领域',
+      dataIndex: 'tech_domain_name',
+      key: 'tech_domain_name',
     },
     {
       title: '时间范围',

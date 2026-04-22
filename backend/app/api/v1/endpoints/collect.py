@@ -3,8 +3,8 @@ Collect configuration API endpoints - MVP v1.2
 采集配置相关接口
 
 功能说明：
-- 技术要素配置：管理技术要素关联的顶会顶刊
-- 采集任务：基于技术要素触发采集，可配置年份范围
+- 技术领域配置：管理技术领域关联的顶会顶刊
+- 采集任务：基于技术领域触发采集，可配置年份范围
 - 固定参数：数据类型（学者+论文+机构）
 - 可配置参数：时间范围（起始年份~截止年份/至今）
 """
@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
-from app.repositories.collect_repository import CollectTaskRepository, TechElementCollectRepository
+from app.repositories.collect_repository import CollectTaskRepository, TechDomainCollectRepository
 from app.repositories.venue_repository import VenueSubTaskRepository
 from app.schemas.collect import (
     DEFAULT_START_YEAR,
@@ -29,8 +29,8 @@ from app.schemas.collect import (
     TASK_STATUS_OPTIONS,
     CollectTaskListResponse,
     CollectTaskResponse,
-    TechElementCollectListResponse,
-    TechElementCollectResponse,
+    TechDomainCollectListResponse,
+    TechDomainCollectResponse,
     TriggerCollectTaskRequest,
     UpdateCollectSourcesRequest,
     get_current_year,
@@ -130,30 +130,30 @@ async def _run_unified_collect(task_id: int):
             print(f"\n[BACKGROUND] 任务 #{task_id} 失败: {progress.errors}")
 
 
-# ============ Tech Element Collect Config Endpoints ============
+# ============ Tech Domain Collect Config Endpoints ============
 
 @router.get(
-    "/tech-elements",
-    response_model=TechElementCollectListResponse,
-    summary="获取技术要素采集配置列表",
-    description="获取所有技术要素及其关联的顶会顶刊配置"
+    "/tech-domains",
+    response_model=TechDomainCollectListResponse,
+    summary="获取技术领域采集配置列表",
+    description="获取所有技术领域及其关联的顶会顶刊配置"
 )
-async def list_tech_elements_collect(
+async def list_tech_domains_collect(
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_admin_user),
 ):
-    """List all tech elements with collect configuration."""
-    repo = TechElementCollectRepository(session)
-    elements = await repo.list_with_collect_config()
+    """List all tech domains with collect configuration."""
+    repo = TechDomainCollectRepository(session)
+    domains = await repo.list_with_collect_config()
 
-    # Get venue bindings for all tech elements
+    # Get venue bindings for all tech domains
     from app.repositories.venue_repository import VenueTechBindingRepository
     binding_repo = VenueTechBindingRepository(session)
 
     items = []
-    for e in elements:
+    for d in domains:
         # Get bindings from VenueTechBinding table
-        bindings = await binding_repo.get_by_tech_element(e.tech_element_id, is_enabled=True)
+        bindings = await binding_repo.get_by_tech_domain(d.tech_domain_id, is_enabled=True)
         venue_count = len(bindings)
 
         # Build collect_sources from bindings (for backward compatibility)
@@ -162,37 +162,37 @@ async def list_tech_elements_collect(
             for b in bindings if b.venue
         ]
 
-        items.append(TechElementCollectResponse(
-            tech_element_id=e.tech_element_id,
-            element_code=e.element_code,
-            element_name=e.element_name,
-            element_name_en=e.element_name_en,
+        items.append(TechDomainCollectResponse(
+            tech_domain_id=d.tech_domain_id,
+            domain_code=d.domain_code,
+            domain_name=d.domain_name,
+            domain_name_en=d.domain_name_en,
             collect_sources=collect_sources,
-            last_collect_at=e.last_collect_at,
-            is_enabled=e.is_enabled,
+            last_collect_at=d.last_collect_at,
+            is_enabled=d.is_enabled,
             venue_count=venue_count,
         ))
 
-    return TechElementCollectListResponse(items=items, total=len(items))
+    return TechDomainCollectListResponse(items=items, total=len(items))
 
 
 @router.put(
-    "/tech-elements/{tech_element_id}/sources",
-    response_model=TechElementCollectResponse,
-    summary="更新技术要素的采集源配置",
+    "/tech-domains/{tech_domain_id}/sources",
+    response_model=TechDomainCollectResponse,
+    summary="更新技术领域的采集源配置",
     description="[已废弃] 请使用 /venues/bindings API 管理绑定关系",
     deprecated=True
 )
-async def update_tech_element_sources(
-    tech_element_id: int,
+async def update_tech_domain_sources(
+    tech_domain_id: int,
     request: UpdateCollectSourcesRequest,
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_admin_user),
 ):
-    """Update collect sources for a tech element - DEPRECATED, use venue bindings API instead."""
+    """Update collect sources for a tech domain - DEPRECATED, use venue bindings API instead."""
     raise HTTPException(
         status_code=400,
-        detail="This API is deprecated. Please use /venues/bindings API to manage venue-tech element bindings."
+        detail="This API is deprecated. Please use /venues/bindings API to manage venue-tech domain bindings."
     )
 
 
@@ -206,7 +206,7 @@ async def update_tech_element_sources(
 )
 async def list_tasks(
     status: str | None = Query(None, description="按状态筛选"),
-    tech_element_id: int | None = Query(None, description="按技术要素筛选"),
+    tech_domain_id: int | None = Query(None, description="按技术领域筛选"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
@@ -216,7 +216,7 @@ async def list_tasks(
     repo = CollectTaskRepository(session)
     tasks, total = await repo.list_tasks(
         status=status,
-        tech_element_id=tech_element_id,
+        tech_domain_id=tech_domain_id,
         page=page,
         page_size=page_size,
     )
@@ -237,8 +237,8 @@ async def list_tasks(
         items.append(CollectTaskResponse(
             task_id=t.task_id,
             task_code=t.task_code,
-            tech_element_id=t.tech_element_id,
-            tech_element_name=t.tech_element.element_name if t.tech_element else None,
+            tech_domain_id=t.tech_domain_id,
+            tech_domain_name=t.tech_domain.domain_name if t.tech_domain else None,
             start_year=start_year,
             end_year=end_year,
             triggered_by=t.triggered_by,
@@ -273,7 +273,7 @@ async def list_tasks(
 - 数据类型：学者、论文、机构
 
 **可配置参数：**
-- tech_element_id：技术要素ID（必填）
+- tech_domain_id：技术领域ID（必填）
 - start_year：起始年份，默认2020，最小2015
 - end_year：截止年份，默认为至今
 
@@ -288,31 +288,31 @@ async def trigger_task(
 ):
     """Trigger a new collect task."""
     task_repo = CollectTaskRepository(session)
-    element_repo = TechElementCollectRepository(session)
+    domain_repo = TechDomainCollectRepository(session)
 
-    # Validate tech element exists
-    element = await element_repo.get_by_id(request.tech_element_id)
-    if not element:
-        raise HTTPException(status_code=404, detail="Tech element not found")
+    # Validate tech domain exists
+    domain = await domain_repo.get_by_id(request.tech_domain_id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Tech domain not found")
 
     # Check if has venue bindings configured
     from app.repositories.venue_repository import VenueTechBindingRepository
     binding_repo = VenueTechBindingRepository(session)
-    bindings = await binding_repo.get_by_tech_element(request.tech_element_id, is_enabled=True)
+    bindings = await binding_repo.get_by_tech_domain(request.tech_domain_id, is_enabled=True)
 
     if not bindings:
         raise HTTPException(
             status_code=400,
-            detail="Tech element has no venue bindings configured. Please bind venues first."
+            detail="Tech domain has no venue bindings configured. Please bind venues first."
         )
 
-    # Check if there's already a running task for this element
+    # Check if there's already a running task for this domain
     active_tasks = await task_repo.get_active_tasks()
     for t in active_tasks:
-        if t.tech_element_id == request.tech_element_id:
+        if t.tech_domain_id == request.tech_domain_id:
             raise HTTPException(
                 status_code=400,
-                detail=f"There is already a running task (#{t.task_id}) for this tech element."
+                detail=f"There is already a running task (#{t.task_id}) for this tech domain."
             )
 
     # Validate year range
@@ -355,7 +355,7 @@ async def trigger_task(
 
     task = await task_repo.create_task(
         task_code=task_code,
-        tech_element_id=request.tech_element_id,
+        tech_domain_id=request.tech_domain_id,
         collect_mode="full",  # 保留字段以兼容数据库，但不再使用
         triggered_by=current_user.get("user_id"),
         time_window_start=time_start,
@@ -373,7 +373,7 @@ async def trigger_task(
     binding_repo = VenueTechBindingRepository(session)
     sub_task_repo = VenueSubTaskRepository(session)
 
-    bindings = await binding_repo.get_by_tech_element(request.tech_element_id, is_enabled=True)
+    bindings = await binding_repo.get_by_tech_domain(request.tech_domain_id, is_enabled=True)
 
     for binding in bindings:
         sub_task = VenueSubTask(
@@ -387,7 +387,7 @@ async def trigger_task(
 
     await session.commit()
 
-    logger.info(f"Created collect task {task.task_id} for {element.element_name} "
+    logger.info(f"Created collect task {task.task_id} for {domain.domain_name} "
                 f"with {len(bindings)} venues, year range: {start_year}-{end_year or '至今'}")
 
     # Start background task using asyncio (in-process, works reliably on Windows)
@@ -397,8 +397,8 @@ async def trigger_task(
     return CollectTaskResponse(
         task_id=task.task_id,
         task_code=task.task_code,
-        tech_element_id=task.tech_element_id,
-        tech_element_name=element.element_name,
+        tech_domain_id=task.tech_domain_id,
+        tech_domain_name=domain.domain_name,
         start_year=start_year,
         end_year=end_year,
         triggered_by=task.triggered_by,
@@ -451,8 +451,8 @@ async def get_task(
     return CollectTaskResponse(
         task_id=task.task_id,
         task_code=task.task_code,
-        tech_element_id=task.tech_element_id,
-        tech_element_name=task.tech_element.element_name if task.tech_element else None,
+        tech_domain_id=task.tech_domain_id,
+        tech_domain_name=task.tech_domain.domain_name if task.tech_domain else None,
         start_year=start_year,
         end_year=end_year,
         triggered_by=task.triggered_by,
@@ -558,8 +558,6 @@ async def delete_task(
     current_user: dict = Depends(require_admin_user),
 ):
     """Delete a completed task record."""
-    from sqlalchemy import text
-
     repo = CollectTaskRepository(session)
     task = await repo.get_by_id(task_id)
 
@@ -569,76 +567,8 @@ async def delete_task(
     if task.status in ["pending", "running"]:
         raise HTTPException(status_code=400, detail="Cannot delete running or pending task")
 
-    # 清除关联数据的外键引用（设为 NULL），而不是删除数据本身
-    # 这样可以保留采集的数据，只是断开与任务的关联
-
-    # 清除原始数据层的关联
-    await session.execute(
-        text("UPDATE raw_work SET fetch_task_id = NULL WHERE fetch_task_id = :task_id"),
-        {"task_id": task_id}
-    )
-    await session.execute(
-        text("UPDATE raw_author SET fetch_task_id = NULL WHERE fetch_task_id = :task_id"),
-        {"task_id": task_id}
-    )
-    await session.execute(
-        text("UPDATE raw_institution SET fetch_task_id = NULL WHERE fetch_task_id = :task_id"),
-        {"task_id": task_id}
-    )
-
-    # 清除标准化层的关联
-    await session.execute(
-        text("UPDATE std_author SET source_task_id = NULL WHERE source_task_id = :task_id"),
-        {"task_id": task_id}
-    )
-    await session.execute(
-        text("UPDATE std_school SET source_task_id = NULL WHERE source_task_id = :task_id"),
-        {"task_id": task_id}
-    )
-
-    # 清除技术归属的关联
-    await session.execute(
-        text("UPDATE rel_author_tech_belong SET source_task_id = NULL WHERE source_task_id = :task_id"),
-        {"task_id": task_id}
-    )
-
-    # 清除数据版本的关联
-    await session.execute(
-        text("UPDATE data_version SET source_task_id = NULL WHERE source_task_id = :task_id"),
-        {"task_id": task_id}
-    )
-
-    # 清除 raw_work 中子任务的关联（子任务删除前）
-    # 先获取要删除的子任务 ID
-    sub_task_result = await session.execute(
-        text("SELECT sub_task_id FROM sync_venue_sub_task WHERE task_id = :task_id"),
-        {"task_id": task_id}
-    )
-    sub_task_ids = [row[0] for row in sub_task_result.fetchall()]
-
-    if sub_task_ids:
-        # 清除 raw_work 的 sub_task_id 引用
-        # 使用 unnest 将数组展开为多行进行匹配
-        from sqlalchemy import bindparam
-        from sqlalchemy.dialects.postgresql import array
-
-        # 直接使用原生 SQL，构建 IN 子句
-        ids_str = ','.join(str(sid) for sid in sub_task_ids)
-        await session.execute(
-            text(f"UPDATE raw_work SET sub_task_id = NULL WHERE sub_task_id IN ({ids_str})")
-        )
-
-    # 删除子任务
-    await session.execute(
-        text("DELETE FROM sync_venue_sub_task WHERE task_id = :task_id"),
-        {"task_id": task_id}
-    )
-
-    # 删除任务本身
-    await session.execute(
-        text("DELETE FROM sync_collect_task WHERE task_id = :task_id"),
-        {"task_id": task_id}
-    )
+    # Clear foreign key references and delete task via repository
+    await repo.cleanup_task_references(task_id)
 
     await session.commit()
 
@@ -662,8 +592,8 @@ async def get_active_tasks(
     return [CollectTaskResponse(
         task_id=t.task_id,
         task_code=t.task_code,
-        tech_element_id=t.tech_element_id,
-        tech_element_name=t.tech_element.element_name if t.tech_element else None,
+        tech_domain_id=t.tech_domain_id,
+        tech_domain_name=t.tech_domain.domain_name if t.tech_domain else None,
         start_year=t.time_window_start.year if t.time_window_start else DEFAULT_START_YEAR,
         end_year=t.time_window_end.year if t.time_window_end else None,
         triggered_by=t.triggered_by,

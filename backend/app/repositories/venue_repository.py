@@ -11,27 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.venue import Venue, VenueSubTask, VenueTechBinding
+from app.repositories.base import BaseRepository
 
 
-class VenueRepository:
+class VenueRepository(BaseRepository[Venue]):
     """Venue repository for database operations"""
 
     def __init__(self, session: AsyncSession):
-        self.session = session
-
-    async def create(self, venue: Venue) -> Venue:
-        """Create a new venue"""
-        self.session.add(venue)
-        await self.session.flush()
-        await self.session.refresh(venue)
-        return venue
-
-    async def get_by_id(self, venue_id: int) -> Venue | None:
-        """Get venue by ID"""
-        result = await self.session.execute(
-            select(Venue).where(Venue.venue_id == venue_id)
-        )
-        return result.scalar_one_or_none()
+        super().__init__(session, Venue)
 
     async def get_by_code(self, venue_code: str) -> Venue | None:
         """Get venue by code"""
@@ -111,7 +98,7 @@ class VenueRepository:
 
 
 class VenueTechBindingRepository:
-    """Venue-TechElement binding repository"""
+    """Venue-TechDomain binding repository"""
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -130,26 +117,26 @@ class VenueTechBindingRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_venue_and_tech(self, venue_id: int, tech_element_id: int) -> VenueTechBinding | None:
-        """Get binding by venue and tech element"""
+    async def get_by_venue_and_tech(self, venue_id: int, tech_domain_id: int) -> VenueTechBinding | None:
+        """Get binding by venue and tech domain"""
         result = await self.session.execute(
             select(VenueTechBinding).where(
                 VenueTechBinding.venue_id == venue_id,
-                VenueTechBinding.tech_element_id == tech_element_id
+                VenueTechBinding.tech_domain_id == tech_domain_id
             )
         )
         return result.scalar_one_or_none()
 
-    async def get_by_tech_element(
+    async def get_by_tech_domain(
         self,
-        tech_element_id: int,
+        tech_domain_id: int,
         is_enabled: bool | None = None
     ) -> list[VenueTechBinding]:
-        """Get all bindings for a tech element with venue eagerly loaded"""
+        """Get all bindings for a tech domain with venue eagerly loaded"""
         query = select(VenueTechBinding).options(
             selectinload(VenueTechBinding.venue)
         ).where(
-            VenueTechBinding.tech_element_id == tech_element_id
+            VenueTechBinding.tech_domain_id == tech_domain_id
         )
         if is_enabled is not None:
             query = query.where(VenueTechBinding.is_enabled == is_enabled)
@@ -175,14 +162,14 @@ class VenueTechBindingRepository:
 
     async def get_list_with_venue(
         self,
-        tech_element_id: int,
+        tech_domain_id: int,
         is_enabled: bool | None = None
     ) -> list[VenueTechBinding]:
-        """Get bindings with venue info for a tech element (venue eagerly loaded)"""
+        """Get bindings with venue info for a tech domain (venue eagerly loaded)"""
         query = select(VenueTechBinding).options(
             selectinload(VenueTechBinding.venue)
         ).where(
-            VenueTechBinding.tech_element_id == tech_element_id
+            VenueTechBinding.tech_domain_id == tech_domain_id
         )
         if is_enabled is not None:
             query = query.where(VenueTechBinding.is_enabled == is_enabled)
@@ -204,11 +191,11 @@ class VenueTechBindingRepository:
         )
         return result.rowcount > 0
 
-    async def delete_by_tech_element(self, tech_element_id: int) -> int:
-        """Delete all bindings for a tech element"""
+    async def delete_by_tech_domain(self, tech_domain_id: int) -> int:
+        """Delete all bindings for a tech domain"""
         result = await self.session.execute(
             delete(VenueTechBinding).where(
-                VenueTechBinding.tech_element_id == tech_element_id
+                VenueTechBinding.tech_domain_id == tech_domain_id
             )
         )
         return result.rowcount
@@ -216,7 +203,7 @@ class VenueTechBindingRepository:
     async def update_collect_status(
         self,
         venue_id: int,
-        tech_element_id: int,
+        tech_domain_id: int,
         status: str,
         author_count: int | None = None,
         work_count: int | None = None
@@ -235,7 +222,7 @@ class VenueTechBindingRepository:
             update(VenueTechBinding)
             .where(
                 VenueTechBinding.venue_id == venue_id,
-                VenueTechBinding.tech_element_id == tech_element_id
+                VenueTechBinding.tech_domain_id == tech_domain_id
             )
             .values(**values)
         )

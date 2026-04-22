@@ -1,7 +1,7 @@
 /**
  * E2E tests for v1.3 features:
  * - React Query caching behavior
- * - Tech Element page with filters
+ * - Tech Domain page with filters
  * - Performance metrics
  */
 import { test, expect, Page } from '@playwright/test';
@@ -38,7 +38,7 @@ test.describe('v1.3 React Query 缓存测试', () => {
     const initialStats = await page.locator('.ant-statistic-content-value').first().textContent();
 
     // Navigate away
-    await page.goto(`${BASE_URL}/tech-element`);
+    await page.goto(`${BASE_URL}/tech-domain`);
     await page.waitForTimeout(1000);
 
     // Navigate back to home
@@ -58,24 +58,24 @@ test.describe('v1.3 React Query 缓存测试', () => {
     console.log('✅ 首页数据缓存验证通过');
   });
 
-  test('技术要素页面加载', async ({ page }) => {
+  test('技术领域页面加载', async ({ page }) => {
     await login(page);
 
     // Navigate to tech element page
-    await page.goto(`${BASE_URL}/tech-element`);
+    await page.goto(`${BASE_URL}/tech-domain`);
     await page.waitForTimeout(2000);
 
-    // Check tech element selector exists
+    // Check tech domain selector exists
     const selector = page.locator('.ant-select').first();
     await expect(selector).toBeVisible({ timeout: 10000 });
 
-    await page.screenshot({ path: 'test-results/v13-tech-element-page.png', fullPage: true });
-    console.log('✅ 技术要素页面加载正常');
+    await page.screenshot({ path: 'test-results/v13-tech-domain-page.png', fullPage: true });
+    console.log('✅ 技术领域页面加载正常');
   });
 
-  test('技术要素选择器交互', async ({ page }) => {
+  test('技术领域选择器交互', async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE_URL}/tech-element`);
+    await page.goto(`${BASE_URL}/tech-domain`);
     await page.waitForTimeout(2000);
 
     // Click on tech element selector
@@ -92,12 +92,12 @@ test.describe('v1.3 React Query 缓存测试', () => {
       await page.screenshot({ path: 'test-results/v13-tech-selector.png', fullPage: true });
     }
 
-    console.log('✅ 技术要素选择器交互测试完成');
+    console.log('✅ 技术领域选择器交互测试完成');
   });
 
-  test('技术要素统计卡片', async ({ page }) => {
+  test('技术领域统计卡片', async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE_URL}/tech-element`);
+    await page.goto(`${BASE_URL}/tech-domain`);
     await page.waitForTimeout(2000);
 
     // Check for statistics
@@ -108,7 +108,7 @@ test.describe('v1.3 React Query 缓存测试', () => {
     expect(statsCount).toBeGreaterThanOrEqual(4);
 
     await page.screenshot({ path: 'test-results/v13-tech-stats.png', fullPage: true });
-    console.log('✅ 技术要素统计卡片验证通过');
+    console.log('✅ 技术领域统计卡片验证通过');
   });
 
   test('页面导航缓存验证', async ({ page }) => {
@@ -119,7 +119,7 @@ test.describe('v1.3 React Query 缓存测试', () => {
     await page.waitForTimeout(2000);
 
     // Visit tech element
-    await page.goto(`${BASE_URL}/tech-element`);
+    await page.goto(`${BASE_URL}/tech-domain`);
     await page.waitForTimeout(2000);
 
     // Visit back to home
@@ -151,21 +151,21 @@ test.describe('v1.3 性能测试', () => {
     console.log('✅ 首页加载时间符合预期');
   });
 
-  test('技术要素页面加载时间', async ({ page }) => {
+  test('技术领域页面加载时间', async ({ page }) => {
     await login(page);
 
     const startTime = Date.now();
 
-    await page.goto(`${BASE_URL}/tech-element`);
+    await page.goto(`${BASE_URL}/tech-domain`);
     await page.waitForLoadState('networkidle');
 
     const loadTime = Date.now() - startTime;
-    console.log(`⏱️ 技术要素页面加载时间: ${loadTime}ms`);
+    console.log(`⏱️ 技术领域页面加载时间: ${loadTime}ms`);
 
     // Should load in under 5 seconds
     expect(loadTime).toBeLessThan(5000);
 
-    console.log('✅ 技术要素页面加载时间符合预期');
+    console.log('✅ 技术领域页面加载时间符合预期');
   });
 
   test('多次访问缓存命中', async ({ page }) => {
@@ -178,7 +178,7 @@ test.describe('v1.3 性能测试', () => {
     const firstLoad = Date.now() - firstStart;
 
     // Navigate away
-    await page.goto(`${BASE_URL}/tech-element`);
+    await page.goto(`${BASE_URL}/tech-domain`);
     await page.waitForTimeout(1000);
 
     // Second visit (should be cached)
@@ -200,9 +200,9 @@ test.describe('v1.3 性能测试', () => {
 
 test.describe('v1.3 筛选功能测试', () => {
 
-  test('技术要素筛选器存在', async ({ page }) => {
+  test('技术领域筛选器存在', async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE_URL}/tech-element`);
+    await page.goto(`${BASE_URL}/tech-domain`);
     await page.waitForTimeout(2000);
 
     // Check for filter inputs/selects
@@ -220,7 +220,7 @@ test.describe('v1.3 筛选功能测试', () => {
 
   test('搜索按钮功能', async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE_URL}/tech-element`);
+    await page.goto(`${BASE_URL}/tech-domain`);
     await page.waitForTimeout(2000);
 
     // Find search button
@@ -239,7 +239,7 @@ test.describe('v1.3 筛选功能测试', () => {
 
   test('重置按钮功能', async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE_URL}/tech-element`);
+    await page.goto(`${BASE_URL}/tech-domain`);
     await page.waitForTimeout(2000);
 
     // Find reset button

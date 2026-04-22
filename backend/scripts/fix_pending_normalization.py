@@ -66,7 +66,7 @@ async def fix_pending_normalization(task_id: int, run_sync: bool = False):
         if run_sync:
             logger.info("Step 3: Syncing to serving layer...")
 
-            # Get tech_element_id from task
+            # Get tech_domain_id from task
             task_result = await session.execute(
                 select(CollectTask).where(CollectTask.task_id == task_id)
             )
@@ -78,8 +78,8 @@ async def fix_pending_normalization(task_id: int, run_sync: bool = False):
             sync = ServingLayerOrchestrator(session)
             stats = await sync.sync_all_for_task(
                 task_id=task_id,
-                tech_element_id=task.tech_element_id,
-                default_tech_direction_id=await get_default_tech_direction(session, task.tech_element_id)
+                tech_domain_id=task.tech_domain_id,
+                default_tech_direction_id=await get_default_tech_direction(session, task.tech_domain_id)
             )
             logger.info(f"  Sync stats: {stats}")
             await session.commit()
@@ -95,9 +95,9 @@ async def fix_pending_normalization(task_id: int, run_sync: bool = False):
         logger.info("Normalization fix complete!")
 
 
-async def get_default_tech_direction(session, tech_element_id: int) -> int:
-    """Get or create default tech direction for a tech element."""
-    from app.models.tech_element import TechDirection
+async def get_default_tech_direction(session, tech_domain_id: int) -> int:
+    """Get or create default tech direction for a tech domain."""
+    from app.models.tech_domain import TechDirection
     from sqlalchemy import func
 
     # Try to get the first available direction

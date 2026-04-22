@@ -57,7 +57,7 @@ def event_loop():
 # ============ Database Fixtures ============
 
 # Import all models to ensure they are registered with Base.metadata
-from app.models import school, talent, raw_data, standardized, venue, tech_element, sync, enums
+from app.models import school, talent, raw_data, standardized, venue, tech_domain, sync, enums
 
 
 @pytest.fixture(scope="function")
@@ -115,21 +115,21 @@ async def client(test_session: AsyncSession) -> AsyncGenerator[AsyncClient, None
 # ============ Test Data Fixtures ============
 
 @pytest.fixture
-async def sample_tech_element(test_session: AsyncSession):
-    """Create sample tech element for testing."""
-    from app.models.tech_element import TechElement, TechDirection
+async def sample_tech_domain(test_session: AsyncSession):
+    """Create sample tech domain for testing."""
+    from app.models.tech_domain import TechDomain, TechDirection
 
-    element = TechElement(
-        element_code="TEST",
-        element_name="测试技术要素",
-        element_name_en="Test Tech Element",
+    domain = TechDomain(
+        domain_code="TEST",
+        domain_name="测试技术领域",
+        domain_name_en="Test Tech Domain",
         is_enabled=True,
     )
-    test_session.add(element)
+    test_session.add(domain)
     await test_session.flush()
 
     direction = TechDirection(
-        tech_element_id=element.tech_element_id,
+        tech_domain_id=domain.tech_domain_id,
         direction_code="TEST-DIR",
         direction_name="测试方向",
         is_enabled=True,
@@ -137,7 +137,7 @@ async def sample_tech_element(test_session: AsyncSession):
     test_session.add(direction)
     await test_session.commit()
 
-    return {"element": element, "direction": direction}
+    return {"domain": domain, "direction": direction}
 
 
 @pytest.fixture
@@ -183,6 +183,9 @@ async def sample_talent(test_session: AsyncSession):
         h_index=10,
         visibility_status=VisibilityStatus.ACTIVE.value,
         is_visible=True,
+        # 添加研究主题，支持推荐和搜索测试
+        openalex_topics=["machine learning", "deep learning"],
+        topic_tags=["人工智能", "机器学习"],
     )
     test_session.add(talent)
     await test_session.commit()
@@ -270,26 +273,26 @@ async def full_setup(test_session: AsyncSession):
     Create full test setup for collection tests.
 
     Includes:
-    - Tech element with default direction
+    - Tech domain with default direction
     - Venue
     - Venue-Tech binding
     """
-    from app.models.tech_element import TechElement, TechDirection
+    from app.models.tech_domain import TechDomain, TechDirection
     from app.models.venue import Venue, VenueTechBinding
 
-    # Create tech element
-    tech_element = TechElement(
-        element_code="AI",
-        element_name="人工智能",
-        element_name_en="Artificial Intelligence",
+    # Create tech domain
+    tech_domain = TechDomain(
+        domain_code="AI",
+        domain_name="人工智能",
+        domain_name_en="Artificial Intelligence",
         is_enabled=True,
     )
-    test_session.add(tech_element)
+    test_session.add(tech_domain)
     await test_session.flush()
 
     # Create tech direction
     tech_direction = TechDirection(
-        tech_element_id=tech_element.tech_element_id,
+        tech_domain_id=tech_domain.tech_domain_id,
         direction_code="AI-ML",
         direction_name="机器学习",
         is_enabled=True,
@@ -311,14 +314,14 @@ async def full_setup(test_session: AsyncSession):
     # Create binding
     binding = VenueTechBinding(
         venue_id=venue.venue_id,
-        tech_element_id=tech_element.tech_element_id,
+        tech_domain_id=tech_domain.tech_domain_id,
         is_enabled=True,
     )
     test_session.add(binding)
     await test_session.commit()
 
     return {
-        "tech_element": tech_element,
+        "tech_domain": tech_domain,
         "tech_direction": tech_direction,
         "venue": venue,
         "binding": binding,

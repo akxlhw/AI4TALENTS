@@ -12,7 +12,7 @@ from app.core.database import get_async_session
 from app.repositories.homepage_repository import HomepageRepository
 from app.schemas.homepage import (
     HomepageHighlightsResponse,
-    HotTechElementItem,
+    HotTechDomainItem,
     TopCountryItem,
     TopSchoolItem,
 )
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/homepage", tags=["Homepage"])
     "/highlights",
     response_model=HomepageHighlightsResponse,
     summary="获取首页聚合数据",
-    description="返回首页热点数据，包括热门技术要素、主要国家、Top院校",
+    description="返回首页热点数据，包括热门技术领域、主要国家、Top院校",
 )
 async def get_highlights(
     session: AsyncSession = Depends(get_async_session),
@@ -35,7 +35,7 @@ async def get_highlights(
     Get homepage highlights data.
 
     Returns:
-    - hot_tech_elements: 热门技术要素列表 (按人才数Top6)
+    - hot_tech_domains: 热门技术领域列表 (按人才数Top6)
     - top_countries: 主要国家列表 (按人才数Top5)
     - top_schools: Top院校列表 (按人才数Top5)
     """
@@ -48,12 +48,12 @@ async def get_highlights(
         repo = HomepageRepository(session)
 
         # Fetch all data in parallel
-        hot_tech_elements = await repo.get_hot_tech_elements(limit=6)
+        hot_tech_domains = await repo.get_hot_tech_domains(limit=6)
         top_countries = await repo.get_top_countries(limit=5)
         top_schools = await repo.get_top_schools(limit=5)
 
         return {
-            "hot_tech_elements": hot_tech_elements,
+            "hot_tech_domains": hot_tech_domains,
             "top_countries": top_countries,
             "top_schools": top_schools,
         }
@@ -66,13 +66,13 @@ async def get_highlights(
     )
 
     if cached_data:
-        hot_tech_elements = cached_data.get("hot_tech_elements", [])
+        hot_tech_domains = cached_data.get("hot_tech_domains", [])
         top_countries = cached_data.get("top_countries", [])
         top_schools = cached_data.get("top_schools", [])
     else:
         # Fallback to direct database query
         repo = HomepageRepository(session)
-        hot_tech_elements = await repo.get_hot_tech_elements(limit=6)
+        hot_tech_domains = await repo.get_hot_tech_domains(limit=6)
         top_countries = await repo.get_top_countries(limit=5)
         top_schools = await repo.get_top_schools(limit=5)
 
@@ -80,8 +80,8 @@ async def get_highlights(
     version = now.strftime("%Y%m%d-%H%M%S")
 
     return HomepageHighlightsResponse(
-        hot_tech_elements=[
-            HotTechElementItem(**item) for item in hot_tech_elements
+        hot_tech_domains=[
+            HotTechDomainItem(**item) for item in hot_tech_domains
         ],
         top_countries=[
             TopCountryItem(**item) for item in top_countries

@@ -9,7 +9,7 @@ import LoginPage from './pages/LoginPage'
 import AdminPage from './pages/AdminPage'
 import FavoritesPage from './pages/FavoritesPage'
 import ProfilePage from './pages/ProfilePage'
-import TechElementPage from './pages/TechElementPage'
+import TechDomainPage from './pages/TechDomainPage'
 import CountrySchoolPage from './pages/CountrySchoolPage'
 import SystemConfigPage from './pages/SystemConfigPage'
 import DataVersionPage from './pages/DataVersionPage'
@@ -97,7 +97,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<HomePage />} />
-        <Route path="tech-element" element={<TechElementPage />} />
+        <Route path="tech-domain" element={<TechDomainPage />} />
         <Route path="country-school" element={<CountrySchoolPage />} />
         <Route path="search-recommend" element={<SearchRecommendPage />} />
         <Route path="search" element={<Navigate to="/search-recommend" replace />} />

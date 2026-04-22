@@ -1,6 +1,6 @@
 """
-Tech Element API endpoints.
-技术要素相关接口
+Tech Domain API endpoints.
+技术领域相关接口
 """
 from __future__ import annotations
 
@@ -9,78 +9,78 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import get_cache_connection
 from app.core.database import get_async_session
-from app.repositories.tech_element_repository import TechElementRepository
+from app.repositories.tech_domain_repository import TechDomainRepository
 from app.schemas.common import PaginatedResponse
-from app.schemas.tech_element import (
+from app.schemas.tech_domain import (
     CountryDistributionItem,
     CountryDistributionResponse,
     OverallStatsResponse,
     SchoolDistributionItem,
     SchoolDistributionResponse,
-    TalentInTechElement,
-    TechElementListResponse,
-    TechElementResponse,
-    TechElementStatsResponse,
-    TechElementSummary,
+    TalentInTechDomain,
+    TechDomainListResponse,
+    TechDomainResponse,
+    TechDomainStatsResponse,
+    TechDomainSummary,
 )
 from app.services.cache_keys import CacheKeys, CacheTTL
 from app.services.cache_service import CacheService
 
-router = APIRouter(prefix="/tech-elements", tags=["Tech Elements"])
+router = APIRouter(prefix="/tech-domains", tags=["Tech Domains"])
 
 
 @router.get(
     "",
-    response_model=TechElementListResponse,
-    summary="获取技术要素列表",
-    description="返回所有启用的技术要素及其技术方向",
+    response_model=TechDomainListResponse,
+    summary="获取技术领域列表",
+    description="返回所有启用的技术领域及其技术方向",
 )
-async def list_tech_elements(
+async def list_tech_domains(
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get all tech elements with their directions."""
-    repo = TechElementRepository(session)
-    elements = await repo.get_all_elements()
+    """Get all tech domains with their directions."""
+    repo = TechDomainRepository(session)
+    domains = await repo.get_all_domains()
 
     items = [
-        TechElementResponse(
-            tech_element_id=e.tech_element_id,
-            element_code=e.element_code,
-            element_name=e.element_name,
-            element_name_en=e.element_name_en,
-            element_desc=e.element_desc,
-            sort_order=e.sort_order,
+        TechDomainResponse(
+            tech_domain_id=d.tech_domain_id,
+            domain_code=d.domain_code,
+            domain_name=d.domain_name,
+            domain_name_en=d.domain_name_en,
+            domain_desc=d.domain_desc,
+            sort_order=d.sort_order,
             directions=[
                 {
-                    'tech_direction_id': d.tech_direction_id,
-                    'direction_code': d.direction_code,
-                    'direction_name': d.direction_name,
-                    'direction_name_en': d.direction_name_en,
-                    'tech_element_id': d.tech_element_id,
-                    'sort_order': d.sort_order,
+                    'tech_direction_id': dir.tech_direction_id,
+                    'direction_code': dir.direction_code,
+                    'direction_name': dir.direction_name,
+                    'direction_name_en': dir.direction_name_en,
+                    'tech_domain_id': dir.tech_domain_id,
+                    'sort_order': dir.sort_order,
                 }
-                for d in e.directions if d.is_enabled
+                for dir in d.directions if dir.is_enabled
             ]
         )
-        for e in elements
+        for d in domains
     ]
 
-    return TechElementListResponse(items=items, total=len(items))
+    return TechDomainListResponse(items=items, total=len(items))
 
 
 @router.get(
     "/summary",
-    response_model=TechElementSummary,
-    summary="获取技术要素概要统计",
-    description="返回技术要素总数、技术方向总数、关联人才总数",
+    response_model=TechDomainSummary,
+    summary="获取技术领域概要统计",
+    description="返回技术领域总数、技术方向总数、关联人才总数",
 )
-async def get_tech_element_summary(
+async def get_tech_domain_summary(
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get tech element summary statistics."""
-    repo = TechElementRepository(session)
-    stats = await repo.get_element_stats()
-    return TechElementSummary(**stats)
+    """Get tech domain summary statistics."""
+    repo = TechDomainRepository(session)
+    stats = await repo.get_domain_stats()
+    return TechDomainSummary(**stats)
 
 
 @router.get(
@@ -97,7 +97,7 @@ async def get_overall_stats(
     cache = CacheService(cache_conn)
 
     async def fetch_stats():
-        repo = TechElementRepository(session)
+        repo = TechDomainRepository(session)
         return await repo.get_overall_stats()
 
     stats = await cache.get_or_set(
@@ -108,7 +108,7 @@ async def get_overall_stats(
 
     if not stats:
         # Fallback to direct query
-        repo = TechElementRepository(session)
+        repo = TechDomainRepository(session)
         stats = await repo.get_overall_stats()
 
     return OverallStatsResponse(**stats)
@@ -124,7 +124,7 @@ async def get_overall_country_distribution(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get overall country distribution."""
-    repo = TechElementRepository(session)
+    repo = TechDomainRepository(session)
     items = await repo.get_country_distribution()
     return CountryDistributionResponse(items=[CountryDistributionItem(**item) for item in items])
 
@@ -141,7 +141,7 @@ async def get_overall_school_distribution(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get overall school distribution."""
-    repo = TechElementRepository(session)
+    repo = TechDomainRepository(session)
     items, total = await repo.get_school_distribution(page=page, page_size=page_size)
     return SchoolDistributionResponse(
         items=[SchoolDistributionItem(**item) for item in items],
@@ -151,7 +151,7 @@ async def get_overall_school_distribution(
 
 @router.get(
     "/overall-talents",
-    response_model=PaginatedResponse[TalentInTechElement],
+    response_model=PaginatedResponse[TalentInTechDomain],
     summary="获取总体人才列表",
     description="返回用户权限范围内所有人才列表",
 )
@@ -165,7 +165,7 @@ async def get_overall_talents(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get overall talent list."""
-    repo = TechElementRepository(session)
+    repo = TechDomainRepository(session)
     talents, total = await repo.get_talent_list(
         country_code=country_code,
         school_id=school_id,
@@ -176,7 +176,7 @@ async def get_overall_talents(
     )
 
     items = [
-        TalentInTechElement(
+        TalentInTechDomain(
             talent_id=t.talent_id,
             name=t.name,
             name_en=t.name_en,
@@ -200,67 +200,67 @@ async def get_overall_talents(
 
 
 @router.get(
-    "/{element_id}",
-    response_model=TechElementResponse,
-    summary="获取单个技术要素",
-    description="返回指定技术要素的详细信息",
+    "/{domain_id}",
+    response_model=TechDomainResponse,
+    summary="获取单个技术领域",
+    description="返回指定技术领域的详细信息",
 )
-async def get_tech_element(
-    element_id: int,
+async def get_tech_domain(
+    domain_id: int,
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get a specific tech element by ID."""
-    repo = TechElementRepository(session)
-    element = await repo.get_element_by_id(element_id)
+    """Get a specific tech domain by ID."""
+    repo = TechDomainRepository(session)
+    domain = await repo.get_domain_by_id(domain_id)
 
-    if not element:
-        raise HTTPException(status_code=404, detail="Tech element not found")
+    if not domain:
+        raise HTTPException(status_code=404, detail="Tech domain not found")
 
-    return TechElementResponse(
-        tech_element_id=element.tech_element_id,
-        element_code=element.element_code,
-        element_name=element.element_name,
-        element_name_en=element.element_name_en,
-        element_desc=element.element_desc,
-        sort_order=element.sort_order,
+    return TechDomainResponse(
+        tech_domain_id=domain.tech_domain_id,
+        domain_code=domain.domain_code,
+        domain_name=domain.domain_name,
+        domain_name_en=domain.domain_name_en,
+        domain_desc=domain.domain_desc,
+        sort_order=domain.sort_order,
         directions=[
             {
                 'tech_direction_id': d.tech_direction_id,
                 'direction_code': d.direction_code,
                 'direction_name': d.direction_name,
                 'direction_name_en': d.direction_name_en,
-                'tech_element_id': d.tech_element_id,
+                'tech_domain_id': d.tech_domain_id,
                 'sort_order': d.sort_order,
             }
-            for d in element.directions if d.is_enabled
+            for d in domain.directions if d.is_enabled
         ]
     )
 
 
 @router.get(
-    "/{element_id}/stats",
-    response_model=TechElementStatsResponse,
-    summary="获取技术要素统计",
-    description="返回指定技术要素的人才数、覆盖国家数、覆盖院校数等统计",
+    "/{domain_id}/stats",
+    response_model=TechDomainStatsResponse,
+    summary="获取技术领域统计",
+    description="返回指定技术领域的人才数、覆盖国家数、覆盖院校数等统计",
 )
-async def get_element_stats(
-    element_id: int,
+async def get_domain_stats(
+    domain_id: int,
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get statistics for a specific tech element."""
-    repo = TechElementRepository(session)
+    """Get statistics for a specific tech domain."""
+    repo = TechDomainRepository(session)
 
-    # Verify element exists
-    element = await repo.get_element_by_id(element_id)
-    if not element:
-        raise HTTPException(status_code=404, detail="Tech element not found")
+    # Verify domain exists
+    domain = await repo.get_domain_by_id(domain_id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Tech domain not found")
 
     cache_conn = await get_cache_connection()
     cache = CacheService(cache_conn)
-    cache_key = CacheKeys.STATS_TECH_ELEMENT.format(element_id=element_id)
+    cache_key = CacheKeys.STATS_TECH_DOMAIN.format(domain_id=domain_id)
 
     async def fetch_stats():
-        return await repo.get_element_stats(element_id)
+        return await repo.get_domain_stats(domain_id)
 
     stats = await cache.get_or_set(
         cache_key,
@@ -270,58 +270,58 @@ async def get_element_stats(
 
     if not stats:
         # Fallback to direct query
-        stats = await repo.get_element_stats(element_id)
+        stats = await repo.get_domain_stats(domain_id)
 
-    return TechElementStatsResponse(**stats)
+    return TechDomainStatsResponse(**stats)
 
 
 @router.get(
-    "/{element_id}/countries",
+    "/{domain_id}/countries",
     response_model=CountryDistributionResponse,
     summary="获取国家分布",
-    description="返回指定技术要素的人才国家分布",
+    description="返回指定技术领域的人才国家分布",
 )
-async def get_element_country_distribution(
-    element_id: int,
+async def get_domain_country_distribution(
+    domain_id: int,
     direction_id: int | None = Query(None, description="按技术方向筛选"),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get country distribution for a tech element."""
-    repo = TechElementRepository(session)
+    """Get country distribution for a tech domain."""
+    repo = TechDomainRepository(session)
 
-    # Verify element exists
-    element = await repo.get_element_by_id(element_id)
-    if not element:
-        raise HTTPException(status_code=404, detail="Tech element not found")
+    # Verify domain exists
+    domain = await repo.get_domain_by_id(domain_id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Tech domain not found")
 
-    items = await repo.get_country_distribution(element_id, direction_id)
+    items = await repo.get_country_distribution(domain_id, direction_id)
     return CountryDistributionResponse(items=[CountryDistributionItem(**item) for item in items])
 
 
 @router.get(
-    "/{element_id}/schools",
+    "/{domain_id}/schools",
     response_model=SchoolDistributionResponse,
     summary="获取院校分布",
-    description="返回指定技术要素的人才院校分布",
+    description="返回指定技术领域的人才院校分布",
 )
-async def get_element_school_distribution(
-    element_id: int,
+async def get_domain_school_distribution(
+    domain_id: int,
     direction_id: int | None = Query(None, description="按技术方向筛选"),
     country_code: str | None = Query(None, description="按国家代码筛选 (ISO 3166-1 alpha-2)"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get school distribution for a tech element."""
-    repo = TechElementRepository(session)
+    """Get school distribution for a tech domain."""
+    repo = TechDomainRepository(session)
 
-    # Verify element exists
-    element = await repo.get_element_by_id(element_id)
-    if not element:
-        raise HTTPException(status_code=404, detail="Tech element not found")
+    # Verify domain exists
+    domain = await repo.get_domain_by_id(domain_id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Tech domain not found")
 
     items, total = await repo.get_school_distribution(
-        element_id=element_id,
+        domain_id=domain_id,
         direction_id=direction_id,
         country_code=country_code,
         page=page,
@@ -334,13 +334,13 @@ async def get_element_school_distribution(
 
 
 @router.get(
-    "/{element_id}/talents",
-    response_model=PaginatedResponse[TalentInTechElement],
+    "/{domain_id}/talents",
+    response_model=PaginatedResponse[TalentInTechDomain],
     summary="获取人才列表",
-    description="返回指定技术要素的人才列表",
+    description="返回指定技术领域的人才列表",
 )
-async def get_element_talents(
-    element_id: int,
+async def get_domain_talents(
+    domain_id: int,
     direction_id: int | None = Query(None, description="按技术方向筛选"),
     country_code: str | None = Query(None, description="按国家代码筛选 (ISO 3166-1 alpha-2)"),
     school_id: int | None = Query(None, description="按院校筛选"),
@@ -350,16 +350,16 @@ async def get_element_talents(
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
 ):
-    """Get talent list for a tech element."""
-    repo = TechElementRepository(session)
+    """Get talent list for a tech domain."""
+    repo = TechDomainRepository(session)
 
-    # Verify element exists
-    element = await repo.get_element_by_id(element_id)
-    if not element:
-        raise HTTPException(status_code=404, detail="Tech element not found")
+    # Verify domain exists
+    domain = await repo.get_domain_by_id(domain_id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Tech domain not found")
 
     talents, total = await repo.get_talent_list(
-        element_id=element_id,
+        domain_id=domain_id,
         direction_id=direction_id,
         country_code=country_code,
         school_id=school_id,
@@ -370,7 +370,7 @@ async def get_element_talents(
     )
 
     items = [
-        TalentInTechElement(
+        TalentInTechDomain(
             talent_id=t.talent_id,
             name=t.name,
             name_en=t.name_en,

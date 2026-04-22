@@ -18,7 +18,7 @@ from sqlalchemy.orm import selectinload
 from app.models.raw_data import RawWork, RawAuthor, RawInstitution, AuthorTechBelong
 from app.models.standardized import StdAuthor, StdSchool
 from app.models.talent import Talent
-from app.models.tech_element import TalentTechTag, TechElement, TechDirection
+from app.models.tech_domain import TalentTechTag, TechDomain, TechDirection
 from app.models.sync import CollectTask
 from app.services.collect.orchestrator import CollectionOrchestrator
 from app.services.normalizers import AuthorNormalizer, SchoolNormalizer
@@ -43,7 +43,7 @@ class TestAuthorTechBelongSourceTask:
         # Create a task with all required fields
         task = CollectTask(
             task_code="TEST-TASK-001",
-            tech_element_id=setup["tech_element"].tech_element_id,
+            tech_domain_id=setup["tech_domain"].tech_domain_id,
             collect_mode="incremental",
             triggered_by=None,
             triggered_at=datetime.utcnow(),  # Required field
@@ -78,7 +78,7 @@ class TestAuthorTechBelongSourceTask:
         tech_belong = AuthorTechBelong(
             openalex_author_id="A-TEST",
             std_author_id=std_author.std_author_id,
-            tech_element_id=setup["tech_element"].tech_element_id,
+            tech_domain_id=setup["tech_domain"].tech_domain_id,
             source_venue_id=setup["venue"].venue_id,
             source_task_id=task.task_id,  # CRITICAL: must be set
             work_count_in_venue=5
@@ -90,7 +90,7 @@ class TestAuthorTechBelongSourceTask:
         result = await test_session.execute(
             select(AuthorTechBelong).where(
                 AuthorTechBelong.source_task_id == task.task_id,
-                AuthorTechBelong.tech_element_id == setup["tech_element"].tech_element_id
+                AuthorTechBelong.tech_domain_id == setup["tech_domain"].tech_domain_id
             )
         )
         found = result.scalars().all()
@@ -103,12 +103,12 @@ class TestTalentTopicTagsEagerLoading:
     """Test that _update_talent_topic_tags properly loads relationships"""
 
     @pytest.mark.asyncio
-    async def test_update_topic_tags_eager_loads_tech_element(
+    async def test_update_topic_tags_eager_loads_tech_domain(
         self, test_session: AsyncSession, full_setup
     ):
         """
         Issue: _update_talent_topic_tags failed with greenlet_spawn error
-        because tech_element was lazily loaded inside async context.
+        because tech_domain was lazily loaded inside async context.
 
         This test verifies eager loading works correctly.
         """
@@ -131,7 +131,7 @@ class TestTalentTopicTagsEagerLoading:
         # Create tech tag
         tech_tag = TalentTechTag(
             talent_id=talent.talent_id,
-            tech_element_id=setup["tech_element"].tech_element_id,
+            tech_domain_id=setup["tech_domain"].tech_domain_id,
             tech_direction_id=setup["tech_direction"].tech_direction_id,
             is_enabled=True
         )
@@ -141,7 +141,7 @@ class TestTalentTopicTagsEagerLoading:
         # Now try to update topic_tags using eager loading
         result = await test_session.execute(
             select(Talent).options(
-                selectinload(Talent.tech_tags).selectinload(TalentTechTag.tech_element)
+                selectinload(Talent.tech_tags).selectinload(TalentTechTag.tech_domain)
             )
         )
         talents = result.scalars().all()
@@ -150,9 +150,9 @@ class TestTalentTopicTagsEagerLoading:
         for t in talents:
             if t.tech_tags:
                 tech_names = list(set(
-                    tag.tech_element.element_name
+                    tag.tech_domain.domain_name
                     for tag in t.tech_tags
-                    if tag.tech_element and tag.is_enabled
+                    if tag.tech_domain and tag.is_enabled
                 ))
                 if tech_names:
                     t.topic_tags = tech_names
@@ -166,7 +166,7 @@ class TestTalentTopicTagsEagerLoading:
         # Reload and verify
         await test_session.refresh(talent)
         assert len(talent.topic_tags) > 0, "Talent should have topic tags"
-        assert setup["tech_element"].element_name in talent.topic_tags
+        assert setup["tech_domain"].domain_name in talent.topic_tags
 
 
 class TestNormalizationStatistics:
@@ -286,7 +286,7 @@ class TestCollectionProgressStatistics:
         # Create a task with all required fields
         task = CollectTask(
             task_code="TEST-PROGRESS-001",
-            tech_element_id=setup["tech_element"].tech_element_id,
+            tech_domain_id=setup["tech_domain"].tech_domain_id,
             collect_mode="incremental",
             triggered_by=None,
             triggered_at=datetime.utcnow(),  # Required field

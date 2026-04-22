@@ -1,6 +1,6 @@
 """
-Tech Element Schemas.
-技术要素相关DTO
+Tech Domain Schemas.
+技术领域相关DTO
 """
 
 from __future__ import annotations
@@ -14,20 +14,20 @@ class TechDirectionResponse(BaseModel):
     direction_code: str
     direction_name: str
     direction_name_en: str | None = None
-    tech_element_id: int
+    tech_domain_id: int
     sort_order: int = 0
 
     class Config:
         from_attributes = True
 
 
-class TechElementResponse(BaseModel):
-    """技术要素响应"""
-    tech_element_id: int
-    element_code: str
-    element_name: str
-    element_name_en: str | None = None
-    element_desc: str | None = None
+class TechDomainResponse(BaseModel):
+    """技术领域响应"""
+    tech_domain_id: int
+    domain_code: str
+    domain_name: str
+    domain_name_en: str | None = None
+    domain_desc: str | None = None
     sort_order: int = 0
     directions: list[TechDirectionResponse] = []
 
@@ -35,15 +35,15 @@ class TechElementResponse(BaseModel):
         from_attributes = True
 
 
-class TechElementSummary(BaseModel):
-    """技术要素概要"""
-    element_count: int
+class TechDomainSummary(BaseModel):
+    """技术领域概要"""
+    domain_count: int
     direction_count: int
     talent_count: int
 
 
-class TechElementStatsResponse(BaseModel):
-    """技术要素统计响应"""
+class TechDomainStatsResponse(BaseModel):
+    """技术领域统计响应"""
     talent_count: int
     professor_count: int
     student_count: int
@@ -59,7 +59,7 @@ class OverallStatsResponse(BaseModel):
     student_count: int
     country_count: int
     school_count: int
-    tech_element_count: int
+    tech_domain_count: int
     tech_direction_count: int
 
 
@@ -78,9 +78,9 @@ class SchoolDistributionItem(BaseModel):
     talent_count: int
 
 
-class TechElementListResponse(BaseModel):
-    """技术要素列表响应"""
-    items: list[TechElementResponse]
+class TechDomainListResponse(BaseModel):
+    """技术领域列表响应"""
+    items: list[TechDomainResponse]
     total: int
 
 
@@ -95,9 +95,9 @@ class SchoolDistributionResponse(BaseModel):
     total: int
 
 
-# For talent list in tech element page
-class TalentInTechElement(BaseModel):
-    """技术要素页的人才项"""
+# For talent list in tech domain page
+class TalentInTechDomain(BaseModel):
+    """技术领域页的人才项"""
     talent_id: int
     name: str
     name_en: str | None = None

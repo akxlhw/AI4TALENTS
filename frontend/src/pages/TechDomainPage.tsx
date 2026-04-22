@@ -1,11 +1,11 @@
 /**
- * 技术要素页面 - MVP v1.1
- * 面向业务部门的主分析页面，从技术要素/技术方向看人才供给
+ * 技术领域页面 - MVP v1.1
+ * 面向业务部门的主分析页面，从技术领域/技术方向看人才供给
  *
  * 页面逻辑：
  * 1. 页面初始化时加载用户权限范围内的总体统计数据
  * 2. 默认显示所有权限范围内的人才列表
- * 3. 用户可通过筛选区选择特定技术要素/方向来缩小范围
+ * 3. 用户可通过筛选区选择特定技术领域/方向来缩小范围
  *
  * v1.3: 使用 React Query 实现前端缓存
  */
@@ -35,21 +35,21 @@ import {
 } from '@ant-design/icons'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import {
-  useTechElements,
-  useTechElementStats,
-  useTechElementTalents,
+  useTechDomains,
+  useTechDomainStats,
+  useTechDomainTalents,
   useOverallTalents,
 } from '../hooks/useQueries'
 import TopicTags from '../components/TopicTags'
 
 const { Title, Text } = Typography
 
-// 技术要素类型
-interface TechElement {
-  tech_element_id: number
-  element_code: string
-  element_name: string
-  element_name_en: string | null
+// 技术领域类型
+interface TechDomain {
+  tech_domain_id: number
+  domain_code: string
+  domain_name: string
+  domain_name_en: string | null
   directions: TechDirection[]
 }
 
@@ -58,7 +58,7 @@ interface TechDirection {
   tech_direction_id: number
   direction_code: string
   direction_name: string
-  tech_element_id: number
+  tech_domain_id: number
 }
 
 // 人才明细数据类型
@@ -74,13 +74,13 @@ interface TalentItem {
   openalex_topics: string[]  // OpenAlex研究主题（具体研究方向）
 }
 
-const TechElementPage: React.FC = () => {
+const TechDomainPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
   // 筛选状态
-  const [techElementId, setTechElementId] = useState<number | undefined>(
-    searchParams.get('tech_element_id') ? Number(searchParams.get('tech_element_id')) : undefined
+  const [techDomainId, setTechDomainId] = useState<number | undefined>(
+    searchParams.get('tech_domain_id') ? Number(searchParams.get('tech_domain_id')) : undefined
   )
   const [keyword, setKeyword] = useState('')
   const [countryId, setCountryId] = useState<number | undefined>()
@@ -90,8 +90,8 @@ const TechElementPage: React.FC = () => {
   const [pageSize, setPageSize] = useState(10)
 
   // React Query hooks
-  const { data: elementsData, isLoading: elementsLoading } = useTechElements()
-  const { data: statsData, isLoading: statsLoading } = useTechElementStats(techElementId)
+  const { data: domainsData, isLoading: domainsLoading } = useTechDomains()
+  const { data: statsData, isLoading: statsLoading } = useTechDomainStats(techDomainId)
 
   // Build talent query params
   const talentParams = useMemo(() => ({
@@ -103,16 +103,16 @@ const TechElementPage: React.FC = () => {
     keyword: keyword || undefined,
   }), [page, pageSize, countryId, schoolId, roleType, keyword])
 
-  // Use different hooks based on whether tech element is selected
+  // Use different hooks based on whether tech domain is selected
   const overallTalentsQuery = useOverallTalents(talentParams)
-  const elementTalentsQuery = useTechElementTalents(techElementId!, talentParams)
+  const domainTalentsQuery = useTechDomainTalents(techDomainId!, talentParams)
 
   // Select the appropriate query result
-  const talentsQuery = techElementId ? elementTalentsQuery : overallTalentsQuery
+  const talentsQuery = techDomainId ? domainTalentsQuery : overallTalentsQuery
   const { data: talentsData, isLoading: talentsLoading, refetch: refetchTalents } = talentsQuery
 
   // Extract data from query results
-  const techElements: TechElement[] = elementsData?.items || []
+  const techDomains: TechDomain[] = domainsData?.items || []
   const stats = statsData || {
     talent_count: 0,
     professor_count: 0,
@@ -131,15 +131,15 @@ const TechElementPage: React.FC = () => {
     { value: 'unknown', label: '待确认' },
   ]
 
-  // 技术要素选项
-  const elementOptions = techElements.map(e => ({
-    value: e.tech_element_id,
-    label: e.element_name,
+  // 技术领域选项
+  const domainOptions = techDomains.map(d => ({
+    value: d.tech_domain_id,
+    label: d.domain_name,
   }))
 
-  // 处理技术要素变化
-  const handleTechElementChange = (value: number | undefined) => {
-    setTechElementId(value)
+  // 处理技术领域变化
+  const handleTechDomainChange = (value: number | undefined) => {
+    setTechDomainId(value)
     setPage(1)
   }
 
@@ -151,7 +151,7 @@ const TechElementPage: React.FC = () => {
 
   // 处理重置
   const handleReset = () => {
-    setTechElementId(undefined)
+    setTechDomainId(undefined)
     setKeyword('')
     setCountryId(undefined)
     setSchoolId(undefined)
@@ -224,8 +224,8 @@ const TechElementPage: React.FC = () => {
     <div style={{ padding: 0 }}>
       {/* 页面标题 */}
       <div style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>技术要素</Title>
-        <Text type="secondary">从技术要素/技术方向视角分析人才供给</Text>
+        <Title level={4} style={{ margin: 0 }}>技术领域</Title>
+        <Text type="secondary">从技术领域/技术方向视角分析人才供给</Text>
       </div>
 
       {/* 概要统计区 */}
@@ -275,14 +275,14 @@ const TechElementPage: React.FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={[16, 16]}>
           <Col span={6}>
-            <div style={{ marginBottom: 4 }}><Text type="secondary">技术要素</Text></div>
+            <div style={{ marginBottom: 4 }}><Text type="secondary">技术领域</Text></div>
             <Select
               style={{ width: '100%' }}
               placeholder="全部（可选筛选）"
-              value={techElementId}
-              onChange={handleTechElementChange}
-              options={elementOptions}
-              loading={elementsLoading}
+              value={techDomainId}
+              onChange={handleTechDomainChange}
+              options={domainOptions}
+              loading={domainsLoading}
               allowClear
               showSearch
               optionFilterProp="label"
@@ -370,4 +370,4 @@ const TechElementPage: React.FC = () => {
   )
 }
 
-export default TechElementPage
+export default TechDomainPage

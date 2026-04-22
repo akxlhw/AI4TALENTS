@@ -40,7 +40,7 @@ class UserAccount(Base, TimestampMixin):
     department = Column(String(255), nullable=True)
 
     # User preferences
-    default_view = Column(String(30), default="tech_element", nullable=False)  # tech_element / country_school
+    default_view = Column(String(30), default="tech_domain", nullable=False)  # tech_domain / country_school
 
     # Last login
     last_login_at = Column(DateTime, nullable=True)
@@ -56,7 +56,7 @@ class UserAccount(Base, TimestampMixin):
 
 
 class UserSchoolScope(Base, TimestampMixin):
-    """User permission scope - supports school/country/tech_element dimensions."""
+    """User permission scope - supports school/country/tech_domain dimensions."""
 
     __tablename__ = "iam_user_school_scope"
 
@@ -66,7 +66,7 @@ class UserSchoolScope(Base, TimestampMixin):
     # Scope definition - three dimensions:
     # - 'school': scope_value = school_id
     # - 'country': scope_value = country_code
-    # - 'tech_element': scope_value = tech_element_id
+    # - 'tech_domain': scope_value = tech_domain_id
     # - 'all': scope_value = '*'
     scope_type = Column(String(20), nullable=False)
     scope_value = Column(String(100), nullable=True)
@@ -118,7 +118,7 @@ class TalentPool(Base, TimestampMixin):
 
     pool_id = Column(Integer, primary_key=True, index=True)
     pool_name = Column(String(100), nullable=False)
-    pool_type = Column(String(30), default="custom", nullable=False)  # tech_element/country/campaign/custom
+    pool_type = Column(String(30), default="custom", nullable=False)  # tech_domain/country/campaign/custom
     owner_user_id = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=False, index=True)
     scope_desc = Column(Text, nullable=True)
     pool_status = Column(String(20), default="active", nullable=False)  # active/archived

@@ -1,12 +1,12 @@
 """
-更新技术要素配置，使用正确的 OpenAlex Source ID
+更新技术领域配置，使用正确的 OpenAlex Source ID
 """
 import asyncio
 import sys
 sys.path.insert(0, '.')
 
 from app.core.database import AsyncSessionLocal
-from app.models.tech_element import TechElement
+from app.models.tech_domain import TechDomain
 from sqlalchemy import select
 
 
@@ -82,17 +82,17 @@ VENUE_MAPPINGS = {
 
 async def update_venues():
     async with AsyncSessionLocal() as session:
-        for element_code, venues in VENUE_MAPPINGS.items():
+        for domain_code, venues in VENUE_MAPPINGS.items():
             result = await session.execute(
-                select(TechElement).where(TechElement.element_code == element_code)
+                select(TechDomain).where(TechDomain.domain_code == domain_code)
             )
-            element = result.scalar_one_or_none()
+            domain = result.scalar_one_or_none()
 
-            if element:
-                element.collect_sources = venues
-                print(f"Updated {element.element_name} with {len(venues)} venues")
+            if domain:
+                domain.collect_sources = venues
+                print(f"Updated {domain.domain_name} with {len(venues)} venues")
             else:
-                print(f"Tech element '{element_code}' not found")
+                print(f"Tech domain '{domain_code}' not found")
 
         await session.commit()
         print("\nAll venues updated!")

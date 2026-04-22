@@ -2,19 +2,19 @@
  * VenueConfigModal - 顶会顶刊配置弹窗组件
  *
  * 职责：
- * - 显示技术要素关联的顶会顶刊
+ * - 显示技术领域关联的顶会顶刊
  * - 使用 Transfer 组件进行选择
  * - 保存配置
  */
 import { Modal, Alert, Typography, Transfer, Tag, Spin } from 'antd'
 import type { TransferProps } from 'antd'
-import type { VenueItem, VenueTypeConfig, TechElementCollect } from '../../types'
+import type { VenueItem, VenueTypeConfig, TechDomainCollect } from '../../types'
 
 const { Text } = Typography
 
 export interface VenueConfigModalProps {
   visible: boolean
-  element: TechElementCollect | null
+  domain: TechDomainCollect | null
   allVenues: VenueItem[]
   selectedVenueIds: string[]
   loading: boolean
@@ -33,7 +33,7 @@ interface TransferItem {
 
 const VenueConfigModal: React.FC<VenueConfigModalProps> = ({
   visible,
-  element,
+  domain,
   allVenues,
   selectedVenueIds,
   loading,
@@ -44,8 +44,8 @@ const VenueConfigModal: React.FC<VenueConfigModalProps> = ({
 }) => {
   const dataSource: TransferItem[] = allVenues.map(v => ({
     key: String(v.venue_id),
-    title: v.venue_name,
-    description: v.venue_name_en || v.venue_code,
+    title: (v.venue_code || v.venue_name).toUpperCase(),
+    description: v.venue_name,
     venue_type: v.venue_type,
   }))
 
@@ -54,8 +54,8 @@ const VenueConfigModal: React.FC<VenueConfigModalProps> = ({
       <Tag color={venueTypeMap[item.venue_type]?.color || 'default'} style={{ marginRight: 4 }}>
         {venueTypeMap[item.venue_type]?.label || item.venue_type}
       </Tag>
-      {item.title}
-      {item.description && <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>({item.description})</Text>}
+      <Text strong>{item.title}</Text>
+      <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>({item.description})</Text>
     </span>
   )
 
@@ -65,7 +65,7 @@ const VenueConfigModal: React.FC<VenueConfigModalProps> = ({
 
   return (
     <Modal
-      title={`配置采集范围 - ${element?.element_name || ''}`}
+      title={`配置采集范围 - ${domain?.domain_name || ''}`}
       open={visible}
       onCancel={onCancel}
       onOk={onSave}
@@ -100,7 +100,7 @@ const VenueConfigModal: React.FC<VenueConfigModalProps> = ({
             itemUnit: '个',
             itemsUnit: '个',
             searchPlaceholder: '搜索...',
-            notFoundContent: '该技术要素暂无关联的顶会顶刊',
+            notFoundContent: '该技术领域暂无关联的顶会顶刊',
           }}
         />
       </Spin>

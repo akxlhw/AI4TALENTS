@@ -69,7 +69,7 @@ class VenueSubTaskExecutor:
         # Update binding status
         await self.binding_repo.update_collect_status(
             venue.venue_id,
-            task.tech_element_id,
+            task.tech_domain_id,
             "completed"
         )
 

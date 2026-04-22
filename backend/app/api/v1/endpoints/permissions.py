@@ -27,7 +27,7 @@ class UserResponse(BaseModel):
     display_name: str | None = None
     department: str | None = None
     is_active: bool
-    default_view: str = "tech_element"
+    default_view: str = "tech_domain"
     last_login_at: datetime | None = None
 
 
@@ -72,7 +72,7 @@ class ScopeResponse(BaseModel):
 class ScopeCreateRequest(BaseModel):
     """Create scope request."""
     user_id: int
-    scope_type: str = Field(..., pattern="^(school|country|tech_element|all)$")
+    scope_type: str = Field(..., pattern="^(school|country|tech_domain|all)$")
     scope_value: str
     expires_at: datetime | None = None
     notes: str | None = None
@@ -80,7 +80,7 @@ class ScopeCreateRequest(BaseModel):
 
 class DefaultViewRequest(BaseModel):
     """Update default view request."""
-    default_view: str = Field(..., pattern="^(tech_element|country_school)$")
+    default_view: str = Field(..., pattern="^(tech_domain|country_school)$")
 
 
 class ScopeListResponse(BaseModel):
@@ -450,19 +450,19 @@ async def check_school_access(
 
 
 @router.get(
-    "/me/scopes/tech-elements",
+    "/me/scopes/tech-domains",
     response_model=list[int],
-    summary="获取当前用户可访问的技术要素",
-    description="返回当前用户有权访问的技术要素ID列表",
+    summary="获取当前用户可访问的技术领域",
+    description="返回当前用户有权访问的技术领域ID列表",
 )
-async def get_my_accessible_tech_elements(
+async def get_my_accessible_tech_domains(
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_user),
 ):
-    """Get current user's accessible tech element IDs."""
+    """Get current user's accessible tech domain IDs."""
     scope_repo = UserScopeRepository(session)
-    tech_element_ids = await scope_repo.get_accessible_tech_element_ids(current_user["user_id"])
-    return tech_element_ids
+    tech_domain_ids = await scope_repo.get_accessible_tech_domain_ids(current_user["user_id"])
+    return tech_domain_ids
 
 
 @router.get(

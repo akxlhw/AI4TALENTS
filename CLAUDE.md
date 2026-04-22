@@ -59,7 +59,7 @@ npx playwright test --ui      # Run with UI
 # System initialization
 python scripts/init_system.py              # Reset system with interactive confirmation
 python scripts/init_system.py --force      # Reset without confirmation
-python scripts/seed_tech_elements.py       # Seed six tech elements
+python scripts/seed_tech_domains.py        # Seed six tech domains
 
 # Data maintenance
 python scripts/fix_pending_normalization.py --task-id <ID> [--sync]  # Fix pending normalization
@@ -191,7 +191,7 @@ Performance indexes are created via migration `023_add_performance_indexes.py`.
 | Raw data models | `backend/app/models/raw_data.py` |
 | Standardized models | `backend/app/models/standardized.py` |
 | Serving models | `backend/app/models/talent.py`, `school.py` |
-| Tech element model | `backend/app/models/tech_element.py` |
+| Tech domain model | `backend/app/models/tech_domain.py` |
 | API endpoints | `backend/app/api/v1/endpoints/` |
 | Frontend pages | `frontend/src/pages/` |
 | Frontend stores (Zustand) | `frontend/src/store/` |

@@ -106,7 +106,7 @@ async def enhanced_search_talents(
     min_citations: int | None = Query(None, description="最低引用数"),
     min_works: int | None = Query(None, description="最低论文数"),
     country_code: str | None = Query(None, description="按国家代码筛选"),
-    tech_element_id: int | None = Query(None, description="按技术要素筛选"),
+    tech_domain_id: int | None = Query(None, description="按技术领域筛选"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     session: AsyncSession = Depends(get_async_session),
@@ -126,7 +126,7 @@ async def enhanced_search_talents(
     - `min_citations`: Minimum citation count
     - `min_works`: Minimum number of works
     - `country_code`: Filter by country code (e.g., 'CN', 'US')
-    - `tech_element_id`: Filter by tech element
+    - `tech_domain_id`: Filter by tech domain
     """
     start_time = time.time()
 
@@ -150,8 +150,8 @@ async def enhanced_search_talents(
         filters["min_works"] = min_works
     if country_code:
         filters["country_code"] = country_code
-    if tech_element_id:
-        filters["tech_element_id"] = tech_element_id
+    if tech_domain_id:
+        filters["tech_domain_id"] = tech_domain_id
 
     try:
         # Create embedding service for semantic/hybrid search
@@ -168,6 +168,8 @@ async def enhanced_search_talents(
                     api_base=llm_config.api_base,
                     model=llm_config.model,
                     embedding_model=llm_config.embedding_model,
+                    embedding_api_base=llm_config.embedding_api_base,
+                    embedding_api_key=llm_config.embedding_api_key,
                     timeout=llm_config.timeout or 60,
                     api_format=llm_config.api_format,
                     embedding_api_format=llm_config.embedding_api_format,
@@ -214,6 +216,7 @@ async def enhanced_search_talents(
                 topic_tags=item.get("topic_tags", []),
                 openalex_topics=item.get("openalex_topics", []),
                 similarity_score=item.get("similarity_score"),
+                match_sources=item.get("match_sources", []),
                 highlight=None,
             ))
 
@@ -227,6 +230,8 @@ async def enhanced_search_talents(
             took_ms=took_ms,
             precise_count=results.precise_count,
             similar_count=results.similar_count,
+            fulltext_count=results.fulltext_count,
+            semantic_count=results.semantic_count,
         )
 
     except EmptyQueryError:

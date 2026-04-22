@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.school import School
-from app.models.tech_element import TalentTechTag, TechElement
+from app.models.tech_domain import TalentTechTag, TechDomain
 
 
 class HomepageRepository:
@@ -16,32 +16,32 @@ class HomepageRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_hot_tech_elements(self, limit: int = 6) -> list[dict]:
+    async def get_hot_tech_domains(self, limit: int = 6) -> list[dict]:
         """
-        Get hot tech elements by talent count.
-        按人才数获取热门技术要素
+        Get hot tech domains by talent count.
+        按人才数获取热门技术领域
 
         Args:
             limit: Maximum number of results
 
         Returns:
-            List of dictionaries with tech element info and talent count
+            List of dictionaries with tech domain info and talent count
         """
-        # Count talents per tech element through talent_tech_tag
+        # Count talents per tech domain through talent_tech_tag
         query = (
             select(
-                TechElement.tech_element_id,
-                TechElement.element_code,
-                TechElement.element_name,
+                TechDomain.tech_domain_id,
+                TechDomain.domain_code,
+                TechDomain.domain_name,
                 func.count(func.distinct(TalentTechTag.talent_id)).label("talent_count"),
             )
-            .select_from(TechElement)
+            .select_from(TechDomain)
             .outerjoin(
                 TalentTechTag,
-                TechElement.tech_element_id == TalentTechTag.tech_element_id
+                TechDomain.tech_domain_id == TalentTechTag.tech_domain_id
             )
-            .where(TechElement.is_enabled.is_(True))
-            .group_by(TechElement.tech_element_id)
+            .where(TechDomain.is_enabled.is_(True))
+            .group_by(TechDomain.tech_domain_id)
             .order_by(func.count(func.distinct(TalentTechTag.talent_id)).desc())
             .limit(limit)
         )
@@ -51,9 +51,9 @@ class HomepageRepository:
 
         return [
             {
-                "tech_element_id": row.tech_element_id,
-                "element_code": row.element_code,
-                "element_name": row.element_name,
+                "tech_domain_id": row.tech_domain_id,
+                "domain_code": row.domain_code,
+                "domain_name": row.domain_name,
                 "talent_count": row.talent_count,
             }
             for row in rows

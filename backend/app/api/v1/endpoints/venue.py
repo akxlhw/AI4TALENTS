@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.models.tech_element import TechElement
+from app.models.tech_domain import TechDomain
 from app.models.venue import Venue, VenueTechBinding
 from app.repositories.venue_repository import VenueRepository, VenueTechBindingRepository
 from app.schemas.venue import (
@@ -39,24 +39,24 @@ async def batch_create_bindings(
     data: VenueTechBindingBatchCreate,
     session: AsyncSession = Depends(get_async_session)
 ):
-    """更新技术要素的Venue绑定启用状态
+    """更新技术领域的Venue绑定启用状态
 
     传入的 venue_ids 会被标记为启用(is_enabled=True)，
-    该技术要素的其他绑定会被标记为禁用(is_enabled=False)
+    该技术领域的其他绑定会被标记为禁用(is_enabled=False)
     """
     try:
         binding_repo = VenueTechBindingRepository(session)
 
-        # Check tech element exists
+        # Check tech domain exists
         tech_result = await session.execute(
-            select(TechElement).where(TechElement.tech_element_id == data.tech_element_id)
+            select(TechDomain).where(TechDomain.tech_domain_id == data.tech_domain_id)
         )
-        tech_element = tech_result.scalar_one_or_none()
-        if not tech_element:
-            raise HTTPException(status_code=404, detail="Tech element not found")
+        tech_domain = tech_result.scalar_one_or_none()
+        if not tech_domain:
+            raise HTTPException(status_code=404, detail="Tech domain not found")
 
-        # 获取该技术要素的所有绑定
-        all_bindings = await binding_repo.get_by_tech_element(data.tech_element_id)
+        # 获取该技术领域的所有绑定
+        all_bindings = await binding_repo.get_by_tech_domain(data.tech_domain_id)
 
         selected_venue_ids = set(data.venue_ids)
 
@@ -70,9 +70,9 @@ async def batch_create_bindings(
 
         await session.commit()
 
-        # 同步更新 TechElement.collect_sources 字段
+        # 同步更新 TechDomain.collect_sources 字段
         # 只包含启用的 venues
-        enabled_bindings = await binding_repo.get_list_with_venue(data.tech_element_id, is_enabled=True)
+        enabled_bindings = await binding_repo.get_list_with_venue(data.tech_domain_id, is_enabled=True)
         collect_sources = [
             {
                 "id": b.venue.openalex_source_id or b.venue.venue_code,
@@ -81,7 +81,7 @@ async def batch_create_bindings(
             }
             for b in enabled_bindings if b.venue
         ]
-        tech_element.collect_sources = collect_sources
+        tech_domain.collect_sources = collect_sources
         await session.commit()
 
         # 返回更新后的绑定数量
@@ -216,7 +216,7 @@ async def delete_venue(
 
 
 # ============================================
-# Venue-TechElement Binding
+# Venue-TechDomain Binding
 # ============================================
 
 @router.get("/{venue_id}/bindings", response_model=VenueTechBindingListResponse)
@@ -225,7 +225,7 @@ async def get_venue_bindings(
     is_enabled: bool | None = Query(None),
     session: AsyncSession = Depends(get_async_session)
 ):
-    """获取Venue的所有技术要素绑定"""
+    """获取Venue的所有技术领域绑定"""
     repo = VenueTechBindingRepository(session)
     bindings = await repo.get_by_venue(venue_id, is_enabled)
 
@@ -240,7 +240,7 @@ async def create_binding(
     data: VenueTechBindingCreate,
     session: AsyncSession = Depends(get_async_session)
 ):
-    """创建Venue-TechElement绑定"""
+    """创建Venue-TechDomain绑定"""
     venue_repo = VenueRepository(session)
     binding_repo = VenueTechBindingRepository(session)
 
@@ -249,15 +249,15 @@ async def create_binding(
     if not venue:
         raise HTTPException(status_code=404, detail="Venue not found")
 
-    # Check tech element exists
+    # Check tech domain exists
     tech_result = await session.execute(
-        select(TechElement).where(TechElement.tech_element_id == data.tech_element_id)
+        select(TechDomain).where(TechDomain.tech_domain_id == data.tech_domain_id)
     )
     if not tech_result.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Tech element not found")
+        raise HTTPException(status_code=404, detail="Tech domain not found")
 
     # Check if binding already exists
-    existing = await binding_repo.get_by_venue_and_tech(data.venue_id, data.tech_element_id)
+    existing = await binding_repo.get_by_venue_and_tech(data.venue_id, data.tech_domain_id)
     if existing:
         raise HTTPException(status_code=400, detail="Binding already exists")
 
@@ -306,18 +306,18 @@ async def delete_binding(
 
 
 # ============================================
-# Tech Element Bindings
+# Tech Domain Bindings
 # ============================================
 
-@router.get("/tech-elements/{tech_element_id}/bindings", response_model=VenueTechBindingListResponse)
-async def get_tech_element_bindings(
-    tech_element_id: int,
+@router.get("/tech-domains/{tech_domain_id}/bindings", response_model=VenueTechBindingListResponse)
+async def get_tech_domain_bindings(
+    tech_domain_id: int,
     is_enabled: bool | None = Query(None),
     session: AsyncSession = Depends(get_async_session)
 ):
-    """获取技术要素的所有Venue绑定"""
+    """获取技术领域的所有Venue绑定"""
     repo = VenueTechBindingRepository(session)
-    bindings = await repo.get_list_with_venue(tech_element_id, is_enabled)
+    bindings = await repo.get_list_with_venue(tech_domain_id, is_enabled)
 
     return VenueTechBindingListResponse(
         total=len(bindings),
@@ -336,23 +336,23 @@ async def migrate_collect_sources(
     data: MigrateCollectSourcesRequest,
     session: AsyncSession = Depends(get_async_session)
 ):
-    """迁移 TechElement.collect_sources JSON 到 Venue 表"""
+    """迁移 TechDomain.collect_sources JSON 到 Venue 表"""
     venue_repo = VenueRepository(session)
     binding_repo = VenueTechBindingRepository(session)
 
-    # Get tech element
+    # Get tech domain
     tech_result = await session.execute(
-        select(TechElement).where(TechElement.tech_element_id == data.tech_element_id)
+        select(TechDomain).where(TechDomain.tech_domain_id == data.tech_domain_id)
     )
-    tech_element = tech_result.scalar_one_or_none()
-    if not tech_element:
-        raise HTTPException(status_code=404, detail="Tech element not found")
+    tech_domain = tech_result.scalar_one_or_none()
+    if not tech_domain:
+        raise HTTPException(status_code=404, detail="Tech domain not found")
 
-    collect_sources = tech_element.collect_sources or []
+    collect_sources = tech_domain.collect_sources or []
     if not collect_sources:
         return MigrateCollectSourcesResponse(
-            tech_element_id=data.tech_element_id,
-            tech_element_name=tech_element.element_name,
+            tech_domain_id=data.tech_domain_id,
+            tech_domain_name=tech_domain.domain_name,
             venues_found=0,
             venues_created=0,
             bindings_created=0,
@@ -405,12 +405,12 @@ async def migrate_collect_sources(
             # Create binding if not exists
             if not data.dry_run:
                 existing_binding = await binding_repo.get_by_venue_and_tech(
-                    venue.venue_id, data.tech_element_id
+                    venue.venue_id, data.tech_domain_id
                 )
                 if not existing_binding:
                     binding = VenueTechBinding(
                         venue_id=venue.venue_id,
-                        tech_element_id=data.tech_element_id,
+                        tech_domain_id=data.tech_domain_id,
                         priority=0,
                         is_enabled=True
                     )
@@ -421,8 +421,8 @@ async def migrate_collect_sources(
         await session.commit()
 
     return MigrateCollectSourcesResponse(
-        tech_element_id=data.tech_element_id,
-        tech_element_name=tech_element.element_name,
+        tech_domain_id=data.tech_domain_id,
+        tech_domain_name=tech_domain.domain_name,
         venues_found=len(collect_sources),
         venues_created=venues_created,
         bindings_created=bindings_created,

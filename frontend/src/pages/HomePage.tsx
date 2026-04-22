@@ -14,10 +14,10 @@ import { useHomepageHighlights, useOverviewStats } from '../hooks/useQueries'
 const { Title, Paragraph, Text } = Typography
 const { Search } = Input
 
-interface HotTechElement {
-  tech_element_id: number
-  element_code: string
-  element_name: string
+interface HotTechDomain {
+  tech_domain_id: number
+  domain_code: string
+  domain_name: string
   talent_count: number
 }
 
@@ -49,8 +49,8 @@ const HomePage: React.FC = () => {
     }
   }
 
-  const handleTechElementClick = (techElementId: number) => {
-    navigate(`/tech-element?tech_element_id=${techElementId}`)
+  const handleTechDomainClick = (techDomainId: number) => {
+    navigate(`/tech-domain?tech_domain_id=${techDomainId}`)
   }
 
   const handleCountryClick = (countryCode: string) => {
@@ -66,11 +66,11 @@ const HomePage: React.FC = () => {
     professor_count: 0,
     student_count: 0,
     talent_count: 0,
-    tech_element_count: 0,
+    tech_domain_count: 0,
     country_count: 0,
   }
 
-  const hotTechElements: HotTechElement[] = highlights?.hot_tech_elements || []
+  const hotTechDomains: HotTechDomain[] = highlights?.hot_tech_domains || []
   const topCountries: TopCountry[] = highlights?.top_countries || []
   const topSchools: TopSchool[] = highlights?.top_schools || []
 
@@ -130,8 +130,8 @@ const HomePage: React.FC = () => {
           <Col span={4}>
             <Card size="small">
               <Statistic
-                title="技术要素"
-                value={stats.tech_element_count || hotTechElements.length}
+                title="技术领域"
+                value={stats.tech_domain_count || hotTechDomains.length}
                 prefix={<AppstoreOutlined />}
                 valueStyle={{ color: '#13c2c2', fontSize: 24 }}
               />
@@ -166,17 +166,17 @@ const HomePage: React.FC = () => {
 
         {/* 主视角概要区 */}
         <Row gutter={16} style={{ marginBottom: 24 }}>
-          {/* 技术要素概要卡 */}
+          {/* 技术领域概要卡 */}
           <Col span={12}>
             <Card
               title={
                 <Space>
                   <AppstoreOutlined style={{ color: '#1890ff' }} />
-                  <span>技术要素</span>
+                  <span>技术领域</span>
                 </Space>
               }
               extra={
-                <Button type="link" onClick={() => navigate('/tech-element')}>
+                <Button type="link" onClick={() => navigate('/tech-domain')}>
                   进入 <ArrowRightOutlined />
                 </Button>
               }
@@ -185,7 +185,7 @@ const HomePage: React.FC = () => {
               {/* 概要统计 */}
               <Row gutter={16} style={{ marginBottom: 16 }}>
                 <Col span={8}>
-                  <Statistic title="技术要素" value={stats.tech_element_count || hotTechElements.length} />
+                  <Statistic title="技术领域" value={stats.tech_domain_count || hotTechDomains.length} />
                 </Col>
                 <Col span={8}>
                   <Statistic title="人才总数" value={stats.talent_count} />
@@ -205,21 +205,21 @@ const HomePage: React.FC = () => {
 
               <Divider style={{ margin: '12px 0' }} />
 
-              {/* 热门技术要素标签 */}
+              {/* 热门技术领域标签 */}
               <div>
-                <Text type="secondary" style={{ fontSize: 12 }}>热门技术要素：</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>热门技术领域：</Text>
                 <div style={{ marginTop: 8 }}>
-                  {hotTechElements.slice(0, 6).map((item) => (
+                  {hotTechDomains.slice(0, 6).map((item) => (
                     <Tag
-                      key={item.tech_element_id}
+                      key={item.tech_domain_id}
                       style={{ marginBottom: 4, cursor: 'pointer' }}
                       color="blue"
-                      onClick={() => handleTechElementClick(item.tech_element_id)}
+                      onClick={() => handleTechDomainClick(item.tech_domain_id)}
                     >
-                      {item.element_name} ({item.talent_count})
+                      {item.domain_name} ({item.talent_count})
                     </Tag>
                   ))}
-                  {hotTechElements.length === 0 && (
+                  {hotTechDomains.length === 0 && (
                     <Text type="secondary">暂无数据</Text>
                   )}
                 </div>

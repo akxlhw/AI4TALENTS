@@ -308,12 +308,12 @@ class TestThreeDimensionalScopes:
         assert isinstance(data, list)
 
     @pytest.mark.asyncio
-    async def test_get_accessible_tech_elements(
+    async def test_get_accessible_tech_domains(
         self, client: AsyncClient, normal_user_token
     ):
-        """Test getting accessible tech elements."""
+        """Test getting accessible tech domains."""
         response = await client.get(
-            "/api/v1/users/me/scopes/tech-elements",
+            "/api/v1/users/me/scopes/tech-domains",
             headers={"Authorization": f"Bearer {normal_user_token}"},
         )
 
@@ -351,7 +351,7 @@ class TestDefaultView:
         assert response.status_code == 200
         data = response.json()
         assert "default_view" in data
-        assert data["default_view"] in ["tech_element", "country_school"]
+        assert data["default_view"] in ["tech_domain", "country_school"]
 
     @pytest.mark.asyncio
     async def test_update_default_view(self, client: AsyncClient, normal_user_token):

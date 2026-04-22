@@ -30,18 +30,18 @@ class CacheInvalidator:
     async def on_collection_complete(
         self,
         task_id: int,
-        tech_element_id: int | None = None,
+        tech_domain_id: int | None = None,
     ) -> None:
         """
         Invalidate caches after a collection task completes.
 
         Args:
             task_id: Collection task ID.
-            tech_element_id: Tech element ID if collection was for a specific element.
+            tech_domain_id: Tech domain ID if collection was for a specific domain.
         """
         logger.info(
             f"Invalidating caches after collection task {task_id} "
-            f"(tech_element={tech_element_id})"
+            f"(tech_domain={tech_domain_id})"
         )
 
         # Invalidate homepage statistics
@@ -50,21 +50,21 @@ class CacheInvalidator:
         # Invalidate overall statistics
         await self._cache.delete(CacheKeys.STATS_OVERALL)
 
-        # Invalidate specific tech element stats
-        if tech_element_id:
-            key = CacheKeys.STATS_TECH_ELEMENT.format(element_id=tech_element_id)
+        # Invalidate specific tech domain stats
+        if tech_domain_id:
+            key = CacheKeys.STATS_TECH_DOMAIN.format(domain_id=tech_domain_id)
             await self._cache.delete(key)
 
-            # Invalidate distribution data for this element
+            # Invalidate distribution data for this domain
             await self._cache.delete(
-                CacheKeys.STATS_COUNTRY_DISTRIBUTION.format(element_id=tech_element_id)
+                CacheKeys.STATS_COUNTRY_DISTRIBUTION.format(domain_id=tech_domain_id)
             )
             await self._cache.delete(
-                CacheKeys.STATS_SCHOOL_DISTRIBUTION.format(element_id=tech_element_id)
+                CacheKeys.STATS_SCHOOL_DISTRIBUTION.format(domain_id=tech_domain_id)
             )
 
-        # Invalidate tech element list
-        await self._cache.delete(CacheKeys.TECH_ELEMENT_LIST)
+        # Invalidate tech domain list
+        await self._cache.delete(CacheKeys.TECH_DOMAIN_LIST)
 
     async def on_talent_updated(self, talent_id: int) -> None:
         """
@@ -99,25 +99,25 @@ class CacheInvalidator:
         # Distribution data may have changed
         await self._cache.delete_pattern("stats:schools:*")
 
-    async def on_tech_element_updated(self, element_id: int) -> None:
+    async def on_tech_domain_updated(self, domain_id: int) -> None:
         """
-        Invalidate caches when a tech element is updated.
+        Invalidate caches when a tech domain is updated.
 
         Args:
-            element_id: Tech element ID.
+            domain_id: Tech domain ID.
         """
-        logger.debug(f"Invalidating caches for tech element {element_id}")
+        logger.debug(f"Invalidating caches for tech domain {domain_id}")
 
-        # Invalidate tech element detail
-        key = CacheKeys.TECH_ELEMENT_DETAIL.format(element_id=element_id)
+        # Invalidate tech domain detail
+        key = CacheKeys.TECH_DOMAIN_DETAIL.format(domain_id=domain_id)
         await self._cache.delete(key)
 
-        # Invalidate stats for this element
-        stats_key = CacheKeys.STATS_TECH_ELEMENT.format(element_id=element_id)
+        # Invalidate stats for this domain
+        stats_key = CacheKeys.STATS_TECH_DOMAIN.format(domain_id=domain_id)
         await self._cache.delete(stats_key)
 
         # Invalidate list cache
-        await self._cache.delete(CacheKeys.TECH_ELEMENT_LIST)
+        await self._cache.delete(CacheKeys.TECH_DOMAIN_LIST)
 
     async def invalidate_all_stats(self) -> int:
         """

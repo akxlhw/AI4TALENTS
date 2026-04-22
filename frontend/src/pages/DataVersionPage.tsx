@@ -27,6 +27,8 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
+import { formatUTCToLocal } from '../utils/datetime'
+import { formatNumber } from '../utils/format'
 
 const { Text, Title } = Typography
 
@@ -254,7 +256,7 @@ const DataVersionPage: React.FC = () => {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => new Date(date).toLocaleString(),
+      render: (date: string) => formatUTCToLocal(date),
     },
     {
       title: '操作',
@@ -334,7 +336,7 @@ const DataVersionPage: React.FC = () => {
       title: '修正时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => new Date(date).toLocaleString(),
+      render: (date: string) => formatUTCToLocal(date),
     },
   ]
 
@@ -357,10 +359,10 @@ const DataVersionPage: React.FC = () => {
               <Descriptions column={1} size="small">
                 <Descriptions.Item label="版本">{activeVersion.version_name}</Descriptions.Item>
                 <Descriptions.Item label="编码">{activeVersion.version_code}</Descriptions.Item>
-                <Descriptions.Item label="人才数">{activeVersion.total_talents.toLocaleString()}</Descriptions.Item>
-                <Descriptions.Item label="学校数">{activeVersion.total_schools.toLocaleString()}</Descriptions.Item>
+                <Descriptions.Item label="人才数">{formatNumber(activeVersion.total_talents)}</Descriptions.Item>
+                <Descriptions.Item label="学校数">{formatNumber(activeVersion.total_schools)}</Descriptions.Item>
                 <Descriptions.Item label="发布时间">
-                  {activeVersion.published_at ? new Date(activeVersion.published_at).toLocaleString() : '-'}
+                  {formatUTCToLocal(activeVersion.published_at)}
                 </Descriptions.Item>
               </Descriptions>
             ) : (

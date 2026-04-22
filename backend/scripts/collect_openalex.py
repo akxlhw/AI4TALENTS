@@ -27,7 +27,7 @@ def main():
     cursor = conn.cursor()
 
     # 获取配置的 venues
-    cursor.execute('SELECT collect_sources FROM core_tech_element WHERE tech_element_id = 1')
+    cursor.execute('SELECT collect_sources FROM core_tech_domain WHERE tech_domain_id = 1')
     row = cursor.fetchone()
     venues = json.loads(row[0]) if row and row[0] else []
 

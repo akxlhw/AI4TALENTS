@@ -1,6 +1,6 @@
 """
 Venue and VenueTechBinding models.
-顶会顶刊配置与技术要素绑定模型
+顶会顶刊配置与技术领域绑定模型
 """
 from sqlalchemy import (
     Boolean,
@@ -62,23 +62,23 @@ class Venue(Base, TimestampMixin):
 
 
 class VenueTechBinding(Base, TimestampMixin):
-    """Venue-技术要素绑定关系表"""
+    """Venue-技术领域绑定关系表"""
 
     __tablename__ = "config_venue_tech_binding"
     __table_args__ = (
-        UniqueConstraint('venue_id', 'tech_element_id', name='uq_venue_tech_element'),
+        UniqueConstraint('venue_id', 'tech_domain_id', name='uq_venue_tech_domain'),
     )
 
     binding_id = Column(Integer, primary_key=True, index=True)
 
     # Foreign keys
     venue_id = Column(Integer, ForeignKey("config_venue.venue_id"), nullable=False, index=True)
-    tech_element_id = Column(Integer, ForeignKey("core_tech_element.tech_element_id"), nullable=False, index=True)
+    tech_domain_id = Column(Integer, ForeignKey("core_tech_domain.tech_domain_id"), nullable=False, index=True)
 
-    # Priority within this tech element (for display order)
+    # Priority within this tech domain (for display order)
     priority = Column(Integer, default=0)
 
-    # Collection status for this venue-tech_element pair
+    # Collection status for this venue-tech_domain pair
     collect_status = Column(String(20), default="pending", nullable=False)  # pending/collecting/completed/failed
 
     # Last collection time for this binding
@@ -93,10 +93,10 @@ class VenueTechBinding(Base, TimestampMixin):
 
     # Relationships
     venue = relationship("Venue", back_populates="tech_bindings")
-    tech_element = relationship("TechElement", back_populates="venue_bindings")
+    tech_domain = relationship("TechDomain", back_populates="venue_bindings")
 
     def __repr__(self):
-        return f"<VenueTechBinding(venue_id={self.venue_id}, tech_element_id={self.tech_element_id})>"
+        return f"<VenueTechBinding(venue_id={self.venue_id}, tech_domain_id={self.tech_domain_id})>"
 
 
 class VenueSubTask(Base, TimestampMixin):

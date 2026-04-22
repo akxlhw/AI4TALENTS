@@ -6,12 +6,12 @@
  * - 选择采集模式
  * - 确认启动采集
  */
-import { Modal, Descriptions, Tag, Space, Radio } from 'antd'
-import type { TechElementCollect, VenueTypeConfig } from '../../types'
+import { Modal, Descriptions, Tag, Space, Radio, Tooltip } from 'antd'
+import type { TechDomainCollect, VenueTypeConfig } from '../../types'
 
 export interface CollectConfirmModalProps {
   visible: boolean
-  element: TechElementCollect | null
+  domain: TechDomainCollect | null
   collectMode: string
   venueTypeMap: Record<string, VenueTypeConfig>
   onModeChange: (mode: string) => void
@@ -21,7 +21,7 @@ export interface CollectConfirmModalProps {
 
 const CollectConfirmModal: React.FC<CollectConfirmModalProps> = ({
   visible,
-  element,
+  domain,
   collectMode,
   venueTypeMap,
   onModeChange,
@@ -30,7 +30,7 @@ const CollectConfirmModal: React.FC<CollectConfirmModalProps> = ({
 }) => {
   return (
     <Modal
-      title={`启动采集 - ${element?.element_name || ''}`}
+      title={`启动采集 - ${domain?.domain_name || ''}`}
       open={visible}
       onCancel={onCancel}
       onOk={onConfirm}
@@ -39,13 +39,13 @@ const CollectConfirmModal: React.FC<CollectConfirmModalProps> = ({
       <Descriptions column={1} bordered size="small">
         <Descriptions.Item label="采集范围">
           <Space size={[4, 4]} wrap>
-            {(element?.collect_sources || []).slice(0, 5).map(v => (
-              <Tag key={v.id} color={venueTypeMap[v.type]?.color || 'default'}>
-                {v.name || v.id}
-              </Tag>
+            {(domain?.collect_sources || []).slice(0, 5).map(v => (
+              <Tooltip key={v.id} title={v.name || v.id}>
+                <Tag color={venueTypeMap[v.type]?.color || 'default'}>{v.id.toUpperCase()}</Tag>
+              </Tooltip>
             ))}
-            {(element?.collect_sources?.length || 0) > 5 && (
-              <Tag>+{element!.collect_sources!.length - 5}</Tag>
+            {(domain?.collect_sources?.length || 0) > 5 && (
+              <Tag>+{domain!.collect_sources!.length - 5}</Tag>
             )}
           </Space>
         </Descriptions.Item>

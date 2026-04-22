@@ -1,9 +1,9 @@
 """
-Seed tech element data with venue mappings.
-初始化技术要素数据和顶会顶刊映射配置
+Seed tech domain data with venue mappings.
+初始化技术领域数据和顶会顶刊映射配置
 
 Usage:
-    python -m scripts.seed_tech_elements_with_venues
+    python -m scripts.seed_tech_domains_with_venues
 """
 import asyncio
 import sys
@@ -17,16 +17,16 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
 
 from app.core.config import settings
-from app.models.tech_element import TechElement, TechDirection
+from app.models.tech_domain import TechDomain, TechDirection
 
 
-# 技术要素与顶会顶刊映射数据
-TECH_ELEMENTS_WITH_VENUES = [
+# 技术领域与顶会顶刊映射数据
+TECH_DOMAINS_WITH_VENUES = [
     {
-        "element_code": "ai",
-        "element_name": "人工智能",
-        "element_name_en": "Artificial Intelligence",
-        "element_desc": "人工智能相关技术，包括机器学习、深度学习、NLP、计算机视觉等",
+        "domain_code": "ai",
+        "domain_name": "人工智能",
+        "domain_name_en": "Artificial Intelligence",
+        "domain_desc": "人工智能相关技术，包括机器学习、深度学习、NLP、计算机视觉等",
         "sort_order": 1,
         "directions": [
             {"direction_code": "ml", "direction_name": "机器学习", "direction_name_en": "Machine Learning"},
@@ -52,10 +52,10 @@ TECH_ELEMENTS_WITH_VENUES = [
         ]
     },
     {
-        "element_code": "robotics",
-        "element_name": "机器人",
-        "element_name_en": "Robotics",
-        "element_desc": "机器人技术相关领域，包括机器人控制、人机交互、自主系统等",
+        "domain_code": "robotics",
+        "domain_name": "机器人",
+        "domain_name_en": "Robotics",
+        "domain_desc": "机器人技术相关领域，包括机器人控制、人机交互、自主系统等",
         "sort_order": 2,
         "directions": [
             {"direction_code": "robot_control", "direction_name": "机器人控制", "direction_name_en": "Robot Control"},
@@ -73,10 +73,10 @@ TECH_ELEMENTS_WITH_VENUES = [
         ]
     },
     {
-        "element_code": "data_science",
-        "element_name": "数据科学",
-        "element_name_en": "Data Science",
-        "element_desc": "数据科学与分析，包括大数据、数据挖掘、可视化等",
+        "domain_code": "data_science",
+        "domain_name": "数据科学",
+        "domain_name_en": "Data Science",
+        "domain_desc": "数据科学与分析，包括大数据、数据挖掘、可视化等",
         "sort_order": 3,
         "directions": [
             {"direction_code": "big_data", "direction_name": "大数据", "direction_name_en": "Big Data"},
@@ -95,10 +95,10 @@ TECH_ELEMENTS_WITH_VENUES = [
         ]
     },
     {
-        "element_code": "networks",
-        "element_name": "网络与通信",
-        "element_name_en": "Networks & Communications",
-        "element_desc": "计算机网络与通信技术，包括物联网、5G、网络安全等",
+        "domain_code": "networks",
+        "domain_name": "网络与通信",
+        "domain_name_en": "Networks & Communications",
+        "domain_desc": "计算机网络与通信技术，包括物联网、5G、网络安全等",
         "sort_order": 4,
         "directions": [
             {"direction_code": "iot", "direction_name": "物联网", "direction_name_en": "IoT"},
@@ -116,10 +116,10 @@ TECH_ELEMENTS_WITH_VENUES = [
         ]
     },
     {
-        "element_code": "systems",
-        "element_name": "系统与软件",
-        "element_name_en": "Systems & Software",
-        "element_desc": "计算机系统与软件工程，包括分布式系统、云计算、软件工程等",
+        "domain_code": "systems",
+        "domain_name": "系统与软件",
+        "domain_name_en": "Systems & Software",
+        "domain_desc": "计算机系统与软件工程，包括分布式系统、云计算、软件工程等",
         "sort_order": 5,
         "directions": [
             {"direction_code": "distributed", "direction_name": "分布式系统", "direction_name_en": "Distributed Systems"},
@@ -139,10 +139,10 @@ TECH_ELEMENTS_WITH_VENUES = [
         ]
     },
     {
-        "element_code": "security",
-        "element_name": "信息安全",
-        "element_name_en": "Information Security",
-        "element_desc": "信息安全与密码学，包括密码学、隐私保护、区块链等",
+        "domain_code": "security",
+        "domain_name": "信息安全",
+        "domain_name_en": "Information Security",
+        "domain_desc": "信息安全与密码学，包括密码学、隐私保护、区块链等",
         "sort_order": 6,
         "directions": [
             {"direction_code": "cryptography", "direction_name": "密码学", "direction_name_en": "Cryptography"},
@@ -164,45 +164,45 @@ TECH_ELEMENTS_WITH_VENUES = [
 ]
 
 
-async def seed_tech_elements():
-    """Seed tech elements with venue mappings."""
+async def seed_tech_domains():
+    """Seed tech domains with venue mappings."""
     engine = create_async_engine(settings.DATABASE_URL, echo=True)
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async with async_session() as session:
         # Check if data already exists
-        result = await session.execute(select(TechElement).limit(1))
+        result = await session.execute(select(TechDomain).limit(1))
         if result.scalar_one_or_none():
-            print("Tech elements already exist. Updating with venue mappings...")
+            print("Tech domains already exist. Updating with venue mappings...")
 
-            # Update existing elements with collect_sources
-            for element_data in TECH_ELEMENTS_WITH_VENUES:
+            # Update existing domains with collect_sources
+            for domain_data in TECH_DOMAINS_WITH_VENUES:
                 result = await session.execute(
-                    select(TechElement).where(TechElement.element_code == element_data["element_code"])
+                    select(TechDomain).where(TechDomain.domain_code == domain_data["domain_code"])
                 )
-                element = result.scalar_one_or_none()
-                if element and "collect_sources" in element_data:
-                    element.collect_sources = element_data["collect_sources"]
-                    print(f"Updated {element.element_name} with {len(element_data['collect_sources'])} venues")
+                domain = result.scalar_one_or_none()
+                if domain and "collect_sources" in domain_data:
+                    domain.collect_sources = domain_data["collect_sources"]
+                    print(f"Updated {domain.domain_name} with {len(domain_data['collect_sources'])} venues")
         else:
-            # Insert new tech elements with directions and venues
-            for element_data in TECH_ELEMENTS_WITH_VENUES:
-                directions_data = element_data.pop("directions")
-                collect_sources = element_data.pop("collect_sources", None)
+            # Insert new tech domains with directions and venues
+            for domain_data in TECH_DOMAINS_WITH_VENUES:
+                directions_data = domain_data.pop("directions")
+                collect_sources = domain_data.pop("collect_sources", None)
 
-                element = TechElement(**element_data)
-                element.collect_sources = collect_sources
-                session.add(element)
-                await session.flush()  # Get the element_id
+                domain = TechDomain(**domain_data)
+                domain.collect_sources = collect_sources
+                session.add(domain)
+                await session.flush()  # Get the domain_id
 
                 for dir_data in directions_data:
                     direction = TechDirection(
                         **dir_data,
-                        tech_element_id=element.tech_element_id
+                        tech_domain_id=domain.tech_domain_id
                     )
                     session.add(direction)
 
-                print(f"Created {element.element_name} with {len(directions_data)} directions and {len(collect_sources) if collect_sources else 0} venues")
+                print(f"Created {domain.domain_name} with {len(directions_data)} directions and {len(collect_sources) if collect_sources else 0} venues")
 
         await session.commit()
         print("\nSeed completed successfully!")
@@ -210,8 +210,8 @@ async def seed_tech_elements():
 
 async def main():
     """Main entry point."""
-    print("Seeding tech elements with venue mappings...")
-    await seed_tech_elements()
+    print("Seeding tech domains with venue mappings...")
+    await seed_tech_domains()
 
 
 if __name__ == "__main__":

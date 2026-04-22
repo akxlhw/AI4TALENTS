@@ -146,9 +146,9 @@ class TestCacheKeys:
         """Test homepage highlights cache key."""
         assert CacheKeys.STATS_HOME_HIGHLIGHTS == "stats:home:highlights"
 
-    def test_stats_tech_element_pattern(self):
-        """Test tech element stats cache key pattern."""
-        key = CacheKeys.STATS_TECH_ELEMENT.format(element_id=1)
+    def test_stats_tech_domain_pattern(self):
+        """Test tech domain stats cache key pattern."""
+        key = CacheKeys.STATS_TECH_DOMAIN.format(domain_id=1)
         assert key == "stats:tech:1"
 
     def test_talent_detail_pattern(self):

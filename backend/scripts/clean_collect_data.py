@@ -141,7 +141,7 @@ async def clean_collect_data():
         print("  - User permissions (iam_user_permission)")
         print("  - User school scope (iam_user_school_scope)")
         print("  - Countries (core_country)")
-        print("  - Tech elements (core_tech_element)")
+        print("  - Tech domains (core_tech_domain)")
         print("  - Tech directions (core_tech_direction)")
         print("  - Audit logs (audit_operation_log)")
 

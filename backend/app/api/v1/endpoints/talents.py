@@ -113,7 +113,7 @@ async def get_talent(
     """
     from sqlalchemy import select
 
-    from app.models.tech_element import TalentTechTag, TechDirection, TechElement
+    from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
 
     service = TalentService(session)
     talent = await service.get_talent_by_id(talent_id)
@@ -137,15 +137,15 @@ async def get_talent(
     # Fetch tech tags
     tech_tags = []
     result = await session.execute(
-        select(TalentTechTag, TechElement, TechDirection)
-        .join(TechElement, TalentTechTag.tech_element_id == TechElement.tech_element_id)
+        select(TalentTechTag, TechDomain, TechDirection)
+        .join(TechDomain, TalentTechTag.tech_domain_id == TechDomain.tech_domain_id)
         .outerjoin(TechDirection, TalentTechTag.tech_direction_id == TechDirection.tech_direction_id)
         .where(TalentTechTag.talent_id == talent_id)
     )
-    for _tag, element, direction in result.fetchall():
+    for _tag, domain, direction in result.fetchall():
         tech_tags.append(TechTagItem(
-            tech_element_id=element.tech_element_id,
-            tech_element_name=element.element_name,
+            tech_domain_id=domain.tech_domain_id,
+            tech_domain_name=domain.domain_name,
             tech_direction_id=direction.tech_direction_id if direction else None,
             tech_direction_name=direction.direction_name if direction else None,
         ))

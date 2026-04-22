@@ -1,6 +1,6 @@
 """
-Technology Element and Direction models.
-技术要素与技术方向模型
+Technology Domain and Direction models.
+技术领域与技术方向模型
 """
 from sqlalchemy import (
     Boolean,
@@ -19,16 +19,16 @@ from app.core.database import Base
 from app.models.base import TimestampMixin
 
 
-class TechElement(Base, TimestampMixin):
-    """技术要素"""
+class TechDomain(Base, TimestampMixin):
+    """技术领域"""
 
-    __tablename__ = "core_tech_element"
+    __tablename__ = "core_tech_domain"
 
-    tech_element_id = Column(Integer, primary_key=True, index=True)
-    element_code = Column(String(50), unique=True, nullable=False)
-    element_name = Column(String(100), nullable=False)
-    element_name_en = Column(String(100), nullable=True)
-    element_desc = Column(Text, nullable=True)
+    tech_domain_id = Column(Integer, primary_key=True, index=True)
+    domain_code = Column(String(50), unique=True, nullable=False)
+    domain_name = Column(String(100), nullable=False)
+    domain_name_en = Column(String(100), nullable=True)
+    domain_desc = Column(Text, nullable=True)
     sort_order = Column(Integer, default=0)
     is_enabled = Column(Boolean, default=True, nullable=False)
 
@@ -36,11 +36,11 @@ class TechElement(Base, TimestampMixin):
     last_collect_at = Column(DateTime, nullable=True)
 
     # Relationships
-    directions = relationship("TechDirection", back_populates="tech_element")
-    venue_bindings = relationship("VenueTechBinding", back_populates="tech_element")
+    directions = relationship("TechDirection", back_populates="tech_domain")
+    venue_bindings = relationship("VenueTechBinding", back_populates="tech_domain")
 
     def __repr__(self):
-        return f"<TechElement(id={self.tech_element_id}, name={self.element_name})>"
+        return f"<TechDomain(id={self.tech_domain_id}, name={self.domain_name})>"
 
 
 class TechDirection(Base, TimestampMixin):
@@ -52,13 +52,13 @@ class TechDirection(Base, TimestampMixin):
     direction_code = Column(String(50), unique=True, nullable=False)
     direction_name = Column(String(100), nullable=False)
     direction_name_en = Column(String(100), nullable=True)
-    tech_element_id = Column(Integer, ForeignKey("core_tech_element.tech_element_id"), nullable=False, index=True)
+    tech_domain_id = Column(Integer, ForeignKey("core_tech_domain.tech_domain_id"), nullable=False, index=True)
     direction_desc = Column(Text, nullable=True)
     sort_order = Column(Integer, default=0)
     is_enabled = Column(Boolean, default=True, nullable=False)
 
     # Relationships
-    tech_element = relationship("TechElement", back_populates="directions")
+    tech_domain = relationship("TechDomain", back_populates="directions")
     talent_tags = relationship("TalentTechTag", back_populates="tech_direction")
 
     def __repr__(self):
@@ -75,7 +75,7 @@ class TalentTechTag(Base, TimestampMixin):
 
     tag_id = Column(Integer, primary_key=True, index=True)
     talent_id = Column(Integer, ForeignKey("core_talent.talent_id"), nullable=False, index=True)
-    tech_element_id = Column(Integer, ForeignKey("core_tech_element.tech_element_id"), nullable=False, index=True)
+    tech_domain_id = Column(Integer, ForeignKey("core_tech_domain.tech_domain_id"), nullable=False, index=True)
     tech_direction_id = Column(Integer, ForeignKey("core_tech_direction.tech_direction_id"), nullable=False, index=True)
 
     tag_level = Column(String(20), default="primary", nullable=False)  # primary/secondary
@@ -86,7 +86,7 @@ class TalentTechTag(Base, TimestampMixin):
 
     # Relationships
     talent = relationship("Talent", back_populates="tech_tags")
-    tech_element = relationship("TechElement")
+    tech_domain = relationship("TechDomain")
     tech_direction = relationship("TechDirection", back_populates="talent_tags")
 
     def __repr__(self):

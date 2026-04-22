@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sync import CollectTask
-from app.models.tech_element import TechElement
+from app.models.tech_domain import TechDomain
 from app.models.venue import VenueSubTask
 from app.repositories.venue_repository import VenueSubTaskRepository, VenueTechBindingRepository
 
@@ -48,28 +48,28 @@ class TaskCreationService:
 
     async def create_task(
         self,
-        tech_element_id: int,
+        tech_domain_id: int,
         mode: str = "full",
         triggered_by: int | None = None
     ) -> CollectTask:
         """Create a new collection task"""
         # Generate task code
         timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-        task_code = f"COL-{tech_element_id}-{timestamp}"
+        task_code = f"COL-{tech_domain_id}-{timestamp}"
 
         # Get time window
-        tech_element = await self.session.execute(
-            select(TechElement).where(TechElement.tech_element_id == tech_element_id)
+        tech_domain = await self.session.execute(
+            select(TechDomain).where(TechDomain.tech_domain_id == tech_domain_id)
         )
-        tech_element = tech_element.scalar_one_or_none()
-        last_collect = tech_element.last_collect_at if tech_element else None
+        tech_domain = tech_domain.scalar_one_or_none()
+        last_collect = tech_domain.last_collect_at if tech_domain else None
 
         start_date, end_date = self.get_time_window(mode, last_collect)
 
         # Create task
         task = CollectTask(
             task_code=task_code,
-            tech_element_id=tech_element_id,
+            tech_domain_id=tech_domain_id,
             collect_mode=mode,
             time_window_start=start_date,
             time_window_end=end_date,
@@ -81,7 +81,7 @@ class TaskCreationService:
         await self.session.flush()
 
         # Create venue sub-tasks
-        bindings = await self.binding_repo.get_by_tech_element(tech_element_id, is_enabled=True)
+        bindings = await self.binding_repo.get_by_tech_domain(tech_domain_id, is_enabled=True)
         for binding in bindings:
             venue_sub_task = VenueSubTask(
                 task_id=task.task_id,
@@ -95,7 +95,7 @@ class TaskCreationService:
         await self.session.commit()
 
         logger.info(
-            f"Created task {task.task_id} ({task_code}) for tech_element {tech_element_id} "
+            f"Created task {task.task_id} ({task_code}) for tech_domain {tech_domain_id} "
             f"with {len(bindings)} venue sub-tasks"
         )
 

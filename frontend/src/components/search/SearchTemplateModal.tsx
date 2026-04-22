@@ -25,7 +25,7 @@ const SearchTemplateModal: React.FC<SearchTemplateModalProps> = ({
 }) => {
   const filterSummary = [
     filters.role && `角色=${filters.role}`,
-    filters.tech_element_id && `技术要素`,
+    filters.tech_domain_id && `技术领域`,
     filters.country_id && `国家`,
     filters.school_id && `学校`,
     filters.min_works && `论文≥${filters.min_works}`,

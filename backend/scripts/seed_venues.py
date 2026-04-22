@@ -1,6 +1,6 @@
 """
-Seed venues from TechElement collect_sources.
-从技术要素的采集源初始化 Venue 表和 VenueTechBinding 表
+Seed venues from TechDomain collect_sources.
+从技术领域的采集源初始化 Venue 表和 VenueTechBinding 表
 
 用法:
     python -m backend.scripts.seed_venues
@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
-from app.models.tech_element import TechElement
+from app.models.tech_domain import TechDomain
 from app.models.venue import Venue, VenueTechBinding
 from app.repositories.venue_repository import VenueRepository, VenueTechBindingRepository
 
@@ -93,7 +93,7 @@ async def seed_venues(
     verbose: bool = True
 ) -> Dict[str, Any]:
     """
-    从 TechElement.collect_sources 初始化 Venue 和 VenueTechBinding
+    从 TechDomain.collect_sources 初始化 Venue 和 VenueTechBinding
 
     Args:
         session: 数据库会话
@@ -104,7 +104,7 @@ async def seed_venues(
         dict: 执行统计
     """
     stats = {
-        "tech_elements_processed": 0,
+        "tech_domains_processed": 0,
         "venues_created": 0,
         "venues_updated": 0,
         "bindings_created": 0,
@@ -115,31 +115,31 @@ async def seed_venues(
     venue_repo = VenueRepository(session)
     binding_repo = VenueTechBindingRepository(session)
 
-    # 获取所有技术要素
+    # 获取所有技术领域
     result = await session.execute(
-        select(TechElement).where(TechElement.is_enabled == True)
+        select(TechDomain).where(TechDomain.is_enabled == True)
     )
-    tech_elements = result.scalars().all()
+    tech_domains = result.scalars().all()
 
     if verbose:
         print(f"\n{'='*60}")
         print(f"Venue Seeding Script")
         print(f"{'='*60}")
-        print(f"Found {len(tech_elements)} enabled tech elements")
+        print(f"Found {len(tech_domains)} enabled tech domains")
         print(f"Dry run: {dry_run}")
         print(f"{'='*60}\n")
 
-    for tech_element in tech_elements:
-        stats["tech_elements_processed"] += 1
+    for tech_domain in tech_domains:
+        stats["tech_domains_processed"] += 1
 
-        if not tech_element.collect_sources:
+        if not tech_domain.collect_sources:
             if verbose:
-                print(f"[{tech_element.element_code}] No collect sources, skipping")
+                print(f"[{tech_domain.domain_code}] No collect sources, skipping")
             continue
 
-        sources = tech_element.collect_sources
+        sources = tech_domain.collect_sources
         if verbose:
-            print(f"\n[{tech_element.element_code}] Processing {len(sources)} sources...")
+            print(f"\n[{tech_domain.domain_code}] Processing {len(sources)} sources...")
 
         for idx, source in enumerate(sources):
             source_id = source.get("id", "")
@@ -147,7 +147,7 @@ async def seed_venues(
             source_type = source.get("type", "conference")
 
             if not source_id:
-                stats["errors"].append(f"Missing source ID in {tech_element.element_code}")
+                stats["errors"].append(f"Missing source ID in {tech_domain.domain_code}")
                 continue
 
             # 生成 venue_code
@@ -191,7 +191,7 @@ async def seed_venues(
 
                 # 检查绑定是否已存在
                 existing_binding = await binding_repo.get_by_venue_and_tech(
-                    venue.venue_id, tech_element.tech_element_id
+                    venue.venue_id, tech_domain.tech_domain_id
                 )
 
                 if existing_binding:
@@ -202,7 +202,7 @@ async def seed_venues(
                     # 创建新绑定
                     binding = VenueTechBinding(
                         venue_id=venue.venue_id,
-                        tech_element_id=tech_element.tech_element_id,
+                        tech_domain_id=tech_domain.tech_domain_id,
                         priority=idx,
                         collect_status="pending",
                         is_enabled=True,
@@ -229,7 +229,7 @@ async def seed_venues(
     if verbose:
         print(f"\n{'='*60}")
         print(f"Summary:")
-        print(f"  Tech elements processed: {stats['tech_elements_processed']}")
+        print(f"  Tech domains processed: {stats['tech_domains_processed']}")
         print(f"  Venues created: {stats['venues_created']}")
         print(f"  Venues updated: {stats['venues_updated']}")
         print(f"  Bindings created: {stats['bindings_created']}")
@@ -244,7 +244,7 @@ async def main():
     """Main entry point"""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Seed venues from TechElement collect_sources")
+    parser = argparse.ArgumentParser(description="Seed venues from TechDomain collect_sources")
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without committing")
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress detailed output")
     args = parser.parse_args()

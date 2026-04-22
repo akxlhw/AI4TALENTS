@@ -22,7 +22,7 @@ class OverviewStatSnapshot(Base):
     student_count = Column(Integer, default=0)
     talent_count = Column(Integer, default=0)
     country_count = Column(Integer, default=0)  # 覆盖国家数
-    tech_element_count = Column(Integer, default=0)  # 技术要素数
+    tech_domain_count = Column(Integer, default=0)  # 技术领域数
     tech_direction_count = Column(Integer, default=0)  # 技术方向数
 
     # Metadata

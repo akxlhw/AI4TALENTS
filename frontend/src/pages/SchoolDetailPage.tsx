@@ -25,6 +25,7 @@ import {
 import { api } from '../services/api'
 import { getRoleTypeConfig, ROLE_TYPE_MAP } from '../constants/roleType'
 import TopicTags from '../components/TopicTags'
+import { formatNumber } from '../utils/format'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -182,7 +183,7 @@ const SchoolDetailPage: React.FC = () => {
       key: 'cited_by_count',
       width: 100,
       align: 'right' as const,
-      render: (count: number) => count.toLocaleString(),
+      render: (count: number) => formatNumber(count),
     },
     {
       title: 'H指数',

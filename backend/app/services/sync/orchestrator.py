@@ -54,7 +54,7 @@ class ServingLayerOrchestrator:
     async def sync_all_for_task(
         self,
         task_id: int,
-        tech_element_id: int,
+        tech_domain_id: int,
         default_tech_direction_id: int | None = None
     ) -> dict:
         """
@@ -62,7 +62,7 @@ class ServingLayerOrchestrator:
 
         Args:
             task_id: Collection task ID
-            tech_element_id: Tech element ID
+            tech_domain_id: Tech domain ID
             default_tech_direction_id: Default tech direction ID
 
         Returns:
@@ -81,12 +81,12 @@ class ServingLayerOrchestrator:
         }
 
         # Use bulk sync for PostgreSQL
-        return await self._bulk_sync_all(task_id, tech_element_id, default_tech_direction_id, stats)
+        return await self._bulk_sync_all(task_id, tech_domain_id, default_tech_direction_id, stats)
 
     async def _bulk_sync_all(
         self,
         task_id: int,
-        tech_element_id: int,
+        tech_domain_id: int,
         default_tech_direction_id: int | None,
         stats: dict
     ) -> dict:
@@ -97,11 +97,11 @@ class ServingLayerOrchestrator:
         """
         from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
 
-        # Get AuthorTechBelong records for this task and tech element
+        # Get AuthorTechBelong records for this task and tech domain
         belong_result = await self.session.execute(
             select(AuthorTechBelong).where(
                 AuthorTechBelong.source_task_id == task_id,
-                AuthorTechBelong.tech_element_id == tech_element_id
+                AuthorTechBelong.tech_domain_id == tech_domain_id
             )
         )
         belongs = belong_result.scalars().all()
@@ -147,6 +147,10 @@ class ServingLayerOrchestrator:
         stats["authors_updated"] = author_result["updated"]
         stats["authors_filtered"] = author_result["filtered"]
         stats["new_talents_for_works"] = author_result.get("new_talents", [])
+
+        # Track affected school IDs for incremental statistics update
+        affected_school_ids = set(school_id_map.values())
+        stats["affected_school_ids"] = affected_school_ids
 
         # 3. Sync tech tags (still individual, but batched)
         # Get all talents that were synced

@@ -39,3 +39,5 @@ class CollectionProgress(BaseProgress):
     created_tech_tags: int = 0
     created_schools: int = 0
     errors: list[str] = field(default_factory=list)
+    # Incremental update tracking
+    affected_school_ids: set[int] = field(default_factory=set)

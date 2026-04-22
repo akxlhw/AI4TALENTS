@@ -24,7 +24,7 @@ from app.api.v1.endpoints import (
     system_config,
     talent_pool,
     talents,
-    tech_element,
+    tech_domain,
     venue,
 )
 
@@ -60,8 +60,8 @@ api_router.include_router(schools.router)
 # Talents endpoints
 api_router.include_router(talents.router)
 
-# Tech Element endpoints
-api_router.include_router(tech_element.router)
+# Tech Domain endpoints
+api_router.include_router(tech_domain.router)
 
 # Talent Pool endpoints
 api_router.include_router(talent_pool.router)

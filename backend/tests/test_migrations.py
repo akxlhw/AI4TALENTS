@@ -335,7 +335,7 @@ class TestFreshDeployment:
             "iam_user_account",
             "core_talent",
             "core_school",
-            "core_tech_element",
+            "core_tech_domain",
             "config_venue",
             "raw_work",
             "raw_author",
@@ -510,7 +510,7 @@ class TestModelMigrationConsistency:
         import sys
         sys.path.insert(0, backend_dir)
         from app.core.database import Base
-        from app.models import iam, talent, school, tech_element, raw_data, standardized
+        from app.models import iam, talent, school, tech_domain, raw_data, standardized
 
         engine = create_engine(temp_db_url)
 

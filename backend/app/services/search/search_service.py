@@ -14,6 +14,7 @@ Features:
 from __future__ import annotations
 
 import time
+import asyncio
 import logging
 from enum import Enum
 from dataclasses import dataclass, field
@@ -28,6 +29,7 @@ from app.models.school import School
 from app.models.search import SearchTalentDocument
 from app.repositories.talent_repository import TalentRepository
 from app.services.search.errors import EmptyQueryError, InvalidSearchModeError
+from app.core.database import AsyncSessionLocal
 from app.services.llm.errors import (
     SemanticSearchError,
     FulltextSearchError,
@@ -167,6 +169,8 @@ class SearchResult:
     took_ms: float
     precise_count: int = 0  # 精准匹配数量 (similarity >= 0.95)
     similar_count: int = 0  # 相似匹配数量 (0.7 <= similarity < 0.95)
+    fulltext_count: int = 0  # 关键词匹配数量
+    semantic_count: int = 0  # 语义匹配数量
 
     def to_dict(self) -> dict:
         """转换为字典"""
@@ -290,6 +294,8 @@ class SearchService:
         # 从结果中获取精准匹配和相似匹配数量
         precise_count = result.get("precise_count", 0)
         similar_count = result.get("similar_count", 0)
+        fulltext_count = result.get("fulltext_count", 0)
+        semantic_count = result.get("semantic_count", 0)
 
         return SearchResult(
             total=result["total"],
@@ -300,6 +306,8 @@ class SearchService:
             took_ms=took_ms,
             precise_count=precise_count,
             similar_count=similar_count,
+            fulltext_count=fulltext_count,
+            semantic_count=semantic_count,
         )
 
     async def _keyword_search(
@@ -317,15 +325,66 @@ class SearchService:
         搜索范围：姓名、职位、研究方向(openalex_topics)、论文标题
         使用 GIN 索引加速 JSON 数组和全文搜索。
         """
-        # 默认搜索字段
+        return await self._do_keyword_search(
+            session=self.session,
+            repo=self.talent_repo,
+            query=query,
+            fields=fields,
+            page=page,
+            page_size=page_size,
+            filters=filters,
+        )
+
+    async def _keyword_search_with_session(
+        self,
+        session: AsyncSession,
+        query: str,
+        page_size: int,
+        filters: dict | None,
+    ) -> dict:
+        """关键词搜索（使用指定 session）"""
+        repo = TalentRepository(session)
+        return await self._do_keyword_search(
+            session=session,
+            repo=repo,
+            query=query,
+            fields=["name", "title", "topics", "works"],
+            page=1,
+            page_size=page_size,
+            filters=filters,
+        )
+
+    async def _do_keyword_search(
+        self,
+        session: AsyncSession,
+        repo: TalentRepository,
+        query: str,
+        fields: List[str] | None,
+        page: int,
+        page_size: int,
+        filters: dict | None,
+    ) -> dict:
+        """
+        Unified keyword search implementation.
+
+        Args:
+            session: Database session to use
+            repo: TalentRepository instance
+            query: Search query string
+            fields: Fields to search in
+            page: Page number (1-indexed)
+            page_size: Number of results per page
+            filters: Optional filters dict
+        """
+        # Default search fields
         if fields is None:
             fields = ["name", "title", "topics", "works"]
 
-        # 收集匹配的人才 ID
+        # Collect matched talent IDs
         matched_talent_ids: set = set()
         pattern = f"%{query}%"
 
-        # 1. 姓名、职位搜索（使用 ILIKE，无专门索引）
+        # 1. Name and title search (using ILIKE)
         basic_fields = [f for f in fields if f in ["name", "title"]]
         if basic_fields:
             query_stmt = (
@@ -347,27 +406,26 @@ class SearchService:
             if search_conditions:
                 query_stmt = query_stmt.where(or_(*search_conditions))
                 query_stmt = self._apply_filters(query_stmt, filters)
-                result = await self.session.execute(query_stmt)
+                result = await session.execute(query_stmt)
                 for row in result.fetchall():
                     matched_talent_ids.add(row.talent_id)
 
-        # 2. 研究方向搜索（使用模糊匹配，因为 openalex_topics 值通常是复合词）
+        # 2. Research topics search (fuzzy match for openalex_topics)
         if "topics" in fields:
-            # 使用 ILIKE 进行子串匹配
             query_stmt = (
                 select(Talent.talent_id)
                 .where(Talent.is_visible.is_(True))
                 .where(text("core_talent.openalex_topics::text ILIKE :pattern").bindparams(pattern=pattern))
             )
             query_stmt = self._apply_filters(query_stmt, filters)
-            result = await self.session.execute(query_stmt)
+            result = await session.execute(query_stmt)
             for row in result.fetchall():
                 matched_talent_ids.add(row.talent_id)
 
-        # 3. 论文标题搜索（使用 pg_trgm GIN 索引）
+        # 3. Paper title search (using pg_trgm GIN index)
         if "works" in fields:
             try:
-                work_talents = await self.talent_repo._search_by_paper_titles_gin(
+                work_talents = await repo._search_by_paper_titles_gin(
                     keywords=[query],
                     filters=filters,
                     limit=page_size * 3,
@@ -377,23 +435,23 @@ class SearchService:
             except Exception as e:
                 logger.warning(f"Paper title GIN search failed: {e}")
 
-        # 4. 如果没有匹配，返回空结果
+        # 4. Return empty if no matches
         if not matched_talent_ids:
             return {"total": 0, "items": []}
 
-        # 5. 获取完整人才数据并排序
+        # 5. Get full talent data and sort
         talent_ids_list = list(matched_talent_ids)
-        talents = await self.talent_repo.get_by_ids(talent_ids_list, include_relations=True)
+        talents = await repo.get_by_ids(talent_ids_list, include_relations=True)
 
-        # 按引用数排序
+        # Sort by citation count
         talents.sort(key=lambda t: t.cited_by_count or 0, reverse=True)
 
-        # 6. 计算总数和分页
+        # 6. Calculate total and paginate
         total = len(talents)
         offset = (page - 1) * page_size
         paginated_talents = talents[offset:offset + page_size]
 
-        # 7. 转换结果
+        # 7. Convert results
         items = [self._talent_to_dict(t) for t in paginated_talents]
 
         return {"total": total, "items": items}
@@ -411,23 +469,71 @@ class SearchService:
         使用 PostgreSQL tsvector 进行全文搜索。
         如果 SearchTalentDocument 表没有数据，则降级到关键词搜索。
         """
+        return await self._do_fulltext_search(
+            session=self.session,
+            query=query,
+            page=page,
+            page_size=page_size,
+            filters=filters,
+            fallback_method=lambda: self._keyword_search(query, ["name", "title", "topics", "works"], False, page, page_size, filters)
+        )
+
+    async def _fulltext_search_with_session(
+        self,
+        session: AsyncSession,
+        query: str,
+        page_size: int,
+        filters: dict | None,
+    ) -> dict:
+        """
+        全文搜索（使用指定 session）
+
+        用于并行执行时避免 session 并发冲突。
+        """
+        return await self._do_fulltext_search(
+            session=session,
+            query=query,
+            page=1,
+            page_size=page_size,
+            filters=filters,
+            fallback_method=lambda: self._keyword_search_with_session(session, query, page_size, filters)
+        )
+
+    async def _do_fulltext_search(
+        self,
+        session: AsyncSession,
+        query: str,
+        page: int,
+        page_size: int,
+        filters: dict | None,
+        fallback_method
+    ) -> dict:
+        """
+        Unified fulltext search implementation.
+
+        Args:
+            session: Database session to use
+            query: Search query string
+            page: Page number (1-indexed)
+            page_size: Number of results per page
+            filters: Optional filters dict
+            fallback_method: Async callable to fallback to if fulltext fails
+        """
         try:
-            # 检查是否有全文搜索支持
-            # 首先检查 SearchTalentDocument 表是否有数据
+            # Check if fulltext search is available
             count_query = select(func.count()).select_from(SearchTalentDocument)
-            count_result = await self.session.execute(count_query)
+            count_result = await session.execute(count_query)
             doc_count = count_result.scalar() or 0
 
             if doc_count == 0:
                 logger.info("SearchTalentDocument table is empty, falling back to keyword search")
-                return await self._keyword_search(query, ["name", "title", "topics", "works"], False, page, page_size, filters)
+                return await fallback_method()
 
-            # 构建 tsquery 搜索词（使用 OR 连接多个词）
-            # 将查询词分词并用 OR 连接，支持部分匹配
+            # Build tsquery with OR connector for partial matching
             search_terms = query.strip().split()
-            tsquery = " | ".join(search_terms)  # OR 搜索，任一词匹配即可
+            tsquery = " | ".join(search_terms)
 
-            # 使用 tsvector 索引进行全文搜索
+            # Use tsvector index for fulltext search
             query_stmt = (
                 select(SearchTalentDocument)
                 .where(SearchTalentDocument.is_active.is_(True))
@@ -435,24 +541,14 @@ class SearchService:
                     text("search_vector @@ to_tsquery('simple', :tsquery)").bindparams(tsquery=tsquery)
                 )
             )
+            query_stmt = self._apply_search_document_filters(query_stmt, filters)
 
-            # 应用过滤
-            if filters:
-                if "school_id" in filters:
-                    query_stmt = query_stmt.where(
-                        SearchTalentDocument.school_id == filters["school_id"]
-                    )
-                if "role_type" in filters:
-                    query_stmt = query_stmt.where(
-                        SearchTalentDocument.role_type == filters["role_type"]
-                    )
-
-            # 获取总数
+            # Get total count
             count_query = select(func.count()).select_from(query_stmt.subquery())
-            total_result = await self.session.execute(count_query)
+            total_result = await session.execute(count_query)
             total = total_result.scalar() or 0
 
-            # 如果 tsquery 搜索没有结果，尝试降级到 ILIKE 搜索
+            # Fallback to ILIKE if tsquery returns no results
             if total == 0:
                 logger.info(f"tsquery search returned 0 results, falling back to ILIKE for query: {query}")
                 pattern = f"%{query}%"
@@ -461,34 +557,24 @@ class SearchService:
                     .where(SearchTalentDocument.is_active.is_(True))
                     .where(SearchTalentDocument.search_text.ilike(pattern))
                 )
-
-                # 重新应用过滤
-                if filters:
-                    if "school_id" in filters:
-                        query_stmt = query_stmt.where(
-                            SearchTalentDocument.school_id == filters["school_id"]
-                        )
-                    if "role_type" in filters:
-                        query_stmt = query_stmt.where(
-                            SearchTalentDocument.role_type == filters["role_type"]
-                        )
+                query_stmt = self._apply_search_document_filters(query_stmt, filters)
 
                 count_query = select(func.count()).select_from(query_stmt.subquery())
-                total_result = await self.session.execute(count_query)
+                total_result = await session.execute(count_query)
                 total = total_result.scalar() or 0
 
-            # 分页
+            # Apply pagination
             offset = (page - 1) * page_size
             query_stmt = query_stmt.order_by(SearchTalentDocument.cited_by_count.desc())
             query_stmt = query_stmt.offset(offset).limit(page_size)
 
-            result = await self.session.execute(query_stmt)
+            result = await session.execute(query_stmt)
             docs = list(result.scalars().all())
 
-            # 转换结果 - 获取完整人才信息
+            # Convert results
             items = []
             for doc in docs:
-                item = {
+                items.append({
                     "talent_id": doc.talent_id,
                     "name": doc.name,
                     "name_en": None,
@@ -497,20 +583,18 @@ class SearchService:
                     "school_name": doc.school_name,
                     "role_type": doc.role_type,
                     "topic_tags": doc.topic_tags or [],
-                    "openalex_topics": [],  # SearchTalentDocument 没有 openalex_topics，需要从 core_talent 获取
+                    "openalex_topics": [],
                     "works_count": doc.works_count,
                     "cited_by_count": doc.cited_by_count,
                     "h_index": doc.h_index,
                     "orcid": doc.orcid,
-                }
-                items.append(item)
+                })
 
             return {"total": total, "items": items}
 
         except Exception as e:
-            # 全文搜索失败，降级到关键词搜索
             logger.warning(f"Fulltext search failed: {e}, falling back to keyword search")
-            return await self._keyword_search(query, ["name", "title", "topics", "works"], False, page, page_size, filters)
+            return await fallback_method()
 
     async def _semantic_search(
         self,
@@ -522,7 +606,8 @@ class SearchService:
         """
         语义搜索
 
-        使用向量相似度进行搜索。
+        使用多向量相似度进行搜索（research + papers 加权融合）。
+        直接使用原始查询生成向量，支持中英文。
         如果没有嵌入服务，降级到全文搜索。
         """
         # 检查嵌入服务
@@ -531,43 +616,69 @@ class SearchService:
             return await self._fulltext_search(query, page, page_size, filters)
 
         try:
-            # 检查是否有中文到英文的翻译映射
-            english_translation = get_english_translation(query)
+            # 直接使用原始查询生成向量（支持中英文）
+            query_embedding = await self.embedding_service.get_query_embedding(query)
 
-            if english_translation:
-                # 中文查询：使用英文翻译生成 embedding（避免拼接导致的语义偏差）
-                embedding_text = english_translation
-                logger.info(f"Chinese query '{query}' -> English embedding '{english_translation}'")
-            else:
-                # 英文查询：同义词扩展后生成 embedding
-                embedding_text = expand_query_with_synonyms(query)
-                if embedding_text != query:
-                    logger.info(f"Query expanded: '{query}' -> '{embedding_text}'")
+            # 多向量检索：research 和 papers 并行执行
+            # 权重：research 0.6, papers 0.4
+            RESEARCH_WEIGHT = 0.6
+            PAPERS_WEIGHT = 0.4
 
-            # 获取查询嵌入向量
-            query_embedding = await self.embedding_service.get_query_embedding(embedding_text)
+            # 获取更多结果用于融合
+            extended_limit = min(page_size * settings.SEARCH_HYBRID_EXTENDED_FACTOR, 100)
 
-            # 计算偏移量
-            offset = (page - 1) * page_size
+            # 并行执行两种向量搜索（使用独立 session 避免并发冲突）
+            async def _search_research():
+                async with AsyncSessionLocal() as session:
+                    repo = TalentRepository(session)
+                    return await repo.search_by_vector_similarity(
+                        query_embedding=query_embedding,
+                        similarity_threshold=settings.SEARCH_SEMANTIC_THRESHOLD,
+                        filters=filters,
+                        limit=extended_limit,
+                        offset=0,
+                        vector_type="research",
+                    )
 
-            # 使用 Repository 进行向量相似度搜索
-            items, total = await self.talent_repo.search_by_vector_similarity(
-                query_embedding=query_embedding,
-                similarity_threshold=settings.SEARCH_SEMANTIC_THRESHOLD,
-                filters=filters,
-                limit=page_size,
-                offset=offset,
+            async def _search_papers():
+                async with AsyncSessionLocal() as session:
+                    repo = TalentRepository(session)
+                    return await repo.search_by_vector_similarity(
+                        query_embedding=query_embedding,
+                        similarity_threshold=settings.SEARCH_SEMANTIC_THRESHOLD,
+                        filters=filters,
+                        limit=extended_limit,
+                        offset=0,
+                        vector_type="papers",
+                    )
+
+            (research_items, _), (papers_items, _) = await asyncio.gather(
+                _search_research(),
+                _search_papers(),
             )
 
-            # 统计精准匹配和相似匹配
-            precise_count = sum(1 for item in items if item.get("similarity_score", 0) >= settings.SEARCH_PRECISE_THRESHOLD)
-            similar_count = sum(1 for item in items if settings.SEARCH_SIMILAR_THRESHOLD_MIN <= item.get("similarity_score", 0) < settings.SEARCH_PRECISE_THRESHOLD)
+            # 融合多向量结果
+            merged_items = self._merge_vector_scores(
+                research_items=research_items,
+                papers_items=papers_items,
+                research_weight=RESEARCH_WEIGHT,
+                papers_weight=PAPERS_WEIGHT,
+            )
 
-            logger.info(f"Semantic search found {total} results (similarity >= 70%) for query: {query}")
+            # 分页
+            offset = (page - 1) * page_size
+            total = len(merged_items)
+            paginated_items = merged_items[offset:offset + page_size]
+
+            # 统计精准匹配和相似匹配
+            precise_count = sum(1 for item in paginated_items if item.get("similarity_score", 0) >= settings.SEARCH_PRECISE_THRESHOLD)
+            similar_count = sum(1 for item in paginated_items if settings.SEARCH_SIMILAR_THRESHOLD_MIN <= item.get("similarity_score", 0) < settings.SEARCH_PRECISE_THRESHOLD)
+
+            logger.info(f"Semantic search found {total} results (research={len(research_items)}, papers={len(papers_items)}) for query: {query}")
 
             return {
                 "total": total,
-                "items": items,
+                "items": paginated_items,
                 "precise_count": precise_count,
                 "similar_count": similar_count,
             }
@@ -588,6 +699,64 @@ class SearchService:
             await self.session.rollback()
             return await self._fulltext_search(query, page, page_size, filters)
 
+    def _merge_vector_scores(
+        self,
+        research_items: List[dict],
+        papers_items: List[dict],
+        research_weight: float,
+        papers_weight: float,
+    ) -> List[dict]:
+        """
+        融合多向量搜索结果
+
+        Args:
+            research_items: 研究方向向量搜索结果
+            papers_items: 论文向量搜索结果
+            research_weight: 研究方向权重
+            papers_weight: 论文权重
+
+        Returns:
+            融合后的结果列表，包含 match_sources 字段
+        """
+        # 按 talent_id 合并
+        merged_map: dict = {}
+
+        for item in research_items:
+            tid = item["talent_id"]
+            score = item.get("similarity_score", 0) * research_weight
+            merged_map[tid] = {
+                **item,
+                "similarity_score": score,
+                "_research_score": item.get("similarity_score", 0),
+                "_papers_score": 0.0,
+                "match_sources": ["semantic_research"],
+            }
+
+        for item in papers_items:
+            tid = item["talent_id"]
+            score = item.get("similarity_score", 0) * papers_weight
+            if tid in merged_map:
+                merged_map[tid]["similarity_score"] += score
+                merged_map[tid]["_papers_score"] = item.get("similarity_score", 0)
+                merged_map[tid]["match_sources"].append("semantic_papers")
+            else:
+                merged_map[tid] = {
+                    **item,
+                    "similarity_score": score,
+                    "_research_score": 0.0,
+                    "_papers_score": item.get("similarity_score", 0),
+                    "match_sources": ["semantic_papers"],
+                }
+
+        # 按融合后的相似度排序
+        sorted_items = sorted(
+            merged_map.values(),
+            key=lambda x: x.get("similarity_score", 0),
+            reverse=True
+        )
+
+        return sorted_items
+
     async def _hybrid_search(
         self,
         query: str,
@@ -600,7 +769,8 @@ class SearchService:
         """
         混合搜索
 
-        结合全文搜索和语义搜索的结果，重新排序。
+        结合全文搜索和多向量语义搜索的结果，重新排序。
+        全文搜索和语义搜索并行执行。
         """
         # 如果没有嵌入服务，降级到全文搜索
         if self.embedding_service is None:
@@ -608,36 +778,46 @@ class SearchService:
             return await self._fulltext_search(query, page, page_size, filters)
 
         try:
-            # 并行执行全文搜索和语义搜索
             # 获取更多结果用于融合
             extended_page_size = min(page_size * settings.SEARCH_HYBRID_EXTENDED_FACTOR, 100)
 
-            # 检查是否有中文到英文的翻译
+            # 检查是否有中文到英文的翻译（用于全文搜索扩展）
             english_translation = get_english_translation(query)
 
-            # 全文搜索：顺序执行中文和英文搜索（避免 session 并发问题）
-            fulltext_items = {}
+            # 全文搜索使用独立 session
+            async def _do_fulltext_search():
+                async with AsyncSessionLocal() as session:
+                    fulltext_items = {}
 
-            # 1. 中文全文搜索
-            chinese_result = await self._fulltext_search(query, 1, extended_page_size, filters)
-            for item in chinese_result["items"]:
-                tid = item["talent_id"]
-                if tid not in fulltext_items:
-                    fulltext_items[tid] = item
+                    # 1. 中文全文搜索
+                    repo = TalentRepository(session)
+                    # 复用当前 session 的搜索方法
+                    chinese_result = await self._fulltext_search_with_session(
+                        session, query, extended_page_size, filters
+                    )
+                    for item in chinese_result["items"]:
+                        tid = item["talent_id"]
+                        if tid not in fulltext_items:
+                            fulltext_items[tid] = item
 
-            # 2. 如果有英文翻译，也用英文执行全文搜索
-            if english_translation:
-                logger.info(f"Hybrid search: also searching with English translation '{english_translation}'")
-                english_result = await self._fulltext_search(english_translation, 1, extended_page_size, filters)
-                for item in english_result["items"]:
-                    tid = item["talent_id"]
-                    if tid not in fulltext_items:
-                        fulltext_items[tid] = item
+                    # 2. 如果有英文翻译，也用英文执行全文搜索
+                    if english_translation:
+                        logger.info(f"Hybrid search: also searching with English translation '{english_translation}'")
+                        english_result = await self._fulltext_search_with_session(
+                            session, english_translation, extended_page_size, filters
+                        )
+                        for item in english_result["items"]:
+                            tid = item["talent_id"]
+                            if tid not in fulltext_items:
+                                fulltext_items[tid] = item
 
-            fulltext_result = {"items": list(fulltext_items.values())}
+                    return {"items": list(fulltext_items.values())}
 
-            # 语义搜索
-            semantic_result = await self._semantic_search(query, 1, extended_page_size, filters)
+            # 并行执行全文搜索和语义搜索
+            fulltext_result, semantic_result = await asyncio.gather(
+                _do_fulltext_search(),
+                self._semantic_search(query, 1, extended_page_size, filters),
+            )
 
             # 融合结果
             # 使用倒数排名融合 (Reciprocal Rank Fusion)
@@ -651,18 +831,28 @@ class SearchService:
                 score_map[tid] = score_map.get(tid, 0) + 1.0 / (k + rank)
                 # 全文搜索匹配的给高分相似度
                 item["similarity_score"] = settings.SEARCH_PRECISE_THRESHOLD
+                # 标记匹配来源
+                item["match_sources"] = ["fulltext"]
+                item["_research_score"] = 0.0
+                item["_papers_score"] = 0.0
                 item_map[tid] = item
 
-            # 语义搜索结果（已过滤相似度 >= 70%）
+            # 多向量语义搜索结果
             for rank, item in enumerate(semantic_result["items"], 1):
                 tid = item["talent_id"]
                 score_map[tid] = score_map.get(tid, 0) + 1.0 / (k + rank)
-                # 如果已存在（全文搜索命中），保留较高的相似度
+                # 如果已存在（全文搜索命中），合并匹配来源
                 if tid in item_map:
                     existing_score = item_map[tid].get("similarity_score", 0)
                     new_score = item.get("similarity_score", 0)
                     if new_score > existing_score:
                         item_map[tid]["similarity_score"] = new_score
+                    # 合并匹配来源
+                    semantic_sources = item.get("match_sources", [])
+                    item_map[tid]["match_sources"].extend(semantic_sources)
+                    # 更新向量分数
+                    item_map[tid]["_research_score"] = item.get("_research_score", 0)
+                    item_map[tid]["_papers_score"] = item.get("_papers_score", 0)
                 else:
                     item_map[tid] = item
 
@@ -677,6 +867,10 @@ class SearchService:
             precise_count = sum(1 for tid in sorted_ids if item_map[tid].get("similarity_score", 0) >= settings.SEARCH_PRECISE_THRESHOLD)
             similar_count = sum(1 for tid in sorted_ids if settings.SEARCH_SIMILAR_THRESHOLD_MIN <= item_map[tid].get("similarity_score", 0) < settings.SEARCH_PRECISE_THRESHOLD)
 
+            # 计算匹配来源统计（基于全部合并结果）
+            fulltext_count = sum(1 for tid in sorted_ids if "fulltext" in item_map[tid].get("match_sources", []))
+            semantic_count = sum(1 for tid in sorted_ids if any(s.startswith("semantic_") for s in item_map[tid].get("match_sources", [])))
+
             # 分页
             offset = (page - 1) * page_size
             paginated_ids = sorted_ids[offset:offset + page_size]
@@ -684,13 +878,15 @@ class SearchService:
             # 构建最终结果
             items = [item_map[tid] for tid in paginated_ids if tid in item_map]
 
-            logger.info(f"Hybrid search: fulltext={len(fulltext_result['items'])}, semantic={len(semantic_result['items'])}, merged={len(sorted_ids)}, returned={len(items)}, precise={precise_count}, similar={similar_count}")
+            logger.info(f"Hybrid search: fulltext={len(fulltext_result['items'])}, semantic={len(semantic_result['items'])}, merged={len(sorted_ids)}, returned={len(items)}, precise={precise_count}, similar={similar_count}, fulltext_match={fulltext_count}, semantic_match={semantic_count}")
 
             return {
                 "total": len(sorted_ids),
                 "items": items,
                 "precise_count": precise_count,
                 "similar_count": similar_count,
+                "fulltext_count": fulltext_count,
+                "semantic_count": semantic_count,
             }
 
         except LLMError as e:
@@ -726,8 +922,46 @@ class SearchService:
         if "min_works" in filters:
             query = query.where(Talent.works_count >= filters["min_works"])
 
-        if "tech_elements" in filters:
-            # 技术要素过滤需要join
+        if "country_code" in filters:
+            query = query.where(Talent.country_code == filters["country_code"])
+
+        if "tech_domain_id" in filters:
+            query = query.join(
+                TalentTechTag,
+                Talent.talent_id == TalentTechTag.talent_id
+            ).where(
+                TalentTechTag.tech_domain_id == filters["tech_domain_id"],
+                TalentTechTag.is_enabled == True
+            )
+
+        if "is_graduated" in filters:
+            is_grad = filters["is_graduated"] == "true" or filters["is_graduated"] is True
+            query = query.where(Talent.is_graduated == is_grad)
+
+        if "confirm_status" in filters:
+            query = query.join(
+                TalentTechTag,
+                Talent.talent_id == TalentTechTag.talent_id
+            ).where(
+                TalentTechTag.confirm_status == filters["confirm_status"]
+            )
+
+        return query
+
+    def _apply_search_document_filters(self, query, filters: dict | None):
+        """Apply filters to SearchTalentDocument query."""
+        if not filters:
+            return query
+
+        if "school_id" in filters:
+            query = query.where(SearchTalentDocument.school_id == filters["school_id"])
+        if "role_type" in filters:
+            query = query.where(SearchTalentDocument.role_type == filters["role_type"])
+
+        return query
+
+        if "tech_domains" in filters:
+            # 技术领域过滤需要join
             pass
 
         return query

@@ -190,11 +190,12 @@ class RecommendService:
     ) -> List[RecommendResultItem]:
         """使用向量相似度查找相似人才"""
         try:
-            # 获取参考人才的嵌入向量
+            # 获取参考人才的嵌入向量（使用 research 类型）
             reference_ids = [t.talent_id for t in reference_talents]
             query = (
                 select(TalentEmbedding.talent_id, TalentEmbedding.embedding)
                 .where(TalentEmbedding.talent_id.in_(reference_ids))
+                .where(TalentEmbedding.vector_type == "research")
             )
             result = await self.session.execute(query)
             embeddings = result.all()
@@ -233,12 +234,13 @@ class RecommendService:
 
             query_vector = np.mean(vectors, axis=0).tolist()
 
-            # 使用 Repository 进行向量搜索
+            # 使用 Repository 进行向量搜索（使用 research 类型）
             items, _ = await self.talent_repo.search_by_vector_similarity(
                 query_embedding=query_vector,
                 similarity_threshold=settings.RECOMMEND_SIMILARITY_THRESHOLD,
                 filters=filters,
                 limit=limit,
+                vector_type="research",
             )
 
             # 转换为 RecommendResultItem

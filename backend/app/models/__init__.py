@@ -35,7 +35,7 @@ from app.models.sync import (
     SyncBatch,
 )
 from app.models.talent import RoleProfile, SelectedWork, Talent
-from app.models.tech_element import TalentTechTag, TechDirection, TechElement
+from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
 from app.models.venue import Venue, VenueSubTask, VenueTechBinding
 from app.models.embedding import TalentEmbedding
 from app.models.jd_match import JDMatchSession, JDMatchResult
@@ -55,7 +55,7 @@ __all__ = [
     "Talent",
     "RoleProfile",
     "SelectedWork",
-    "TechElement",
+    "TechDomain",
     "TechDirection",
     "TalentTechTag",
     "Collaboration",

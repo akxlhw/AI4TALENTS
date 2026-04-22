@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.raw_data import RawAuthor
 from app.models.sync import CollectTask
 from app.models.talent import SelectedWork
-from app.models.tech_element import TechDirection, TechElement
+from app.models.tech_domain import TechDirection, TechDomain
 from app.repositories.raw_data_repository import (
     RawAuthorRepository,
     RawInstitutionRepository,
@@ -260,7 +260,7 @@ class CollectionOrchestrator:
 
             # Phase 6: Calculate tech belong relationships
             await self.progress_tracker.update_progress(task, "计算技术归属", PhaseProgress.CALCULATE_TECH_BELONG)
-            await self._calculate_tech_belong(task_id, task.tech_element_id)
+            await self._calculate_tech_belong(task_id, task.tech_domain_id)
 
             # 检查取消
             if await self._should_cancel(task_id):
@@ -269,7 +269,7 @@ class CollectionOrchestrator:
 
             # Phase 7: Sync to serving layer (delegated to sync service)
             await self.progress_tracker.update_progress(task, "同步到服务层", PhaseProgress.SYNC_SERVING_LAYER)
-            new_talents = await self._sync_to_serving_layer(task_id, task.tech_element_id, progress)
+            new_talents = await self._sync_to_serving_layer(task_id, task.tech_domain_id, progress)
 
             # 检查取消
             if await self._should_cancel(task_id):
@@ -397,8 +397,12 @@ class CollectionOrchestrator:
         year_from = task.time_window_start.year if task.time_window_start else None
         year_to = task.time_window_end.year if task.time_window_end else None
 
+        # Pre-fetch all venues in batch to avoid N+1 query
+        venue_ids = [st.venue_id for st in sub_tasks]
+        venues_map = await self.venue_repo.get_by_ids(venue_ids)
+
         for sub_task in sub_tasks:
-            venue = await self.venue_repo.get_by_id(sub_task.venue_id)
+            venue = venues_map.get(sub_task.venue_id)
             if venue and self.work_fetcher:
                 try:
                     count = await self.work_fetcher.get_work_count_from_venue(
@@ -554,24 +558,24 @@ class CollectionOrchestrator:
         if result.processed > 0:
             self.progress_tracker.add_log("info", f"标准化作者: {result.processed}")
 
-    async def _calculate_tech_belong(self, task_id: int, tech_element_id: int):
-        """Phase 6: Calculate author-tech element relationships"""
+    async def _calculate_tech_belong(self, task_id: int, tech_domain_id: int):
+        """Phase 6: Calculate author-tech domain relationships"""
 
-        # Get all venues for this tech element
+        # Get all venues for this tech domain
         sub_tasks = await self.sub_task_repo.get_by_task(task_id)
 
         for sub_task in sub_tasks:
             if sub_task.status == "completed":
                 await self.tech_belong_calculator.calculate_for_venue(
                     venue_id=sub_task.venue_id,
-                    tech_element_id=tech_element_id,
+                    tech_domain_id=tech_domain_id,
                     task_id=task_id
                 )
 
     async def _sync_to_serving_layer(
         self,
         task_id: int,
-        tech_element_id: int,
+        tech_domain_id: int,
         progress: CollectionProgress
     ) -> list[dict]:
         """Phase 7: Sync to serving layer (calls external sync service)
@@ -586,12 +590,12 @@ class CollectionOrchestrator:
         sync = ServingLayerOrchestrator(self.session)
 
         # Get or create default tech direction
-        default_direction_id = await self._get_or_create_default_tech_direction(tech_element_id)
+        default_direction_id = await self._get_or_create_default_tech_direction(tech_domain_id)
 
         # Execute sync
         stats = await sync.sync_all_for_task(
             task_id=task_id,
-            tech_element_id=tech_element_id,
+            tech_domain_id=tech_domain_id,
             default_tech_direction_id=default_direction_id
         )
 
@@ -600,6 +604,10 @@ class CollectionOrchestrator:
         progress.created_talents = stats.get("authors_created", 0)
         progress.updated_talents = stats.get("authors_updated", 0)
         progress.created_tech_tags = stats.get("tags_created", 0)
+
+        # Collect affected school IDs for incremental statistics update
+        affected_school_ids = stats.get("affected_school_ids", set())
+        progress.affected_school_ids.update(affected_school_ids)
 
         # Record errors
         for error in stats.get("errors", []):
@@ -707,12 +715,12 @@ class CollectionOrchestrator:
         from sqlalchemy.orm import selectinload
 
         from app.models.talent import Talent
-        from app.models.tech_element import TalentTechTag
+        from app.models.tech_domain import TalentTechTag
 
         progress.current_step = "Updating topic tags"
         self.progress_tracker.add_log("info", "开始更新人才技术标签")
 
-        # 获取当前任务关联的 tech_element_id
+        # 获取当前任务关联的 tech_domain_id
         task_result = await self.session.execute(
             select(CollectTask).where(CollectTask.task_id == task_id)
         )
@@ -721,12 +729,12 @@ class CollectionOrchestrator:
             self.progress_tracker.add_log("warning", f"任务 {task_id} 不存在")
             return
 
-        tech_element_id = task.tech_element_id
+        tech_domain_id = task.tech_domain_id
 
         # 先获取去重后的 talent_id 列表（避免 JSON 列的 DISTINCT 问题）
         distinct_ids_result = await self.session.execute(
             select(TalentTechTag.talent_id).where(
-                TalentTechTag.tech_element_id == tech_element_id
+                TalentTechTag.tech_domain_id == tech_domain_id
             ).distinct()
         )
         talent_ids = [row[0] for row in distinct_ids_result.all()]
@@ -768,44 +776,95 @@ class CollectionOrchestrator:
         self.progress_tracker.add_log("info", f"更新了 {updated_count} 个人才的技术标签")
 
     async def _update_school_statistics(self, task_id: int, progress: CollectionProgress):
-        """Phase 9: Update school professor_count and student_count"""
+        """Phase 9: Update school professor_count and student_count
+
+        Uses incremental update for better performance:
+        - Only updates schools affected by this task
+        - Avoids resetting all schools unnecessarily
+        """
         from app.models.school import School
         from app.models.talent import Talent
 
         progress.current_step = "Updating school statistics"
         self.progress_tracker.add_log("info", "开始更新学校统计")
 
-        # Reset all school counts
-        await self.session.execute(
-            School.__table__.update().values(professor_count=0, student_count=0)
-        )
+        # Get affected school IDs from the sync phase
+        affected_school_ids = progress.affected_school_ids
 
-        # Calculate and update counts
-        result = await self.session.execute(
-            select(
-                Talent.school_id,
-                func.count(case((Talent.role_type == 'professor', 1))).label('professor_count'),
-                func.count(case((Talent.role_type.in_(['student', 'graduate']), 1))).label('student_count')
-            ).where(
-                Talent.school_id.isnot(None),
-                Talent.is_visible.is_(True)
-            ).group_by(Talent.school_id)
-        )
+        if affected_school_ids:
+            # Incremental update: only update affected schools
+            self.progress_tracker.add_log(
+                "info",
+                f"增量更新 {len(affected_school_ids)} 所受影响的学校"
+            )
 
-        updated_schools = 0
-        for i, row in enumerate(result):
-            school_id, prof_count, stu_count = row
-            if school_id:
-                await self.session.execute(
-                    School.__table__.update()
-                    .where(School.school_id == school_id)
-                    .values(professor_count=prof_count, student_count=stu_count)
-                )
-                updated_schools += 1
+            # Reset counts for affected schools only
+            await self.session.execute(
+                School.__table__.update()
+                .where(School.school_id.in_(affected_school_ids))
+                .values(professor_count=0, student_count=0)
+            )
 
-                # Save progress periodically
-                if (i + 1) % 50 == 0:
-                    await self.session.commit()
+            # Calculate and update counts for affected schools
+            result = await self.session.execute(
+                select(
+                    Talent.school_id,
+                    func.count(case((Talent.role_type == 'professor', 1))).label('professor_count'),
+                    func.count(case((Talent.role_type.in_(['student', 'graduate']), 1))).label('student_count')
+                ).where(
+                    Talent.school_id.in_(affected_school_ids),
+                    Talent.is_visible.is_(True)
+                ).group_by(Talent.school_id)
+            )
+
+            updated_schools = 0
+            for row in result:
+                school_id, prof_count, stu_count = row
+                if school_id:
+                    await self.session.execute(
+                        School.__table__.update()
+                        .where(School.school_id == school_id)
+                        .values(professor_count=prof_count, student_count=stu_count)
+                    )
+                    updated_schools += 1
+        else:
+            # Fallback: Full update (first run or no tracked schools)
+            self.progress_tracker.add_log(
+                "info",
+                "执行全量学校统计更新"
+            )
+
+            # Reset all school counts
+            await self.session.execute(
+                School.__table__.update().values(professor_count=0, student_count=0)
+            )
+
+            # Calculate and update counts
+            result = await self.session.execute(
+                select(
+                    Talent.school_id,
+                    func.count(case((Talent.role_type == 'professor', 1))).label('professor_count'),
+                    func.count(case((Talent.role_type.in_(['student', 'graduate']), 1))).label('student_count')
+                ).where(
+                    Talent.school_id.isnot(None),
+                    Talent.is_visible.is_(True)
+                ).group_by(Talent.school_id)
+            )
+
+            updated_schools = 0
+            for i, row in enumerate(result):
+                school_id, prof_count, stu_count = row
+                if school_id:
+                    await self.session.execute(
+                        School.__table__.update()
+                        .where(School.school_id == school_id)
+                        .values(professor_count=prof_count, student_count=stu_count)
+                    )
+                    updated_schools += 1
+
+                    # Save progress periodically
+                    if (i + 1) % 50 == 0:
+                        await self.session.commit()
 
         await self.session.flush()
         self.progress_tracker.add_log("info", f"更新了 {updated_schools} 所学校的统计")
@@ -830,72 +889,72 @@ class CollectionOrchestrator:
         except Exception as e:
             self.progress_tracker.add_log("warning", f"统计数据生成异常: {str(e)}")
 
-    async def _get_default_tech_direction(self, tech_element_id: int) -> int | None:
+    async def _get_default_tech_direction(self, tech_domain_id: int) -> int | None:
         """获取默认技术方向ID（只获取，不创建）
 
         Args:
-            tech_element_id: 技术要素ID
+            tech_domain_id: 技术领域ID
 
         Returns:
             默认技术方向ID，如果不存在返回 None
         """
         result = await self.session.execute(
             select(TechDirection.tech_direction_id).where(
-                TechDirection.tech_element_id == tech_element_id,
+                TechDirection.tech_domain_id == tech_domain_id,
                 TechDirection.is_enabled.is_(True)
             ).order_by(TechDirection.sort_order).limit(1)
         )
         return result.scalar_one_or_none()
 
-    async def _create_default_tech_direction(self, tech_element_id: int) -> int | None:
+    async def _create_default_tech_direction(self, tech_domain_id: int) -> int | None:
         """创建默认技术方向
 
         Args:
-            tech_element_id: 技术要素ID
+            tech_domain_id: 技术领域ID
 
         Returns:
-            新创建的技术方向ID，如果技术要素不存在返回 None
+            新创建的技术方向ID，如果技术领域不存在返回 None
         """
-        te_result = await self.session.execute(
-            select(TechElement).where(TechElement.tech_element_id == tech_element_id)
+        td_result = await self.session.execute(
+            select(TechDomain).where(TechDomain.tech_domain_id == tech_domain_id)
         )
-        tech_element = te_result.scalar_one_or_none()
+        tech_domain = td_result.scalar_one_or_none()
 
-        if not tech_element:
-            logger.warning(f"Tech element {tech_element_id} not found, cannot create default direction")
+        if not tech_domain:
+            logger.warning(f"Tech domain {tech_domain_id} not found, cannot create default direction")
             return None
 
         new_direction = TechDirection(
-            direction_code=f"{tech_element.element_code}-DEFAULT",
-            direction_name=f"{tech_element.element_name}（默认）",
-            tech_element_id=tech_element_id,
+            direction_code=f"{tech_domain.domain_code}-DEFAULT",
+            direction_name=f"{tech_domain.domain_name}（默认）",
+            tech_domain_id=tech_domain_id,
             sort_order=0,
             is_enabled=True
         )
         self.session.add(new_direction)
         await self.session.flush()
 
-        logger.info(f"Created default tech direction for {tech_element.element_name}")
+        logger.info(f"Created default tech direction for {tech_domain.domain_name}")
         return new_direction.tech_direction_id
 
-    async def _get_or_create_default_tech_direction(self, tech_element_id: int) -> int | None:
+    async def _get_or_create_default_tech_direction(self, tech_domain_id: int) -> int | None:
         """获取或创建默认技术方向ID
 
         先尝试获取已存在的默认方向，不存在则创建新的。
 
         Args:
-            tech_element_id: 技术要素ID
+            tech_domain_id: 技术领域ID
 
         Returns:
             默认技术方向ID
         """
         # 先尝试获取
-        direction_id = await self._get_default_tech_direction(tech_element_id)
+        direction_id = await self._get_default_tech_direction(tech_domain_id)
         if direction_id:
             return direction_id
 
         # 不存在则创建
-        return await self._create_default_tech_direction(tech_element_id)
+        return await self._create_default_tech_direction(tech_domain_id)
 
     async def get_task_progress(self, task_id: int) -> dict[str, Any]:
         """Get progress for a task"""
@@ -941,8 +1000,12 @@ class CollectionOrchestrator:
         sub_tasks = await self.sub_task_repo.get_by_task(task_id)
         venue_details = []
 
+        # Pre-fetch all venues in batch to avoid N+1 query
+        venue_ids = [st.venue_id for st in sub_tasks]
+        venues_map = await self.venue_repo.get_by_ids(venue_ids)
+
         for sub_task in sub_tasks:
-            venue = await self.venue_repo.get_by_id(sub_task.venue_id)
+            venue = venues_map.get(sub_task.venue_id)
             if venue:
                 # 计算耗时
                 duration = None
@@ -955,7 +1018,7 @@ class CollectionOrchestrator:
                         duration = f"{total_seconds}秒"
 
                 venue_details.append({
-                    "venue_id": sub_task.venue_id,
+                    "venue_id": venue.venue_code or str(sub_task.venue_id),
                     "venue_name": venue.venue_name,
                     "status": sub_task.status or "unknown",
                     "fetched": sub_task.works_fetched or 0,

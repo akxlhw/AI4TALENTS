@@ -44,7 +44,12 @@ class EmbeddingRepository:
     """嵌入向量仓储
 
     负责嵌入向量的数据库 CRUD 操作。
+    支持多种向量类型：research、papers
     """
+
+    # 向量类型常量
+    VECTOR_TYPE_RESEARCH = "research"
+    VECTOR_TYPE_PAPERS = "papers"
 
     def __init__(self, session: AsyncSession):
         """
@@ -55,27 +60,55 @@ class EmbeddingRepository:
         """
         self.session = session
 
-    async def get_by_talent_id(self, talent_id: int) -> Optional[TalentEmbedding]:
+    async def get_by_talent_id(
+        self,
+        talent_id: int,
+        vector_type: str = "research"
+    ) -> Optional[TalentEmbedding]:
         """
         根据人才 ID 获取嵌入向量
 
         Args:
             talent_id: 人才 ID
+            vector_type: 向量类型 (research/papers)
 
         Returns:
             Optional[TalentEmbedding]: 嵌入记录或 None
         """
         result = await self.session.execute(
-            select(TalentEmbedding).where(TalentEmbedding.talent_id == talent_id)
+            select(TalentEmbedding).where(
+                TalentEmbedding.talent_id == talent_id,
+                TalentEmbedding.vector_type == vector_type
+            )
         )
         return result.scalar_one_or_none()
 
-    async def get_by_talent_ids(self, talent_ids: List[int]) -> List[TalentEmbedding]:
+    async def get_all_by_talent_id(self, talent_id: int) -> List[TalentEmbedding]:
+        """
+        获取人才的所有向量类型嵌入
+
+        Args:
+            talent_id: 人才 ID
+
+        Returns:
+            List[TalentEmbedding]: 该人才的所有嵌入记录
+        """
+        result = await self.session.execute(
+            select(TalentEmbedding).where(TalentEmbedding.talent_id == talent_id)
+        )
+        return list(result.scalars().all())
+
+    async def get_by_talent_ids(
+        self,
+        talent_ids: List[int],
+        vector_type: str | None = None
+    ) -> List[TalentEmbedding]:
         """
         批量获取嵌入向量
 
         Args:
             talent_ids: 人才 ID 列表
+            vector_type: 向量类型过滤 (可选，不过滤则返回全部)
 
         Returns:
             List[TalentEmbedding]: 嵌入记录列表
@@ -89,9 +122,10 @@ class EmbeddingRepository:
 
         for i in range(0, len(talent_ids), BATCH_SIZE):
             batch_ids = talent_ids[i:i + BATCH_SIZE]
-            result = await self.session.execute(
-                select(TalentEmbedding).where(TalentEmbedding.talent_id.in_(batch_ids))
-            )
+            query = select(TalentEmbedding).where(TalentEmbedding.talent_id.in_(batch_ids))
+            if vector_type:
+                query = query.where(TalentEmbedding.vector_type == vector_type)
+            result = await self.session.execute(query)
             all_results.extend(result.scalars().all())
 
         return all_results
@@ -102,6 +136,7 @@ class EmbeddingRepository:
         embedding: List[float],
         model_name: str,
         source_text_hash: str,
+        vector_type: str = "research",
     ) -> TalentEmbedding:
         """
         创建嵌入记录
@@ -111,6 +146,7 @@ class EmbeddingRepository:
             embedding: 嵌入向量
             model_name: 模型名称
             source_text_hash: 源文本哈希
+            vector_type: 向量类型 (research/papers)
 
         Returns:
             TalentEmbedding: 创建的记录
@@ -124,11 +160,12 @@ class EmbeddingRepository:
             await self.session.execute(
                 text("""
                     INSERT INTO core_talent_embedding
-                    (talent_id, embedding, model_name, source_text_hash, created_at, updated_at)
-                    VALUES (:talent_id, CAST(:embedding AS vector), :model_name, :source_text_hash, :created_at, :updated_at)
+                    (talent_id, vector_type, embedding, model_name, source_text_hash, created_at, updated_at)
+                    VALUES (:talent_id, :vector_type, CAST(:embedding AS vector), :model_name, :source_text_hash, :created_at, :updated_at)
                 """),
                 {
                     "talent_id": talent_id,
+                    "vector_type": vector_type,
                     "embedding": vector_str,
                     "model_name": model_name,
                     "source_text_hash": source_text_hash,
@@ -138,12 +175,13 @@ class EmbeddingRepository:
             )
             await self.session.flush()
             # 返回记录（需要重新查询）
-            return await self.get_by_talent_id(talent_id)
+            return await self.get_by_talent_id(talent_id, vector_type)
         else:
             # SQLite: 使用 JSON 存储
             embedding_str = json.dumps(embedding)
             record = TalentEmbedding(
                 talent_id=talent_id,
+                vector_type=vector_type,
                 embedding=embedding_str,
                 model_name=model_name,
                 source_text_hash=source_text_hash,
@@ -169,6 +207,7 @@ class EmbeddingRepository:
                 - embedding: 嵌入向量
                 - model_name: 模型名称
                 - source_text_hash: 源文本哈希
+                - vector_type: 向量类型 (可选，默认 research)
 
         Returns:
             int: 处理的记录数
@@ -185,10 +224,12 @@ class EmbeddingRepository:
             params = {}
             for i, item in enumerate(items):
                 vector_str = '[' + ','.join(str(v) for v in item['embedding']) + ']'
+                vector_type = item.get('vector_type', 'research')
                 values_clauses.append(
-                    f"(:talent_id_{i}, CAST(:embedding_{i} AS vector), :model_name_{i}, :hash_{i}, :created_at, :updated_at)"
+                    f"(:talent_id_{i}, :vector_type_{i}, CAST(:embedding_{i} AS vector), :model_name_{i}, :hash_{i}, :created_at, :updated_at)"
                 )
                 params[f"talent_id_{i}"] = item['talent_id']
+                params[f"vector_type_{i}"] = vector_type
                 params[f"embedding_{i}"] = vector_str
                 params[f"model_name_{i}"] = item['model_name']
                 params[f"hash_{i}"] = item['source_text_hash']
@@ -198,9 +239,9 @@ class EmbeddingRepository:
 
             sql = f"""
                 INSERT INTO core_talent_embedding
-                (talent_id, embedding, model_name, source_text_hash, created_at, updated_at)
+                (talent_id, vector_type, embedding, model_name, source_text_hash, created_at, updated_at)
                 VALUES {', '.join(values_clauses)}
-                ON CONFLICT (talent_id) DO UPDATE SET
+                ON CONFLICT (talent_id, vector_type) DO UPDATE SET
                     embedding = EXCLUDED.embedding,
                     model_name = EXCLUDED.model_name,
                     source_text_hash = EXCLUDED.source_text_hash,
@@ -218,6 +259,7 @@ class EmbeddingRepository:
                     embedding=item['embedding'],
                     model_name=item['model_name'],
                     source_text_hash=item['source_text_hash'],
+                    vector_type=item.get('vector_type', 'research'),
                 )
             return len(items)
 
@@ -227,6 +269,7 @@ class EmbeddingRepository:
         embedding: List[float],
         model_name: str,
         source_text_hash: str,
+        vector_type: str = "research",
     ) -> TalentEmbedding:
         """
         创建或更新嵌入记录
@@ -236,6 +279,7 @@ class EmbeddingRepository:
             embedding: 嵌入向量
             model_name: 模型名称
             source_text_hash: 源文本哈希
+            vector_type: 向量类型 (research/papers)
 
         Returns:
             TalentEmbedding: 记录
@@ -249,9 +293,9 @@ class EmbeddingRepository:
             await self.session.execute(
                 text("""
                     INSERT INTO core_talent_embedding
-                    (talent_id, embedding, model_name, source_text_hash, created_at, updated_at)
-                    VALUES (:talent_id, CAST(:embedding AS vector), :model_name, :source_text_hash, :created_at, :updated_at)
-                    ON CONFLICT (talent_id) DO UPDATE SET
+                    (talent_id, vector_type, embedding, model_name, source_text_hash, created_at, updated_at)
+                    VALUES (:talent_id, :vector_type, CAST(:embedding AS vector), :model_name, :source_text_hash, :created_at, :updated_at)
+                    ON CONFLICT (talent_id, vector_type) DO UPDATE SET
                         embedding = EXCLUDED.embedding,
                         model_name = EXCLUDED.model_name,
                         source_text_hash = EXCLUDED.source_text_hash,
@@ -259,6 +303,7 @@ class EmbeddingRepository:
                 """),
                 {
                     "talent_id": talent_id,
+                    "vector_type": vector_type,
                     "embedding": vector_str,
                     "model_name": model_name,
                     "source_text_hash": source_text_hash,
@@ -267,10 +312,10 @@ class EmbeddingRepository:
                 }
             )
             await self.session.flush()
-            return await self.get_by_talent_id(talent_id)
+            return await self.get_by_talent_id(talent_id, vector_type)
         else:
             # SQLite: 使用 JSON 存储
-            existing = await self.get_by_talent_id(talent_id)
+            existing = await self.get_by_talent_id(talent_id, vector_type)
 
             if existing:
                 existing.embedding = json.dumps(embedding)
@@ -280,7 +325,7 @@ class EmbeddingRepository:
                 await self.session.flush()
                 return existing
             else:
-                return await self.create(talent_id, embedding, model_name, source_text_hash)
+                return await self.create(talent_id, embedding, model_name, source_text_hash, vector_type)
 
     async def delete_by_talent_id(self, talent_id: int) -> bool:
         """
@@ -348,7 +393,8 @@ class EmbeddingRepository:
     async def get_missing_talent_ids(
         self,
         talent_ids: List[int],
-        model_name: str | None = None
+        model_name: str | None = None,
+        vector_type: str | None = None
     ) -> List[int]:
         """
         获取没有嵌入向量的人才 ID
@@ -356,6 +402,7 @@ class EmbeddingRepository:
         Args:
             talent_ids: 人才 ID 列表
             model_name: 可选的模型名称过滤
+            vector_type: 可选的向量类型过滤 (research/papers)
 
         Returns:
             List[int]: 缺失嵌入的人才 ID 列表
@@ -374,6 +421,8 @@ class EmbeddingRepository:
             )
             if model_name:
                 query = query.where(TalentEmbedding.model_name == model_name)
+            if vector_type:
+                query = query.where(TalentEmbedding.vector_type == vector_type)
 
             result = await self.session.execute(query)
             for row in result.fetchall():
@@ -382,16 +431,20 @@ class EmbeddingRepository:
         # 返回缺失的 ID
         return [tid for tid in talent_ids if tid not in existing_ids]
 
-    async def get_existing_talent_ids(self) -> set[int]:
+    async def get_existing_talent_ids(self, vector_type: str | None = None) -> set[int]:
         """
         获取所有已有嵌入向量的人才 ID
+
+        Args:
+            vector_type: 可选的向量类型过滤
 
         Returns:
             set[int]: 已有嵌入的人才 ID 集合
         """
-        result = await self.session.execute(
-            select(TalentEmbedding.talent_id)
-        )
+        query = select(TalentEmbedding.talent_id)
+        if vector_type:
+            query = query.where(TalentEmbedding.vector_type == vector_type)
+        result = await self.session.execute(query)
         return set(row[0] for row in result.fetchall())
 
     def _str_to_embedding(self, embedding_str: str) -> List[float]:

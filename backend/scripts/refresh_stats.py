@@ -21,7 +21,7 @@ from sqlalchemy import select, func, case, update, text
 from app.core.database import AsyncSessionLocal
 from app.models.school import School
 from app.models.talent import Talent
-from app.models.tech_element import TechElement, TalentTechTag
+from app.models.tech_domain import TechDomain, TalentTechTag
 
 logging.basicConfig(
     level=logging.INFO,
@@ -67,28 +67,28 @@ async def update_school_statistics(session):
     return updated_schools
 
 
-async def update_tech_element_counts(session):
-    """Update tech element talent counts from TechTag."""
-    logger.info("Updating tech element talent counts...")
+async def update_tech_domain_counts(session):
+    """Update tech domain talent counts from TechTag."""
+    logger.info("Updating tech domain talent counts...")
 
-    # Count talents per tech element
+    # Count talents per tech domain
     result = await session.execute(
         select(
-            TalentTechTag.tech_element_id,
+            TalentTechTag.tech_domain_id,
             func.count(TalentTechTag.talent_id.distinct()).label('talent_count')
-        ).group_by(TalentTechTag.tech_element_id)
+        ).group_by(TalentTechTag.tech_domain_id)
     )
 
-    updated_elements = 0
+    updated_domains = 0
     for row in result:
-        tech_element_id, talent_count = row
-        # Update the tech element (if it has a talent_count field)
-        # Note: core_tech_element doesn't have talent_count, but we can log for reference
-        updated_elements += 1
-        logger.info(f"  Tech element {tech_element_id}: {talent_count} talents")
+        tech_domain_id, talent_count = row
+        # Update the tech domain (if it has a talent_count field)
+        # Note: core_tech_domain doesn't have talent_count, but we can log for reference
+        updated_domains += 1
+        logger.info(f"  Tech domain {tech_domain_id}: {talent_count} talents")
 
-    logger.info(f"  {updated_elements} tech elements have talents")
-    return updated_elements
+    logger.info(f"  {updated_domains} tech domains have talents")
+    return updated_domains
 
 
 async def build_homepage_statistics(session):
@@ -146,8 +146,8 @@ async def refresh_all_stats():
         await update_school_statistics(session)
         await session.commit()
 
-        # 2. Update tech element counts
-        await update_tech_element_counts(session)
+        # 2. Update tech domain counts
+        await update_tech_domain_counts(session)
 
         # 3. Build homepage statistics
         await build_homepage_statistics(session)

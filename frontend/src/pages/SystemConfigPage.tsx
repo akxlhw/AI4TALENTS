@@ -2,7 +2,7 @@
  * System Configuration Page - v1.4
  *
  * 功能说明：
- * - 采集配置：技术要素配置、采集任务管理
+ * - 采集配置：技术领域配置、采集任务管理
  * - LLM 配置：LLM API 设置
  */
 import { useEffect, useState, useRef } from 'react'
@@ -59,8 +59,9 @@ import {
   getEndYearOptions,
   TIME_RANGE_CONFIG,
 } from '../constants'
-import type { VenueItem, VenueBinding, TechElementCollect, CollectTask } from '../types'
+import type { VenueItem, VenueBinding, TechDomainCollect, CollectTask } from '../types'
 import { formatUTCToLocal } from '../utils/datetime'
+import { formatNumber } from '../utils/format'
 
 const { Text, Title } = Typography
 
@@ -109,10 +110,10 @@ const SystemConfigPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('collect')
 
   // ========== Collect Config State ==========
-  const [techElements, setTechElements] = useState<TechElementCollect[]>([])
+  const [techDomains, setTechDomains] = useState<TechDomainCollect[]>([])
   const [venueModalVisible, setVenueModalVisible] = useState(false)
   const [collectModalVisible, setCollectModalVisible] = useState(false)
-  const [selectedElement, setSelectedElement] = useState<TechElementCollect | null>(null)
+  const [selectedDomain, setSelectedDomain] = useState<TechDomainCollect | null>(null)
   const [startYear, setStartYear] = useState<number>(TIME_RANGE_CONFIG.DEFAULT_START_YEAR)
   const [endYear, setEndYear] = useState<number | null>(null)
   const [allVenues, setAllVenues] = useState<VenueItem[]>([])
@@ -124,7 +125,7 @@ const SystemConfigPage: React.FC = () => {
   const [taskDetailVisible, setTaskDetailVisible] = useState(false)
   const [selectedTask, setSelectedTask] = useState<CollectTask | null>(null)
   const [loading, setLoading] = useState(false)
-  const [collectSubTab, setCollectSubTab] = useState('tech-elements')
+  const [collectSubTab, setCollectSubTab] = useState('tech-domains')
   const runningTaskIdsRef = useRef<Set<number>>(new Set())
   const [collabSyncStatus, setCollabSyncStatus] = useState<{
     status: string
@@ -183,8 +184,8 @@ const SystemConfigPage: React.FC = () => {
   // Load data based on active tab
   useEffect(() => {
     if (activeTab === 'collect') {
-      if (collectSubTab === 'tech-elements') {
-        loadTechElements()
+      if (collectSubTab === 'tech-domains') {
+        loadTechDomains()
       } else if (collectSubTab === 'tasks') {
         loadTasks()
       } else if (collectSubTab === 'collaborations') {
@@ -210,22 +211,22 @@ const SystemConfigPage: React.FC = () => {
   }, [collectSubTab, tasks])
 
   // ========== Collect Config Functions ==========
-  const loadTechElements = async () => {
+  const loadTechDomains = async () => {
     setLoading(true)
     try {
-      const response = await api.collect.listTechElements()
-      setTechElements(response.data.items || [])
+      const response = await api.collect.listTechDomains()
+      setTechDomains(response.data.items || [])
     } catch {
-      message.error('加载技术要素失败')
+      message.error('加载技术领域失败')
     } finally {
       setLoading(false)
     }
   }
 
-  const loadTechElementVenues = async (techElementId: number) => {
+  const loadTechDomainVenues = async (techDomainId: number) => {
     setVenueLoading(true)
     try {
-      const response = await api.venues.getTechElementBindings(techElementId)
+      const response = await api.venues.getTechDomainBindings(techDomainId)
       const bindings = response.data.items || []
       const venues: VenueItem[] = bindings
         .filter((b: VenueBinding) => b.venue)
@@ -252,38 +253,38 @@ const SystemConfigPage: React.FC = () => {
     }
   }
 
-  const handleConfigVenues = async (element: TechElementCollect) => {
-    setSelectedElement(element)
+  const handleConfigVenues = async (domain: TechDomainCollect) => {
+    setSelectedDomain(domain)
     setSelectedVenueIds([])
     setAllVenues([])
     setVenueModalVisible(true)
-    await loadTechElementVenues(element.tech_element_id)
+    await loadTechDomainVenues(domain.tech_domain_id)
   }
 
   const handleSaveVenues = async () => {
-    if (!selectedElement) return
+    if (!selectedDomain) return
     try {
-      await api.venues.batchCreateBindings(selectedElement.tech_element_id, selectedVenueIds.map(id => parseInt(id, 10)))
+      await api.venues.batchCreateBindings(selectedDomain.tech_domain_id, selectedVenueIds.map(id => parseInt(id, 10)))
       message.success('配置更新成功')
       setVenueModalVisible(false)
-      loadTechElements()
+      loadTechDomains()
     } catch (error) {
       message.error(getErrorMessage(error, '更新失败'))
     }
   }
 
-  const handleOpenCollect = (element: TechElementCollect) => {
-    setSelectedElement(element)
+  const handleOpenCollect = (domain: TechDomainCollect) => {
+    setSelectedDomain(domain)
     setStartYear(TIME_RANGE_CONFIG.DEFAULT_START_YEAR)
     setEndYear(null)
     setCollectModalVisible(true)
   }
 
   const handleTriggerCollect = async () => {
-    if (!selectedElement) return
+    if (!selectedDomain) return
     try {
       await api.collect.triggerTask({
-        tech_element_id: selectedElement.tech_element_id,
+        tech_domain_id: selectedDomain.tech_domain_id,
         start_year: startYear,
         end_year: endYear,
       })
@@ -580,33 +581,29 @@ const SystemConfigPage: React.FC = () => {
   // ========== Table Columns ==========
   const elementColumns = [
     {
-      title: '技术要素',
-      dataIndex: 'element_name',
-      key: 'element_name',
-      render: (name: string, record: TechElementCollect) => (
-        <Space>
-          <Text strong>{name}</Text>
-          {record.element_name_en && <Text type="secondary">({record.element_name_en})</Text>}
-        </Space>
-      ),
+      title: '技术领域',
+      dataIndex: 'domain_name',
+      key: 'domain_name',
+      width: 120,
+      render: (name: string) => <Text strong>{name}</Text>,
     },
     {
       title: '关联顶会顶刊',
       key: 'venues',
-      render: (_: unknown, record: TechElementCollect) => {
+      render: (_: unknown, record: TechDomainCollect) => {
         const sources = record.collect_sources || []
         if (sources.length === 0) return <Text type="secondary">未配置</Text>
-        const displayVenues = sources.slice(0, 3)
+        const displayVenues = sources.slice(0, 10)
         return (
           <Space size={[4, 4]} wrap>
             {displayVenues.map((v) => (
-              <Tooltip key={v.id} title={v.id}>
+              <Tooltip key={v.id} title={v.name || v.id}>
                 <Tag color={getVenueTypeConfig(v.type).color}>
-                  {v.name || v.id}
+                  {v.id.toUpperCase()}
                 </Tag>
               </Tooltip>
             ))}
-            {sources.length > 3 && <Tag>+{sources.length - 3}</Tag>}
+            {sources.length > 10 && <Tag>+{sources.length - 10}</Tag>}
           </Space>
         )
       },
@@ -624,7 +621,7 @@ const SystemConfigPage: React.FC = () => {
       title: '操作',
       key: 'actions',
       width: 180,
-      render: (_: unknown, record: TechElementCollect) => (
+      render: (_: unknown, record: TechDomainCollect) => (
         <Space>
           <Tooltip title="配置顶会顶刊">
             <Button type="link" size="small" icon={<SettingOutlined />} onClick={() => handleConfigVenues(record)}>
@@ -648,8 +645,28 @@ const SystemConfigPage: React.FC = () => {
   ]
 
   const taskColumns = [
-    { title: '任务编码', dataIndex: 'task_code', key: 'task_code', width: 220 },
-    { title: '技术要素', dataIndex: 'tech_element_name', key: 'tech_element_name' },
+    { title: '任务编码', dataIndex: 'task_code', key: 'task_code', width: 180 },
+    { title: '技术领域', dataIndex: 'tech_domain_name', key: 'tech_domain_name' },
+    {
+      title: '顶刊顶会',
+      key: 'venues',
+      render: (_: unknown, record: CollectTask) => {
+        const domain = techDomains.find(d => d.tech_domain_id === record.tech_domain_id)
+        const sources = domain?.collect_sources || []
+        if (sources.length === 0) return <Text type="secondary">-</Text>
+        const displayVenues = sources.slice(0, 5)
+        return (
+          <Space size={[4, 4]} wrap>
+            {displayVenues.map((v) => (
+              <Tooltip key={v.id} title={v.name || v.id}>
+                <Tag>{v.id.toUpperCase()}</Tag>
+              </Tooltip>
+            ))}
+            {sources.length > 5 && <Tag>+{sources.length - 5}</Tag>}
+          </Space>
+        )
+      },
+    },
     {
       title: '时间范围',
       key: 'time_range',
@@ -744,17 +761,17 @@ const SystemConfigPage: React.FC = () => {
                 onChange={setCollectSubTab}
                 items={[
                   {
-                    key: 'tech-elements',
-                    label: <span><SettingOutlined /> 技术要素配置</span>,
+                    key: 'tech-domains',
+                    label: <span><SettingOutlined /> 技术领域配置</span>,
                     children: (
                       <Card>
                         <Spin spinning={loading}>
                           <Table
-                            dataSource={techElements}
+                            dataSource={techDomains}
                             columns={elementColumns}
-                            rowKey="tech_element_id"
+                            rowKey="tech_domain_id"
                             pagination={false}
-                            locale={{ emptyText: <Empty description="暂无技术要素数据" /> }}
+                            locale={{ emptyText: <Empty description="暂无技术领域数据" /> }}
                           />
                         </Spin>
                       </Card>
@@ -880,7 +897,7 @@ const SystemConfigPage: React.FC = () => {
                                   />
                                   <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                                     <Text type="secondary">
-                                      已处理 {embeddingProgress?.processed.toLocaleString() || 0} / {embeddingProgress?.total.toLocaleString() || 0} 位人才
+                                      已处理 {formatNumber(embeddingProgress?.processed)} / {formatNumber(embeddingProgress?.total)} 位人才
                                     </Text>
                                     {embeddingProgress?.failed > 0 && (
                                       <Text type="danger">失败 {embeddingProgress.failed}</Text>
@@ -1190,7 +1207,7 @@ const SystemConfigPage: React.FC = () => {
 
       {/* Venue Config Modal */}
       <Modal
-        title={`配置采集范围 - ${selectedElement?.element_name || ''}`}
+        title={`配置采集范围 - ${selectedDomain?.domain_name || ''}`}
         open={venueModalVisible}
         onCancel={() => setVenueModalVisible(false)}
         onOk={handleSaveVenues}
@@ -1203,8 +1220,8 @@ const SystemConfigPage: React.FC = () => {
           <Transfer
             dataSource={allVenues.map(v => ({
               key: String(v.venue_id),
-              title: v.venue_name,
-              description: v.venue_name_en || v.venue_code,
+              title: (v.venue_code || v.venue_name).toUpperCase(),
+              description: v.venue_name,
               venue_type: v.venue_type,
             }))}
             titles={['不采集', '待采集']}
@@ -1215,7 +1232,8 @@ const SystemConfigPage: React.FC = () => {
                 <Tag color={getVenueTypeConfig(item.venue_type).color} style={{ marginRight: 4 }}>
                   {getVenueTypeConfig(item.venue_type).label}
                 </Tag>
-                {item.title}
+                <Text strong>{item.title}</Text>
+                <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>({item.description})</Text>
               </span>
             )}
             listStyle={{ width: 350, height: 400 }}
@@ -1227,7 +1245,7 @@ const SystemConfigPage: React.FC = () => {
 
       {/* Collect Confirm Modal */}
       <Modal
-        title={`启动采集 - ${selectedElement?.element_name || ''}`}
+        title={`启动采集 - ${selectedDomain?.domain_name || ''}`}
         open={collectModalVisible}
         onCancel={() => setCollectModalVisible(false)}
         onOk={handleTriggerCollect}
@@ -1236,10 +1254,12 @@ const SystemConfigPage: React.FC = () => {
         <Descriptions column={1} bordered size="small">
           <Descriptions.Item label="采集范围">
             <Space size={[4, 4]} wrap>
-              {(selectedElement?.collect_sources || []).slice(0, 5).map(v => (
-                <Tag key={v.id} color={getVenueTypeConfig(v.type).color}>{v.name || v.id}</Tag>
+              {(selectedDomain?.collect_sources || []).slice(0, 5).map(v => (
+                <Tooltip key={v.id} title={v.name || v.id}>
+                  <Tag color={getVenueTypeConfig(v.type).color}>{v.id.toUpperCase()}</Tag>
+                </Tooltip>
               ))}
-              {(selectedElement?.collect_sources?.length || 0) > 5 && <Tag>+{selectedElement!.collect_sources!.length - 5}</Tag>}
+              {(selectedDomain?.collect_sources?.length || 0) > 5 && <Tag>+{selectedDomain!.collect_sources!.length - 5}</Tag>}
             </Space>
           </Descriptions.Item>
           <Descriptions.Item label="数据类型">学者、论文、机构</Descriptions.Item>
@@ -1268,7 +1288,7 @@ const SystemConfigPage: React.FC = () => {
               <Descriptions.Item label="状态">
                 <Badge status={getTaskStatusConfig(selectedTask.status).status} text={getTaskStatusConfig(selectedTask.status).label} />
               </Descriptions.Item>
-              <Descriptions.Item label="技术要素">{selectedTask.tech_element_name}</Descriptions.Item>
+              <Descriptions.Item label="技术领域">{selectedTask.tech_domain_name}</Descriptions.Item>
               <Descriptions.Item label="时间范围">{selectedTask.start_year}年 ~ {selectedTask.end_year ? `${selectedTask.end_year}年` : '至今'}</Descriptions.Item>
               <Descriptions.Item label="当前阶段">
                 {selectedTask.current_step || '-'}
@@ -1328,7 +1348,16 @@ const SystemConfigPage: React.FC = () => {
                   size="small"
                   pagination={false}
                   columns={[
-                    { title: '采集源', dataIndex: 'venue_name', key: 'venue_name', ellipsis: true },
+                    {
+                      title: '采集源',
+                      key: 'venue_id',
+                      width: 120,
+                      render: (_: unknown, record: { venue_id: string; venue_name: string }) => (
+                        <Tooltip title={record.venue_name}>
+                          <Text strong>{record.venue_id.toUpperCase()}</Text>
+                        </Tooltip>
+                      ),
+                    },
                     { title: '状态', dataIndex: 'status', key: 'status', width: 80 },
                     { title: '获取', dataIndex: 'fetched', key: 'fetched', width: 60, align: 'center' },
                     { title: '入库', dataIndex: 'saved', key: 'saved', width: 60, align: 'center' },

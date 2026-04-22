@@ -8,7 +8,8 @@ import json
 import logging
 from datetime import datetime
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, insert, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.raw_data import AuthorTechBelong, RawAuthor, RawInstitution, RawWork
@@ -207,12 +208,62 @@ class RawAuthorRepository:
             return await self.create(author)
 
     async def batch_upsert(self, authors: list[RawAuthor]) -> int:
-        """Batch create or update authors"""
-        count = 0
+        """
+        Batch create or update authors using PostgreSQL INSERT ON CONFLICT.
+
+        This is much faster than individual upserts as it:
+        1. Uses a single SQL statement
+        2. Avoids N+1 queries
+        3. Reduces round-trips to database
+
+        Args:
+            authors: List of RawAuthor objects to upsert
+
+        Returns:
+            Number of authors processed
+        """
+        if not authors:
+            return 0
+
+        # Prepare data for bulk insert
+        values = []
         for author in authors:
-            await self.upsert(author)
-            count += 1
-        return count
+            values.append({
+                "openalex_author_id": author.openalex_author_id,
+                "raw_json": author.raw_json,
+                "display_name": author.display_name,
+                "orcid": author.orcid,
+                "works_count": author.works_count,
+                "cited_by_count": author.cited_by_count,
+                "h_index": author.h_index,
+                "i10_index": author.i10_index,
+                "last_known_institution_id": author.last_known_institution_id,
+                "last_known_institution_name": author.last_known_institution_name,
+                "fetch_task_id": author.fetch_task_id,
+                "fetched_at": datetime.utcnow(),
+            })
+
+        # Use PostgreSQL INSERT ON CONFLICT for efficient upsert
+        stmt = pg_insert(RawAuthor).values(values)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["openalex_author_id"],
+            set_={
+                "raw_json": stmt.excluded.raw_json,
+                "display_name": stmt.excluded.display_name,
+                "orcid": stmt.excluded.orcid,
+                "works_count": stmt.excluded.works_count,
+                "cited_by_count": stmt.excluded.cited_by_count,
+                "h_index": stmt.excluded.h_index,
+                "i10_index": stmt.excluded.i10_index,
+                "last_known_institution_id": stmt.excluded.last_known_institution_id,
+                "last_known_institution_name": stmt.excluded.last_known_institution_name,
+                "fetch_task_id": stmt.excluded.fetch_task_id,
+                "fetched_at": stmt.excluded.fetched_at,
+            }
+        )
+
+        await self.session.execute(stmt)
+        return len(authors)
 
     async def get_by_openalex_id(self, openalex_id: str) -> RawAuthor | None:
         """Get raw author by OpenAlex ID"""
@@ -416,7 +467,7 @@ class RawInstitutionRepository:
 
 
 class AuthorTechBelongRepository:
-    """Author-TechElement relationship repository"""
+    """Author-TechDomain relationship repository"""
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -430,7 +481,7 @@ class AuthorTechBelongRepository:
 
     async def upsert(self, belong: AuthorTechBelong) -> AuthorTechBelong:
         """Create or update an author-tech belong relationship"""
-        existing = await self.get_by_author_and_tech(belong.openalex_author_id, belong.tech_element_id)
+        existing = await self.get_by_author_and_tech(belong.openalex_author_id, belong.tech_domain_id)
         if existing:
             existing.work_count_in_venue = belong.work_count_in_venue
             existing.first_work_year = belong.first_work_year
@@ -442,35 +493,35 @@ class AuthorTechBelongRepository:
         else:
             return await self.create(belong)
 
-    async def get_by_author_and_tech(self, openalex_author_id: str, tech_element_id: int) -> AuthorTechBelong | None:
-        """Get relationship by author and tech element"""
+    async def get_by_author_and_tech(self, openalex_author_id: str, tech_domain_id: int) -> AuthorTechBelong | None:
+        """Get relationship by author and tech domain"""
         result = await self.session.execute(
             select(AuthorTechBelong).where(
                 AuthorTechBelong.openalex_author_id == openalex_author_id,
-                AuthorTechBelong.tech_element_id == tech_element_id
+                AuthorTechBelong.tech_domain_id == tech_domain_id
             )
         )
         return result.scalar_one_or_none()
 
-    async def get_by_tech_element(self, tech_element_id: int) -> list[AuthorTechBelong]:
-        """Get all relationships for a tech element"""
+    async def get_by_tech_domain(self, tech_domain_id: int) -> list[AuthorTechBelong]:
+        """Get all relationships for a tech domain"""
         result = await self.session.execute(
-            select(AuthorTechBelong).where(AuthorTechBelong.tech_element_id == tech_element_id)
+            select(AuthorTechBelong).where(AuthorTechBelong.tech_domain_id == tech_domain_id)
         )
         return list(result.scalars().all())
 
     async def get_by_author(self, openalex_author_id: str) -> list[AuthorTechBelong]:
-        """Get all tech elements for an author"""
+        """Get all tech domains for an author"""
         result = await self.session.execute(
             select(AuthorTechBelong).where(AuthorTechBelong.openalex_author_id == openalex_author_id)
         )
         return list(result.scalars().all())
 
-    async def count_by_tech_element(self, tech_element_id: int) -> int:
-        """Count authors for a tech element"""
+    async def count_by_tech_domain(self, tech_domain_id: int) -> int:
+        """Count authors for a tech domain"""
         result = await self.session.execute(
             select(func.count(AuthorTechBelong.belong_id))
-            .where(AuthorTechBelong.tech_element_id == tech_element_id)
+            .where(AuthorTechBelong.tech_domain_id == tech_domain_id)
         )
         return result.scalar() or 0
 

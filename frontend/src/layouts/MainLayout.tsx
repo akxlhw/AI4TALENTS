@@ -29,9 +29,9 @@ const MainLayout: React.FC = () => {
       label: '首页',
     },
     {
-      key: '/tech-element',
+      key: '/tech-domain',
       icon: <AppstoreOutlined />,
-      label: '技术要素',
+      label: '技术领域',
     },
     {
       key: '/country-school',

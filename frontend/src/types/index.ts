@@ -121,12 +121,12 @@ export interface UserPermission {
 // v1.1 新增类型定义
 // ============================================
 
-// Tech Element - 技术要素
-export interface TechElement {
-  tech_element_id: number
-  element_code: string
-  element_name: string
-  element_name_en?: string | null
+// Tech Domain - 技术领域
+export interface TechDomain {
+  tech_domain_id: number
+  domain_code: string
+  domain_name: string
+  domain_name_en?: string | null
   directions?: TechDirection[]
 }
 
@@ -135,7 +135,7 @@ export interface TechDirection {
   tech_direction_id: number
   direction_code: string
   direction_name: string
-  tech_element_id: number
+  tech_domain_id: number
 }
 
 // Search Talent Result - 搜索结果人才
@@ -153,6 +153,7 @@ export interface SearchTalent {
   topic_tags: string[]
   openalex_topics: string[]  // OpenAlex研究主题（具体研究方向）
   similarity_score?: number  // 语义搜索相似度分数
+  match_sources?: string[]   // 匹配来源：fulltext, semantic_research, semantic_papers
 }
 
 // Search Filter Params - 搜索筛选参数
@@ -160,7 +161,7 @@ export interface SearchFilterParams {
   role_type?: string
   school_id?: number
   country_code?: string
-  tech_element_id?: number
+  tech_domain_id?: number
   tech_direction_id?: number
   min_works?: number
   min_citations?: number
@@ -220,11 +221,11 @@ export interface VenueItem {
   is_enabled: boolean
 }
 
-// Venue Binding - 技术要素与顶会顶刊的绑定
+// Venue Binding - 技术领域与顶会顶刊的绑定
 export interface VenueBinding {
   binding_id: number
   venue_id: number
-  tech_element_id: number
+  tech_domain_id: number
   is_enabled: boolean
   venue?: VenueItem
   author_count?: number
@@ -232,12 +233,12 @@ export interface VenueBinding {
   last_collect_at?: string
 }
 
-// Tech Element Collect - 技术要素采集配置
-export interface TechElementCollect {
-  tech_element_id: number
-  element_code: string
-  element_name: string
-  element_name_en: string | null
+// Tech Domain Collect - 技术领域采集配置
+export interface TechDomainCollect {
+  tech_domain_id: number
+  domain_code: string
+  domain_name: string
+  domain_name_en: string | null
   collect_sources: Array<{ id: string; name: string; type: string }> | null
   last_collect_at: string | null
   is_enabled: boolean
@@ -248,8 +249,8 @@ export interface TechElementCollect {
 export interface CollectTask {
   task_id: number
   task_code: string
-  tech_element_id: number
-  tech_element_name: string | null
+  tech_domain_id: number
+  tech_domain_name: string | null
   start_year: number
   end_year: number | null  // null 表示至今
   triggered_by: number | null

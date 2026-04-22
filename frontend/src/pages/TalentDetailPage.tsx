@@ -33,6 +33,7 @@ import { api } from '../services/api'
 import FavoriteButton from '../components/FavoriteButton'
 import CollaborationGraph, { CollaborationNode, CollaborationLink } from '../components/CollaborationGraph'
 import { getRoleTypeConfig } from '../constants/roleType'
+import { formatNumber } from '../utils/format'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -181,7 +182,7 @@ const TalentDetailPage: React.FC = () => {
       key: 'citation_count',
       width: 100,
       align: 'right' as const,
-      render: (count: number) => count.toLocaleString(),
+      render: (count: number) => formatNumber(count),
     },
   ]
 

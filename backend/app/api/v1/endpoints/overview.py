@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.models.school import School
 from app.models.talent import Talent
-from app.models.tech_element import TechDirection, TechElement
+from app.models.tech_domain import TechDirection, TechDomain
 from app.repositories.stat_repository import StatisticsRepository
 from app.schemas.overview import OverviewResponse, OverviewStats
 
@@ -34,7 +34,7 @@ async def get_overview(
     - Total number of students
     - Total number of talents
     - Total number of countries
-    - Total number of tech elements
+    - Total number of tech domains
     - Total number of tech directions
     """
     repo = StatisticsRepository(session)
@@ -55,12 +55,12 @@ async def get_overview(
     )
     country_count = country_result.scalar() or 0
 
-    # 实时计算技术要素数
-    tech_element_result = await session.execute(
-        select(func.count(TechElement.tech_element_id))
-        .where(TechElement.is_enabled.is_(True))
+    # 实时计算技术领域数
+    tech_domain_result = await session.execute(
+        select(func.count(TechDomain.tech_domain_id))
+        .where(TechDomain.is_enabled.is_(True))
     )
-    tech_element_count = tech_element_result.scalar() or 0
+    tech_domain_count = tech_domain_result.scalar() or 0
 
     # 实时计算技术方向数
     tech_direction_result = await session.execute(
@@ -76,7 +76,7 @@ async def get_overview(
             student_count=stats.student_count,
             talent_count=stats.talent_count,
             country_count=country_count,
-            tech_element_count=tech_element_count,
+            tech_domain_count=tech_domain_count,
             tech_direction_count=tech_direction_count,
         ),
         version=stats.stat_version,

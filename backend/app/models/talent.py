@@ -82,12 +82,12 @@ class Talent(Base, TimestampMixin):
         denormalized cache for quick filtering and display.
         """
         if self.tech_tags:
-            # Get unique tech element names from tech_tags
-            element_names = set()
+            # Get unique tech domain names from tech_tags
+            domain_names = set()
             for tag in self.tech_tags:
-                if tag.is_enabled and tag.tech_element:
-                    element_names.add(tag.tech_element.element_name)
-            self.topic_tags = sorted(element_names)
+                if tag.is_enabled and tag.tech_domain:
+                    domain_names.add(tag.tech_domain.domain_name)
+            self.topic_tags = sorted(domain_names)
         else:
             self.topic_tags = []
 

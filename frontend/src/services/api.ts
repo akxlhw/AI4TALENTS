@@ -225,13 +225,13 @@ export const api = {
       apiClient.get('/users/me/scopes/schools'),
     checkSchoolAccess: (schoolId: number) =>
       apiClient.get(`/users/me/scopes/check/${schoolId}`),
-    getAccessibleTechElements: () =>
-      apiClient.get('/users/me/scopes/tech-elements'),
+    getAccessibleTechDomains: () =>
+      apiClient.get('/users/me/scopes/tech-domains'),
     getAccessibleCountries: () =>
       apiClient.get('/users/me/scopes/countries'),
     getDefaultView: () =>
       apiClient.get('/users/me/default-view'),
-    updateDefaultView: (defaultView: 'tech_element' | 'country_school') =>
+    updateDefaultView: (defaultView: 'tech_domain' | 'country_school') =>
       apiClient.put('/users/me/default-view', { default_view: defaultView }),
   },
 
@@ -251,30 +251,30 @@ export const api = {
       apiClient.delete(`/favorites/${talentId}`),
   },
 
-  // Tech Elements
-  techElements: {
+  // Tech Domains
+  techDomains: {
     list: () =>
-      apiClient.get('/tech-elements'),
+      apiClient.get('/tech-domains'),
     get: (id: number) =>
-      apiClient.get(`/tech-elements/${id}`),
+      apiClient.get(`/tech-domains/${id}`),
     getSummary: () =>
-      apiClient.get('/tech-elements/summary'),
+      apiClient.get('/tech-domains/summary'),
     getOverallStats: () =>
-      apiClient.get('/tech-elements/overall-stats'),
+      apiClient.get('/tech-domains/overall-stats'),
     getOverallCountries: () =>
-      apiClient.get('/tech-elements/overall-countries'),
+      apiClient.get('/tech-domains/overall-countries'),
     getOverallSchools: (params?: { page?: number; page_size?: number }) =>
-      apiClient.get('/tech-elements/overall-schools', { params }),
+      apiClient.get('/tech-domains/overall-schools', { params }),
     getOverallTalents: (params?: { country_code?: string; school_id?: number; role_type?: string; keyword?: string; page?: number; page_size?: number }) =>
-      apiClient.get('/tech-elements/overall-talents', { params }),
+      apiClient.get('/tech-domains/overall-talents', { params }),
     getStats: (id: number) =>
-      apiClient.get(`/tech-elements/${id}/stats`),
+      apiClient.get(`/tech-domains/${id}/stats`),
     getCountries: (id: number, directionId?: number) =>
-      apiClient.get(`/tech-elements/${id}/countries`, { params: { direction_id: directionId } }),
+      apiClient.get(`/tech-domains/${id}/countries`, { params: { direction_id: directionId } }),
     getSchools: (id: number, params?: { direction_id?: number; country_code?: string; page?: number; page_size?: number }) =>
-      apiClient.get(`/tech-elements/${id}/schools`, { params }),
+      apiClient.get(`/tech-domains/${id}/schools`, { params }),
     getTalents: (id: number, params?: { direction_id?: number; country_code?: string; school_id?: number; role_type?: string; keyword?: string; page?: number; page_size?: number }) =>
-      apiClient.get(`/tech-elements/${id}/talents`, { params }),
+      apiClient.get(`/tech-domains/${id}/talents`, { params }),
   },
 
   // Talent Pools
@@ -303,17 +303,17 @@ export const api = {
 
   // Collect Configuration - Simplified for MVP v1.1
   collect: {
-    // Tech Elements with Collect Config
-    listTechElements: () =>
-      apiClient.get('/collect/tech-elements'),
-    updateTechElementSources: (techElementId: number, data: { collect_sources: Array<{ id: string; name: string; type: string }> }) =>
-      apiClient.put(`/collect/tech-elements/${techElementId}/sources`, data),
+    // Tech Domains with Collect Config
+    listTechDomains: () =>
+      apiClient.get('/collect/tech-domains'),
+    updateTechDomainSources: (techDomainId: number, data: { collect_sources: Array<{ id: string; name: string; type: string }> }) =>
+      apiClient.put(`/collect/tech-domains/${techDomainId}/sources`, data),
     // Tasks
-    listTasks: (params?: { status?: string; tech_element_id?: number; page?: number; page_size?: number }) =>
+    listTasks: (params?: { status?: string; tech_domain_id?: number; page?: number; page_size?: number }) =>
       apiClient.get('/collect/tasks', { params }),
     getTask: (taskId: number) =>
       apiClient.get(`/collect/tasks/${taskId}`),
-    triggerTask: (data: { tech_element_id: number; start_year?: number; end_year?: number | null }) =>
+    triggerTask: (data: { tech_domain_id: number; start_year?: number; end_year?: number | null }) =>
       apiClient.post('/collect/tasks', data),
     cancelTask: (taskId: number) =>
       apiClient.post(`/collect/tasks/${taskId}/cancel`),
@@ -366,18 +366,18 @@ export const api = {
     // 获取单个 Venue 详情
     get: (venueId: number) =>
       apiClient.get(`/venues/${venueId}`),
-    // 获取技术要素的已绑定 Venue
-    getTechElementBindings: (techElementId: number, isEnabled?: boolean) =>
-      apiClient.get(`/venues/tech-elements/${techElementId}/bindings`, { params: { is_enabled: isEnabled } }),
+    // 获取技术领域的已绑定 Venue
+    getTechDomainBindings: (techDomainId: number, isEnabled?: boolean) =>
+      apiClient.get(`/venues/tech-domains/${techDomainId}/bindings`, { params: { is_enabled: isEnabled } }),
     // 批量创建绑定
-    batchCreateBindings: (techElementId: number, venueIds: number[]) =>
-      apiClient.post('/venues/bindings/batch', { tech_element_id: techElementId, venue_ids: venueIds }),
+    batchCreateBindings: (techDomainId: number, venueIds: number[]) =>
+      apiClient.post('/venues/bindings/batch', { tech_domain_id: techDomainId, venue_ids: venueIds }),
     // 删除绑定
     deleteBinding: (bindingId: number) =>
       apiClient.delete(`/venues/bindings/${bindingId}`),
     // 批量更新绑定的启用状态
-    updateBindings: (techElementId: number, venueIds: number[]) =>
-      apiClient.post('/venues/bindings/batch', { tech_element_id: techElementId, venue_ids: venueIds }),
+    updateBindings: (techDomainId: number, venueIds: number[]) =>
+      apiClient.post('/venues/bindings/batch', { tech_domain_id: techDomainId, venue_ids: venueIds }),
   },
 
   // Homepage - 首页聚合数据
@@ -399,7 +399,7 @@ export const api = {
       min_citations?: number
       min_works?: number
       country_code?: string
-      tech_element_id?: number
+      tech_domain_id?: number
       page?: number
       page_size?: number
     }) => apiClient.get('/search/v2/talents', { params }),

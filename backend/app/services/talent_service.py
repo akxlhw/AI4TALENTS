@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.school import School
 from app.models.talent import Talent
-from app.models.tech_element import TalentTechTag
+from app.models.tech_domain import TalentTechTag
 from app.repositories.school_repository import SchoolRepository
 from app.repositories.talent_repository import TalentRepository
 
@@ -103,7 +103,7 @@ class TalentService:
             .where(Talent.talent_id == talent_id)
             .options(
                 selectinload(Talent.school),
-                selectinload(Talent.tech_tags).selectinload(TalentTechTag.tech_element),
+                selectinload(Talent.tech_tags).selectinload(TalentTechTag.tech_domain),
             )
         )
         return result.scalar_one_or_none()

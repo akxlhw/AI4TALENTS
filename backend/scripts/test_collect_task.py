@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy import select
 from app.core.database import AsyncSessionLocal
 from app.models.sync import CollectTask
-from app.models.tech_element import TechElement
+from app.models.tech_domain import TechDomain
 from app.models.venue import VenueTechBinding, VenueSubTask
 from datetime import datetime
 import uuid
@@ -25,14 +25,14 @@ async def test_collect_task():
     print("=" * 60)
 
     async with AsyncSessionLocal() as session:
-        # 1. 检查技术要素
-        print("\n1. 检查技术要素...")
-        result = await session.execute(select(TechElement).limit(1))
+        # 1. 检查技术领域
+        print("\n1. 检查技术领域...")
+        result = await session.execute(select(TechDomain).limit(1))
         tech = result.scalar_one_or_none()
         if not tech:
-            print("错误: 没有找到技术要素")
+            print("错误: 没有找到技术领域")
             return
-        print(f"   技术要素: {tech.element_name} (ID: {tech.tech_element_id})")
+        print(f"   技术领域: {tech.domain_name} (ID: {tech.tech_domain_id})")
 
         # 2. 检查绑定的 venue
         print("\n2. 检查绑定的顶会顶刊...")
@@ -40,7 +40,7 @@ async def test_collect_task():
         result = await session.execute(
             select(VenueTechBinding)
             .options(selectinload(VenueTechBinding.venue))
-            .where(VenueTechBinding.tech_element_id == tech.tech_element_id)
+            .where(VenueTechBinding.tech_domain_id == tech.tech_domain_id)
             .where(VenueTechBinding.is_enabled == True)
         )
         bindings = list(result.scalars().all())
@@ -67,7 +67,7 @@ async def test_collect_task():
         print("\n4. 创建新任务...")
         task = CollectTask(
             task_code=f"TEST-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}",
-            tech_element_id=tech.tech_element_id,
+            tech_domain_id=tech.tech_domain_id,
             collect_mode="full",
             triggered_by=1,
             triggered_at=datetime.utcnow(),

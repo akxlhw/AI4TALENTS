@@ -4,7 +4,7 @@ Embedding generation API endpoints.
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -122,6 +122,7 @@ async def get_generation_progress(
 async def trigger_generation(
     force: bool = False,
     batch_size: int = 100,
+    vector_types: str = "research",  # Comma-separated: "research,papers"
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_super_admin),
 ):
@@ -165,6 +166,16 @@ async def trigger_generation(
             detail="嵌入 API 地址未配置。请在系统配置中设置嵌入模型的 API 地址。"
         )
 
+    # Parse vector types
+    types_list = [t.strip() for t in vector_types.split(",") if t.strip()]
+    valid_types = {"research", "papers"}
+    for t in types_list:
+        if t not in valid_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid vector type: {t}. Valid types: research, papers"
+            )
+
     # Count talents
     total_result = await session.execute(
         select(func.count()).select_from(Talent).where(Talent.is_visible == True)
@@ -183,18 +194,18 @@ async def trigger_generation(
 
     _embedding_progress["status"] = "running"
     _embedding_progress["processed"] = 0
-    _embedding_progress["total"] = total_talents
+    _embedding_progress["total"] = total_talents * len(types_list)
     _embedding_progress["failed"] = 0
     _embedding_progress["started_at"] = datetime.utcnow().isoformat()
     _embedding_progress["completed_at"] = None
     _embedding_progress["error_message"] = None
 
-    asyncio.create_task(_run_embedding_generation(force, batch_size))
+    asyncio.create_task(_run_embedding_generation(force, batch_size, types_list))
 
-    logger.info(f"Embedding generation triggered by user {current_user.get('user_id')}")
+    logger.info(f"Embedding generation triggered by user {current_user.get('user_id')} for types: {types_list}")
 
     return EmbeddingGenerateResponse(
-        message="Embedding generation started",
+        message=f"Embedding generation started for types: {', '.join(types_list)}",
         total_talents=total_talents,
         status="running",
     )
@@ -223,7 +234,7 @@ async def cancel_generation(
     return {"message": "Generation task cancelled"}
 
 
-async def _run_embedding_generation(force: bool, batch_size: int):
+async def _run_embedding_generation(force: bool, batch_size: int, vector_types: List[str]):
     """Run embedding generation in background."""
     global _embedding_progress
 
@@ -283,14 +294,7 @@ async def _run_embedding_generation(force: bool, batch_size: int):
             # 使用用户配置的嵌入模型名称
             embedding_model = llm_config.embedding_model
 
-            if not force:
-                # Exclude already embedded talents (使用正确的模型名称)
-                from app.repositories.embedding_repository import EmbeddingRepository
-                repo = EmbeddingRepository(session)
-                missing_ids = await repo.get_missing_talent_ids(talent_ids, embedding_model)
-                talent_ids = missing_ids
-
-            _embedding_progress["total"] = len(talent_ids)
+            _embedding_progress["total"] = len(talent_ids) * len(vector_types)
 
             if not talent_ids:
                 _embedding_progress["status"] = "completed"
@@ -302,10 +306,10 @@ async def _run_embedding_generation(force: bool, batch_size: int):
                 session=session,
                 llm_gateway=llm_gateway,
                 rate_limit_delay=1.0,
-                model_name=embedding_model,  # 使用实际模型名称
+                model_name=embedding_model,
             )
 
-            # Process in batches (使用较小的批次以便实时更新进度)
+            # Process in batches with multiple vector types
             processed = 0
             failed = 0
             # MiniMax 有速率限制，使用较小的批次
@@ -322,7 +326,8 @@ async def _run_embedding_generation(force: bool, batch_size: int):
                     stats = await embed_service.batch_generate_embeddings(
                         talent_ids=batch,
                         batch_size=actual_batch_size,
-                        force_regenerate=force,  # 使用 force 参数
+                        force_regenerate=force,
+                        vector_types=vector_types,
                     )
                     processed += stats.get("processed", 0)
                     failed += stats.get("failed", 0)
@@ -330,13 +335,13 @@ async def _run_embedding_generation(force: bool, batch_size: int):
                     # 实时更新进度
                     _embedding_progress["processed"] = processed
                     _embedding_progress["failed"] = failed
-                    logger.info(f"Progress: {processed}/{len(talent_ids)} processed, {failed} failed")
+                    logger.info(f"Progress: {processed}/{_embedding_progress['total']} processed, {failed} failed")
 
                     await session.commit()
 
                 except Exception as e:
                     logger.error(f"Batch {i // actual_batch_size + 1} failed: {e}")
-                    failed += len(batch)
+                    failed += len(batch) * len(vector_types)
                     _embedding_progress["failed"] = failed
 
             # Mark as completed

@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from datetime import datetime
 
 from sqlalchemy import select
@@ -34,7 +34,12 @@ class EmbeddingService:
     """嵌入服务
 
     负责生成和管理人才嵌入向量。
+    支持多种向量类型：research（研究方向）、papers（论文标题）
     """
+
+    # 向量类型常量
+    VECTOR_TYPE_RESEARCH = "research"
+    VECTOR_TYPE_PAPERS = "papers"
 
     def __init__(
         self,
@@ -64,7 +69,11 @@ class EmbeddingService:
         self.rate_limit_delay = rate_limit_delay
         self.repository = EmbeddingRepository(session)
 
-    async def get_or_create_embedding(self, talent_id: int) -> List[float]:
+    async def get_or_create_embedding(
+        self,
+        talent_id: int,
+        vector_type: str = "research"
+    ) -> List[float]:
         """
         获取或创建人才嵌入向量
 
@@ -72,6 +81,7 @@ class EmbeddingService:
 
         Args:
             talent_id: 人才 ID
+            vector_type: 向量类型 (research/papers)
 
         Returns:
             List[float]: 嵌入向量
@@ -86,7 +96,7 @@ class EmbeddingService:
             raise TalentNotFoundError(talent_id)
 
         # 检查数据库
-        record = await self.repository.get_by_talent_id(talent_id)
+        record = await self.repository.get_by_talent_id(talent_id, vector_type)
         if record:
             # 检查模型是否匹配
             if record.model_name == self.model_name:
@@ -94,19 +104,26 @@ class EmbeddingService:
 
         # 检查缓存
         if self.cache:
-            cached = await self.cache.get_embedding(talent_id)
+            cached = await self.cache.get_embedding(talent_id, vector_type)
             if cached:
                 return cached
 
         # 需要生成嵌入，检查是否有 LLM 网关
         if self.llm_gateway is None:
             raise EmbeddingError(
-                f"No embedding found for talent {talent_id} and no LLM gateway configured. "
+                f"No embedding found for talent {talent_id} ({vector_type}) and no LLM gateway configured. "
                 "Cannot generate new embedding."
             )
 
-        # 生成嵌入
-        source_text = self._build_source_text(talent)
+        # 根据向量类型生成嵌入
+        if vector_type == self.VECTOR_TYPE_RESEARCH:
+            source_text = self._build_research_source_text(talent)
+        else:
+            source_text = await self._build_papers_source_text(talent_id)
+
+        if not source_text:
+            raise EmbeddingError(f"No source text for talent {talent_id} ({vector_type})")
+
         result = await self.llm_gateway.generate_embedding(source_text)
 
         # 存储到数据库
@@ -116,11 +133,12 @@ class EmbeddingService:
             embedding=result.embedding,
             model_name=self.model_name,
             source_text_hash=source_hash,
+            vector_type=vector_type,
         )
 
         # 存储到缓存
         if self.cache:
-            await self.cache.set_embedding(talent_id, result.embedding)
+            await self.cache.set_embedding(talent_id, result.embedding, vector_type)
 
         return result.embedding
 
@@ -130,6 +148,7 @@ class EmbeddingService:
         batch_size: int = 100,
         force_regenerate: bool = False,
         progress_callback: Any = None,
+        vector_types: List[str] | None = None,
     ) -> dict:
         """
         批量生成嵌入向量
@@ -139,35 +158,87 @@ class EmbeddingService:
             batch_size: 批次大小
             force_regenerate: 是否强制重新生成
             progress_callback: 进度回调函数
+            vector_types: 要生成的向量类型列表，默认 ["research"]
 
         Returns:
             dict: 统计结果
         """
+        if vector_types is None:
+            vector_types = [self.VECTOR_TYPE_RESEARCH]
+
         stats = {
-            "total": len(talent_ids),
+            "total": len(talent_ids) * len(vector_types),
             "processed": 0,
             "skipped": 0,
             "failed": 0,
             "failed_ids": [],
         }
 
+        # 检查是否有 LLM 网关（生成嵌入需要）
+        if self.llm_gateway is None:
+            logger.error("Cannot generate embeddings: no LLM gateway configured")
+            stats["failed"] = stats["total"]
+            stats["failed_ids"] = talent_ids
+            return stats
+
+        # 获取人才信息（一次性获取，用于两种向量类型）
+        talents = await self._get_talents_by_ids(talent_ids)
+        if not talents:
+            logger.warning("No talents found for given IDs")
+            return stats
+
+        talent_map = {t.talent_id: t for t in talents}
+
+        # 获取论文标题（如果需要生成 papers 向量）
+        papers_map: Dict[int, List[str]] = {}
+        if self.VECTOR_TYPE_PAPERS in vector_types:
+            from app.repositories.talent_repository import TalentRepository
+            talent_repo = TalentRepository(self.session)
+            papers_map = await talent_repo.get_paper_titles_for_talents(
+                list(talent_map.keys()), limit_per_talent=10
+            )
+
+        # 对每种向量类型分别处理
+        for vector_type in vector_types:
+            type_stats = await self._batch_generate_for_type(
+                talent_ids=talent_ids,
+                talent_map=talent_map,
+                papers_map=papers_map,
+                vector_type=vector_type,
+                batch_size=batch_size,
+                force_regenerate=force_regenerate,
+                progress_callback=progress_callback,
+            )
+            stats["processed"] += type_stats["processed"]
+            stats["skipped"] += type_stats["skipped"]
+            stats["failed"] += type_stats["failed"]
+            stats["failed_ids"].extend(type_stats["failed_ids"])
+
+        return stats
+
+    async def _batch_generate_for_type(
+        self,
+        talent_ids: List[int],
+        talent_map: Dict[int, Talent],
+        papers_map: Dict[int, List[str]],
+        vector_type: str,
+        batch_size: int,
+        force_regenerate: bool,
+        progress_callback: Any,
+    ) -> dict:
+        """对单个向量类型进行批量生成"""
+        stats = {"processed": 0, "skipped": 0, "failed": 0, "failed_ids": []}
+
         # 获取已有嵌入的人才（如果不强制重新生成）
         if not force_regenerate:
             missing_ids = await self.repository.get_missing_talent_ids(
-                talent_ids, self.model_name
+                talent_ids, self.model_name, vector_type
             )
             stats["skipped"] = len(talent_ids) - len(missing_ids)
             talent_ids = missing_ids
 
         if not talent_ids:
-            logger.info("All talents already have embeddings")
-            return stats
-
-        # 检查是否有 LLM 网关（生成嵌入需要）
-        if self.llm_gateway is None:
-            logger.error("Cannot generate embeddings: no LLM gateway configured")
-            stats["failed"] = len(talent_ids)
-            stats["failed_ids"] = talent_ids
+            logger.info(f"All talents already have {vector_type} embeddings")
             return stats
 
         # 批量处理
@@ -176,17 +247,28 @@ class EmbeddingService:
             batch_num = i // batch_size + 1
 
             try:
-                # 获取人才信息
-                talents = await self._get_talents_by_ids(batch)
-                if not talents:
-                    logger.warning(f"Batch {batch_num}: No talents found for IDs {batch}")
+                # 构建文本
+                texts = []
+                valid_talent_ids = []
+                for tid in batch:
+                    talent = talent_map.get(tid)
+                    if not talent:
+                        continue
+
+                    if vector_type == self.VECTOR_TYPE_RESEARCH:
+                        text = self._build_research_source_text(talent)
+                    else:
+                        text = ". ".join(papers_map.get(tid, [])[:10])
+
+                    if text:
+                        texts.append(text)
+                        valid_talent_ids.append(tid)
+
+                if not texts:
+                    logger.warning(f"Batch {batch_num}: No valid texts for {vector_type}")
                     continue
 
-                # 构建文本
-                texts = [self._build_source_text(t) for t in talents]
-                talent_id_map = {self._build_source_text(t): t.talent_id for t in talents}
-
-                logger.info(f"Batch {batch_num}: Generating embeddings for {len(texts)} talents")
+                logger.info(f"Batch {batch_num}: Generating {vector_type} embeddings for {len(texts)} talents")
 
                 # 批量生成嵌入
                 results = await self.llm_gateway.generate_embedding_batch(texts)
@@ -199,26 +281,24 @@ class EmbeddingService:
                         f"Batch {batch_num}: Result count mismatch! "
                         f"Expected {len(texts)}, got {len(results)}"
                     )
-                    # 只处理匹配的部分
                     stats["failed"] += len(texts) - len(results)
 
-                # 批量存储结果（性能优化：单次数据库操作）
+                # 批量存储结果
                 items_to_store = []
-                for text, result in zip(texts, results):
-                    talent_id = talent_id_map.get(text)
-                    if talent_id:
-                        source_hash = self.calculate_source_hash(text)
-                        items_to_store.append({
-                            'talent_id': talent_id,
-                            'embedding': result.embedding,
-                            'model_name': self.model_name,
-                            'source_text_hash': source_hash,
-                        })
+                for tid, text, result in zip(valid_talent_ids, texts, results):
+                    source_hash = self.calculate_source_hash(text)
+                    items_to_store.append({
+                        'talent_id': tid,
+                        'embedding': result.embedding,
+                        'model_name': self.model_name,
+                        'source_text_hash': source_hash,
+                        'vector_type': vector_type,
+                    })
 
                 if items_to_store:
                     stored_count = await self.repository.batch_upsert(items_to_store)
                     stats["processed"] += stored_count
-                    logger.info(f"Batch {batch_num}: Batch stored {stored_count} embeddings")
+                    logger.info(f"Batch {batch_num}: Stored {stored_count} {vector_type} embeddings")
 
                 # 提交事务
                 await self.session.commit()
@@ -228,7 +308,7 @@ class EmbeddingService:
                     await progress_callback(
                         processed=stats["processed"],
                         total=len(talent_ids),
-                        batch_num=i // batch_size + 1
+                        batch_num=batch_num
                     )
 
                 # 限流
@@ -236,32 +316,54 @@ class EmbeddingService:
                     await asyncio.sleep(self.rate_limit_delay)
 
             except Exception as e:
-                logger.error(f"Batch embedding failed for batch {i}: {e}")
+                logger.error(f"Batch embedding failed for batch {i} ({vector_type}): {e}")
                 stats["failed"] += len(batch)
                 stats["failed_ids"].extend(batch)
                 await self.session.rollback()
 
         return stats
 
-    async def get_average_embedding(self, talent_ids: List[int]) -> List[float]:
+    async def get_average_embedding(
+        self,
+        talent_ids: List[int],
+        vector_type: str = "research"
+    ) -> List[float]:
         """
         获取多个人才的平均嵌入向量
 
+        使用批量查询优化性能，避免 N+1 问题。
+
         Args:
             talent_ids: 人才 ID 列表
+            vector_type: 向量类型 (research/papers)
 
         Returns:
             List[float]: 平均嵌入向量
         """
         import numpy as np
 
+        if not talent_ids:
+            return [0.0] * self.dimension
+
+        # 批量获取 embeddings（避免 N+1 查询）
+        records = await self.repository.get_by_talent_ids(talent_ids, vector_type)
+
+        # 构建 talent_id -> embedding 的映射
+        embedding_map = {r.talent_id: r.embedding for r in records if r.embedding}
+
+        # 收集存在的 embeddings
         embeddings = []
+        missing_ids = []
+
         for tid in talent_ids:
-            try:
-                emb = await self.get_or_create_embedding(tid)
-                embeddings.append(emb)
-            except Exception as e:
-                logger.warning(f"Failed to get embedding for talent {tid}: {e}")
+            if tid in embedding_map:
+                embeddings.append(embedding_map[tid])
+            else:
+                missing_ids.append(tid)
+
+        # 如果有缺失的，可以并行生成（可选，当前使用零向量）
+        if missing_ids:
+            logger.info(f"Missing embeddings for {len(missing_ids)} talents, using zero vectors")
 
         if not embeddings:
             return [0.0] * self.dimension
@@ -295,11 +397,12 @@ class EmbeddingService:
         """
         return hashlib.md5(source_text.encode()).hexdigest()
 
-    def _build_source_text(self, talent: Talent) -> str:
+    def _build_research_source_text(self, talent: Talent) -> str:
         """
-        构建嵌入源文本
+        构建研究方向向量源文本
 
-        优先使用研究方向信息，让语义搜索更精准匹配研究领域。
+        使用 openalex_topics 作为主要研究方向描述，
+        topic_tags 作为补充，职位和姓名作为最后回退。
 
         Args:
             talent: 人才对象
@@ -307,35 +410,51 @@ class EmbeddingService:
         Returns:
             str: 用于生成嵌入的文本
         """
-        # 研究方向相关字段优先
         research_parts = []
 
-        # 1. OpenAlex 研究主题（最精准的研究方向描述）
+        # OpenAlex 研究主题（最精准的研究方向描述）
         if talent.openalex_topics:
             research_parts.extend(talent.openalex_topics)
 
-        # 2. 技术标签
+        # 技术标签作为补充
         if talent.topic_tags:
             research_parts.extend(talent.topic_tags)
 
-        # 如果没有任何研究方向信息，使用职位
+        # 如果没有研究方向，使用职位
         if not research_parts and talent.current_title:
             research_parts.append(talent.current_title)
 
-        # 姓名（标识用，放在末尾降低权重）
-        name_parts = []
-        if talent.name:
-            name_parts.append(talent.name)
-        if talent.name_en and talent.name_en != talent.name:
-            name_parts.append(talent.name_en)
+        # 最后回退：使用姓名
+        if not research_parts:
+            name_parts = []
+            if talent.name:
+                name_parts.append(talent.name)
+            if talent.name_en and talent.name_en != talent.name:
+                name_parts.append(talent.name_en)
+            if name_parts:
+                research_parts.append(" ".join(name_parts))
 
-        # 组合：研究方向为主，姓名为辅
-        if research_parts and name_parts:
-            return f"{', '.join(research_parts)}. Researcher: {' '.join(name_parts)}"
-        elif research_parts:
-            return ", ".join(research_parts)
-        else:
-            return " ".join(name_parts) if name_parts else ""
+        return ", ".join(research_parts)
+
+    async def _build_papers_source_text(self, talent_id: int) -> str:
+        """
+        构建论文向量源文本
+
+        获取人才的代表性论文标题。
+
+        Args:
+            talent_id: 人才 ID
+
+        Returns:
+            str: 用于生成嵌入的文本
+        """
+        from app.repositories.talent_repository import TalentRepository
+
+        talent_repo = TalentRepository(self.session)
+        papers = await talent_repo.get_paper_titles_for_talents([talent_id], limit_per_talent=10)
+        titles = papers.get(talent_id, [])
+
+        return ". ".join(titles)
 
     async def _get_talents_by_ids(self, talent_ids: List[int]) -> List[Talent]:
         """根据 ID 列表获取人才"""

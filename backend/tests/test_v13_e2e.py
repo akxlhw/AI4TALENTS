@@ -19,7 +19,7 @@ from app.main import app
 from app.models.enums import RoleType, VisibilityStatus
 from app.models.school import School
 from app.models.talent import Talent
-from app.models.tech_element import TechDirection, TechElement, TalentTechTag
+from app.models.tech_domain import TechDirection, TechDomain, TalentTechTag
 
 
 @pytest.fixture
@@ -58,26 +58,26 @@ async def setup_e2e_data(test_session: AsyncSession):
 
     await test_session.flush()
 
-    # Create tech elements
-    elements = []
+    # Create tech domains
+    domains = []
     for i, code in enumerate(["AI", "ROBOTICS"]):
-        element = TechElement(
-            element_code=code,
-            element_name=["人工智能", "机器人"][i],
+        domain = TechDomain(
+            domain_code=code,
+            domain_name=["人工智能", "机器人"][i],
             is_enabled=True,
         )
-        test_session.add(element)
-        elements.append(element)
+        test_session.add(domain)
+        domains.append(domain)
 
     await test_session.flush()
 
     # Create tech directions
     directions = []
-    for element in elements:
+    for domain in domains:
         direction = TechDirection(
-            tech_element_id=element.tech_element_id,
-            direction_code=f"{element.element_code}-DIR",
-            direction_name=f"{element.element_name}方向",
+            tech_domain_id=domain.tech_domain_id,
+            direction_code=f"{domain.domain_code}-DIR",
+            direction_name=f"{domain.domain_name}方向",
             is_enabled=True,
         )
         test_session.add(direction)
@@ -89,7 +89,7 @@ async def setup_e2e_data(test_session: AsyncSession):
     for talent in talents[:8]:
         tag = TalentTechTag(
             talent_id=talent.talent_id,
-            tech_element_id=elements[0].tech_element_id,
+            tech_domain_id=domains[0].tech_domain_id,
             tech_direction_id=directions[0].tech_direction_id,
             is_enabled=True,
         )
@@ -100,7 +100,7 @@ async def setup_e2e_data(test_session: AsyncSession):
     return {
         "schools": schools,
         "talents": talents,
-        "elements": elements,
+        "domains": domains,
         "directions": directions,
     }
 
@@ -119,7 +119,7 @@ class TestE2ECacheFlow:
             assert response1.status_code == 200
             data1 = response1.json()
 
-            assert "hot_tech_elements" in data1
+            assert "hot_tech_domains" in data1
             assert "top_countries" in data1
             assert "top_schools" in data1
             assert "version" in data1
@@ -138,7 +138,7 @@ class TestE2ECacheFlow:
     ):
         """Test overall stats API end-to-end."""
         async with AsyncClient(app=app, base_url="http://test") as client:
-            response = await client.get("/api/v1/tech-elements/overall-stats")
+            response = await client.get("/api/v1/tech-domains/overall-stats")
             assert response.status_code == 200
             data = response.json()
 
@@ -162,8 +162,8 @@ class TestE2EMetricsFlow:
         async with AsyncClient(app=app, base_url="http://test") as client:
             # Make various requests
             await client.get("/api/v1/health/live")
-            await client.get("/api/v1/tech-elements")
-            await client.get("/api/v1/tech-elements/overall-stats")
+            await client.get("/api/v1/tech-domains")
+            await client.get("/api/v1/tech-domains/overall-stats")
 
             # Get metrics
             metrics_response = await client.get("/api/v1/metrics")
@@ -233,16 +233,16 @@ class TestE2EHealthCheck:
             assert data["status"] == "alive"
 
 
-class TestE2ETechElementFlow:
-    """E2E tests for tech element API flow."""
+class TestE2ETechDomainFlow:
+    """E2E tests for tech domain API flow."""
 
     @pytest.mark.asyncio
-    async def test_tech_element_list_e2e(
+    async def test_tech_domain_list_e2e(
         self, test_session: AsyncSession, setup_e2e_data
     ):
-        """Test tech element list API."""
+        """Test tech domain list API."""
         async with AsyncClient(app=app, base_url="http://test") as client:
-            response = await client.get("/api/v1/tech-elements")
+            response = await client.get("/api/v1/tech-domains")
             assert response.status_code == 200
 
             data = response.json()
@@ -250,16 +250,16 @@ class TestE2ETechElementFlow:
             assert len(data["items"]) >= 2  # Should have AI and ROBOTICS
 
     @pytest.mark.asyncio
-    async def test_tech_element_talents_pagination_e2e(
+    async def test_tech_domain_talents_pagination_e2e(
         self, client: AsyncClient, setup_e2e_data
     ):
-        """Test tech element talents pagination."""
+        """Test tech domain talents pagination."""
         data = setup_e2e_data
-        element_id = data["elements"][0].tech_element_id
+        domain_id = data["domains"][0].tech_domain_id
 
         # Get first page
         response = await client.get(
-            f"/api/v1/tech-elements/{element_id}/talents",
+            f"/api/v1/tech-domains/{domain_id}/talents",
             params={"page": 1, "page_size": 5},
         )
         assert response.status_code == 200

@@ -1,6 +1,6 @@
 """
 恢复期刊配置数据脚本
-从技术要素配置中恢复 Venue 和 VenueTechBinding 表
+从技术领域配置中恢复 Venue 和 VenueTechBinding 表
 
 用法:
     python scripts/restore_venues.py
@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
-from app.models.tech_element import TechElement
+from app.models.tech_domain import TechDomain
 from app.models.venue import Venue, VenueTechBinding
 
 
@@ -109,10 +109,10 @@ KNOWN_OPENALEX_SOURCES = {
 }
 
 
-# 技术要素与顶会顶刊映射数据
-TECH_ELEMENTS_WITH_VENUES = [
+# 技术领域与顶会顶刊映射数据
+TECH_DOMAINS_WITH_VENUES = [
     {
-        "element_code": "ai",
+        "domain_code": "ai",
         "venues": [
             {"id": "NeurIPS", "name": "Neural Information Processing Systems", "type": "conference"},
             {"id": "ICML", "name": "International Conference on Machine Learning", "type": "conference"},
@@ -130,7 +130,7 @@ TECH_ELEMENTS_WITH_VENUES = [
         ]
     },
     {
-        "element_code": "robotics",
+        "domain_code": "robotics",
         "venues": [
             {"id": "ICRA", "name": "International Conference on Robotics and Automation", "type": "conference"},
             {"id": "IROS", "name": "International Conference on Intelligent Robots and Systems", "type": "conference"},
@@ -142,7 +142,7 @@ TECH_ELEMENTS_WITH_VENUES = [
         ]
     },
     {
-        "element_code": "data_science",
+        "domain_code": "data_science",
         "venues": [
             {"id": "KDD", "name": "ACM SIGKDD Conference on Knowledge Discovery and Data Mining", "type": "conference"},
             {"id": "SIGMOD", "name": "ACM SIGMOD International Conference on Management of Data", "type": "conference"},
@@ -155,7 +155,7 @@ TECH_ELEMENTS_WITH_VENUES = [
         ]
     },
     {
-        "element_code": "networks",
+        "domain_code": "networks",
         "venues": [
             {"id": "SIGCOMM", "name": "ACM SIGCOMM Conference", "type": "conference"},
             {"id": "MobiCom", "name": "ACM International Conference on Mobile Computing and Networking", "type": "conference"},
@@ -167,7 +167,7 @@ TECH_ELEMENTS_WITH_VENUES = [
         ]
     },
     {
-        "element_code": "systems",
+        "domain_code": "systems",
         "venues": [
             {"id": "OSDI", "name": "USENIX Symposium on Operating Systems Design and Implementation", "type": "conference"},
             {"id": "SOSP", "name": "ACM Symposium on Operating Systems Principles", "type": "conference"},
@@ -181,7 +181,7 @@ TECH_ELEMENTS_WITH_VENUES = [
         ]
     },
     {
-        "element_code": "security",
+        "domain_code": "security",
         "venues": [
             {"id": "CCS", "name": "ACM Conference on Computer and Communications Security", "type": "conference"},
             {"id": "USENIX Security", "name": "USENIX Security Symposium", "type": "conference"},
@@ -204,9 +204,9 @@ async def restore_venues():
     print("="*60)
 
     async with AsyncSessionLocal() as session:
-        # 获取所有技术要素
-        result = await session.execute(select(TechElement))
-        tech_elements = {e.element_code: e for e in result.scalars().all()}
+        # 获取所有技术领域
+        result = await session.execute(select(TechDomain))
+        tech_domains = {d.domain_code: d for d in result.scalars().all()}
 
         stats = {
             "venues_created": 0,
@@ -214,16 +214,16 @@ async def restore_venues():
             "errors": []
         }
 
-        for element_data in TECH_ELEMENTS_WITH_VENUES:
-            element_code = element_data["element_code"]
-            venues_data = element_data["venues"]
+        for domain_data in TECH_DOMAINS_WITH_VENUES:
+            domain_code = domain_data["domain_code"]
+            venues_data = domain_data["venues"]
 
-            tech_element = tech_elements.get(element_code)
-            if not tech_element:
-                print(f"[WARN] 技术要素 {element_code} 不存在，跳过")
+            tech_domain = tech_domains.get(domain_code)
+            if not tech_domain:
+                print(f"[WARN] 技术领域 {domain_code} 不存在，跳过")
                 continue
 
-            print(f"\n[{tech_element.element_name}] 处理 {len(venues_data)} 个期刊...")
+            print(f"\n[{tech_domain.domain_name}] 处理 {len(venues_data)} 个期刊...")
 
             for idx, venue_info in enumerate(venues_data):
                 venue_code = venue_info["id"].lower().replace(" ", "-").replace("_", "-")
@@ -260,7 +260,7 @@ async def restore_venues():
                     result = await session.execute(
                         select(VenueTechBinding).where(
                             VenueTechBinding.venue_id == venue.venue_id,
-                            VenueTechBinding.tech_element_id == tech_element.tech_element_id
+                            VenueTechBinding.tech_domain_id == tech_domain.tech_domain_id
                         )
                     )
                     binding = result.scalar_one_or_none()
@@ -269,7 +269,7 @@ async def restore_venues():
                         # 创建绑定
                         binding = VenueTechBinding(
                             venue_id=venue.venue_id,
-                            tech_element_id=tech_element.tech_element_id,
+                            tech_domain_id=tech_domain.tech_domain_id,
                             priority=idx,
                             collect_status="pending",
                             is_enabled=True,

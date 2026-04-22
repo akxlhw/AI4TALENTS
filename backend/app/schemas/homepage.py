@@ -7,12 +7,12 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
-class HotTechElementItem(BaseModel):
-    """热门技术要素项"""
+class HotTechDomainItem(BaseModel):
+    """热门技术领域项"""
 
-    tech_element_id: int = Field(description="技术要素ID")
-    element_code: str = Field(description="技术要素代码")
-    element_name: str = Field(description="技术要素名称")
+    tech_domain_id: int = Field(description="技术领域ID")
+    domain_code: str = Field(description="技术领域代码")
+    domain_name: str = Field(description="技术领域名称")
     talent_count: int = Field(description="相关人才数", default=0)
 
 
@@ -37,9 +37,9 @@ class TopSchoolItem(BaseModel):
 class HomepageHighlightsResponse(BaseModel):
     """首页聚合数据响应"""
 
-    hot_tech_elements: list[HotTechElementItem] = Field(
+    hot_tech_domains: list[HotTechDomainItem] = Field(
         default_factory=list,
-        description="热门技术要素列表"
+        description="热门技术领域列表"
     )
     top_countries: list[TopCountryItem] = Field(
         default_factory=list,

@@ -39,23 +39,23 @@ export const queryKeys = {
     overview: ['homepage', 'overview'] as const,
   },
 
-  // Tech Elements
-  techElements: {
-    all: ['techElements'] as const,
-    list: ['techElements', 'list'] as const,
-    detail: (id: number) => ['techElements', 'detail', id] as const,
-    stats: (id?: number) => ['techElements', 'stats', id] as const,
-    overallStats: ['techElements', 'overallStats'] as const,
-    countries: (elementId?: number, directionId?: number) =>
-      ['techElements', 'countries', elementId, directionId] as const,
-    schools: (elementId: number, params?: object) =>
-      ['techElements', 'schools', elementId, params] as const,
-    talents: (elementId: number, params?: object) =>
-      ['techElements', 'talents', elementId, params] as const,
+  // Tech Domains
+  techDomains: {
+    all: ['techDomains'] as const,
+    list: ['techDomains', 'list'] as const,
+    detail: (id: number) => ['techDomains', 'detail', id] as const,
+    stats: (id?: number) => ['techDomains', 'stats', id] as const,
+    overallStats: ['techDomains', 'overallStats'] as const,
+    countries: (domainId?: number, directionId?: number) =>
+      ['techDomains', 'countries', domainId, directionId] as const,
+    schools: (domainId: number, params?: object) =>
+      ['techDomains', 'schools', domainId, params] as const,
+    talents: (domainId: number, params?: object) =>
+      ['techDomains', 'talents', domainId, params] as const,
     overallTalents: (params?: object) =>
-      ['techElements', 'overallTalents', params] as const,
+      ['techDomains', 'overallTalents', params] as const,
     overallSchools: (params?: object) =>
-      ['techElements', 'overallSchools', params] as const,
+      ['techDomains', 'overallSchools', params] as const,
   },
 
   // Talents
@@ -86,7 +86,7 @@ export const queryKeys = {
 
   // Collect
   collect: {
-    techElements: ['collect', 'techElements'] as const,
+    techDomains: ['collect', 'techDomains'] as const,
     tasks: (params?: object) => ['collect', 'tasks', params] as const,
     task: (id: number) => ['collect', 'task', id] as const,
     activeTasks: ['collect', 'activeTasks'] as const,

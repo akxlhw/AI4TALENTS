@@ -170,12 +170,12 @@ def test_database_connection():
             country_count = result.scalar()
             print(f"  国家数: {country_count}")
 
-            # 检查技术要素
-            result = conn.execute(text("SELECT tech_element_id, element_name FROM core_tech_element"))
-            elements = result.fetchall()
-            print(f"  技术要素:")
-            for elem in elements:
-                print(f"    - {elem[0]}: {elem[1]}")
+            # 检查技术领域
+            result = conn.execute(text("SELECT tech_domain_id, domain_name FROM core_tech_domain"))
+            domains = result.fetchall()
+            print(f"  技术领域:")
+            for dom in domains:
+                print(f"    - {dom[0]}: {dom[1]}")
 
         return True
 

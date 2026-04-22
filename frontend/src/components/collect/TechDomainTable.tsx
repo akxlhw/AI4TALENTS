@@ -1,26 +1,26 @@
 /**
- * TechElementTable - 技术要素配置表格组件
+ * TechDomainTable - 技术领域配置表格组件
  *
  * 职责：
- * - 显示技术要素列表
+ * - 显示技术领域列表
  * - 显示关联的顶会顶刊
  * - 提供配置和采集操作按钮
  */
 import { Table, Typography, Tag, Space, Button, Tooltip, Badge, Empty } from 'antd'
 import { SettingOutlined, PlayCircleOutlined } from '@ant-design/icons'
-import type { TechElementCollect, VenueTypeConfig } from '../../types'
+import type { TechDomainCollect, VenueTypeConfig } from '../../types'
 
 const { Text } = Typography
 
-export interface TechElementTableProps {
-  data: TechElementCollect[]
+export interface TechDomainTableProps {
+  data: TechDomainCollect[]
   loading: boolean
   venueTypeMap: Record<string, VenueTypeConfig>
-  onConfigVenues: (element: TechElementCollect) => void
-  onStartCollect: (element: TechElementCollect) => void
+  onConfigVenues: (domain: TechDomainCollect) => void
+  onStartCollect: (domain: TechDomainCollect) => void
 }
 
-const TechElementTable: React.FC<TechElementTableProps> = ({
+const TechDomainTable: React.FC<TechDomainTableProps> = ({
   data,
   loading,
   venueTypeMap,
@@ -29,35 +29,31 @@ const TechElementTable: React.FC<TechElementTableProps> = ({
 }) => {
   const columns = [
     {
-      title: '技术要素',
-      dataIndex: 'element_name',
-      key: 'element_name',
-      render: (name: string, record: TechElementCollect) => (
-        <Space>
-          <Text strong>{name}</Text>
-          {record.element_name_en && <Text type="secondary">({record.element_name_en})</Text>}
-        </Space>
-      ),
+      title: '技术领域',
+      dataIndex: 'domain_name',
+      key: 'domain_name',
+      width: 120,
+      render: (name: string) => <Text strong>{name}</Text>,
     },
     {
       title: '关联顶会顶刊',
       key: 'venues',
-      render: (_: unknown, record: TechElementCollect) => {
+      render: (_: unknown, record: TechDomainCollect) => {
         const sources = record.collect_sources || []
         if (sources.length === 0) {
           return <Text type="secondary">未配置</Text>
         }
-        const displayVenues = sources.slice(0, 3)
+        const displayVenues = sources.slice(0, 10)
         return (
           <Space size={[4, 4]} wrap>
             {displayVenues.map((v) => (
-              <Tooltip key={v.id} title={v.id}>
+              <Tooltip key={v.id} title={v.name || v.id}>
                 <Tag color={venueTypeMap[v.type]?.color || 'default'}>
-                  {v.name || v.id}
+                  {v.id.toUpperCase()}
                 </Tag>
               </Tooltip>
             ))}
-            {sources.length > 3 && <Tag>+{sources.length - 3}</Tag>}
+            {sources.length > 10 && <Tag>+{sources.length - 10}</Tag>}
           </Space>
         )
       },
@@ -82,7 +78,7 @@ const TechElementTable: React.FC<TechElementTableProps> = ({
       title: '操作',
       key: 'actions',
       width: 180,
-      render: (_: unknown, record: TechElementCollect) => (
+      render: (_: unknown, record: TechDomainCollect) => (
         <Space>
           <Tooltip title="配置顶会顶刊">
             <Button
@@ -114,14 +110,14 @@ const TechElementTable: React.FC<TechElementTableProps> = ({
     <Table
       dataSource={data}
       columns={columns}
-      rowKey="tech_element_id"
+      rowKey="tech_domain_id"
       pagination={false}
       loading={loading}
       locale={{
-        emptyText: <Empty description="暂无技术要素数据" />,
+        emptyText: <Empty description="暂无技术领域数据" />,
       }}
     />
   )
 }
 
-export default TechElementTable
+export default TechDomainTable

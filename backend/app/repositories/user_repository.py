@@ -231,10 +231,10 @@ class UserRepository:
 
 
 class UserScopeRepository:
-    """Repository for user scope operations (school/country/tech_element)."""
+    """Repository for user scope operations (school/country/tech_domain)."""
 
     # Valid scope types
-    SCOPE_TYPES = ['school', 'country', 'tech_element', 'all']
+    SCOPE_TYPES = ['school', 'country', 'tech_domain', 'all']
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -281,8 +281,8 @@ class UserScopeRepository:
 
         Args:
             user_id: User ID
-            scope_type: 'school', 'country', 'tech_element', or 'all'
-            scope_value: school_id, country_code, tech_element_id, or '*'
+            scope_type: 'school', 'country', 'tech_domain', or 'all'
+            scope_value: school_id, country_code, tech_domain_id, or '*'
             granted_by: User ID who granted the scope
             expires_at: Optional expiration date
             notes: Optional notes
@@ -461,17 +461,17 @@ class UserScopeRepository:
 
         return list(accessible_ids)
 
-    async def check_tech_element_access(
+    async def check_tech_domain_access(
         self,
         user_id: int,
-        tech_element_id: int,
+        tech_domain_id: int,
     ) -> bool:
         """
-        Check if user has access to a specific tech element.
+        Check if user has access to a specific tech domain.
 
         Args:
             user_id: User ID
-            tech_element_id: Tech Element ID to check
+            tech_domain_id: Tech Domain ID to check
 
         Returns:
             True if user has access, False otherwise
@@ -509,23 +509,23 @@ class UserScopeRepository:
             if scope.scope_type == "all":
                 return True
 
-            if scope.scope_type == "tech_element":
-                if scope.scope_value == str(tech_element_id):
+            if scope.scope_type == "tech_domain":
+                if scope.scope_value == str(tech_domain_id):
                     return True
 
         return False
 
-    async def get_accessible_tech_element_ids(self, user_id: int) -> list[int]:
+    async def get_accessible_tech_domain_ids(self, user_id: int) -> list[int]:
         """
-        Get list of tech element IDs the user can access.
+        Get list of tech domain IDs the user can access.
 
         Args:
             user_id: User ID
 
         Returns:
-            List of accessible tech element IDs
+            List of accessible tech domain IDs
         """
-        from app.models.tech_element import TechElement
+        from app.models.tech_domain import TechDomain
 
         # Get user to check role
         user_result = await self.session.execute(
@@ -538,7 +538,7 @@ class UserScopeRepository:
 
         # Super admin has access to all
         if user.role_type == UserRoleType.SUPER_ADMIN.value:
-            result = await self.session.execute(select(TechElement.tech_element_id))
+            result = await self.session.execute(select(TechDomain.tech_domain_id))
             return [row[0] for row in result.fetchall()]
 
         # Get scopes
@@ -560,10 +560,10 @@ class UserScopeRepository:
                 continue
 
             if scope.scope_type == "all":
-                result = await self.session.execute(select(TechElement.tech_element_id))
+                result = await self.session.execute(select(TechDomain.tech_domain_id))
                 return [row[0] for row in result.fetchall()]
 
-            if scope.scope_type == "tech_element":
+            if scope.scope_type == "tech_domain":
                 try:
                     accessible_ids.add(int(scope.scope_value))
                 except ValueError:
@@ -635,7 +635,7 @@ class UserScopeRepository:
             user_id: User ID
 
         Returns:
-            Default view ('tech_element' or 'country_school')
+            Default view ('tech_domain' or 'country_school')
         """
         user_result = await self.session.execute(
             select(UserAccount).where(UserAccount.user_id == user_id)
@@ -643,6 +643,6 @@ class UserScopeRepository:
         user = user_result.scalar_one_or_none()
 
         if not user:
-            return "tech_element"
+            return "tech_domain"
 
-        return user.default_view or "tech_element"
+        return user.default_view or "tech_domain"

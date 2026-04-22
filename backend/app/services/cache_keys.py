@@ -10,21 +10,21 @@ class CacheKeys:
     # Homepage statistics
     STATS_HOME_HIGHLIGHTS = "stats:home:highlights"
 
-    # Tech element statistics
-    STATS_TECH_ELEMENT = "stats:tech:{element_id}"
+    # Tech domain statistics
+    STATS_TECH_DOMAIN = "stats:tech:{domain_id}"
     STATS_OVERALL = "stats:overall"
 
     # Distribution data
-    STATS_COUNTRY_DISTRIBUTION = "stats:countries:{element_id}"
-    STATS_SCHOOL_DISTRIBUTION = "stats:schools:{element_id}"
+    STATS_COUNTRY_DISTRIBUTION = "stats:countries:{domain_id}"
+    STATS_SCHOOL_DISTRIBUTION = "stats:schools:{domain_id}"
 
     # Entity details
     TALENT_DETAIL = "talent:{talent_id}"
     SCHOOL_DETAIL = "school:{school_id}"
 
-    # Tech element data
-    TECH_ELEMENT_LIST = "tech:elements:list"
-    TECH_ELEMENT_DETAIL = "tech:element:{element_id}"
+    # Tech domain data
+    TECH_DOMAIN_LIST = "tech:domains:list"
+    TECH_DOMAIN_DETAIL = "tech:domain:{domain_id}"
 
     @classmethod
     def build_key(cls, pattern: str, **kwargs: str | int) -> str:

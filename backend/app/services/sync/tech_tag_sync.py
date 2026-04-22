@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.raw_data import AuthorTechBelong
 from app.models.talent import Talent
-from app.models.tech_element import TalentTechTag, TechDirection
+from app.models.tech_domain import TalentTechTag, TechDirection
 
 logger = logging.getLogger(__name__)
 
@@ -38,28 +38,52 @@ class TechTagSyncService:
         Returns:
             int: Number of tags created
         """
+        if not belongs:
+            return 0
+
         created_count = 0
 
-        for belong in belongs:
-            # Check if tag already exists
-            existing = await self.session.execute(
-                select(TalentTechTag).where(
-                    TalentTechTag.talent_id == talent.talent_id,
-                    TalentTechTag.tech_element_id == belong.tech_element_id
-                )
+        # Batch check existing tags - get all domain IDs for this talent at once
+        domain_ids = [b.tech_domain_id for b in belongs]
+        existing_result = await self.session.execute(
+            select(TalentTechTag.tech_domain_id).where(
+                TalentTechTag.talent_id == talent.talent_id,
+                TalentTechTag.tech_domain_id.in_(domain_ids)
             )
-            if existing.scalar_one_or_none():
+        )
+        existing_domain_ids = {row.tech_domain_id for row in existing_result.all()}
+
+        # Pre-fetch tech directions for all domains to avoid N+1 in _get_tech_direction_id
+        domain_ids_needing_direction = [b.tech_domain_id for b in belongs if b.tech_domain_id not in existing_domain_ids]
+        if domain_ids_needing_direction:
+            directions_result = await self.session.execute(
+                select(TechDirection).where(
+                    TechDirection.tech_domain_id.in_(domain_ids_needing_direction),
+                    TechDirection.is_enabled.is_(True)
+                ).order_by(TechDirection.tech_domain_id, TechDirection.sort_order)
+            )
+            # Build a map: tech_domain_id -> first tech_direction_id
+            self._direction_map: dict[int, int] = {}
+            for direction in directions_result.scalars().all():
+                if direction.tech_domain_id not in self._direction_map:
+                    self._direction_map[direction.tech_domain_id] = direction.tech_direction_id
+        else:
+            self._direction_map = {}
+
+        for belong in belongs:
+            # Check if tag already exists (using batch-fetched data)
+            if belong.tech_domain_id in existing_domain_ids:
                 continue
 
-            # Get or use default tech direction
-            tech_direction_id = await self._get_tech_direction_id(
-                belong.tech_element_id,
-                default_tech_direction_id
-            )
+            # Get tech direction from pre-fetched map or use default
+            if default_tech_direction_id:
+                tech_direction_id = default_tech_direction_id
+            else:
+                tech_direction_id = self._direction_map.get(belong.tech_domain_id)
 
             if not tech_direction_id:
                 logger.warning(
-                    f"No tech direction found for tech_element_id={belong.tech_element_id}, "
+                    f"No tech direction found for tech_domain_id={belong.tech_domain_id}, "
                     f"skipping tag for talent {talent.talent_id}"
                 )
                 continue
@@ -67,7 +91,7 @@ class TechTagSyncService:
             # Create new tech tag
             new_tag = TalentTechTag(
                 talent_id=talent.talent_id,
-                tech_element_id=belong.tech_element_id,
+                tech_domain_id=belong.tech_domain_id,
                 tech_direction_id=tech_direction_id,
                 tag_level="primary",
                 tag_source="auto_mapping",
@@ -87,17 +111,17 @@ class TechTagSyncService:
 
     async def _get_tech_direction_id(
         self,
-        tech_element_id: int,
+        tech_domain_id: int,
         default_id: int | None = None
     ) -> int | None:
-        """Get tech direction ID for a tech element"""
+        """Get tech direction ID for a tech domain"""
         if default_id:
             return default_id
 
-        # Try to get the first tech direction for this tech element
+        # Try to get the first tech direction for this tech domain
         result = await self.session.execute(
             select(TechDirection).where(
-                TechDirection.tech_element_id == tech_element_id,
+                TechDirection.tech_domain_id == tech_domain_id,
                 TechDirection.is_enabled.is_(True)
             ).order_by(TechDirection.sort_order)
         )

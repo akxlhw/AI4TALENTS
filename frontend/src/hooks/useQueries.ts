@@ -16,7 +16,7 @@ import { queryKeys, staleTimes } from './queryClient'
 // ============================================
 
 /**
- * Get homepage highlights (hot tech elements, top countries, top schools).
+ * Get homepage highlights (hot tech domains, top countries, top schools).
  * Cached for 5 minutes.
  */
 export function useHomepageHighlights() {
@@ -46,18 +46,18 @@ export function useOverviewStats() {
 }
 
 // ============================================
-// Tech Element Queries
+// Tech Domain Queries
 // ============================================
 
 /**
- * Get all tech elements list.
+ * Get all tech domains list.
  * Cached for 30 minutes (static config data).
  */
-export function useTechElements() {
+export function useTechDomains() {
   return useQuery({
-    queryKey: queryKeys.techElements.list,
+    queryKey: queryKeys.techDomains.list,
     queryFn: async () => {
-      const response = await api.techElements.list()
+      const response = await api.techDomains.list()
       return response.data
     },
     staleTime: staleTimes.static,
@@ -65,14 +65,14 @@ export function useTechElements() {
 }
 
 /**
- * Get tech element detail.
+ * Get tech domain detail.
  * Cached for 30 minutes.
  */
-export function useTechElement(id: number) {
+export function useTechDomain(id: number) {
   return useQuery({
-    queryKey: queryKeys.techElements.detail(id),
+    queryKey: queryKeys.techDomains.detail(id),
     queryFn: async () => {
-      const response = await api.techElements.get(id)
+      const response = await api.techDomains.get(id)
       return response.data
     },
     staleTime: staleTimes.static,
@@ -81,18 +81,18 @@ export function useTechElement(id: number) {
 }
 
 /**
- * Get tech element stats.
+ * Get tech domain stats.
  * Cached for 5 minutes.
  */
-export function useTechElementStats(elementId?: number) {
+export function useTechDomainStats(domainId?: number) {
   return useQuery({
-    queryKey: queryKeys.techElements.stats(elementId),
+    queryKey: queryKeys.techDomains.stats(domainId),
     queryFn: async () => {
-      if (elementId) {
-        const response = await api.techElements.getStats(elementId)
+      if (domainId) {
+        const response = await api.techDomains.getStats(domainId)
         return response.data
       } else {
-        const response = await api.techElements.getOverallStats()
+        const response = await api.techDomains.getOverallStats()
         return response.data
       }
     },
@@ -101,14 +101,14 @@ export function useTechElementStats(elementId?: number) {
 }
 
 /**
- * Get overall tech element stats.
+ * Get overall tech domain stats.
  * Cached for 5 minutes.
  */
-export function useOverallTechElementStats() {
+export function useOverallTechDomainStats() {
   return useQuery({
-    queryKey: queryKeys.techElements.overallStats,
+    queryKey: queryKeys.techDomains.overallStats,
     queryFn: async () => {
-      const response = await api.techElements.getOverallStats()
+      const response = await api.techDomains.getOverallStats()
       return response.data
     },
     staleTime: staleTimes.stats,
@@ -116,18 +116,18 @@ export function useOverallTechElementStats() {
 }
 
 /**
- * Get country distribution for tech element.
+ * Get country distribution for tech domain.
  * Cached for 10 minutes.
  */
-export function useTechElementCountries(elementId?: number, directionId?: number) {
+export function useTechDomainCountries(domainId?: number, directionId?: number) {
   return useQuery({
-    queryKey: queryKeys.techElements.countries(elementId, directionId),
+    queryKey: queryKeys.techDomains.countries(domainId, directionId),
     queryFn: async () => {
-      if (elementId) {
-        const response = await api.techElements.getCountries(elementId, directionId)
+      if (domainId) {
+        const response = await api.techDomains.getCountries(domainId, directionId)
         return response.data
       } else {
-        const response = await api.techElements.getOverallCountries()
+        const response = await api.techDomains.getOverallCountries()
         return response.data
       }
     },
@@ -136,30 +136,30 @@ export function useTechElementCountries(elementId?: number, directionId?: number
 }
 
 /**
- * Get school distribution for tech element.
+ * Get school distribution for tech domain.
  * Cached for 5 minutes.
  */
-export function useTechElementSchools(
-  elementId: number,
+export function useTechDomainSchools(
+  domainId: number,
   params?: { direction_id?: number; country_code?: string; page?: number; page_size?: number }
 ) {
   return useQuery({
-    queryKey: queryKeys.techElements.schools(elementId, params),
+    queryKey: queryKeys.techDomains.schools(domainId, params),
     queryFn: async () => {
-      const response = await api.techElements.getSchools(elementId, params)
+      const response = await api.techDomains.getSchools(domainId, params)
       return response.data
     },
     staleTime: staleTimes.list,
-    enabled: !!elementId,
+    enabled: !!domainId,
   })
 }
 
 /**
- * Get talent list for tech element.
+ * Get talent list for tech domain.
  * Cached for 3 minutes.
  */
-export function useTechElementTalents(
-  elementId: number,
+export function useTechDomainTalents(
+  domainId: number,
   params?: {
     direction_id?: number
     country_code?: string
@@ -171,13 +171,13 @@ export function useTechElementTalents(
   }
 ) {
   return useQuery({
-    queryKey: queryKeys.techElements.talents(elementId, params),
+    queryKey: queryKeys.techDomains.talents(domainId, params),
     queryFn: async () => {
-      const response = await api.techElements.getTalents(elementId, params)
+      const response = await api.techDomains.getTalents(domainId, params)
       return response.data
     },
     staleTime: staleTimes.list,
-    enabled: !!elementId,
+    enabled: !!domainId,
   })
 }
 
@@ -194,9 +194,9 @@ export function useOverallTalents(params?: {
   page_size?: number
 }) {
   return useQuery({
-    queryKey: queryKeys.techElements.overallTalents(params),
+    queryKey: queryKeys.techDomains.overallTalents(params),
     queryFn: async () => {
-      const response = await api.techElements.getOverallTalents(params)
+      const response = await api.techDomains.getOverallTalents(params)
       return response.data
     },
     staleTime: staleTimes.list,
@@ -429,14 +429,14 @@ export function useRemoveFavorite() {
 // ============================================
 
 /**
- * Get collect tech elements with config.
+ * Get collect tech domains with config.
  * Cached for 30 minutes.
  */
-export function useCollectTechElements() {
+export function useCollectTechDomains() {
   return useQuery({
-    queryKey: queryKeys.collect.techElements,
+    queryKey: queryKeys.collect.techDomains,
     queryFn: async () => {
-      const response = await api.collect.listTechElements()
+      const response = await api.collect.listTechDomains()
       return response.data
     },
     staleTime: staleTimes.static,
@@ -449,7 +449,7 @@ export function useCollectTechElements() {
  */
 export function useCollectTasks(params?: {
   status?: string
-  tech_element_id?: number
+  tech_domain_id?: number
   page?: number
   page_size?: number
 }) {

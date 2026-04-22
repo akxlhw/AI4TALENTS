@@ -3,7 +3,7 @@ Collect configuration schemas - MVP v1.2
 采集配置相关 DTO
 
 采集逻辑：
-- 采集最小单位：技术要素
+- 采集最小单位：技术领域
 - 数据类型：固定为学者+论文+机构
 - 时间范围：用户可配置年份范围（2015年至今）
 """
@@ -35,14 +35,14 @@ class VenueItem(BaseModel):
     type: str = Field(default="conference", description="类型: conference/journal")
 
 
-# ============ Tech Element with Collect Config ============
+# ============ Tech Domain with Collect Config ============
 
-class TechElementCollectResponse(BaseModel):
-    """技术要素采集配置响应"""
-    tech_element_id: int
-    element_code: str
-    element_name: str
-    element_name_en: str | None = None
+class TechDomainCollectResponse(BaseModel):
+    """技术领域采集配置响应"""
+    tech_domain_id: int
+    domain_code: str
+    domain_name: str
+    domain_name_en: str | None = None
     # collect_sources is computed from VenueTechBinding table
     # This field is kept for backward compatibility with frontend
     collect_sources: list[VenueItem] | None = None
@@ -54,14 +54,14 @@ class TechElementCollectResponse(BaseModel):
         from_attributes = True
 
 
-class TechElementCollectListResponse(BaseModel):
-    """技术要素采集配置列表响应"""
-    items: list[TechElementCollectResponse]
+class TechDomainCollectListResponse(BaseModel):
+    """技术领域采集配置列表响应"""
+    items: list[TechDomainCollectResponse]
     total: int
 
 
 class UpdateCollectSourcesRequest(BaseModel):
-    """更新技术要素的采集源配置"""
+    """更新技术领域的采集源配置"""
     collect_sources: list[VenueItem] = Field(..., min_items=1, description="关联的顶会顶刊列表")
 
 
@@ -69,7 +69,7 @@ class UpdateCollectSourcesRequest(BaseModel):
 
 class TriggerCollectTaskRequest(BaseModel):
     """触发采集任务请求"""
-    tech_element_id: int = Field(..., description="技术要素ID")
+    tech_domain_id: int = Field(..., description="技术领域ID")
     start_year: int = Field(
         default=DEFAULT_START_YEAR,
         ge=MIN_START_YEAR,
@@ -85,8 +85,8 @@ class CollectTaskResponse(BaseModel):
     """采集任务响应"""
     task_id: int
     task_code: str
-    tech_element_id: int | None = None
-    tech_element_name: str | None = None
+    tech_domain_id: int | None = None
+    tech_domain_name: str | None = None
     start_year: int = Field(default=DEFAULT_START_YEAR, description="起始年份")
     end_year: int | None = Field(default=None, description="截止年份，None表示至今")
     triggered_by: Any | None = None  # Can be user ID (int) or username (str)

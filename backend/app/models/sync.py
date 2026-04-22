@@ -55,7 +55,7 @@ class CollectScope(Base, TimestampMixin):
     scope_name = Column(String(100), nullable=False)
 
     # Scope definition
-    scope_type = Column(String(30), nullable=False)  # 'tech_element', 'country', 'school', 'custom'
+    scope_type = Column(String(30), nullable=False)  # 'tech_domain', 'country', 'school', 'custom'
     scope_value = Column(JSON, nullable=False)  # JSON array of IDs or codes
 
     # Status
@@ -113,7 +113,7 @@ class CollectStrategy(Base, TimestampMixin):
 
 
 class CollectTask(Base, TimestampMixin):
-    """采集任务 - 简化版，直接关联技术要素"""
+    """采集任务 - 简化版，直接关联技术领域"""
 
     __tablename__ = "sync_collect_task"
 
@@ -124,8 +124,8 @@ class CollectTask(Base, TimestampMixin):
     strategy_id = Column(Integer, nullable=True)  # 不再使用，保留兼容
     task_type = Column(String(30), default="manual", nullable=False)  # 保留兼容
 
-    # 关联技术要素（采集最小单位）
-    tech_element_id = Column(Integer, ForeignKey("core_tech_element.tech_element_id"), nullable=True, index=True)
+    # 关联技术领域（采集最小单位）
+    tech_domain_id = Column(Integer, ForeignKey("core_tech_domain.tech_domain_id"), nullable=True, index=True)
 
     # 采集模式：full=全量, incremental=增量
     collect_mode = Column(String(20), default="full", nullable=False)
@@ -167,7 +167,7 @@ class CollectTask(Base, TimestampMixin):
     execution_logs = Column(JSON, nullable=True)  # List of {timestamp, level, message}
 
     # Relationships
-    tech_element = relationship("TechElement")
+    tech_domain = relationship("TechDomain")
 
     def __repr__(self):
         return f"<CollectTask(task_id={self.task_id}, status={self.status})>"

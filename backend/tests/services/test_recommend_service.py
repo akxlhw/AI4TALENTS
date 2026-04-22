@@ -285,10 +285,10 @@ class TestRecommendServiceFilters:
             assert item.talent_id != exclude_id
 
     @pytest.mark.asyncio
-    async def test_filter_by_tech_element(
-        self, test_session: AsyncSession, sample_talent: dict, sample_tech_element: dict
+    async def test_filter_by_tech_domain(
+        self, test_session: AsyncSession, sample_talent: dict, sample_tech_domain: dict
     ):
-        """应按技术要素过滤"""
+        """应按技术领域过滤"""
         # Arrange
         from app.services.recommend.recommend_service import RecommendService
 
@@ -300,7 +300,7 @@ class TestRecommendServiceFilters:
         )
 
         filters = {
-            "tech_elements": ["AI"]
+            "tech_domains": ["AI"]
         }
 
         # Act
@@ -310,7 +310,7 @@ class TestRecommendServiceFilters:
             filters=filters
         )
 
-        # Assert - 结果应符合技术要素过滤
+        # Assert - 结果应符合技术领域过滤
         pass
 
 

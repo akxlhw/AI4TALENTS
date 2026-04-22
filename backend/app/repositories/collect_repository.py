@@ -4,7 +4,7 @@ Repository for collect configuration operations - Simplified for MVP v1.1
 
 采集逻辑简化：
 - 移除 Scope 和 Strategy 概念
-- 任务直接关联技术要素
+- 任务直接关联技术领域
 - 数据类型固定：学者+论文+机构
 - 时间范围固定：2010.1.1至今
 """
@@ -12,34 +12,35 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.sync import CollectTask
-from app.models.tech_element import TechElement
+from app.models.tech_domain import TechDomain
+from app.repositories.base import BaseRepository
 
 
-class CollectTaskRepository:
+class CollectTaskRepository(BaseRepository[CollectTask]):
     """Repository for CollectTask operations."""
 
     def __init__(self, session: AsyncSession):
-        self.session = session
+        super().__init__(session, CollectTask)
 
     async def list_tasks(
         self,
         status: str | None = None,
-        tech_element_id: int | None = None,
+        tech_domain_id: int | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[CollectTask], int]:
         """List collect tasks with pagination."""
-        query = select(CollectTask).options(selectinload(CollectTask.tech_element))
+        query = select(CollectTask).options(selectinload(CollectTask.tech_domain))
 
         if status:
             query = query.where(CollectTask.status == status)
-        if tech_element_id:
-            query = query.where(CollectTask.tech_element_id == tech_element_id)
+        if tech_domain_id:
+            query = query.where(CollectTask.tech_domain_id == tech_domain_id)
 
         # Count
         count_query = select(func.count()).select_from(query.subquery())
@@ -59,7 +60,7 @@ class CollectTaskRepository:
         """Get collect task by ID."""
         result = await self.session.execute(
             select(CollectTask)
-            .options(selectinload(CollectTask.tech_element))
+            .options(selectinload(CollectTask.tech_domain))
             .where(CollectTask.task_id == task_id)
         )
         return result.scalar_one_or_none()
@@ -74,7 +75,7 @@ class CollectTaskRepository:
     async def create_task(
         self,
         task_code: str,
-        tech_element_id: int,
+        tech_domain_id: int,
         collect_mode: str,
         triggered_by: int | None = None,
         time_window_start: datetime | None = None,
@@ -83,7 +84,7 @@ class CollectTaskRepository:
         """Create a new collect task."""
         task = CollectTask(
             task_code=task_code,
-            tech_element_id=tech_element_id,
+            tech_domain_id=tech_domain_id,
             collect_mode=collect_mode,
             task_type="manual",  # 兼容旧字段
             triggered_by=triggered_by,
@@ -187,38 +188,109 @@ class CollectTaskRepository:
         )
         return list(result.scalars().all())
 
+    async def cleanup_task_references(self, task_id: int) -> list[int]:
+        """
+        Clear foreign key references for a task before deletion.
 
-class TechElementCollectRepository:
-    """Repository for TechElement collect configuration."""
+        This preserves the collected data while removing the task association.
+        Returns the list of sub_task_ids that were cleared.
+        """
+        # Clear raw data layer references
+        await self.session.execute(
+            text("UPDATE raw_work SET fetch_task_id = NULL WHERE fetch_task_id = :task_id"),
+            {"task_id": task_id}
+        )
+        await self.session.execute(
+            text("UPDATE raw_author SET fetch_task_id = NULL WHERE fetch_task_id = :task_id"),
+            {"task_id": task_id}
+        )
+        await self.session.execute(
+            text("UPDATE raw_institution SET fetch_task_id = NULL WHERE fetch_task_id = :task_id"),
+            {"task_id": task_id}
+        )
+
+        # Clear standardized layer references
+        await self.session.execute(
+            text("UPDATE std_author SET source_task_id = NULL WHERE source_task_id = :task_id"),
+            {"task_id": task_id}
+        )
+        await self.session.execute(
+            text("UPDATE std_school SET source_task_id = NULL WHERE source_task_id = :task_id"),
+            {"task_id": task_id}
+        )
+
+        # Clear tech belong references
+        await self.session.execute(
+            text("UPDATE rel_author_tech_belong SET source_task_id = NULL WHERE source_task_id = :task_id"),
+            {"task_id": task_id}
+        )
+
+        # Clear data version references
+        await self.session.execute(
+            text("UPDATE data_version SET source_task_id = NULL WHERE source_task_id = :task_id"),
+            {"task_id": task_id}
+        )
+
+        # Get sub-task IDs before clearing
+        sub_task_result = await self.session.execute(
+            text("SELECT sub_task_id FROM sync_venue_sub_task WHERE task_id = :task_id"),
+            {"task_id": task_id}
+        )
+        sub_task_ids = [row[0] for row in sub_task_result.fetchall()]
+
+        if sub_task_ids:
+            # Clear raw_work sub_task references
+            ids_str = ','.join(str(sid) for sid in sub_task_ids)
+            await self.session.execute(
+                text(f"UPDATE raw_work SET sub_task_id = NULL WHERE sub_task_id IN ({ids_str})")
+            )
+
+        # Delete sub-tasks
+        await self.session.execute(
+            text("DELETE FROM sync_venue_sub_task WHERE task_id = :task_id"),
+            {"task_id": task_id}
+        )
+
+        # Delete the task itself
+        await self.session.execute(
+            text("DELETE FROM sync_collect_task WHERE task_id = :task_id"),
+            {"task_id": task_id}
+        )
+
+        return sub_task_ids
+
+
+class TechDomainCollectRepository:
+    """Repository for TechDomain collect configuration."""
 
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def list_with_collect_config(self) -> list[TechElement]:
-        """List all tech elements with their collect configuration."""
+    async def list_with_collect_config(self) -> list[TechDomain]:
+        """List all tech domains with their collect configuration."""
         result = await self.session.execute(
-            select(TechElement)
-            .where(TechElement.is_enabled.is_(True))
-            .order_by(TechElement.sort_order)
+            select(TechDomain)
+            .where(TechDomain.is_enabled.is_(True))
+            .order_by(TechDomain.sort_order)
         )
         return list(result.scalars().all())
 
-    async def get_by_id(self, tech_element_id: int) -> TechElement | None:
-        """Get tech element by ID."""
+    async def get_by_id(self, tech_domain_id: int) -> TechDomain | None:
+        """Get tech domain by ID."""
         result = await self.session.execute(
-            select(TechElement).where(TechElement.tech_element_id == tech_element_id)
+            select(TechDomain).where(TechDomain.tech_domain_id == tech_domain_id)
         )
         return result.scalar_one_or_none()
 
     async def update_last_collect_time(
         self,
-        tech_element_id: int,
+        tech_domain_id: int,
         collect_at: datetime | None = None,
-    ) -> TechElement | None:
-        """Update last collect time for a tech element."""
-        element = await self.get_by_id(tech_element_id)
-        if not element:
+    ) -> TechDomain | None:
+        """Update last collect time for a tech domain."""
+        domain = await self.get_by_id(tech_domain_id)
+        if not domain:
             return None
 
-        element.last_collect_at = collect_at or datetime.utcnow()
-        return element
+        domain.last_collect_at = collect_at or datetime.utcnow()
+        return domain

@@ -58,7 +58,8 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useSearchTemplates } from '../hooks/useSearchTemplates'
 import { useColumnConfig } from '../hooks/useColumnConfig'
 import { getRoleTypeConfig } from '../constants/roleType'
-import type { SearchTalent, TechElement, EnhancedSearchResult, JDFeatures, MatchResultItem, RecommendResultItem } from '../types'
+import { formatNumber } from '../utils/format'
+import type { SearchTalent, TechDomain, EnhancedSearchResult, JDFeatures, MatchResultItem, RecommendResultItem } from '../types'
 
 const { Title, Text } = Typography
 const { Search } = Input
@@ -106,8 +107,8 @@ const SearchRecommendPage: React.FC = () => {
   const pageSize = 20
   const [tookMs, setTookMs] = useState<number | null>(null)
   const [searchModeUsed, setSearchModeUsed] = useState<string | null>(null) // 实际使用的搜索模式
-  const [preciseCount, setPreciseCount] = useState(0) // 精准匹配数量
-  const [similarCount, setSimilarCount] = useState(0) // 相似匹配数量
+  const [fulltextMatchCount, setFulltextMatchCount] = useState(0) // 关键词匹配数量
+  const [semanticMatchCount, setSemanticMatchCount] = useState(0) // 语义匹配数量
   const [roleFilter, setRoleFilter] = useState<string | undefined>()
   const [schoolFilter, setSchoolFilter] = useState<number | undefined>()
   const [minCitations, setMinCitations] = useState<number | undefined>()
@@ -118,9 +119,9 @@ const SearchRecommendPage: React.FC = () => {
   const [compareModalVisible, setCompareModalVisible] = useState(false)
   const [schools, setSchools] = useState<School[]>([])
   const [countries, setCountries] = useState<Country[]>([])
-  const [techElements, setTechElements] = useState<TechElement[]>([])
+  const [techDomains, setTechDomains] = useState<TechDomain[]>([])
   const [countryFilter, setCountryFilter] = useState<string | undefined>()
-  const [techElementFilter, setTechElementFilter] = useState<number | undefined>()
+  const [techDomainFilter, setTechDomainFilter] = useState<number | undefined>()
   const { addTemplate } = useSearchTemplates()
   const [saveTemplateModalVisible, setSaveTemplateModalVisible] = useState(false)
   const [newTemplateName, setNewTemplateName] = useState('')
@@ -153,7 +154,7 @@ const SearchRecommendPage: React.FC = () => {
   const [jdPage, setJdPage] = useState(1) // JD 匹配结果分页
 
   // JD 匹配筛选条件
-  const [jdTechElementFilter, setJdTechElementFilter] = useState<number | undefined>()
+  const [jdTechDomainFilter, setJdTechDomainFilter] = useState<number | undefined>()
   const [jdCountryFilter, setJdCountryFilter] = useState<string | undefined>()
   const [jdSchoolFilter, setJdSchoolFilter] = useState<number | undefined>()
   const [jdRoleFilter, setJdRoleFilter] = useState<string | undefined>()
@@ -186,14 +187,14 @@ const SearchRecommendPage: React.FC = () => {
   // ========== Load Reference Data ==========
   const loadReferenceData = useCallback(async () => {
     try {
-      const [schoolsRes, countriesRes, techElementsRes] = await Promise.all([
+      const [schoolsRes, countriesRes, techDomainsRes] = await Promise.all([
         api.schools.list({}),
         api.countries.list(),
-        api.techElements.list(),
+        api.techDomains.list(),
       ])
       setSchools(schoolsRes.data.items || [])
       setCountries(countriesRes.data.items || [])
-      setTechElements(techElementsRes.data.items || [])
+      setTechDomains(techDomainsRes.data.items || [])
     } catch { /* ignore */ }
   }, [])
 
@@ -230,8 +231,8 @@ const SearchRecommendPage: React.FC = () => {
         setTotal(savedState.total)
         setTookMs(savedState.tookMs)
         setSearchModeUsed(savedState.searchModeUsed)
-        setPreciseCount(savedState.preciseCount || 0)
-        setSimilarCount(savedState.similarCount || 0)
+        setFulltextMatchCount(savedState.fulltextMatchCount || 0)
+        setSemanticMatchCount(savedState.semanticMatchCount || 0)
         setPage(savedState.page || 1)
       } else {
         // 执行新搜索
@@ -245,8 +246,8 @@ const SearchRecommendPage: React.FC = () => {
       setTotal(savedState.total || 0)
       setTookMs(savedState.tookMs || null)
       setSearchModeUsed(savedState.searchModeUsed || null)
-      setPreciseCount(savedState.preciseCount || 0)
-      setSimilarCount(savedState.similarCount || 0)
+      setFulltextMatchCount(savedState.fulltextMatchCount || 0)
+      setSemanticMatchCount(savedState.semanticMatchCount || 0)
       setPage(savedState.page || 1)
     } else {
       loadAllTalents()
@@ -313,13 +314,17 @@ const SearchRecommendPage: React.FC = () => {
         topic_tags: item.topic_tags || [],
         openalex_topics: item.openalex_topics || [],
         similarity_score: item.similarity_score,
+        match_sources: item.match_sources || [],
       }))
       setResults(items)
       setTotal(response.data.total || items.length)
       setTookMs(response.data.took_ms || null)
       setSearchModeUsed(response.data.mode || 'hybrid')
-      setPreciseCount(response.data.precise_count || 0)
-      setSimilarCount(response.data.similar_count || 0)
+
+      // 使用后端返回的匹配来源统计
+      setFulltextMatchCount(response.data.fulltext_count || 0)
+      setSemanticMatchCount(response.data.semantic_count || 0)
+
       setPage(pageNum)
 
       // 保存搜索状态到 sessionStorage
@@ -329,8 +334,8 @@ const SearchRecommendPage: React.FC = () => {
         total: response.data.total || items.length,
         tookMs: response.data.took_ms || null,
         searchModeUsed: response.data.mode || 'hybrid',
-        preciseCount: response.data.precise_count || 0,
-        similarCount: response.data.similar_count || 0,
+        fulltextMatchCount: response.data.fulltext_count || 0,
+        semanticMatchCount: response.data.semantic_count || 0,
         page: pageNum,
       }))
     } catch {
@@ -355,7 +360,7 @@ const SearchRecommendPage: React.FC = () => {
     setSchoolFilter(undefined)
     setMinCitations(undefined)
     setCountryFilter(undefined)
-    setTechElementFilter(undefined)
+    setTechDomainFilter(undefined)
     setSortBy('cited_by_count')
     setSortOrder('desc')
     performSearch(query, 1)
@@ -429,7 +434,7 @@ const SearchRecommendPage: React.FC = () => {
     try {
       // 构建筛选条件
       const filters: Record<string, unknown> = {}
-      if (jdTechElementFilter) filters.tech_element_id = jdTechElementFilter
+      if (jdTechDomainFilter) filters.tech_domain_id = jdTechDomainFilter
       if (jdCountryFilter) filters.country_code = jdCountryFilter
       if (jdSchoolFilter) filters.school_id = jdSchoolFilter
       if (jdRoleFilter) filters.role_type = jdRoleFilter
@@ -481,7 +486,7 @@ const SearchRecommendPage: React.FC = () => {
     setJdTookMs(null)
     setJdPage(1)
     // 重置筛选条件
-    setJdTechElementFilter(undefined)
+    setJdTechDomainFilter(undefined)
     setJdCountryFilter(undefined)
     setJdSchoolFilter(undefined)
     setJdRoleFilter(undefined)
@@ -491,10 +496,10 @@ const SearchRecommendPage: React.FC = () => {
   }
 
   // JD 匹配是否有激活的筛选条件
-  const hasJdActiveFilters = jdTechElementFilter || jdCountryFilter || jdSchoolFilter || jdRoleFilter || jdMinCitations
+  const hasJdActiveFilters = jdTechDomainFilter || jdCountryFilter || jdSchoolFilter || jdRoleFilter || jdMinCitations
 
   const handleResetJdFilters = () => {
-    setJdTechElementFilter(undefined)
+    setJdTechDomainFilter(undefined)
     setJdCountryFilter(undefined)
     setJdSchoolFilter(undefined)
     setJdRoleFilter(undefined)
@@ -632,7 +637,7 @@ const SearchRecommendPage: React.FC = () => {
         name ? <a onClick={() => navigate(`/schools/${record.school_id}`)}>{name}</a> : <Text type="secondary">-</Text>,
     },
     { title: '论文', dataIndex: 'works_count', key: 'works_count', width: 80, align: 'center' as const },
-    { title: '引用', dataIndex: 'cited_by_count', key: 'cited_by_count', width: 100, align: 'right' as const, render: (count: number) => count.toLocaleString() },
+    { title: '引用', dataIndex: 'cited_by_count', key: 'cited_by_count', width: 100, align: 'right' as const, render: (count: number) => formatNumber(count) },
     { title: 'H指数', dataIndex: 'h_index', key: 'h_index', width: 80, align: 'center' as const },
     {
       title: '研究方向',
@@ -759,7 +764,7 @@ const SearchRecommendPage: React.FC = () => {
   // ========== Options ==========
   const countryOptions = countries.map(c => ({ value: c.country_code, label: c.country_name_cn }))
   const schoolOptions = schools.map(s => ({ value: s.school_id, label: s.school_name }))
-  const techElementOptions = techElements.map(e => ({ value: e.tech_element_id, label: e.element_name }))
+  const techDomainOptions = techDomains.map(d => ({ value: d.tech_domain_id, label: d.domain_name }))
 
   const sortMenu = (
     <Menu
@@ -773,7 +778,7 @@ const SearchRecommendPage: React.FC = () => {
     />
   )
 
-  const hasActiveFilters = roleFilter || schoolFilter || minCitations || countryFilter || techElementFilter
+  const hasActiveFilters = roleFilter || schoolFilter || minCitations || countryFilter || techDomainFilter
 
   // ========== Tab Change Handler ==========
   const handleTabChange = (key: string) => {
@@ -844,14 +849,18 @@ const SearchRecommendPage: React.FC = () => {
                           </span>
                         </Space>
                         <span>共 {total} 人</span>
-                        {(preciseCount > 0 || similarCount > 0) && (
+                        {(fulltextMatchCount > 0 || semanticMatchCount > 0) && (
                           <>
-                            <span style={{ color: '#52c41a' }}>
-                              精准匹配 {preciseCount} 人
-                            </span>
-                            <span style={{ color: '#1890ff' }}>
-                              相似匹配 {similarCount} 人
-                            </span>
+                            {fulltextMatchCount > 0 && (
+                              <span style={{ color: '#fa8c16' }}>
+                                关键词匹配 {fulltextMatchCount} 人
+                              </span>
+                            )}
+                            {semanticMatchCount > 0 && (
+                              <span style={{ color: '#722ed1' }}>
+                                语义匹配 {semanticMatchCount} 人
+                              </span>
+                            )}
                           </>
                         )}
                         <span style={{ color: '#999' }}>耗时 {tookMs.toFixed(0)}ms</span>
@@ -869,7 +878,7 @@ const SearchRecommendPage: React.FC = () => {
                     <Col span={24}>
                       <Space size={8} wrap>
                         <Text type="secondary">筛选:</Text>
-                        <Select placeholder="技术要素" value={techElementFilter} onChange={(val) => { setTechElementFilter(val); performSearch(query, 1) }} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techElementOptions} />
+                        <Select placeholder="技术领域" value={techDomainFilter} onChange={(val) => { setTechDomainFilter(val); performSearch(query, 1) }} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techDomainOptions} />
                         <Select placeholder="国家" value={countryFilter} onChange={(val) => { setCountryFilter(val); performSearch(query, 1) }} allowClear showSearch optionFilterProp="label" style={{ width: 120 }} options={countryOptions} />
                         <Select placeholder="学校" value={schoolFilter} onChange={(val) => { setSchoolFilter(val); performSearch(query, 1) }} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
                         <Select placeholder="角色" value={roleFilter} onChange={(val) => { setRoleFilter(val); performSearch(query, 1) }} allowClear style={{ width: 140 }} options={[{ value: 'professor', label: '教授/研究员' }, { value: 'student', label: '学生' }, { value: 'graduated', label: '毕业生' }]} />
@@ -939,7 +948,7 @@ const SearchRecommendPage: React.FC = () => {
                       <TextArea placeholder="请粘贴职位描述内容，包括岗位职责、任职要求、技能要求等..." value={jdText} onChange={(e) => setJdText(e.target.value)} rows={6} showCount maxLength={5000} />
                       <Space style={{ marginTop: 12, flexWrap: 'wrap' }}>
                         <Text type="secondary">筛选:</Text>
-                        <Select placeholder="技术要素" value={jdTechElementFilter} onChange={setJdTechElementFilter} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techElementOptions} />
+                        <Select placeholder="技术领域" value={jdTechDomainFilter} onChange={setJdTechDomainFilter} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techDomainOptions} />
                         <Select placeholder="国家" value={jdCountryFilter} onChange={setJdCountryFilter} allowClear showSearch optionFilterProp="label" style={{ width: 120 }} options={countryOptions} />
                         <Select placeholder="学校" value={jdSchoolFilter} onChange={setJdSchoolFilter} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
                         <Select placeholder="角色" value={jdRoleFilter} onChange={setJdRoleFilter} allowClear style={{ width: 140 }} options={[{ value: 'professor', label: '教授/研究员' }, { value: 'student', label: '学生' }, { value: 'graduated', label: '毕业生' }]} />

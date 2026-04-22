@@ -66,32 +66,32 @@ class VenueListResponse(BaseModel):
 # ============================================
 
 class VenueTechBindingBase(BaseModel):
-    """Venue-TechElement binding base schema"""
+    """Venue-TechDomain binding base schema"""
     venue_id: int = Field(..., description="Venue ID")
-    tech_element_id: int = Field(..., description="技术要素ID")
+    tech_domain_id: int = Field(..., description="技术领域ID")
     priority: int = Field(default=0, description="优先级")
     is_enabled: bool = Field(default=True, description="是否启用")
 
 
 class VenueTechBindingCreate(VenueTechBindingBase):
-    """Venue-TechElement binding creation schema"""
+    """Venue-TechDomain binding creation schema"""
     pass
 
 
 class VenueTechBindingBatchCreate(BaseModel):
-    """Batch create bindings for a tech element"""
-    tech_element_id: int = Field(..., description="技术要素ID")
+    """Batch create bindings for a tech domain"""
+    tech_domain_id: int = Field(..., description="技术领域ID")
     venue_ids: list[int] = Field(..., description="Venue ID列表")
 
 
 class VenueTechBindingUpdate(BaseModel):
-    """Venue-TechElement binding update schema"""
+    """Venue-TechDomain binding update schema"""
     priority: int | None = None
     is_enabled: bool | None = None
 
 
 class VenueTechBindingResponse(VenueTechBindingBase):
-    """Venue-TechElement binding response schema"""
+    """Venue-TechDomain binding response schema"""
     binding_id: int
     collect_status: str = Field(default="pending", description="采集状态")
     last_collect_at: datetime | None = None
@@ -107,7 +107,7 @@ class VenueTechBindingResponse(VenueTechBindingBase):
 
 
 class VenueTechBindingListResponse(BaseModel):
-    """Venue-TechElement binding list response"""
+    """Venue-TechDomain binding list response"""
     total: int
     items: list[VenueTechBindingResponse]
 
@@ -150,14 +150,14 @@ class VenueSubTaskListResponse(BaseModel):
 
 class MigrateCollectSourcesRequest(BaseModel):
     """Request to migrate collect_sources JSON to Venue tables"""
-    tech_element_id: int = Field(..., description="技术要素ID")
+    tech_domain_id: int = Field(..., description="技术领域ID")
     dry_run: bool = Field(default=False, description="是否只预览不执行")
 
 
 class MigrateCollectSourcesResponse(BaseModel):
     """Response for collect_sources migration"""
-    tech_element_id: int
-    tech_element_name: str
+    tech_domain_id: int
+    tech_domain_name: str
     venues_found: int
     venues_created: int
     bindings_created: int

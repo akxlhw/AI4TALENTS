@@ -293,15 +293,15 @@ class TestServingLayerOrchestrator:
     async def setup_orchestrator_data(self, test_session: AsyncSession):
         """Create comprehensive test data for orchestrator tests."""
         from app.models.raw_data import AuthorTechBelong
-        from app.models.tech_element import TechElement
+        from app.models.tech_domain import TechDomain
 
-        # Create tech element
-        element = TechElement(
-            element_code="TEST_AI",
-            element_name="测试人工智能",
+        # Create tech domain
+        domain = TechDomain(
+            domain_code="TEST_AI",
+            domain_name="测试人工智能",
             is_enabled=True,
         )
-        test_session.add(element)
+        test_session.add(domain)
         await test_session.flush()
 
         # Create standardized schools
@@ -340,7 +340,7 @@ class TestServingLayerOrchestrator:
         for author in authors:
             belong = AuthorTechBelong(
                 openalex_author_id=author.openalex_author_id,
-                tech_element_id=element.tech_element_id,
+                tech_domain_id=domain.tech_domain_id,
                 source_task_id=None,  # No task reference for test
                 work_count_in_venue=5,
             )
@@ -350,7 +350,7 @@ class TestServingLayerOrchestrator:
         await test_session.commit()
 
         return {
-            "element": element,
+            "domain": domain,
             "schools": schools,
             "authors": authors,
             "belongs": belongs,
@@ -370,7 +370,7 @@ class TestServingLayerOrchestrator:
         # querying with task_id=1 will find no matches
         result = await orchestrator.sync_all_for_task(
             task_id=1,
-            tech_element_id=data["element"].tech_element_id,
+            tech_domain_id=data["domain"].tech_domain_id,
         )
 
         # Should return empty stats when no matching records
@@ -407,22 +407,22 @@ class TestServingLayerOrchestrator:
     ):
         """Test orchestrator handles task with no data."""
         from app.services.sync.orchestrator import ServingLayerOrchestrator
-        from app.models.tech_element import TechElement
+        from app.models.tech_domain import TechDomain
 
-        # Create tech element
-        element = TechElement(
-            element_code="EMPTY_ELEMENT",
-            element_name="空元素",
+        # Create tech domain
+        domain = TechDomain(
+            domain_code="EMPTY_DOMAIN",
+            domain_name="空元素",
             is_enabled=True,
         )
-        test_session.add(element)
+        test_session.add(domain)
         await test_session.commit()
 
         orchestrator = ServingLayerOrchestrator(test_session)
 
         result = await orchestrator.sync_all_for_task(
             task_id=99999,  # Non-existent task
-            tech_element_id=element.tech_element_id,
+            tech_domain_id=domain.tech_domain_id,
         )
 
         # Should return empty stats

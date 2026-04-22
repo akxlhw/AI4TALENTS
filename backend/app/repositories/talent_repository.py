@@ -15,6 +15,7 @@ from app.models.school import School
 from app.models.talent import RoleProfile, SelectedWork, Talent
 from app.models.raw_data import RawWork
 from app.models.standardized import StdAuthor
+from app.schemas.filters import TalentFilterParams, PaginationParams
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,9 @@ class TalentRepository:
         """
         Get paginated list of talents with filters.
 
+        This method supports both individual parameters (for backward compatibility)
+        and can be called with TalentFilterParams.
+
         Args:
             school_id: Filter by school ID
             country_code: Filter by country code (via school)
@@ -54,34 +58,79 @@ class TalentRepository:
         Returns:
             Tuple of (list of talents, total count)
         """
+        # Create filter params from individual args
+        filters = TalentFilterParams(
+            school_id=school_id,
+            country_code=country_code,
+            role_type=role_type,
+            min_works=min_works,
+            min_citations=min_citations,
+            keyword=keyword,
+            visible_only=visible_only,
+        )
+        pagination = PaginationParams(page=page, page_size=page_size)
+
+        return await self.get_list_with_params(filters, pagination)
+
+    async def get_list_with_params(
+        self,
+        filters: TalentFilterParams,
+        pagination: PaginationParams,
+    ) -> tuple[list[Talent], int]:
+        """
+        Get paginated list of talents with filter params object.
+
+        Args:
+            filters: TalentFilterParams object
+            pagination: PaginationParams object
+
+        Returns:
+            Tuple of (list of talents, total count)
+        """
         query = (
             select(Talent)
             .options(selectinload(Talent.school))
             .order_by(Talent.cited_by_count.desc())
         )
 
-        # Apply filters
-        if visible_only:
+        # Apply filters using helper
+        query = self._apply_talent_filters(query, filters)
+
+        # Get total count
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self.session.execute(count_query)
+        total = total_result.scalar() or 0
+
+        # Apply pagination
+        query = query.offset(pagination.offset).limit(pagination.page_size)
+
+        result = await self.session.execute(query)
+        talents = list(result.scalars().all())
+
+        return talents, total
+
+    def _apply_talent_filters(self, query, filters: TalentFilterParams):
+        """Apply TalentFilterParams to a query. Reusable across methods."""
+        if filters.visible_only:
             query = query.where(Talent.is_visible.is_(True))
 
-        if school_id:
-            query = query.where(Talent.school_id == school_id)
+        if filters.school_id:
+            query = query.where(Talent.school_id == filters.school_id)
 
-        if country_code:
-            # Join with school to filter by country_code
-            query = query.join(School).where(School.country_code == country_code.upper())
+        if filters.country_code:
+            query = query.join(School).where(School.country_code == filters.country_code.upper())
 
-        if role_type:
-            query = query.where(Talent.role_type == role_type)
+        if filters.role_type:
+            query = query.where(Talent.role_type == filters.role_type)
 
-        if min_works is not None:
-            query = query.where(Talent.works_count >= min_works)
+        if filters.min_works is not None:
+            query = query.where(Talent.works_count >= filters.min_works)
 
-        if min_citations is not None:
-            query = query.where(Talent.cited_by_count >= min_citations)
+        if filters.min_citations is not None:
+            query = query.where(Talent.cited_by_count >= filters.min_citations)
 
-        if keyword:
-            keyword_pattern = f"%{keyword}%"
+        if filters.keyword:
+            keyword_pattern = f"%{filters.keyword}%"
             query = query.where(
                 or_(
                     Talent.name.ilike(keyword_pattern),
@@ -90,19 +139,7 @@ class TalentRepository:
                 )
             )
 
-        # Get total count
-        count_query = select(func.count()).select_from(query.subquery())
-        total_result = await self.session.execute(count_query)
-        total = total_result.scalar() or 0
-
-        # Apply pagination
-        offset = (page - 1) * page_size
-        query = query.offset(offset).limit(page_size)
-
-        result = await self.session.execute(query)
-        talents = list(result.scalars().all())
-
-        return talents, total
+        return query
 
     async def get_list_by_cursor(
         self,
@@ -136,46 +173,38 @@ class TalentRepository:
         Returns:
             Tuple of (list of talents, next_cursor or None if no more pages)
         """
-        # Use a subquery approach for efficient filtering with cursor
-        # Order by talent_id descending for consistent pagination
+        # Create filter params from args
+        filters = TalentFilterParams(
+            school_id=school_id,
+            country_code=country_code,
+            role_type=role_type,
+            min_works=min_works,
+            min_citations=min_citations,
+            keyword=keyword,
+            visible_only=visible_only,
+        )
+
+        return await self.get_list_by_cursor_with_params(cursor, page_size, filters)
+
+    async def get_list_by_cursor_with_params(
+        self,
+        cursor: int | None,
+        page_size: int,
+        filters: TalentFilterParams,
+    ) -> tuple[list[Talent], int | None]:
+        """Cursor pagination with filter params object."""
         query = (
             select(Talent)
             .options(selectinload(Talent.school))
             .order_by(Talent.talent_id.desc())
         )
 
-        # Apply cursor filter (get items with id < cursor)
+        # Apply cursor filter
         if cursor is not None:
             query = query.where(Talent.talent_id < cursor)
 
-        # Apply filters
-        if visible_only:
-            query = query.where(Talent.is_visible.is_(True))
-
-        if school_id:
-            query = query.where(Talent.school_id == school_id)
-
-        if country_code:
-            query = query.join(School).where(School.country_code == country_code.upper())
-
-        if role_type:
-            query = query.where(Talent.role_type == role_type)
-
-        if min_works is not None:
-            query = query.where(Talent.works_count >= min_works)
-
-        if min_citations is not None:
-            query = query.where(Talent.cited_by_count >= min_citations)
-
-        if keyword:
-            keyword_pattern = f"%{keyword}%"
-            query = query.where(
-                or_(
-                    Talent.name.ilike(keyword_pattern),
-                    Talent.name_en.ilike(keyword_pattern),
-                    Talent.current_title.ilike(keyword_pattern),
-                )
-            )
+        # Apply filters using helper
+        query = self._apply_talent_filters(query, filters)
 
         # Fetch one extra to determine if there's a next page
         query = query.limit(page_size + 1)
@@ -492,6 +521,7 @@ class TalentRepository:
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
         offset: int = 0,
+        vector_type: str = "research",
     ) -> Tuple[List[Dict[str, Any]], int]:
         """
         Search talents by vector similarity using pgvector.
@@ -502,6 +532,7 @@ class TalentRepository:
             filters: Additional filters
             limit: Maximum results
             offset: Result offset for pagination
+            vector_type: Vector type to search (research/papers)
 
         Returns:
             Tuple of (list of talent dicts with similarity_score, total count)
@@ -518,8 +549,8 @@ class TalentRepository:
         distance_threshold = 1.0 - similarity_threshold
 
         # Build filter clauses
-        filter_clauses = []
-        filter_params: Dict[str, Any] = {}
+        filter_clauses = ["e.vector_type = :vector_type"]
+        filter_params: Dict[str, Any] = {"vector_type": vector_type}
 
         if filters:
             if "school_id" in filters:
@@ -532,7 +563,7 @@ class TalentRepository:
                 filter_clauses.append("t.cited_by_count >= :min_citations")
                 filter_params["min_citations"] = filters["min_citations"]
 
-        filter_sql = " AND " + " AND ".join(filter_clauses) if filter_clauses else ""
+        filter_sql = " AND " + " AND ".join(filter_clauses)
 
         # Count query
         count_query_str = f"""
@@ -837,13 +868,13 @@ class TalentRepository:
             )
             query = query.where(Talent.school_id.in_(school_subquery))
 
-        # 按技术要素筛选（通过 TalentTechTag 关联）
-        if "tech_element_id" in filters:
-            from app.models.tech_element import TalentTechTag
-            # 子查询：获取属于指定技术要素的人才 ID
+        # 按技术领域筛选（通过 TalentTechTag 关联）
+        if "tech_domain_id" in filters:
+            from app.models.tech_domain import TalentTechTag
+            # 子查询：获取属于指定技术领域的人才 ID
             subquery = (
                 select(TalentTechTag.talent_id)
-                .where(TalentTechTag.tech_element_id == filters["tech_element_id"])
+                .where(TalentTechTag.tech_domain_id == filters["tech_domain_id"])
                 .where(TalentTechTag.is_enabled.is_(True))
                 .distinct()
             )

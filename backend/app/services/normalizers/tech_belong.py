@@ -13,7 +13,7 @@ from app.models.venue import Venue
 
 
 class TechBelongCalculator:
-    """计算作者-技术要素归属关系"""
+    """计算作者-技术领域归属关系"""
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -21,7 +21,7 @@ class TechBelongCalculator:
     async def calculate_for_venue(
         self,
         venue_id: int,
-        tech_element_id: int,
+        tech_domain_id: int,
         task_id: int | None = None
     ) -> int:
         """Calculate author-tech relationships for a venue
@@ -78,7 +78,7 @@ class TechBelongCalculator:
             existing = await self.session.execute(
                 select(AuthorTechBelong).where(
                     AuthorTechBelong.openalex_author_id == author_id,
-                    AuthorTechBelong.tech_element_id == tech_element_id
+                    AuthorTechBelong.tech_domain_id == tech_domain_id
                 )
             )
             belong = existing.scalar_one_or_none()
@@ -94,7 +94,7 @@ class TechBelongCalculator:
                 # Create new record
                 belong = AuthorTechBelong(
                     openalex_author_id=author_id,
-                    tech_element_id=tech_element_id,
+                    tech_domain_id=tech_domain_id,
                     source_venue_id=venue_id,
                     work_count_in_venue=stats["work_count"],
                     first_work_year=stats["first_year"],
