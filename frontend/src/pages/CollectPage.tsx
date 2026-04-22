@@ -448,8 +448,8 @@ const CollectPage: React.FC = () => {
       title: '顶刊顶会',
       key: 'venues',
       render: (_: unknown, record: CollectTask) => {
-        const domain = techDomains.find(d => d.tech_domain_id === record.tech_domain_id)
-        const sources = domain?.collect_sources || []
+        // 使用任务创建时的快照，而非当前配置
+        const sources = record.venue_snapshot || []
         if (sources.length === 0) return <Text type="secondary">-</Text>
         const displayVenues = sources.slice(0, 5)
         return (

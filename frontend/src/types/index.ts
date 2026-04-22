@@ -293,6 +293,7 @@ export interface CollectTask {
     }>
   } | null
   execution_logs: Array<{ timestamp: string; level: string; message: string; details?: unknown }> | null
+  venue_snapshot: Array<{ id: string; name: string; type: string }> | null  // 创建时的顶会顶刊快照
   created_at: string
 }
 

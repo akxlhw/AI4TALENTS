@@ -166,6 +166,9 @@ class CollectTask(Base, TimestampMixin):
     # Execution logs - 新增字段
     execution_logs = Column(JSON, nullable=True)  # List of {timestamp, level, message}
 
+    # Venue snapshot - 保存创建时的顶会顶刊配置
+    venue_snapshot = Column(JSON, nullable=True)  # List of {id, name, type}
+
     # Relationships
     tech_domain = relationship("TechDomain")
 

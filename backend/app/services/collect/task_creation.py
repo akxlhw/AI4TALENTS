@@ -80,8 +80,20 @@ class TaskCreationService:
         self.session.add(task)
         await self.session.flush()
 
-        # Create venue sub-tasks
+        # Create venue sub-tasks and save venue snapshot
         bindings = await self.binding_repo.get_by_tech_domain(tech_domain_id, is_enabled=True)
+
+        # Build venue snapshot for this task
+        venue_snapshot = [
+            {
+                "id": b.venue.venue_code,
+                "name": b.venue.venue_name,
+                "type": b.venue.venue_type
+            }
+            for b in bindings if b.venue
+        ]
+        task.venue_snapshot = venue_snapshot
+
         for binding in bindings:
             venue_sub_task = VenueSubTask(
                 task_id=task.task_id,

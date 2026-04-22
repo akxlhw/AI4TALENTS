@@ -105,6 +105,7 @@ class CollectTaskResponse(BaseModel):
     error_details: dict | None = None
     result_summary: dict | None = None
     execution_logs: list[dict] | None = None
+    venue_snapshot: list[VenueItem] | None = None  # 创建时的顶会顶刊快照
     created_at: datetime
 
     class Config:
