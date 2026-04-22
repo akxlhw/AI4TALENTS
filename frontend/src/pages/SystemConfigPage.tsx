@@ -1352,9 +1352,9 @@ const SystemConfigPage: React.FC = () => {
                       title: '采集源',
                       key: 'venue_id',
                       width: 120,
-                      render: (_: unknown, record: { venue_id: string; venue_name: string }) => (
+                      render: (_: unknown, record: { venue_id: number; venue_name: string }) => (
                         <Tooltip title={record.venue_name}>
-                          <Text strong>{record.venue_id.toUpperCase()}</Text>
+                          <Text strong>{String(record.venue_id).toUpperCase()}</Text>
                         </Tooltip>
                       ),
                     },
