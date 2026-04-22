@@ -442,7 +442,7 @@ class TechDomainRepository:
             conditions.append("ttt.tech_direction_id = :direction_id")
             params['direction_id'] = direction_id
         if school_id:
-            conditions.append("t.school_id = :school_id")
+            conditions.append("(t.education_school_id = :school_id OR t.company_school_id = :school_id OR t.school_id = :school_id)")
             params['school_id'] = school_id
         if country_code:
             conditions.append("s.country_code = :country_code")
@@ -458,13 +458,17 @@ class TechDomainRepository:
 
         # Main query with cursor pagination (fetch one extra for next_cursor)
         # Use DISTINCT ON to avoid JSON equality comparison issues in PostgreSQL
+        # Priority: education_school -> company_school -> legacy school
         main_sql = text(f"""
             SELECT DISTINCT ON (t.talent_id) t.talent_id, t.name, t.name_en, t.role_type,
                    t.current_title, t.h_index, t.works_count, t.topic_tags,
                    t.openalex_topics,
-                   s.school_id, s.school_name
+                   COALESCE(es.school_id, cs.school_id, s.school_id) as school_id,
+                   COALESCE(es.school_name, cs.school_name, s.school_name) as school_name
             FROM core_talent_tech_tag ttt
             INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
+            LEFT JOIN core_school es ON t.education_school_id = es.school_id
+            LEFT JOIN core_school cs ON t.company_school_id = cs.school_id
             LEFT JOIN core_school s ON t.school_id = s.school_id
             WHERE {where_clause}
             ORDER BY t.talent_id DESC
@@ -541,7 +545,7 @@ class TechDomainRepository:
             conditions.append("ttt.tech_direction_id = :direction_id")
             params['direction_id'] = direction_id
         if school_id:
-            conditions.append("t.school_id = :school_id")
+            conditions.append("(t.education_school_id = :school_id OR t.company_school_id = :school_id OR t.school_id = :school_id)")
             params['school_id'] = school_id
         if country_code:
             conditions.append("s.country_code = :country_code")
@@ -556,11 +560,12 @@ class TechDomainRepository:
         where_clause = " AND ".join(conditions)
 
         # Count query - fast with DISTINCT
+        # JOIN all three school fields for country_code filtering
         count_sql = text(f"""
             SELECT COUNT(DISTINCT t.talent_id)
             FROM core_talent_tech_tag ttt
             INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
-            LEFT JOIN core_school s ON t.school_id = s.school_id
+            LEFT JOIN core_school s ON COALESCE(t.education_school_id, t.company_school_id, t.school_id) = s.school_id
             WHERE {where_clause}
         """)
         total_result = await self.session.execute(count_sql, params)
@@ -568,13 +573,17 @@ class TechDomainRepository:
 
         # Main query with pagination
         # Use subquery to avoid JSON equality comparison issues in PostgreSQL
+        # Priority: education_school -> company_school -> legacy school
         offset = (page - 1) * page_size
         main_sql = text(f"""
             SELECT t.talent_id, t.name, t.name_en, t.role_type,
                    t.current_title, t.h_index, t.works_count, t.topic_tags,
                    t.openalex_topics,
-                   s.school_id, s.school_name
+                   COALESCE(es.school_id, cs.school_id, s.school_id) as school_id,
+                   COALESCE(es.school_name, cs.school_name, s.school_name) as school_name
             FROM core_talent t
+            LEFT JOIN core_school es ON t.education_school_id = es.school_id
+            LEFT JOIN core_school cs ON t.company_school_id = cs.school_id
             LEFT JOIN core_school s ON t.school_id = s.school_id
             WHERE t.talent_id IN (
                 SELECT DISTINCT ttt.talent_id

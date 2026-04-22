@@ -98,6 +98,22 @@ class Talent(Base, TimestampMixin):
         else:
             self.topic_tags = []
 
+    @property
+    def primary_school_id(self) -> int | None:
+        """Get primary school ID (education -> company -> legacy)."""
+        return self.education_school_id or self.company_school_id or self.school_id
+
+    @property
+    def primary_school_name(self) -> str | None:
+        """Get primary school name (education -> company -> legacy)."""
+        if self.education_school:
+            return self.education_school.school_name
+        if self.company_school:
+            return self.company_school.school_name
+        if self.school:
+            return self.school.school_name
+        return None
+
     def __repr__(self):
         return f"<Talent(talent_id={self.talent_id}, name={self.name}, role={self.role_type})>"
 

@@ -70,13 +70,8 @@ async def list_talents(
             orcid=talent.orcid,
             role_type=talent.role_type,
             role_confidence=talent.role_confidence,
-            school_id=talent.education_school_id or talent.company_school_id or talent.school_id,
-            # 优先显示教育机构，其次公司机构，最后 legacy school
-            school_name=(
-                talent.education_school.school_name if talent.education_school else
-                talent.company_school.school_name if talent.company_school else
-                talent.school.school_name if talent.school else None
-            ),
+            school_id=talent.primary_school_id,
+            school_name=talent.primary_school_name,
             # Primary institutions
             education_school_id=talent.education_school_id,
             education_school_name=talent.education_school.school_name if talent.education_school else None,
@@ -167,13 +162,8 @@ async def get_talent(
         orcid=talent.orcid,
         role_type=talent.role_type,
         role_confidence=talent.role_confidence,
-        school_id=talent.education_school_id or talent.company_school_id or talent.school_id,
-        # 优先显示教育机构，其次公司机构，最后 legacy school
-        school_name=(
-            talent.education_school.school_name if talent.education_school else
-            talent.company_school.school_name if talent.company_school else
-            talent.school.school_name if talent.school else None
-        ),
+        school_id=talent.primary_school_id,
+        school_name=talent.primary_school_name,
         # Primary institutions
         education_school_id=talent.education_school_id,
         education_school_name=talent.education_school.school_name if talent.education_school else None,
