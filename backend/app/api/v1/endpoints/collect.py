@@ -256,6 +256,7 @@ async def list_tasks(
             error_message=t.error_message,
             error_details=t.error_details,
             result_summary=t.result_summary,
+            venue_snapshot=t.venue_snapshot,
             created_at=t.created_at,
         ))
 
@@ -375,6 +376,17 @@ async def trigger_task(
 
     bindings = await binding_repo.get_by_tech_domain(request.tech_domain_id, is_enabled=True)
 
+    # Save venue snapshot for this task
+    venue_snapshot = [
+        {
+            "id": b.venue.venue_code,
+            "name": b.venue.venue_name,
+            "type": b.venue.venue_type
+        }
+        for b in bindings if b.venue
+    ]
+    task.venue_snapshot = venue_snapshot
+
     for binding in bindings:
         sub_task = VenueSubTask(
             task_id=task.task_id,
@@ -416,6 +428,7 @@ async def trigger_task(
         error_message=task.error_message,
         error_details=task.error_details,
         result_summary=task.result_summary,
+        venue_snapshot=task.venue_snapshot,
         created_at=task.created_at,
     )
 
@@ -471,6 +484,7 @@ async def get_task(
         error_details=task.error_details,
         result_summary=task.result_summary,
         execution_logs=task.execution_logs or [],
+        venue_snapshot=task.venue_snapshot,
         created_at=task.created_at,
     )
 
@@ -611,6 +625,7 @@ async def get_active_tasks(
         error_message=t.error_message,
         error_details=t.error_details,
         result_summary=t.result_summary,
+        venue_snapshot=t.venue_snapshot,
         created_at=t.created_at,
     ) for t in tasks]
 
