@@ -256,7 +256,7 @@ const CountrySchoolPage: React.FC = () => {
   // 学校表格列
   const schoolColumns: ColumnsType<School> = [
     {
-      title: '院校',
+      title: '院校机构',
       dataIndex: 'school_name',
       key: 'school_name',
       render: (text, record) => (
