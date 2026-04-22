@@ -98,6 +98,8 @@ async def add_favorite(
         select(FavoriteTalent)
         .options(
             selectinload(FavoriteTalent.talent),
+            selectinload(FavoriteTalent.talent).selectinload(Talent.education_school),
+            selectinload(FavoriteTalent.talent).selectinload(Talent.company_school),
             selectinload(FavoriteTalent.talent).selectinload(Talent.school),
         )
         .where(FavoriteTalent.favorite_id == favorite.favorite_id)
@@ -272,8 +274,13 @@ def _build_favorite_response(favorite) -> FavoriteTalentResponse:
         name=talent.name,
         name_en=talent.name_en,
         role_type=talent.role_type,
-        school_id=talent.school_id,
-        school_name=talent.school.school_name if talent.school else None,
+        school_id=talent.education_school_id or talent.company_school_id or talent.school_id,
+        # 优先显示教育机构，其次公司机构，最后 legacy school
+        school_name=(
+            talent.education_school.school_name if talent.education_school else
+            talent.company_school.school_name if talent.company_school else
+            talent.school.school_name if talent.school else None
+        ),
         current_title=talent.current_title,
         works_count=talent.works_count,
         cited_by_count=talent.cited_by_count,
