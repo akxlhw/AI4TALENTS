@@ -30,12 +30,18 @@ class StdAuthor(Base, TimestampMixin):
     h_index = Column(Integer, default=0)
     i10_index = Column(Integer, default=0)
 
-    # Institution reference (after normalization)
+    # Institution reference (after normalization) - legacy field
     std_school_id = Column(Integer, ForeignKey("std_school.std_school_id"), nullable=True, index=True)
 
-    # Raw institution info for matching
+    # Raw institution info for matching (legacy field)
     raw_institution_name = Column(String(255), nullable=True)
     raw_institution_id = Column(String(50), nullable=True)
+
+    # Primary institutions (extracted from affiliations by publication count)
+    primary_education_id = Column(String(50), nullable=True)
+    primary_education_name = Column(String(255), nullable=True)
+    primary_company_id = Column(String(50), nullable=True)
+    primary_company_name = Column(String(255), nullable=True)
 
     # Status
     confirm_status = Column(String(20), default="auto_identified", nullable=False, index=True)

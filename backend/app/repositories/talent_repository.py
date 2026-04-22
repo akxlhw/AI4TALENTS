@@ -89,7 +89,11 @@ class TalentRepository:
         """
         query = (
             select(Talent)
-            .options(selectinload(Talent.school))
+            .options(
+                selectinload(Talent.school),
+                selectinload(Talent.education_school),
+                selectinload(Talent.company_school),
+            )
             .order_by(Talent.cited_by_count.desc())
         )
 
@@ -115,10 +119,20 @@ class TalentRepository:
             query = query.where(Talent.is_visible.is_(True))
 
         if filters.school_id:
-            query = query.where(Talent.school_id == filters.school_id)
+            # Filter by school_id using OR logic (matches education or company institution)
+            query = query.where(
+                or_(
+                    Talent.school_id == filters.school_id,
+                    Talent.education_school_id == filters.school_id,
+                    Talent.company_school_id == filters.school_id,
+                )
+            )
 
         if filters.country_code:
-            query = query.join(School).where(School.country_code == filters.country_code.upper())
+            # Join with explicit condition due to multiple FKs between Talent and School
+            query = query.join(School, Talent.school_id == School.school_id).where(
+                School.country_code == filters.country_code.upper()
+            )
 
         if filters.role_type:
             query = query.where(Talent.role_type == filters.role_type)
@@ -195,7 +209,11 @@ class TalentRepository:
         """Cursor pagination with filter params object."""
         query = (
             select(Talent)
-            .options(selectinload(Talent.school))
+            .options(
+                selectinload(Talent.school),
+                selectinload(Talent.education_school),
+                selectinload(Talent.company_school),
+            )
             .order_by(Talent.talent_id.desc())
         )
 
@@ -238,6 +256,8 @@ class TalentRepository:
         if include_relations:
             query = query.options(
                 selectinload(Talent.school),
+                selectinload(Talent.education_school),
+                selectinload(Talent.company_school),
                 selectinload(Talent.role_profile),
                 selectinload(Talent.selected_works),
             )
@@ -840,7 +860,14 @@ class TalentRepository:
             return query
 
         if "school_id" in filters:
-            query = query.where(Talent.school_id == filters["school_id"])
+            # Filter by school_id using OR logic (matches education or company institution)
+            query = query.where(
+                or_(
+                    Talent.school_id == filters["school_id"],
+                    Talent.education_school_id == filters["school_id"],
+                    Talent.company_school_id == filters["school_id"],
+                )
+            )
 
         if "role_type" in filters:
             query = query.where(Talent.role_type == filters["role_type"])
@@ -852,7 +879,14 @@ class TalentRepository:
             query = query.where(Talent.works_count >= filters["min_works"])
 
         if "school_ids" in filters:
-            query = query.where(Talent.school_id.in_(filters["school_ids"]))
+            # Filter by school_ids using OR logic (matches education or company institution)
+            query = query.where(
+                or_(
+                    Talent.school_id.in_(filters["school_ids"]),
+                    Talent.education_school_id.in_(filters["school_ids"]),
+                    Talent.company_school_id.in_(filters["school_ids"]),
+                )
+            )
 
         if "exclude_ids" in filters:
             query = query.where(~Talent.talent_id.in_(filters["exclude_ids"]))
@@ -866,7 +900,14 @@ class TalentRepository:
                 select(School.school_id)
                 .where(School.country_code == filters["country_code"].upper())
             )
-            query = query.where(Talent.school_id.in_(school_subquery))
+            # Filter by country using OR logic (matches education or company institution)
+            query = query.where(
+                or_(
+                    Talent.school_id.in_(school_subquery),
+                    Talent.education_school_id.in_(school_subquery),
+                    Talent.company_school_id.in_(school_subquery),
+                )
+            )
 
         # 按技术领域筛选（通过 TalentTechTag 关联）
         if "tech_domain_id" in filters:

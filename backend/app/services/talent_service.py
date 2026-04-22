@@ -103,6 +103,8 @@ class TalentService:
             .where(Talent.talent_id == talent_id)
             .options(
                 selectinload(Talent.school),
+                selectinload(Talent.education_school),
+                selectinload(Talent.company_school),
                 selectinload(Talent.tech_tags).selectinload(TalentTechTag.tech_domain),
             )
         )
@@ -126,6 +128,8 @@ class TalentService:
             .where(Talent.talent_id.in_(talent_ids))
             .options(
                 selectinload(Talent.school),
+                selectinload(Talent.education_school),
+                selectinload(Talent.company_school),
                 selectinload(Talent.role_profile),
             )
         )

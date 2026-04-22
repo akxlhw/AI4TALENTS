@@ -72,6 +72,11 @@ async def list_talents(
             role_confidence=talent.role_confidence,
             school_id=talent.school_id,
             school_name=talent.school.school_name if talent.school else None,
+            # Primary institutions
+            education_school_id=talent.education_school_id,
+            education_school_name=talent.education_school.school_name if talent.education_school else None,
+            company_school_id=talent.company_school_id,
+            company_school_name=talent.company_school.school_name if talent.company_school else None,
             current_title=talent.current_title,
             works_count=talent.works_count,
             cited_by_count=talent.cited_by_count,
@@ -159,6 +164,11 @@ async def get_talent(
         role_confidence=talent.role_confidence,
         school_id=talent.school_id,
         school_name=talent.school.school_name if talent.school else None,
+        # Primary institutions
+        education_school_id=talent.education_school_id,
+        education_school_name=talent.education_school.school_name if talent.education_school else None,
+        company_school_id=talent.company_school_id,
+        company_school_name=talent.company_school.school_name if talent.company_school else None,
         current_title=talent.current_title,
         works_count=talent.works_count,
         cited_by_count=talent.cited_by_count,

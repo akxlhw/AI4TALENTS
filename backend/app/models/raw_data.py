@@ -77,9 +77,15 @@ class RawAuthor(Base, TimestampMixin):
     h_index = Column(Integer, default=0)
     i10_index = Column(Integer, default=0)
 
-    # Institution
+    # Institution (legacy field - kept for backward compatibility)
     last_known_institution_id = Column(String(50), nullable=True, index=True)
     last_known_institution_name = Column(String(255), nullable=True)
+
+    # Primary institutions (extracted from affiliations by publication count)
+    primary_education_id = Column(String(50), nullable=True)
+    primary_education_name = Column(String(255), nullable=True)
+    primary_company_id = Column(String(50), nullable=True)
+    primary_company_name = Column(String(255), nullable=True)
 
     # Processing status
     processed_status = Column(String(20), default="pending", index=True)  # pending/processed/error

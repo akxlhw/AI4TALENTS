@@ -96,6 +96,11 @@ class TalentSummary(BaseModel):
     role_confidence: float = 0.0
     school_id: int | None = None
     school_name: str | None = None
+    # Primary institutions (v1.5)
+    education_school_id: int | None = None
+    education_school_name: str | None = None
+    company_school_id: int | None = None
+    company_school_name: str | None = None
     current_title: str | None = None
     works_count: int = 0
     cited_by_count: int = 0
@@ -124,6 +129,11 @@ class TalentDetail(BaseModel):
     role_confidence: float = 0.0
     school_id: int | None = None
     school_name: str | None = None
+    # Primary institutions (v1.5)
+    education_school_id: int | None = None
+    education_school_name: str | None = None
+    company_school_id: int | None = None
+    company_school_name: str | None = None
     current_title: str | None = None
     works_count: int = 0
     cited_by_count: int = 0

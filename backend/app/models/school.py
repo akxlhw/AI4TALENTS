@@ -43,7 +43,9 @@ class School(Base, TimestampMixin):
     lab_name = Column(String(255), nullable=True)
 
     # Relationships
-    talents = relationship("Talent", back_populates="school")
+    # Note: talents relationship uses school_id FK (legacy field)
+    # education_talents and company_talents are not defined to avoid relationship explosion
+    talents = relationship("Talent", back_populates="school", foreign_keys="Talent.school_id")
     aliases = relationship("SchoolAlias", back_populates="school")
 
     def __repr__(self):

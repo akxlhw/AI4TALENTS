@@ -146,6 +146,11 @@ export interface SearchTalent {
   role_type: string
   school_id: number | null
   school_name: string | null
+  // Primary institutions (v1.5)
+  education_school_id: number | null
+  education_school_name: string | null
+  company_school_id: number | null
+  company_school_name: string | null
   current_title: string | null
   works_count: number
   cited_by_count: number

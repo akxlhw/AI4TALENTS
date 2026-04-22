@@ -46,6 +46,11 @@ interface TalentDetail {
   role_confidence: number
   school_id: number | null
   school_name: string | null
+  // Primary institutions (v1.5)
+  education_school_id: number | null
+  education_school_name: string | null
+  company_school_id: number | null
+  company_school_name: string | null
   current_title: string | null
   works_count: number
   cited_by_count: number
@@ -238,7 +243,34 @@ const TalentDetailPage: React.FC = () => {
                 {talent.is_graduated && (
                   <Tag color="orange">已毕业</Tag>
                 )}
-                {talent.school_name && (
+                {/* Display education school */}
+                {talent.education_school_name && (
+                  <Tooltip title="教育机构">
+                    <Tag
+                      icon={<BankOutlined />}
+                      color="blue"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/schools/${talent.education_school_id}`)}
+                    >
+                      {talent.education_school_name}
+                    </Tag>
+                  </Tooltip>
+                )}
+                {/* Display company school if different from education */}
+                {talent.company_school_name && talent.company_school_name !== talent.education_school_name && (
+                  <Tooltip title="公司机构">
+                    <Tag
+                      icon={<BankOutlined />}
+                      color="green"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/schools/${talent.company_school_id}`)}
+                    >
+                      {talent.company_school_name}
+                    </Tag>
+                  </Tooltip>
+                )}
+                {/* Fallback to legacy school_name if no new fields */}
+                {!talent.education_school_name && !talent.company_school_name && talent.school_name && (
                   <Tag
                     icon={<BankOutlined />}
                     color="blue"

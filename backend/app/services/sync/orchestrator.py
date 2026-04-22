@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.raw_data import AuthorTechBelong
-from app.models.standardized import StdAuthor
+from app.models.standardized import StdAuthor, StdSchool
 from app.models.talent import Talent
 from app.services.sync.author_sync import AuthorSyncService
 from app.services.sync.school_sync import SchoolSyncService
@@ -125,12 +125,39 @@ class ServingLayerOrchestrator:
             logger.info(f"[BULK_SYNC] CS score distribution: {len(cs_scores)} authors, {above_threshold} >= {CS_SCORE_THRESHOLD}")
 
         # 1. Bulk sync schools first
+        # Collect all institution IDs to sync:
+        # - legacy: std_author.school (via std_school_id FK)
+        # - new: primary_education_id, primary_company_id (OpenAlex IDs, need lookup)
         schools_to_sync = {}
+        openalex_inst_ids_to_lookup = set()
+
+        # Legacy: schools via FK relationship
         for std_author in std_authors:
             if std_author.school and std_author.school.openalex_institution_id:
                 inst_id = std_author.school.openalex_institution_id
                 if inst_id not in schools_to_sync:
                     schools_to_sync[inst_id] = std_author.school
+
+            # Collect primary education/company OpenAlex IDs for lookup
+            if std_author.primary_education_id:
+                openalex_inst_ids_to_lookup.add(std_author.primary_education_id)
+            if std_author.primary_company_id:
+                openalex_inst_ids_to_lookup.add(std_author.primary_company_id)
+
+        # Lookup StdSchool by OpenAlex institution ID for primary education/company
+        if openalex_inst_ids_to_lookup:
+            # Remove IDs already in schools_to_sync
+            openalex_inst_ids_to_lookup -= set(schools_to_sync.keys())
+
+            if openalex_inst_ids_to_lookup:
+                result = await self.session.execute(
+                    select(StdSchool).where(
+                        StdSchool.openalex_institution_id.in_(openalex_inst_ids_to_lookup)
+                    )
+                )
+                for std_school in result.scalars().all():
+                    if std_school.openalex_institution_id:
+                        schools_to_sync[std_school.openalex_institution_id] = std_school
 
         if schools_to_sync:
             school_result = await self.school_sync.bulk_sync_schools(list(schools_to_sync.values()))

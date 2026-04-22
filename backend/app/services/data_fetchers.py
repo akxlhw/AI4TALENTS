@@ -364,6 +364,64 @@ class WorkFetcher:
         return works
 
 
+def extract_institutions(author_data: dict) -> dict:
+    """
+    Extract primary education and company institutions from OpenAlex author data.
+
+    Selection strategy: Choose the institution with the most publication years
+    (affiliations.years count) for each type.
+
+    Args:
+        author_data: OpenAlex author JSON data
+
+    Returns:
+        dict with keys:
+            - primary_education: {'id': str, 'name': str} or None
+            - primary_company: {'id': str, 'name': str} or None
+    """
+    result = {
+        'primary_education': None,
+        'primary_company': None,
+    }
+
+    affiliations = author_data.get('affiliations') or []
+
+    # Group affiliations by institution type
+    education_affs = []
+    company_affs = []
+
+    for aff in affiliations:
+        inst = aff.get('institution')
+        if not inst:
+            continue
+
+        inst_type = inst.get('type')
+        if inst_type == 'education':
+            education_affs.append(aff)
+        elif inst_type == 'company':
+            company_affs.append(aff)
+
+    # Select the education institution with most publication years
+    if education_affs:
+        education_affs.sort(key=lambda x: len(x.get('years', [])), reverse=True)
+        edu = education_affs[0]['institution']
+        result['primary_education'] = {
+            'id': extract_short_id(edu.get('id', '')),
+            'name': edu.get('display_name'),
+        }
+
+    # Select the company institution with most publication years
+    if company_affs:
+        company_affs.sort(key=lambda x: len(x.get('years', [])), reverse=True)
+        comp = company_affs[0]['institution']
+        result['primary_company'] = {
+            'id': extract_short_id(comp.get('id', '')),
+            'name': comp.get('display_name'),
+        }
+
+    return result
+
+
 class AuthorFetcher:
     """Fetcher for authors from OpenAlex"""
 
@@ -430,9 +488,14 @@ class AuthorFetcher:
                     for author_data in authors:
                         try:
                             # OpenAlex returns 'last_known_institutions' (plural, list)
-                            # Take the first institution if available
+                            # Take the first institution if available (legacy field)
                             inst_list = author_data.get("last_known_institutions") or []
                             inst_info = inst_list[0] if inst_list else {}
+
+                            # Extract primary institutions by publication count
+                            institutions = extract_institutions(author_data)
+                            primary_edu = institutions.get('primary_education') or {}
+                            primary_comp = institutions.get('primary_company') or {}
 
                             raw_author = RawAuthor(
                                 openalex_author_id=extract_short_id(author_data.get("id", "")),
@@ -443,8 +506,14 @@ class AuthorFetcher:
                                 cited_by_count=author_data.get("cited_by_count", 0),
                                 h_index=author_data.get("summary_stats", {}).get("h_index", 0),
                                 i10_index=author_data.get("summary_stats", {}).get("i10_index", 0),
+                                # Legacy fields
                                 last_known_institution_id=extract_short_id(inst_info.get("id", "")),
                                 last_known_institution_name=inst_info.get("display_name"),
+                                # Primary institutions (by publication count)
+                                primary_education_id=primary_edu.get('id'),
+                                primary_education_name=primary_edu.get('name'),
+                                primary_company_id=primary_comp.get('id'),
+                                primary_company_name=primary_comp.get('name'),
                                 fetch_task_id=task_id,
                                 fetched_at=datetime.utcnow()
                             )

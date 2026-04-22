@@ -111,6 +111,18 @@ class AuthorNormalizer:
         )
         return result.scalar_one_or_none()
 
+    async def _find_std_school_id(self, openalex_institution_id: str | None) -> int | None:
+        """Find StdSchool ID by OpenAlex institution ID"""
+        if not openalex_institution_id:
+            return None
+        result = await self.session.execute(
+            select(StdSchool).where(
+                StdSchool.openalex_institution_id == openalex_institution_id
+            )
+        )
+        std_school = result.scalar_one_or_none()
+        return std_school.std_school_id if std_school else None
+
     async def create_std_author(
         self,
         raw_author: RawAuthor,
@@ -130,9 +142,15 @@ class AuthorNormalizer:
             cited_by_count=raw_author.cited_by_count,
             h_index=raw_author.h_index,
             i10_index=raw_author.i10_index,
+            # Legacy fields
             std_school_id=std_school_id,
             raw_institution_name=raw_author.last_known_institution_name,
             raw_institution_id=raw_author.last_known_institution_id,
+            # Primary institutions (by publication count)
+            primary_education_id=raw_author.primary_education_id,
+            primary_education_name=raw_author.primary_education_name,
+            primary_company_id=raw_author.primary_company_id,
+            primary_company_name=raw_author.primary_company_name,
             confirm_status="auto_identified",
             confidence_score=0.8 if std_school_id else 0.5,
             openalex_topics=topics,
@@ -150,18 +168,10 @@ class AuthorNormalizer:
         task_id: int | None = None
     ) -> StdAuthor:
         """Normalize a raw author to StdAuthor"""
-        # Find or create school linkage first
+        # Find or create school linkage first (legacy field)
         std_school_id = None
         if raw_author.last_known_institution_id:
-            # Try to find StdSchool by institution ID
-            result = await self.session.execute(
-                select(StdSchool).where(
-                    StdSchool.openalex_institution_id == raw_author.last_known_institution_id
-                )
-            )
-            std_school = result.scalar_one_or_none()
-            if std_school:
-                std_school_id = std_school.std_school_id
+            std_school_id = await self._find_std_school_id(raw_author.last_known_institution_id)
 
         # Check if already exists
         existing = await self.find_std_author(raw_author.openalex_author_id)
@@ -177,8 +187,14 @@ class AuthorNormalizer:
             existing.cited_by_count = raw_author.cited_by_count
             existing.h_index = raw_author.h_index
             existing.i10_index = raw_author.i10_index
+            # Legacy fields
             existing.raw_institution_id = raw_author.last_known_institution_id
             existing.std_school_id = std_school_id
+            # Primary institutions (by publication count)
+            existing.primary_education_id = raw_author.primary_education_id
+            existing.primary_education_name = raw_author.primary_education_name
+            existing.primary_company_id = raw_author.primary_company_id
+            existing.primary_company_name = raw_author.primary_company_name
             existing.openalex_topics = topics
             existing.cs_concepts_score = cs_score
             existing.normalized_at = datetime.utcnow()

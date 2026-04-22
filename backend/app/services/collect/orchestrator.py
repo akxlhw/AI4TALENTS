@@ -503,21 +503,40 @@ class CollectionOrchestrator:
             logger.debug(f"All {len(all_author_ids)} authors already in database")
 
     async def _fetch_all_institutions(self, task_id: int, progress: CollectionProgress):
-        """Phase 3: Fetch all unique institutions from collected authors"""
+        """Phase 3: Fetch all unique institutions from collected authors
+
+        获取三类机构 ID：
+        1. last_known_institution_id (legacy)
+        2. primary_education_id (教育机构)
+        3. primary_company_id (公司机构)
+        """
         progress.current_step = "Fetching institutions"
 
         if not self.institution_fetcher:
             self.progress_tracker.add_log("warning", "Institution fetcher not configured")
             return
 
-        # Get all unique institution IDs from raw authors
+        # Get all unique institution IDs from raw authors (including primary institutions)
+        # Combine: last_known_institution_id, primary_education_id, primary_company_id
         result = await self.session.execute(
-            select(RawAuthor.last_known_institution_id).where(
-                RawAuthor.last_known_institution_id.isnot(None),
-                RawAuthor.last_known_institution_id != ""
-            ).distinct()
+            select(
+                RawAuthor.last_known_institution_id,
+                RawAuthor.primary_education_id,
+                RawAuthor.primary_company_id,
+            )
         )
-        institution_ids = [row[0] for row in result.fetchall() if row[0]]
+
+        # Collect all unique non-empty institution IDs
+        institution_ids = set()
+        for row in result.fetchall():
+            if row[0]:  # last_known_institution_id
+                institution_ids.add(row[0])
+            if row[1]:  # primary_education_id
+                institution_ids.add(row[1])
+            if row[2]:  # primary_company_id
+                institution_ids.add(row[2])
+
+        institution_ids = list(institution_ids)
 
         if not institution_ids:
             return

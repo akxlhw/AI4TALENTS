@@ -29,8 +29,13 @@ class Talent(Base, TimestampMixin):
     name_en = Column(String(255), nullable=True)
     orcid = Column(String(50), nullable=True, index=True)
 
-    # Affiliation
+    # Affiliation (legacy field - kept for backward compatibility)
     school_id = Column(Integer, ForeignKey("core_school.school_id"), nullable=True, index=True)
+
+    # Primary institutions (education and company)
+    education_school_id = Column(Integer, ForeignKey("core_school.school_id"), nullable=True, index=True)
+    company_school_id = Column(Integer, ForeignKey("core_school.school_id"), nullable=True, index=True)
+
     current_title = Column(String(255), nullable=True)
 
     # Role identification (quick filter field)
@@ -66,7 +71,9 @@ class Talent(Base, TimestampMixin):
     extra_data = Column(JSON, nullable=True)  # Flexible storage for additional info
 
     # Relationships
-    school = relationship("School", back_populates="talents")
+    school = relationship("School", back_populates="talents", foreign_keys=[school_id])
+    education_school = relationship("School", foreign_keys=[education_school_id])
+    company_school = relationship("School", foreign_keys=[company_school_id])
     role_profile = relationship("RoleProfile", back_populates="talent", uselist=False)
     selected_works = relationship("SelectedWork", back_populates="talent")
     tech_tags = relationship("TalentTechTag", back_populates="talent")

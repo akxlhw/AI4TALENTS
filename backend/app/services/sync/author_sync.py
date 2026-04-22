@@ -72,19 +72,27 @@ class AuthorSyncService:
             h_index=std_author.h_index or 0
         )
 
-        # 3. Get or create school association
+        # 3. Get or create school association (legacy field)
         school_id = await self._get_school_id(std_author)
+
+        # 4. Get education and company school IDs
+        education_school_id, company_school_id = await self._get_institution_school_ids(std_author)
 
         if existing_talent:
             # Update existing record
             if update_existing:
-                await self._update_talent(existing_talent, std_author, role_result, school_id)
+                await self._update_talent(
+                    existing_talent, std_author, role_result,
+                    school_id, education_school_id, company_school_id
+                )
 
             await self.session.flush()
             return existing_talent, False
 
-        # 4. Create new Talent
-        new_talent = await self._create_talent(std_author, role_result, school_id)
+        # 5. Create new Talent
+        new_talent = await self._create_talent(
+            std_author, role_result, school_id, education_school_id, company_school_id
+        )
 
         logger.debug(
             f"Created talent: {new_talent.talent_id} - {new_talent.name} "
@@ -94,7 +102,7 @@ class AuthorSyncService:
         return new_talent, True
 
     async def _get_school_id(self, std_author: StdAuthor) -> int | None:
-        """Get school ID for author"""
+        """Get school ID for author (legacy field)"""
         if not std_author.std_school_id:
             return None
 
@@ -111,19 +119,49 @@ class AuthorSyncService:
 
         return None
 
+    async def _get_school_id_by_openalex_id(self, openalex_institution_id: str | None) -> int | None:
+        """Get school ID by OpenAlex institution ID"""
+        if not openalex_institution_id:
+            return None
+
+        school_result = await self.session.execute(
+            select(School).where(
+                School.source_record_id == openalex_institution_id
+            )
+        )
+        school = school_result.scalar_one_or_none()
+        return school.school_id if school else None
+
+    async def _get_institution_school_ids(self, std_author: StdAuthor) -> tuple[int | None, int | None]:
+        """
+        Get education and company school IDs for author.
+
+        Returns:
+            Tuple of (education_school_id, company_school_id)
+        """
+        education_school_id = await self._get_school_id_by_openalex_id(std_author.primary_education_id)
+        company_school_id = await self._get_school_id_by_openalex_id(std_author.primary_company_id)
+        return education_school_id, company_school_id
+
     async def _update_talent(
         self,
         talent: Talent,
         std_author: StdAuthor,
         role_result,
-        school_id: int | None
+        school_id: int | None,
+        education_school_id: int | None = None,
+        company_school_id: int | None = None,
     ):
         """Update existing talent record"""
         talent.name = std_author.name_normalized
         talent.name_en = std_author.name_original
         talent.orcid = std_author.orcid
         talent.std_author_id = std_author.std_author_id
+        # Legacy field
         talent.school_id = school_id
+        # Primary institutions
+        talent.education_school_id = education_school_id
+        talent.company_school_id = company_school_id
         talent.role_type = role_result.role_type
         talent.role_confidence = role_result.confidence
         talent.works_count = std_author.works_count or 0
@@ -140,7 +178,9 @@ class AuthorSyncService:
         self,
         std_author: StdAuthor,
         role_result,
-        school_id: int | None
+        school_id: int | None,
+        education_school_id: int | None = None,
+        company_school_id: int | None = None,
     ) -> Talent:
         """Create new talent record"""
         new_talent = Talent(
@@ -150,7 +190,11 @@ class AuthorSyncService:
             name=std_author.name_normalized,
             name_en=std_author.name_original,
             orcid=std_author.orcid,
+            # Legacy field
             school_id=school_id,
+            # Primary institutions
+            education_school_id=education_school_id,
+            company_school_id=company_school_id,
             role_type=role_result.role_type,
             role_confidence=role_result.confidence,
             works_count=std_author.works_count or 0,
@@ -288,10 +332,19 @@ class AuthorSyncService:
         profile_data = []
 
         for std_author in std_authors:
-            # Get school ID
+            # Get school ID (legacy field)
             school_id = None
             if school_id_map and std_author.school:
                 school_id = school_id_map.get(std_author.school.openalex_institution_id)
+
+            # Get education and company school IDs
+            education_school_id = None
+            company_school_id = None
+            if school_id_map:
+                if std_author.primary_education_id:
+                    education_school_id = school_id_map.get(std_author.primary_education_id)
+                if std_author.primary_company_id:
+                    company_school_id = school_id_map.get(std_author.primary_company_id)
 
             # Role identification
             role_result = RoleIdentifier.identify(
@@ -307,7 +360,11 @@ class AuthorSyncService:
                 "name": std_author.name_normalized,
                 "name_en": std_author.name_original,
                 "orcid": std_author.orcid,
+                # Legacy field
                 "school_id": school_id,
+                # Primary institutions
+                "education_school_id": education_school_id,
+                "company_school_id": company_school_id,
                 "role_type": role_result.role_type,
                 "role_confidence": role_result.confidence,
                 "works_count": std_author.works_count or 0,
@@ -340,6 +397,8 @@ class AuthorSyncService:
                     "orcid": stmt.excluded.orcid,
                     "std_author_id": stmt.excluded.std_author_id,
                     "school_id": stmt.excluded.school_id,
+                    "education_school_id": stmt.excluded.education_school_id,
+                    "company_school_id": stmt.excluded.company_school_id,
                     "role_type": stmt.excluded.role_type,
                     "role_confidence": stmt.excluded.role_confidence,
                     "works_count": stmt.excluded.works_count,
