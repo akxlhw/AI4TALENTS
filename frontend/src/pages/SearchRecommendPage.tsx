@@ -628,7 +628,7 @@ const SearchRecommendPage: React.FC = () => {
       },
     },
     {
-      title: '学校',
+      title: '院校机构',
       dataIndex: 'school_name',
       key: 'school_name',
       width: 150,
@@ -731,7 +731,7 @@ const SearchRecommendPage: React.FC = () => {
       ),
     },
     { title: '职位', dataIndex: 'title', key: 'title', width: 150, ellipsis: true },
-    { title: '学校', dataIndex: 'school_name', key: 'school_name', width: 150, ellipsis: true },
+    { title: '院校机构', dataIndex: 'school_name', key: 'school_name', width: 150, ellipsis: true },
     {
       title: '相似度',
       dataIndex: 'similarity_score',
@@ -880,7 +880,7 @@ const SearchRecommendPage: React.FC = () => {
                         <Text type="secondary">筛选:</Text>
                         <Select placeholder="技术领域" value={techDomainFilter} onChange={(val) => { setTechDomainFilter(val); performSearch(query, 1) }} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techDomainOptions} />
                         <Select placeholder="国家" value={countryFilter} onChange={(val) => { setCountryFilter(val); performSearch(query, 1) }} allowClear showSearch optionFilterProp="label" style={{ width: 120 }} options={countryOptions} />
-                        <Select placeholder="学校" value={schoolFilter} onChange={(val) => { setSchoolFilter(val); performSearch(query, 1) }} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
+                        <Select placeholder="院校机构" value={schoolFilter} onChange={(val) => { setSchoolFilter(val); performSearch(query, 1) }} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
                         <Select placeholder="角色" value={roleFilter} onChange={(val) => { setRoleFilter(val); performSearch(query, 1) }} allowClear style={{ width: 140 }} options={[{ value: 'professor', label: '教授/研究员' }, { value: 'student', label: '学生' }, { value: 'graduated', label: '毕业生' }]} />
                         <Select placeholder="最少引用" value={minCitations} onChange={(val) => { setMinCitations(val); performSearch(query, 1) }} allowClear style={{ width: 120 }} options={[{ value: 100, label: '100次以上' }, { value: 500, label: '500次以上' }, { value: 1000, label: '1000次以上' }]} />
                         {hasActiveFilters && <Button type="link" icon={<ReloadOutlined />} onClick={handleResetFilters}>重置筛选</Button>}
@@ -950,7 +950,7 @@ const SearchRecommendPage: React.FC = () => {
                         <Text type="secondary">筛选:</Text>
                         <Select placeholder="技术领域" value={jdTechDomainFilter} onChange={setJdTechDomainFilter} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techDomainOptions} />
                         <Select placeholder="国家" value={jdCountryFilter} onChange={setJdCountryFilter} allowClear showSearch optionFilterProp="label" style={{ width: 120 }} options={countryOptions} />
-                        <Select placeholder="学校" value={jdSchoolFilter} onChange={setJdSchoolFilter} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
+                        <Select placeholder="院校机构" value={jdSchoolFilter} onChange={setJdSchoolFilter} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
                         <Select placeholder="角色" value={jdRoleFilter} onChange={setJdRoleFilter} allowClear style={{ width: 140 }} options={[{ value: 'professor', label: '教授/研究员' }, { value: 'student', label: '学生' }, { value: 'graduated', label: '毕业生' }]} />
                         <Select placeholder="最少引用" value={jdMinCitations} onChange={setJdMinCitations} allowClear style={{ width: 120 }} options={[{ value: 100, label: '100次以上' }, { value: 500, label: '500次以上' }, { value: 1000, label: '1000次以上' }]} />
                         {hasJdActiveFilters && <Button type="link" icon={<ReloadOutlined />} onClick={handleResetJdFilters}>重置筛选</Button>}
@@ -1015,7 +1015,7 @@ const SearchRecommendPage: React.FC = () => {
                             filterOption={false}
                             loading={searchingTalents}
                             notFoundContent={searchingTalents ? <Spin size="small" /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="输入姓名搜索人才" />}
-                            options={talentOptions.map(t => ({ value: t.talent_id, label: `${t.name} (${t.school_name || '未知学校'})` }))}
+                            options={talentOptions.map(t => ({ value: t.talent_id, label: `${t.name} (${t.school_name || '未知院校机构'})` }))}
                           />
                         </Col>
                         <Col span={24}>
