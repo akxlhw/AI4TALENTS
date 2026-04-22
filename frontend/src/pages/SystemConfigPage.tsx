@@ -648,6 +648,26 @@ const SystemConfigPage: React.FC = () => {
     { title: '任务编码', dataIndex: 'task_code', key: 'task_code', width: 180 },
     { title: '技术领域', dataIndex: 'tech_domain_name', key: 'tech_domain_name' },
     {
+      title: '顶刊顶会',
+      key: 'venues',
+      render: (_: unknown, record: CollectTask) => {
+        // 使用任务创建时的快照，而非当前配置
+        const sources = record.venue_snapshot || []
+        if (sources.length === 0) return <Text type="secondary">-</Text>
+        const displayVenues = sources.slice(0, 5)
+        return (
+          <Space size={[4, 4]} wrap>
+            {displayVenues.map((v) => (
+              <Tooltip key={v.id} title={v.name || v.id}>
+                <Tag>{v.id.toUpperCase()}</Tag>
+              </Tooltip>
+            ))}
+            {sources.length > 5 && <Tag>+{sources.length - 5}</Tag>}
+          </Space>
+        )
+      },
+    },
+    {
       title: '时间范围',
       key: 'time_range',
       render: (_: unknown, record: CollectTask) => (
