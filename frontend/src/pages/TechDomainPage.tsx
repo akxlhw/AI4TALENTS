@@ -176,7 +176,7 @@ const TechDomainPage: React.FC = () => {
       ),
     },
     {
-      title: '学校',
+      title: '院校机构',
       dataIndex: 'school_name',
       key: 'school_name',
     },
@@ -301,7 +301,7 @@ const TechDomainPage: React.FC = () => {
             />
           </Col>
           <Col span={6}>
-            <div style={{ marginBottom: 4 }}><Text type="secondary">学校</Text></div>
+            <div style={{ marginBottom: 4 }}><Text type="secondary">院校机构</Text></div>
             <Select
               style={{ width: '100%' }}
               placeholder="全部（可选筛选）"
