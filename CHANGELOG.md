@@ -5,6 +5,146 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-04-23
+
+### Added
+
+#### 企业内网部署支持
+- **代理配置增强**: 支持 HTTP/HTTPS 代理配置，SSL 证书验证开关
+- **no_proxy 功能**: 支持配置不走代理的内网地址
+- **局域网访问**: 后端监听所有网卡，支持局域网 IP 访问
+- **CORS 跨域修复**: 支持局域网前端访问后端 API
+
+#### LLM 配置优化
+- **对话/嵌入模型分离**: 独立的启用开关和配置
+- **嵌入模型连接测试**: 支持测试嵌入模型连接状态
+- **API base URL 规范化**: 自动移除末尾斜杠避免双斜杠问题
+- **连接测试日志**: 添加关键配置和连接日志便于调试
+
+#### 向量功能增强
+- **运行时切换向量维度**: 自动处理数据库变更
+- **配置化向量维度**: 适配不同嵌入模型 (1536/1024/768 等)
+
+#### 数据采集改进
+- **分离教育/公司机构**: 按发文数量选择主要机构显示
+- **顶会顶刊快照**: 采集任务保存创建时的配置快照，避免历史记录被覆盖
+- **CS 背景筛选阈值**: 提高至 0.7，提升人才质量
+
+### Changed
+
+#### UI/UX 优化
+- 登录页面标题改为"顶尖优秀人才发现平台"
+- 全局"学校"改为"院校机构"，更准确反映数据范围
+- 人才列表优先显示教育/公司机构而非 legacy school
+- LLM 配置页面布局优化，嵌入模型配置独立化
+
+#### 代码重构
+- `tech_element` 重命名为 `tech_domain`，语义更清晰
+- 新增 `BaseRepository` 基类，减少重复代码
+- 内聚院校机构显示逻辑到 Talent 模型
+
+### Fixed
+
+- 修复搜索页面翻页无响应问题
+- 修复 `venue_id` 类型错误
+- 修复代理配置未正确应用到所有 HTTP 客户端的问题
+- 修复代理配置路由冲突问题
+- 修复嵌入模型测试连接检查错误的启用开关
+- 向量生成时不再强制要求嵌入 API Key
+- 空 API Key 时跳过 Authorization header
+
+### Technical Details
+
+- 44 个提交 (v1.4.0..v1.4.1)
+- 后端测试: 458+ tests
+- 前端 E2E 测试: 4 test files
+
+## [1.4.0] - 2026-04-17
+
+### Added
+
+#### 智能推荐与语义搜索
+- **pgvector 向量嵌入支持**: 使用 pgvector 扩展存储人才向量嵌入，支持相似度检索
+- **语义搜索**: 基于向量相似度的语义搜索，支持中英文查询
+- **混合搜索**: 关键词搜索与语义搜索融合 (Reciprocal Rank Fusion)
+- **自动搜索模式选择**: 前端自动选择最优搜索模式 (keyword/fulltext/semantic/hybrid)
+
+#### JD 岗位匹配
+- **LLM JD 解析**: 使用 DeepSeek/OpenAI 等 LLM 解析岗位描述，提取研究方向
+- **智能匹配**: 基于研究方向匹配度排序候选人
+- **匹配会话管理**: 保存 JD 匹配历史记录
+
+#### 相似人才推荐
+- **向量相似度推荐**: 基于人才画像向量推荐相似人才
+- **标签相似度降级**: 无向量时基于技术标签相似度推荐
+- **推荐原因说明**: 提供推荐理由（研究方向相似、教育背景相似等）
+
+#### 数据模型
+- **core_talent_embedding**: 人才向量嵌入表
+- **jd_match_session**: JD 匹配会话表
+- **jd_match_result**: JD 匹配结果表
+- **sys_config**: 系统配置表（运行时配置）
+
+#### 搜索增强
+- **全文索引**: PostgreSQL tsvector + GIN 索引
+- **多字段权重**: 姓名(A)、职位(B)、研究方向(C)、学校(D) 权重分级
+- **高亮显示**: 搜索结果关键词高亮
+
+#### LLM 基础设施
+- **LLMGateway**: 统一 LLM API 封装，支持 DeepSeek/OpenAI/智谱/通义千问
+- **重试机制**: 指数退避重试，超时处理
+- **配置化**: 支持运行时切换 LLM 提供商和模型
+
+### Changed
+
+#### 搜索体验优化
+- 搜索页面简化，自动选择最优搜索模式
+- 移除手动搜索模式切换，提升用户体验
+- 搜索结果显示匹配度分数和匹配原因
+
+#### 数据采集优化
+- 提高计算机科学背景筛选阈值至 0.7
+- 分离教育机构和公司机构显示
+- 采集任务保存创建时的顶会顶刊快照
+
+#### UI 优化
+- 登录页面标题改为"顶尖优秀人才发现平台"
+- 搜索推荐页面"学校"改为"院校机构"
+- 人才列表优先显示教育/公司机构而非 legacy school
+
+### Fixed
+
+- 修复搜索页面翻页无响应问题
+- 修复 venue_id 类型错误
+- 支持运行时切换向量维度，自动处理数据库变更
+- 支持配置化向量维度，适配不同嵌入模型
+
+### Technical Details
+
+- 数据库迁移: 025~031 (7 个迁移文件)
+- 新增依赖: openai, tiktoken, pgvector
+- 后端测试: 458+ tests
+- 前端 E2E 测试: 4 test files
+
+### Migration Guide
+
+1. 安装 pgvector 扩展:
+   ```sql
+   CREATE EXTENSION vector;
+   ```
+
+2. 配置 LLM (可选):
+   ```env
+   LLM_ENABLED=true
+   LLM_PROVIDER=deepseek
+   LLM_API_KEY=your-api-key
+   ```
+
+3. 生成向量嵌入:
+   ```bash
+   python scripts/generate_embeddings.py
+   ```
+
 ## [1.3.2] - 2026-04-10
 
 ### Fixed
@@ -240,6 +380,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frontend: React 18 + TypeScript + Vite + Ant Design v5
 - Database: SQLite (dev) / PostgreSQL (prod)
 
+[1.4.1]: https://github.com/akxlhw/AI4TALENTS/compare/v1.4.0...v1.4.1
+[1.4.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/akxlhw/AI4TALENTS/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/akxlhw/AI4TALENTS/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.2.2...v1.3.0
