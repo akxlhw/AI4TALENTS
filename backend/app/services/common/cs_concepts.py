@@ -42,8 +42,8 @@ CORE_CS_CONCEPTS = {
 
 # Threshold for filtering non-CS background authors
 # Authors with CS score below this threshold will not be synced to Talent
-# Set to 0.5 to ensure only authors with strong CS background are included
-CS_SCORE_THRESHOLD = 0.5
+# Set to 0.7 to ensure only authors with strong CS background are included
+CS_SCORE_THRESHOLD = 0.7
 
 # Log module load to verify code version
 logger.info(f"[CS_CONCEPTS] Module loaded. Concepts: {len(CORE_CS_CONCEPTS)}, Threshold: {CS_SCORE_THRESHOLD}")
