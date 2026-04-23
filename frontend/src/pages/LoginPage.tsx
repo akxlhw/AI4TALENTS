@@ -118,7 +118,7 @@ const LoginPage: React.FC = () => {
                 display: 'block',
               }}
             >
-              学术人才发现平台
+              顶尖优秀人才发现平台
             </Text>
           </div>
 
