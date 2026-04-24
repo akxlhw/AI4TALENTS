@@ -81,32 +81,14 @@ async def add_favorite(
         raise HTTPException(status_code=400, detail="该人才已在收藏列表中")
 
     # Add favorite
-    favorite = await repo.add_favorite(
+    favorite = await repo.add_favorite_and_commit(
         user_id=user_id,
         talent_id=request.talent_id,
         notes=request.notes,
     )
 
-    # Load talent relationship
-    from sqlalchemy import select
-    from sqlalchemy.orm import selectinload
-
-    from app.models.iam import FavoriteTalent
-    from app.models.talent import Talent
-
-    result = await session.execute(
-        select(FavoriteTalent)
-        .options(
-            selectinload(FavoriteTalent.talent),
-            selectinload(FavoriteTalent.talent).selectinload(Talent.education_school),
-            selectinload(FavoriteTalent.talent).selectinload(Talent.company_school),
-            selectinload(FavoriteTalent.talent).selectinload(Talent.school),
-        )
-        .where(FavoriteTalent.favorite_id == favorite.favorite_id)
-    )
-    favorite = result.scalar_one()
-
-    await session.commit()
+    # Reload with relationships for response
+    favorite = await repo.get_with_relationships(favorite.favorite_id)
     return _build_favorite_response(favorite)
 
 
@@ -218,26 +200,10 @@ async def update_favorite(
     if not favorite:
         raise HTTPException(status_code=404, detail="未找到该收藏记录")
 
-    updated = await repo.update_favorite(favorite.favorite_id, request.notes)
+    await repo.update_favorite_and_commit(favorite.favorite_id, request.notes)
 
-    # Reload with relationships
-    from sqlalchemy import select
-    from sqlalchemy.orm import selectinload
-
-    from app.models.iam import FavoriteTalent
-    from app.models.talent import Talent
-
-    result = await session.execute(
-        select(FavoriteTalent)
-        .options(
-            selectinload(FavoriteTalent.talent),
-            selectinload(FavoriteTalent.talent).selectinload(Talent.school),
-        )
-        .where(FavoriteTalent.favorite_id == updated.favorite_id)
-    )
-    updated = result.scalar_one()
-
-    await session.commit()
+    # Reload with relationships for response
+    updated = await repo.get_with_relationships(favorite.favorite_id)
     return _build_favorite_response(updated)
 
 
@@ -257,12 +223,11 @@ async def remove_favorite(
     """
     user_id = current_user["user_id"]
     repo = FavoriteRepository(session)
-    removed = await repo.remove_favorite(user_id, talent_id)
+    removed = await repo.remove_favorite_and_commit(user_id, talent_id)
 
     if not removed:
         raise HTTPException(status_code=404, detail="未找到该收藏记录")
 
-    await session.commit()
     return SuccessResponse(success=True, message="已取消收藏")
 
 

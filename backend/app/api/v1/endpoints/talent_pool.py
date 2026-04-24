@@ -36,13 +36,12 @@ async def create_pool(
 ):
     """Create a new talent pool."""
     repo = TalentPoolRepository(session)
-    pool = await repo.create_pool(
+    pool = await repo.create_pool_and_commit(
         user_id=current_user["user_id"],
         name=request.pool_name,
         pool_type=request.pool_type,
         desc=request.scope_desc,
     )
-    await session.commit()
 
     return TalentPoolResponse(
         pool_id=pool.pool_id,
@@ -145,13 +144,12 @@ async def update_pool(
     if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    updated_pool = await repo.update_pool(
+    updated_pool = await repo.update_pool_and_commit(
         pool_id,
         name=request.pool_name,
         desc=request.scope_desc,
         status=request.pool_status,
     )
-    await session.commit()
 
     members, total = await repo.get_pool_members(pool_id, page=1, page_size=1)
 
@@ -187,8 +185,7 @@ async def delete_pool(
     if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    await repo.delete_pool(pool_id)
-    await session.commit()
+    await repo.delete_pool_and_commit(pool_id)
 
     return SuccessResponse(message="Talent pool archived")
 
@@ -218,13 +215,12 @@ async def add_member(
     if await repo.is_member(pool_id, request.talent_id):
         raise HTTPException(status_code=400, detail="Talent already in pool")
 
-    await repo.add_member(
+    await repo.add_member_and_commit(
         pool_id=pool_id,
         talent_id=request.talent_id,
         added_by=current_user["user_id"],
         notes=request.notes,
     )
-    await session.commit()
 
     return SuccessResponse(message="Talent added to pool")
 
@@ -250,8 +246,7 @@ async def remove_member(
     if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    removed = await repo.remove_member(pool_id, talent_id)
-    await session.commit()
+    removed = await repo.remove_member_and_commit(pool_id, talent_id)
 
     if not removed:
         raise HTTPException(status_code=404, detail="Talent not in pool")
@@ -310,12 +305,11 @@ async def update_followup_status(
         raise HTTPException(status_code=400, detail=f"Invalid status. Valid options: {valid_statuses}")
 
     repo = FavoriteRepository(session)
-    favorite = await repo.update_followup_status(
+    favorite = await repo.update_followup_status_and_commit(
         user_id=current_user["user_id"],
         talent_id=talent_id,
         status=request.followup_status,
     )
-    await session.commit()
 
     if not favorite:
         raise HTTPException(status_code=404, detail="Favorite not found")

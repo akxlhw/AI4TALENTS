@@ -43,6 +43,28 @@ class FavoriteRepository:
         await self.session.refresh(favorite)
         return favorite
 
+    async def add_favorite_and_commit(
+        self, user_id: int, talent_id: int, notes: str | None = None
+    ) -> FavoriteTalent:
+        """Add a talent to user's favorites and commit."""
+        favorite = await self.add_favorite(user_id, talent_id, notes)
+        await self.session.commit()
+        return favorite
+
+    async def get_with_relationships(self, favorite_id: int) -> FavoriteTalent | None:
+        """Get a favorite with all relationships loaded."""
+        result = await self.session.execute(
+            select(FavoriteTalent)
+            .options(
+                selectinload(FavoriteTalent.talent),
+                selectinload(FavoriteTalent.talent).selectinload(Talent.education_school),
+                selectinload(FavoriteTalent.talent).selectinload(Talent.company_school),
+                selectinload(FavoriteTalent.talent).selectinload(Talent.school),
+            )
+            .where(FavoriteTalent.favorite_id == favorite_id)
+        )
+        return result.scalar_one_or_none()
+
     async def get_by_user_and_talent(
         self, user_id: int, talent_id: int
     ) -> FavoriteTalent | None:
@@ -183,6 +205,15 @@ class FavoriteRepository:
             await self.session.refresh(favorite)
         return favorite
 
+    async def update_favorite_and_commit(
+        self, favorite_id: int, notes: str | None = None
+    ) -> FavoriteTalent | None:
+        """Update a favorite's notes and commit."""
+        favorite = await self.update_favorite(favorite_id, notes)
+        if favorite:
+            await self.session.commit()
+        return favorite
+
     async def remove_favorite(self, user_id: int, talent_id: int) -> bool:
         """
         Remove a talent from user's favorites (soft delete).
@@ -200,6 +231,13 @@ class FavoriteRepository:
             await self.session.flush()
             return True
         return False
+
+    async def remove_favorite_and_commit(self, user_id: int, talent_id: int) -> bool:
+        """Remove a talent from user's favorites and commit."""
+        success = await self.remove_favorite(user_id, talent_id)
+        if success:
+            await self.session.commit()
+        return success
 
     async def hard_remove_favorite(self, user_id: int, talent_id: int) -> bool:
         """

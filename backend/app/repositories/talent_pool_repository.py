@@ -31,6 +31,12 @@ class TalentPoolRepository:
         await self.session.flush()
         return pool
 
+    async def create_pool_and_commit(self, user_id: int, name: str, pool_type: str = "custom", desc: str = None) -> TalentPool:
+        """Create a new talent pool and commit."""
+        pool = await self.create_pool(user_id, name, pool_type, desc)
+        await self.session.commit()
+        return pool
+
     async def get_pool_by_id(self, pool_id: int) -> TalentPool | None:
         """Get talent pool by ID."""
         result = await self.session.execute(
@@ -64,6 +70,13 @@ class TalentPoolRepository:
         await self.session.flush()
         return pool
 
+    async def update_pool_and_commit(self, pool_id: int, name: str = None, desc: str = None, status: str = None) -> TalentPool | None:
+        """Update talent pool and commit."""
+        pool = await self.update_pool(pool_id, name, desc, status)
+        if pool:
+            await self.session.commit()
+        return pool
+
     async def delete_pool(self, pool_id: int) -> bool:
         """Delete talent pool (soft delete by setting status to archived)."""
         pool = await self.get_pool_by_id(pool_id)
@@ -72,6 +85,13 @@ class TalentPoolRepository:
         pool.pool_status = 'archived'
         await self.session.flush()
         return True
+
+    async def delete_pool_and_commit(self, pool_id: int) -> bool:
+        """Delete talent pool and commit."""
+        success = await self.delete_pool(pool_id)
+        if success:
+            await self.session.commit()
+        return success
 
     async def add_member(self, pool_id: int, talent_id: int, added_by: int, notes: str = None) -> TalentPoolMember:
         """Add talent to pool."""
@@ -83,6 +103,12 @@ class TalentPoolRepository:
         )
         self.session.add(member)
         await self.session.flush()
+        return member
+
+    async def add_member_and_commit(self, pool_id: int, talent_id: int, added_by: int, notes: str = None) -> TalentPoolMember:
+        """Add talent to pool and commit."""
+        member = await self.add_member(pool_id, talent_id, added_by, notes)
+        await self.session.commit()
         return member
 
     async def remove_member(self, pool_id: int, talent_id: int) -> bool:
@@ -99,6 +125,13 @@ class TalentPoolRepository:
             await self.session.flush()
             return True
         return False
+
+    async def remove_member_and_commit(self, pool_id: int, talent_id: int) -> bool:
+        """Remove talent from pool and commit."""
+        success = await self.remove_member(pool_id, talent_id)
+        if success:
+            await self.session.commit()
+        return success
 
     async def get_pool_members(self, pool_id: int, page: int = 1, page_size: int = 20) -> tuple[list[dict], int]:
         """Get members of a talent pool with pagination."""
@@ -172,6 +205,13 @@ class FavoriteRepository:
         if favorite:
             favorite.followup_status = status
             await self.session.flush()
+        return favorite
+
+    async def update_followup_status_and_commit(self, user_id: int, talent_id: int, status: str) -> FavoriteTalent | None:
+        """Update followup status for a favorite and commit."""
+        favorite = await self.update_followup_status(user_id, talent_id, status)
+        if favorite:
+            await self.session.commit()
         return favorite
 
     async def get_favorites_by_status(self, user_id: int, status: str) -> list[FavoriteTalent]:

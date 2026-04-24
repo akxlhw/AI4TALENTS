@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sync import DataCorrectionRecord, DataPublishRecord, DataQualitySummary, DataVersion
+from datetime import datetime
 
 
 class DataVersionRepository:
@@ -89,6 +90,22 @@ class DataVersionRepository:
         await self.session.flush()
         return version
 
+    async def create_version_and_commit(
+        self,
+        version_code: str,
+        version_name: str,
+        version_type: str = "snapshot",
+        base_version_id: int | None = None,
+        source_task_id: int | None = None,
+        description: str | None = None,
+    ) -> DataVersion:
+        """Create a new data version and commit."""
+        version = await self.create_version(
+            version_code, version_name, version_type, base_version_id, source_task_id, description
+        )
+        await self.session.commit()
+        return version
+
     async def update_statistics(
         self,
         version_id: int,
@@ -128,6 +145,44 @@ class DataVersionRepository:
         version.published_at = datetime.now()
         version.published_by = published_by
 
+        return version
+
+    async def publish_version_and_commit(
+        self,
+        version_id: int,
+        published_by: int,
+    ) -> DataVersion | None:
+        """Publish a version (make it active) and commit."""
+        version = await self.publish_version(version_id, published_by)
+        if version:
+            await self.session.commit()
+        return version
+
+    async def publish_version_with_record(
+        self,
+        version_id: int,
+        published_by: int,
+        previous_version_id: int | None = None,
+        notes: str | None = None,
+    ) -> DataVersion | None:
+        """Publish a version with publish record in one transaction."""
+        # Publish the version
+        version = await self.publish_version(version_id, published_by)
+        if not version:
+            return None
+
+        # Create publish record
+        record = DataPublishRecord(
+            version_id=version_id,
+            action="publish",
+            previous_version_id=previous_version_id,
+            operated_by=published_by,
+            operated_at=datetime.now(),
+            notes=notes,
+        )
+        self.session.add(record)
+
+        await self.session.commit()
         return version
 
 
@@ -256,6 +311,26 @@ class DataCorrectionRepository:
         await self.session.flush()
         return correction
 
+    async def create_correction_and_commit(
+        self,
+        target_type: str,
+        target_id: int,
+        field_name: str,
+        original_value: str | None,
+        corrected_value: str | None,
+        correction_type: str,
+        corrected_by: int,
+        reason: str | None = None,
+        source: str | None = None,
+    ) -> DataCorrectionRecord:
+        """Create a correction record and commit."""
+        correction = await self.create_correction(
+            target_type, target_id, field_name, original_value, corrected_value,
+            correction_type, corrected_by, reason, source
+        )
+        await self.session.commit()
+        return correction
+
     async def revert_correction(self, correction_id: int) -> DataCorrectionRecord | None:
         """Revert a correction."""
         correction = await self.get_by_id(correction_id)
@@ -263,6 +338,13 @@ class DataCorrectionRepository:
             return None
 
         correction.status = "reverted"
+        return correction
+
+    async def revert_correction_and_commit(self, correction_id: int) -> DataCorrectionRecord | None:
+        """Revert a correction and commit."""
+        correction = await self.revert_correction(correction_id)
+        if correction:
+            await self.session.commit()
         return correction
 
 

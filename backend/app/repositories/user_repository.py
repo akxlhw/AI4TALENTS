@@ -116,6 +116,19 @@ class UserRepository:
         await self.session.flush()
         return user
 
+    async def create_user_and_commit(
+        self,
+        username: str,
+        email: str,
+        password_hash: str,
+        role: str = UserRoleType.USER.value,
+        display_name: str | None = None,
+    ) -> UserAccount:
+        """Create a new user and commit."""
+        user = await self.create_user(username, email, password_hash, role, display_name)
+        await self.session.commit()
+        return user
+
     async def update_last_login(
         self,
         user_id: int,
@@ -212,6 +225,13 @@ class UserRepository:
             return True
         return False
 
+    async def deactivate_user_and_commit(self, user_id: int) -> bool:
+        """Deactivate a user account and commit."""
+        success = await self.deactivate_user(user_id)
+        if success:
+            await self.session.commit()
+        return success
+
     async def activate_user(self, user_id: int) -> bool:
         """
         Activate a user account.
@@ -307,6 +327,20 @@ class UserScopeRepository:
         await self.session.flush()
         return scope
 
+    async def add_scope_and_commit(
+        self,
+        user_id: int,
+        scope_type: str,
+        scope_value: str,
+        granted_by: int,
+        expires_at: datetime | None = None,
+        notes: str | None = None,
+    ) -> UserSchoolScope:
+        """Add a scope to a user and commit."""
+        scope = await self.add_scope(user_id, scope_type, scope_value, granted_by, expires_at, notes)
+        await self.session.commit()
+        return scope
+
     async def remove_scope(self, scope_id: int) -> bool:
         """
         Remove a school scope.
@@ -325,6 +359,13 @@ class UserScopeRepository:
             scope.is_active = False
             return True
         return False
+
+    async def remove_scope_and_commit(self, scope_id: int) -> bool:
+        """Remove a school scope and commit."""
+        success = await self.remove_scope(scope_id)
+        if success:
+            await self.session.commit()
+        return success
 
     async def check_user_has_access(
         self,
@@ -646,3 +687,64 @@ class UserScopeRepository:
             return "tech_domain"
 
         return user.default_view or "tech_domain"
+
+    async def update_default_view_and_commit(self, user_id: int, default_view: str) -> bool:
+        """
+        Update user's default view preference and commit.
+
+        Args:
+            user_id: User ID
+            default_view: Default view ('tech_domain' or 'country_school')
+
+        Returns:
+            True if updated, False if user not found
+        """
+        user_result = await self.session.execute(
+            select(UserAccount).where(UserAccount.user_id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+
+        if not user:
+            return False
+
+        user.default_view = default_view
+        await self.session.commit()
+        return True
+
+    async def update_user_and_commit(
+        self,
+        user_id: int,
+        display_name: str | None = None,
+        department: str | None = None,
+        role: str | None = None,
+        is_active: bool | None = None,
+    ) -> UserAccount | None:
+        """
+        Update user fields and commit.
+
+        Args:
+            user_id: User ID
+            display_name: Display name
+            department: Department
+            role: Role
+            is_active: Active status
+
+        Returns:
+            Updated UserAccount or None
+        """
+        user = await self.get_by_id(user_id)
+        if not user:
+            return None
+
+        if display_name is not None:
+            user.display_name = display_name
+        if department is not None:
+            user.department = department
+        if role is not None:
+            user.role_type = role
+        if is_active is not None:
+            user.is_active = is_active
+            user.status = "active" if is_active else "inactive"
+
+        await self.session.commit()
+        return user

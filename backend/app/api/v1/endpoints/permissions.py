@@ -186,15 +186,13 @@ async def create_user(
 
     # Create user
     password_hash = hash_password(data.password)
-    user = await repo.create_user(
+    user = await repo.create_user_and_commit(
         username=data.username,
         email=data.email,
         password_hash=password_hash,
         role=data.role,
         display_name=data.display_name,
     )
-
-    await session.commit()
 
     return UserResponse(
         user_id=user.user_id,
@@ -267,20 +265,18 @@ async def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     # Update fields
-    if data.display_name is not None:
-        user.display_name = data.display_name
-    if data.department is not None:
-        user.department = data.department
     if data.role is not None:
         # Only super admin can change roles
         if current_user["role"] != UserRoleType.SUPER_ADMIN.value:
             raise HTTPException(status_code=403, detail="Only super admin can change roles")
-        user.role_type = data.role
-    if data.is_active is not None:
-        user.is_active = data.is_active
-        user.status = "active" if data.is_active else "inactive"
 
-    await session.commit()
+    user = await repo.update_user_and_commit(
+        user_id,
+        display_name=data.display_name,
+        department=data.department,
+        role=data.role,
+        is_active=data.is_active,
+    )
 
     return UserResponse(
         user_id=user.user_id,
@@ -312,12 +308,10 @@ async def deactivate_user(
         raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
 
     repo = UserRepository(session)
-    success = await repo.deactivate_user(user_id)
+    success = await repo.deactivate_user_and_commit(user_id)
 
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
-
-    await session.commit()
 
     return SuccessResponse(message="User deactivated")
 
@@ -376,7 +370,7 @@ async def add_user_scope(
         raise HTTPException(status_code=404, detail="User not found")
 
     scope_repo = UserScopeRepository(session)
-    scope = await scope_repo.add_scope(
+    scope = await scope_repo.add_scope_and_commit(
         user_id=user_id,
         scope_type=data.scope_type,
         scope_value=data.scope_value,
@@ -384,8 +378,6 @@ async def add_user_scope(
         expires_at=data.expires_at,
         notes=data.notes,
     )
-
-    await session.commit()
 
     return ScopeResponse(
         scope_id=scope.scope_id,
@@ -414,12 +406,10 @@ async def remove_user_scope(
 ):
     """Remove school scope from user (admin only)."""
     scope_repo = UserScopeRepository(session)
-    success = await scope_repo.remove_scope(scope_id)
+    success = await scope_repo.remove_scope_and_commit(scope_id)
 
     if not success:
         raise HTTPException(status_code=404, detail="Scope not found")
-
-    await session.commit()
 
     return SuccessResponse(message="Scope removed")
 
@@ -524,13 +514,13 @@ async def update_my_default_view(
     current_user: dict = Depends(require_user),
 ):
     """Update current user's default view preference."""
-    user_repo = UserRepository(session)
-    user = await user_repo.get_by_id(current_user["user_id"])
+    scope_repo = UserScopeRepository(session)
+    success = await scope_repo.update_default_view_and_commit(
+        current_user["user_id"],
+        data.default_view,
+    )
 
-    if not user:
+    if not success:
         raise HTTPException(status_code=404, detail="User not found")
-
-    user.default_view = data.default_view
-    await session.commit()
 
     return SuccessResponse(message="Default view updated")

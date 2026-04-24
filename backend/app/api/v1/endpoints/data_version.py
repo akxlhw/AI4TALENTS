@@ -103,7 +103,7 @@ async def create_version(
     if existing:
         raise HTTPException(status_code=400, detail="Version code already exists")
 
-    version = await repo.create_version(
+    version = await repo.create_version_and_commit(
         version_code=request.version_code,
         version_name=request.version_name,
         version_type=request.version_type,
@@ -111,7 +111,6 @@ async def create_version(
         source_task_id=request.source_task_id,
         description=request.description,
     )
-    await session.commit()
 
     return DataVersionResponse.model_validate(version)
 
@@ -151,28 +150,22 @@ async def publish_version(
 ):
     """Publish a version to make it active."""
     version_repo = DataVersionRepository(session)
-    record_repo = DataPublishRecordRepository(session)
 
     # Get current active version
     active_version = await version_repo.get_active_version()
     previous_version_id = active_version.version_id if active_version else None
 
-    # Publish the version
-    version = await version_repo.publish_version(version_id, current_user["user_id"])
-
-    if not version:
-        raise HTTPException(status_code=404, detail="Version not found")
-
-    # Create publish record
-    await record_repo.create_record(
+    # Publish the version with record in one transaction
+    version = await version_repo.publish_version_with_record(
         version_id=version_id,
-        action="publish",
-        operated_by=current_user["user_id"],
+        published_by=current_user["user_id"],
         previous_version_id=previous_version_id,
         notes=request.notes,
     )
 
-    await session.commit()
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+
     return DataVersionResponse.model_validate(version)
 
 
@@ -240,7 +233,7 @@ async def create_correction(
     """Create a correction record."""
     repo = DataCorrectionRepository(session)
 
-    correction = await repo.create_correction(
+    correction = await repo.create_correction_and_commit(
         target_type=request.target_type,
         target_id=request.target_id,
         field_name=request.field_name,
@@ -251,7 +244,6 @@ async def create_correction(
         reason=request.reason,
         source=request.source,
     )
-    await session.commit()
 
     return CorrectionResponse.model_validate(correction)
 
@@ -269,12 +261,11 @@ async def revert_correction(
 ):
     """Revert a correction."""
     repo = DataCorrectionRepository(session)
-    correction = await repo.revert_correction(correction_id)
+    correction = await repo.revert_correction_and_commit(correction_id)
 
     if not correction:
         raise HTTPException(status_code=404, detail="Correction not found")
 
-    await session.commit()
     return CorrectionResponse.model_validate(correction)
 
 
