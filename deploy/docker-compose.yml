@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:14-alpine
+    image: postgres:16-alpine
     container_name: talent-postgres
     environment:
       POSTGRES_DB: talent_db
@@ -21,6 +21,24 @@ services:
     networks:
       - talent-network
 
+  # Redis 缓存服务 (可选，生产环境建议启用)
+  redis:
+    image: redis:7-alpine
+    container_name: talent-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - talent-network
+    profiles:
+      - production
+
   backend:
     build:
       context: ../backend
@@ -29,6 +47,11 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://talent_user:talent_password@postgres:5432/talent_db
       - DATABASE_SYNC_URL=postgresql://talent_user:talent_password@postgres:5432/talent_db
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_ENABLED=false
+      - LLM_ENABLED=false
+      - LLM_PROVIDER=deepseek
+      - LLM_API_KEY=${LLM_API_KEY:-}
       - ENVIRONMENT=development
       - DEBUG=true
     ports:
@@ -63,6 +86,7 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   talent-network:

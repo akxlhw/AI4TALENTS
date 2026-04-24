@@ -34,7 +34,11 @@ router = APIRouter(prefix="/venues", tags=["Venue Configuration"])
 # Batch operations (must be before /{venue_id} routes)
 # ============================================
 
-@router.post("/bindings/batch")
+@router.post(
+    "/bindings/batch",
+    summary="批量更新技术领域绑定",
+    description="批量更新指定技术领域的 Venue 绑定启用状态。传入的 venue_ids 会被标记为启用，该技术领域的其他绑定会被标记为禁用。"
+)
 async def batch_create_bindings(
     data: VenueTechBindingBatchCreate,
     session: AsyncSession = Depends(get_async_session)
@@ -104,7 +108,12 @@ async def batch_create_bindings(
 # Venue CRUD
 # ============================================
 
-@router.get("", response_model=VenueListResponse)
+@router.get(
+    "",
+    response_model=VenueListResponse,
+    summary="获取Venue列表",
+    description="获取顶会顶刊列表，支持按类型、启用状态筛选，支持关键词搜索和分页。"
+)
 async def list_venues(
     venue_type: str | None = Query(None, description="Venue类型: conference/journal/workshop"),
     is_enabled: bool | None = Query(None, description="是否启用"),
@@ -128,7 +137,12 @@ async def list_venues(
     )
 
 
-@router.post("", response_model=VenueResponse)
+@router.post(
+    "",
+    response_model=VenueResponse,
+    summary="创建Venue",
+    description="创建新的顶会顶刊配置。venue_code 必须唯一，openalex_source_id 如有也需唯一。"
+)
 async def create_venue(
     data: VenueCreate,
     session: AsyncSession = Depends(get_async_session)
@@ -154,7 +168,12 @@ async def create_venue(
     return VenueResponse.model_validate(venue)
 
 
-@router.get("/{venue_id}", response_model=VenueResponse)
+@router.get(
+    "/{venue_id}",
+    response_model=VenueResponse,
+    summary="获取Venue详情",
+    description="根据 ID 获取单个顶会顶刊的详细信息。"
+)
 async def get_venue(
     venue_id: int,
     session: AsyncSession = Depends(get_async_session)
@@ -167,7 +186,12 @@ async def get_venue(
     return VenueResponse.model_validate(venue)
 
 
-@router.put("/{venue_id}", response_model=VenueResponse)
+@router.put(
+    "/{venue_id}",
+    response_model=VenueResponse,
+    summary="更新Venue",
+    description="更新指定顶会顶刊的信息。只更新请求中提供的字段。"
+)
 async def update_venue(
     venue_id: int,
     data: VenueUpdate,
@@ -190,7 +214,11 @@ async def update_venue(
     return VenueResponse.model_validate(venue)
 
 
-@router.delete("/{venue_id}")
+@router.delete(
+    "/{venue_id}",
+    summary="删除Venue",
+    description="删除指定的顶会顶刊。如果存在技术领域绑定则无法删除，需先删除绑定。"
+)
 async def delete_venue(
     venue_id: int,
     session: AsyncSession = Depends(get_async_session)
@@ -219,10 +247,15 @@ async def delete_venue(
 # Venue-TechDomain Binding
 # ============================================
 
-@router.get("/{venue_id}/bindings", response_model=VenueTechBindingListResponse)
+@router.get(
+    "/{venue_id}/bindings",
+    response_model=VenueTechBindingListResponse,
+    summary="获取Venue的技术领域绑定",
+    description="获取指定 Venue 关联的所有技术领域绑定列表。"
+)
 async def get_venue_bindings(
     venue_id: int,
-    is_enabled: bool | None = Query(None),
+    is_enabled: bool | None = Query(None, description="按启用状态筛选"),
     session: AsyncSession = Depends(get_async_session)
 ):
     """获取Venue的所有技术领域绑定"""
@@ -235,7 +268,12 @@ async def get_venue_bindings(
     )
 
 
-@router.post("/bindings", response_model=VenueTechBindingResponse)
+@router.post(
+    "/bindings",
+    response_model=VenueTechBindingResponse,
+    summary="创建Venue-TechDomain绑定",
+    description="创建顶会顶刊与技术领域的关联绑定。同一 Venue 和 TechDomain 组合只能有一个绑定。"
+)
 async def create_binding(
     data: VenueTechBindingCreate,
     session: AsyncSession = Depends(get_async_session)
@@ -268,7 +306,12 @@ async def create_binding(
     return VenueTechBindingResponse.model_validate(binding)
 
 
-@router.put("/bindings/{binding_id}", response_model=VenueTechBindingResponse)
+@router.put(
+    "/bindings/{binding_id}",
+    response_model=VenueTechBindingResponse,
+    summary="更新绑定",
+    description="更新指定的 Venue-TechDomain 绑定信息，如优先级或启用状态。"
+)
 async def update_binding(
     binding_id: int,
     data: VenueTechBindingUpdate,
@@ -290,7 +333,11 @@ async def update_binding(
     return VenueTechBindingResponse.model_validate(binding)
 
 
-@router.delete("/bindings/{binding_id}")
+@router.delete(
+    "/bindings/{binding_id}",
+    summary="删除绑定",
+    description="删除指定的 Venue-TechDomain 绑定关系。"
+)
 async def delete_binding(
     binding_id: int,
     session: AsyncSession = Depends(get_async_session)
@@ -309,10 +356,15 @@ async def delete_binding(
 # Tech Domain Bindings
 # ============================================
 
-@router.get("/tech-domains/{tech_domain_id}/bindings", response_model=VenueTechBindingListResponse)
+@router.get(
+    "/tech-domains/{tech_domain_id}/bindings",
+    response_model=VenueTechBindingListResponse,
+    summary="获取技术领域的Venue绑定",
+    description="获取指定技术领域关联的所有顶会顶刊绑定列表，支持按启用状态筛选。"
+)
 async def get_tech_domain_bindings(
     tech_domain_id: int,
-    is_enabled: bool | None = Query(None),
+    is_enabled: bool | None = Query(None, description="按启用状态筛选"),
     session: AsyncSession = Depends(get_async_session)
 ):
     """获取技术领域的所有Venue绑定"""
@@ -331,7 +383,12 @@ async def get_tech_domain_bindings(
 # Migration
 # ============================================
 
-@router.post("/migrate-collect-sources", response_model=MigrateCollectSourcesResponse)
+@router.post(
+    "/migrate-collect-sources",
+    response_model=MigrateCollectSourcesResponse,
+    summary="迁移采集源数据",
+    description="将 TechDomain.collect_sources JSON 字段中的采集源迁移到 Venue 表，并创建绑定关系。支持 dry_run 模式预览。"
+)
 async def migrate_collect_sources(
     data: MigrateCollectSourcesRequest,
     session: AsyncSession = Depends(get_async_session)
