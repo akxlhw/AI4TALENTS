@@ -12,10 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 
 from app.models.school import School
-from app.models.talent import RoleProfile, SelectedWork, Talent, TalentTechTag
+from app.models.talent import RoleProfile, SelectedWork, Talent
 from app.models.raw_data import RawWork
 from app.models.standardized import StdAuthor
-from app.models.tech_domain import TechDirection, TechDomain
+from app.models.tech_domain import TechDirection, TechDomain, TalentTechTag
 from app.schemas.filters import TalentFilterParams, PaginationParams
 
 logger = logging.getLogger(__name__)
