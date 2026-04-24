@@ -81,7 +81,7 @@ class TalentFilterParams:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
-        result = {}
+        result: dict[str, Any] = {}
         if self.school_id is not None:
             result["school_id"] = self.school_id
         if self.country_code is not None:

@@ -39,15 +39,15 @@ class VenueItem(BaseModel):
 
 class TechDomainCollectResponse(BaseModel):
     """技术领域采集配置响应"""
-    tech_domain_id: int
-    domain_code: str
-    domain_name: str
-    domain_name_en: str | None = None
+    tech_domain_id: int = Field(description="技术领域ID")
+    domain_code: str = Field(description="领域代码")
+    domain_name: str = Field(description="领域名称")
+    domain_name_en: str | None = Field(default=None, description="领域英文名")
     # collect_sources is computed from VenueTechBinding table
     # This field is kept for backward compatibility with frontend
-    collect_sources: list[VenueItem] | None = None
-    last_collect_at: datetime | None = None
-    is_enabled: bool
+    collect_sources: list[VenueItem] | None = Field(default=None, description="关联的顶会顶刊列表")
+    last_collect_at: datetime | None = Field(default=None, description="上次采集时间")
+    is_enabled: bool = Field(description="是否启用")
     venue_count: int = Field(default=0, description="关联顶会顶刊数量")
 
     class Config:
@@ -56,13 +56,13 @@ class TechDomainCollectResponse(BaseModel):
 
 class TechDomainCollectListResponse(BaseModel):
     """技术领域采集配置列表响应"""
-    items: list[TechDomainCollectResponse]
-    total: int
+    items: list[TechDomainCollectResponse] = Field(description="技术领域列表")
+    total: int = Field(description="总数")
 
 
 class UpdateCollectSourcesRequest(BaseModel):
     """更新技术领域的采集源配置"""
-    collect_sources: list[VenueItem] = Field(..., min_items=1, description="关联的顶会顶刊列表")
+    collect_sources: list[VenueItem] = Field(..., min_length=1, description="关联的顶会顶刊列表")
 
 
 # ============ Collect Task Schemas ============
@@ -83,30 +83,30 @@ class TriggerCollectTaskRequest(BaseModel):
 
 class CollectTaskResponse(BaseModel):
     """采集任务响应"""
-    task_id: int
-    task_code: str
-    tech_domain_id: int | None = None
-    tech_domain_name: str | None = None
+    task_id: int = Field(description="任务ID")
+    task_code: str = Field(description="任务编码")
+    tech_domain_id: int | None = Field(default=None, description="技术领域ID")
+    tech_domain_name: str | None = Field(default=None, description="技术领域名称")
     start_year: int = Field(default=DEFAULT_START_YEAR, description="起始年份")
     end_year: int | None = Field(default=None, description="截止年份，None表示至今")
     triggered_by: Any | None = None  # Can be user ID (int) or username (str)
-    triggered_at: datetime
-    status: str
-    progress_percent: int = 0
-    current_step: str | None = None
-    total_records: int = 0
-    processed_records: int = 0
-    success_records: int = 0
-    failed_records: int = 0
-    skipped_records: int = 0
-    started_at: datetime | None = None
-    completed_at: datetime | None = None
-    error_message: str | None = None
-    error_details: dict | None = None
-    result_summary: dict | None = None
-    execution_logs: list[dict] | None = None
-    venue_snapshot: list[VenueItem] | None = None  # 创建时的顶会顶刊快照
-    created_at: datetime
+    triggered_at: datetime = Field(description="触发时间")
+    status: str = Field(description="任务状态: pending/running/completed/failed/cancelled")
+    progress_percent: int = Field(default=0, description="进度百分比")
+    current_step: str | None = Field(default=None, description="当前执行步骤")
+    total_records: int = Field(default=0, description="总记录数")
+    processed_records: int = Field(default=0, description="已处理记录数")
+    success_records: int = Field(default=0, description="成功记录数")
+    failed_records: int = Field(default=0, description="失败记录数")
+    skipped_records: int = Field(default=0, description="跳过记录数")
+    started_at: datetime | None = Field(default=None, description="开始时间")
+    completed_at: datetime | None = Field(default=None, description="完成时间")
+    error_message: str | None = Field(default=None, description="错误信息")
+    error_details: dict | None = Field(default=None, description="错误详情")
+    result_summary: dict | None = Field(default=None, description="结果摘要")
+    execution_logs: list[dict] | None = Field(default=None, description="执行日志")
+    venue_snapshot: list[VenueItem] | None = Field(default=None, description="创建时的顶会顶刊快照")
+    created_at: datetime = Field(description="创建时间")
 
     class Config:
         from_attributes = True
@@ -114,10 +114,10 @@ class CollectTaskResponse(BaseModel):
 
 class CollectTaskListResponse(BaseModel):
     """采集任务列表响应"""
-    items: list[CollectTaskResponse]
-    total: int
-    page: int
-    page_size: int
+    items: list[CollectTaskResponse] = Field(description="任务列表")
+    total: int = Field(description="总数")
+    page: int = Field(description="当前页码")
+    page_size: int = Field(description="每页数量")
 
 
 # ============ Task Status Options ============
@@ -140,6 +140,26 @@ def get_year_options() -> list[dict]:
         {"value": year, "label": f"{year}年"}
         for year in range(current_year, MIN_START_YEAR - 1, -1)
     ]
+
+
+class TaskActionResponse(BaseModel):
+    """采集任务操作响应"""
+    message: str = Field(description="操作结果消息")
+    task_id: int = Field(description="任务ID")
+
+
+class YearOptionsResponse(BaseModel):
+    """年份选项响应"""
+    start_years: list[dict] = Field(description="起始年份选项列表")
+    min_year: int = Field(description="最小可选年份")
+    default_year: int = Field(description="默认起始年份")
+    current_year: int = Field(description="当前年份")
+
+
+class SubTaskActionResponse(BaseModel):
+    """子任务操作响应"""
+    message: str = Field(description="操作结果消息")
+    sub_task_id: int = Field(description="子任务ID")
 
 
 def get_end_year_options(start_year: int) -> list[dict]:

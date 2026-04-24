@@ -11,7 +11,9 @@ Provides Prometheus-compatible metrics for monitoring:
 from __future__ import annotations
 
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 # Metrics storage (in-memory for simplicity)
 # In production, use Prometheus client or similar
@@ -67,7 +69,7 @@ class HistogramMetric:
     buckets: list[float] = field(
         default_factory=lambda: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
     )
-    _counts: dict[float, int] = field(default_factory=dict, repr=False)
+    _counts: dict[float | str, int] = field(default_factory=dict, repr=False)
     sum: float = 0.0
     count: int = 0
 
@@ -78,7 +80,7 @@ class HistogramMetric:
         self._counts["+Inf"] = 0
 
     @property
-    def counts(self) -> dict[float, int]:
+    def counts(self) -> dict[float | str, int]:
         return self._counts
 
     def observe(self, value: float) -> None:
@@ -124,7 +126,10 @@ class MetricsRegistry:
         """Get or create a histogram metric."""
         key = self._make_key(name, labels or {})
         if key not in self._histograms:
-            self._histograms[key] = HistogramMetric(name, description, labels or {}, buckets)
+            self._histograms[key] = HistogramMetric(
+                name, description, labels or {},
+                buckets if buckets is not None else [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+            )
         return self._histograms[key]
 
     def _make_key(self, name: str, labels: dict[str, str]) -> str:
@@ -139,34 +144,34 @@ class MetricsRegistry:
         lines = []
 
         # Export counters
-        for metric in self._counters.values():
-            lines.append(f"# HELP {metric.name} {metric.description}")
-            lines.append(f"# TYPE {metric.name} counter")
-            label_str = self._format_labels(metric.labels)
-            lines.append(f"{metric.name}{label_str} {metric.value}")
+        for counter in self._counters.values():
+            lines.append(f"# HELP {counter.name} {counter.description}")
+            lines.append(f"# TYPE {counter.name} counter")
+            label_str = self._format_labels(counter.labels)
+            lines.append(f"{counter.name}{label_str} {counter.value}")
 
         # Export gauges
-        for metric in self._gauges.values():
-            lines.append(f"# HELP {metric.name} {metric.description}")
-            lines.append(f"# TYPE {metric.name} gauge")
-            label_str = self._format_labels(metric.labels)
-            lines.append(f"{metric.name}{label_str} {metric.value}")
+        for gauge in self._gauges.values():
+            lines.append(f"# HELP {gauge.name} {gauge.description}")
+            lines.append(f"# TYPE {gauge.name} gauge")
+            label_str = self._format_labels(gauge.labels)
+            lines.append(f"{gauge.name}{label_str} {gauge.value}")
 
         # Export histograms
-        for metric in self._histograms.values():
-            lines.append(f"# HELP {metric.name} {metric.description}")
-            lines.append(f"# TYPE {metric.name} histogram")
+        for histogram in self._histograms.values():
+            lines.append(f"# HELP {histogram.name} {histogram.description}")
+            lines.append(f"# TYPE {histogram.name} histogram")
 
-            for bucket, count in metric.counts.items():
+            for bucket, count in histogram.counts.items():
                 bucket_label = "le" if bucket != "+Inf" else "le"
                 bucket_value = str(bucket) if bucket != "+Inf" else "+Inf"
-                labels = {**metric.labels, bucket_label: bucket_value}
+                labels = {**histogram.labels, bucket_label: bucket_value}
                 label_str = self._format_labels(labels)
-                lines.append(f"{metric.name}_bucket{label_str} {count}")
+                lines.append(f"{histogram.name}_bucket{label_str} {count}")
 
-            label_str = self._format_labels(metric.labels)
-            lines.append(f"{metric.name}_sum{label_str} {metric.sum}")
-            lines.append(f"{metric.name}_count{label_str} {metric.count}")
+            label_str = self._format_labels(histogram.labels)
+            lines.append(f"{histogram.name}_sum{label_str} {histogram.sum}")
+            lines.append(f"{histogram.name}_count{label_str} {histogram.count}")
 
         return "\n".join(lines)
 
@@ -304,10 +309,15 @@ class MetricsMiddleware:
         app.add_middleware(MetricsMiddleware)
     """
 
-    def __init__(self, app) -> None:
+    def __init__(self, app: Callable[[dict[str, Any], Callable[[], Awaitable[dict[str, Any]]], Callable[[dict[str, Any]], Awaitable[None]]], Awaitable[None]]) -> None:
         self.app = app
 
-    async def __call__(self, scope, receive, send) -> None:
+    async def __call__(
+        self,
+        scope: dict[str, Any],
+        receive: Callable[[], Awaitable[dict[str, Any]]],
+        send: Callable[[dict[str, Any]], Awaitable[None]]
+    ) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
@@ -327,7 +337,7 @@ class MetricsMiddleware:
         # Capture status code
         status_code = 500
 
-        async def send_wrapper(message):
+        async def send_wrapper(message: dict[str, Any]) -> None:
             nonlocal status_code
             if message["type"] == "http.response.start":
                 status_code = message["status"]

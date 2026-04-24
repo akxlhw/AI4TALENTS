@@ -22,7 +22,7 @@ def with_retry(
     max_delay: float = 60.0,
     exponential_base: float = 2.0,
     retryable_errors: tuple = (LLMError,)
-):
+) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T]]]:
     """指数退避重试装饰器
 
     Args:
@@ -99,7 +99,7 @@ def with_retry(
     return decorator
 
 
-def with_timeout(timeout_seconds: float = 30.0):
+def with_timeout(timeout_seconds: float = 30.0) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T]]]:
     """超时装饰器
 
     Args:

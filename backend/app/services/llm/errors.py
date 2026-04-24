@@ -3,8 +3,8 @@ LLM Error types and handling.
 LLM 错误类型定义
 """
 
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
 from typing import Optional
 
 
@@ -53,7 +53,7 @@ class LLMError(Exception):
 class SearchError(Exception):
     """搜索错误基类"""
 
-    def __init__(self, message: str):
+    def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(message)
 
@@ -61,21 +61,21 @@ class SearchError(Exception):
 class EmptyQueryError(SearchError):
     """空查询错误"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("搜索关键词不能为空")
 
 
 class InvalidSearchModeError(SearchError):
     """无效搜索模式错误"""
 
-    def __init__(self, mode: str):
+    def __init__(self, mode: str) -> None:
         super().__init__(f"无效的搜索模式: {mode}")
 
 
 class EmbeddingError(Exception):
     """嵌入错误基类"""
 
-    def __init__(self, message: str):
+    def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(message)
 
@@ -83,14 +83,14 @@ class EmbeddingError(Exception):
 class TalentNotFoundError(EmbeddingError):
     """人才不存在错误"""
 
-    def __init__(self, talent_id: int):
+    def __init__(self, talent_id: int) -> None:
         super().__init__(f"人才不存在: {talent_id}")
 
 
 class JDMatchError(Exception):
     """岗位匹配错误基类"""
 
-    def __init__(self, message: str):
+    def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(message)
 
@@ -98,14 +98,14 @@ class JDMatchError(Exception):
 class EmptyJDError(JDMatchError):
     """空 JD 错误"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("JD 文本不能为空")
 
 
 class RecommendError(Exception):
     """推荐错误基类"""
 
-    def __init__(self, message: str):
+    def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(message)
 
@@ -113,14 +113,14 @@ class RecommendError(Exception):
 class InvalidReferenceError(RecommendError):
     """无效参考人才错误"""
 
-    def __init__(self, talent_id: int):
+    def __init__(self, talent_id: int) -> None:
         super().__init__(f"参考人才不存在: {talent_id}")
 
 
 class EmptyReferenceError(RecommendError):
     """空参考列表错误"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("参考人才列表不能为空")
 
 
@@ -131,7 +131,7 @@ class EmptyReferenceError(RecommendError):
 class SemanticSearchError(SearchError):
     """语义搜索失败错误"""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Optional[Exception] = None) -> None:
         super().__init__(message)
         self.original_error = original_error
 
@@ -139,7 +139,7 @@ class SemanticSearchError(SearchError):
 class FulltextSearchError(SearchError):
     """全文搜索失败错误"""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Optional[Exception] = None) -> None:
         super().__init__(message)
         self.original_error = original_error
 
@@ -147,12 +147,12 @@ class FulltextSearchError(SearchError):
 class VectorParseError(SearchError):
     """向量解析失败错误"""
 
-    def __init__(self, message: str = "向量格式解析失败"):
+    def __init__(self, message: str = "向量格式解析失败") -> None:
         super().__init__(message)
 
 
 class EmbeddingServiceError(SearchError):
     """嵌入服务错误"""
 
-    def __init__(self, message: str = "嵌入服务不可用"):
+    def __init__(self, message: str = "嵌入服务不可用") -> None:
         super().__init__(message)

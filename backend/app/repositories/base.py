@@ -13,8 +13,9 @@ from typing import Any, Generic, TypeVar
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import DeclarativeBase
 
-Model = TypeVar("Model")
+Model = TypeVar("Model", bound=DeclarativeBase)
 
 
 class BaseRepository(Generic[Model]):
@@ -38,7 +39,7 @@ class BaseRepository(Generic[Model]):
         self.session = session
         self.model = model
 
-    async def get_by_id(self, id: int, id_column: str = None) -> Model | None:
+    async def get_by_id(self, id: int, id_column: str | None = None) -> Model | None:
         """
         Get a single record by primary key.
 
@@ -82,7 +83,7 @@ class BaseRepository(Generic[Model]):
     async def get_by_ids(
         self,
         ids: list[int],
-        id_column: str = None
+        id_column: str | None = None
     ) -> dict[int, Model]:
         """
         Get multiple records by primary keys in batch.

@@ -52,7 +52,7 @@ class BaseBuilder(ABC):
         """
         pass
 
-    def log_error(self, message: str, record_id: str | None = None):
+    def log_error(self, message: str, record_id: str | None = None) -> None:
         """Log an error during building."""
         error_msg = f"[Batch {self.batch_id}] {message}"
         if record_id:
@@ -60,7 +60,7 @@ class BaseBuilder(ABC):
         logger.error(error_msg)
         self.errors.append(error_msg)
 
-    def log_warning(self, message: str):
+    def log_warning(self, message: str) -> None:
         """Log a warning during building."""
         logger.warning(f"[Batch {self.batch_id}] {message}")
 
