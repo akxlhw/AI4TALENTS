@@ -24,6 +24,7 @@ from app.repositories.raw_data_repository import (
 from app.repositories.venue_repository import VenueRepository, VenueSubTaskRepository
 from app.services.collect.progress_tracker import ProgressTracker
 from app.services.collect.venue_executor import VenueSubTaskExecutor
+from app.services.common.batch_utils import batch_in_query_flat
 from app.services.common.progress import CollectionProgress
 from app.services.data_fetchers import AuthorFetcher, InstitutionFetcher, WorkFetcher
 from app.services.normalizers import AuthorNormalizer, SchoolNormalizer, TechBelongCalculator
@@ -762,34 +763,23 @@ class CollectionOrchestrator:
             return
 
         # 分批加载 Talent 对象，避免 PostgreSQL 参数上限 (32767)
-        # 每批最多 5000 个 ID
-        BATCH_SIZE = 5000
         updated_count = 0
 
-        for batch_start in range(0, len(talent_ids), BATCH_SIZE):
-            batch_ids = talent_ids[batch_start:batch_start + BATCH_SIZE]
-            result = await self.session.execute(
-                select(Talent).where(Talent.talent_id.in_(batch_ids))
-            )
-            talents = result.scalars().all()
+        talents = await batch_in_query_flat(
+            self.session,
+            lambda batch: select(Talent).where(Talent.talent_id.in_(batch)),
+            talent_ids
+        )
 
-            for i, talent in enumerate(talents):
-                # 以 OpenAlex 返回的研究主题为准
-                # 如果 openalex_topics 不为空，则使用它作为 topic_tags
-                # 如果为空，则 topic_tags 也为空（不自动打标签）
-                if talent.openalex_topics:
-                    talent.topic_tags = list(talent.openalex_topics)
-                    updated_count += 1
-                else:
-                    talent.topic_tags = []
-
-            # 每批提交一次
-            if batch_start + BATCH_SIZE < len(talent_ids):
-                await self.session.commit()
-                self.progress_tracker.add_log(
-                    "debug",
-                    f"更新进度: {min(batch_start + BATCH_SIZE, len(talent_ids))}/{len(talent_ids)}"
-                )
+        for talent in talents:
+            # 以 OpenAlex 返回的研究主题为准
+            # 如果 openalex_topics 不为空，则使用它作为 topic_tags
+            # 如果为空，则 topic_tags 也为空（不自动打标签）
+            if talent.openalex_topics:
+                talent.topic_tags = list(talent.openalex_topics)
+                updated_count += 1
+            else:
+                talent.topic_tags = []
 
         await self.session.flush()
         self.progress_tracker.add_log("info", f"更新了 {updated_count} 个人才的技术标签")
@@ -817,35 +807,43 @@ class CollectionOrchestrator:
                 f"增量更新 {len(affected_school_ids)} 所受影响的学校"
             )
 
-            # Reset counts for affected schools only
-            await self.session.execute(
-                School.__table__.update()
-                .where(School.school_id.in_(affected_school_ids))
-                .values(professor_count=0, student_count=0)
-            )
-
-            # Calculate and update counts for affected schools
-            result = await self.session.execute(
-                select(
-                    Talent.school_id,
-                    func.count(case((Talent.role_type == 'professor', 1))).label('professor_count'),
-                    func.count(case((Talent.role_type.in_(['student', 'graduate']), 1))).label('student_count')
-                ).where(
-                    Talent.school_id.in_(affected_school_ids),
-                    Talent.is_visible.is_(True)
-                ).group_by(Talent.school_id)
-            )
-
+            # 分批处理，避免 PostgreSQL 参数上限 (32767)
+            SCHOOL_BATCH_SIZE = 5000
             updated_schools = 0
-            for row in result:
-                school_id, prof_count, stu_count = row
-                if school_id:
-                    await self.session.execute(
-                        School.__table__.update()
-                        .where(School.school_id == school_id)
-                        .values(professor_count=prof_count, student_count=stu_count)
-                    )
-                    updated_schools += 1
+            # Convert set to list for slicing
+            school_id_list = list(affected_school_ids)
+
+            for batch_start in range(0, len(school_id_list), SCHOOL_BATCH_SIZE):
+                batch_ids = school_id_list[batch_start:batch_start + SCHOOL_BATCH_SIZE]
+
+                # Reset counts for affected schools only
+                await self.session.execute(
+                    School.__table__.update()
+                    .where(School.school_id.in_(batch_ids))
+                    .values(professor_count=0, student_count=0)
+                )
+
+                # Calculate and update counts for affected schools
+                result = await self.session.execute(
+                    select(
+                        Talent.school_id,
+                        func.count(case((Talent.role_type == 'professor', 1))).label('professor_count'),
+                        func.count(case((Talent.role_type.in_(['student', 'graduate']), 1))).label('student_count')
+                    ).where(
+                        Talent.school_id.in_(batch_ids),
+                        Talent.is_visible.is_(True)
+                    ).group_by(Talent.school_id)
+                )
+
+                for row in result:
+                    school_id, prof_count, stu_count = row
+                    if school_id:
+                        await self.session.execute(
+                            School.__table__.update()
+                            .where(School.school_id == school_id)
+                            .values(professor_count=prof_count, student_count=stu_count)
+                        )
+                        updated_schools += 1
         else:
             # Fallback: Full update (first run or no tracked schools)
             self.progress_tracker.add_log(

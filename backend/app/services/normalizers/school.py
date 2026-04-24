@@ -80,8 +80,9 @@ class SchoolNormalizer:
             normalized = self.normalize_school_name(raw_name)
             result = await self.session.execute(
                 select(StdSchool).where(StdSchool.name_normalized.ilike(f"%{normalized}%"))
+                .limit(1)  # 只取第一条匹配记录
             )
-            school = result.scalar_one_or_none()
+            school = result.scalars().first()
             if school:
                 return school, "normalized"
 
@@ -145,6 +146,7 @@ class SchoolNormalizer:
             matched.country_name = raw_inst.country_name
             matched.ror = raw_inst.ror
             matched.inst_type = raw_inst.type
+            matched.source_task_id = task_id
             matched.normalized_at = datetime.utcnow()
             await self.session.flush()
             return matched

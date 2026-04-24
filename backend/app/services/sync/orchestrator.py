@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.models.raw_data import AuthorTechBelong
 from app.models.standardized import StdAuthor, StdSchool
 from app.models.talent import Talent
+from app.services.common.batch_utils import batch_in_query_flat, batch_in_query_map
 from app.services.sync.author_sync import AuthorSyncService
 from app.services.sync.school_sync import SchoolSyncService
 from app.services.sync.tech_tag_sync import TechTagSyncService
@@ -20,9 +21,6 @@ logger = logging.getLogger(__name__)
 
 # Log module load to verify code version
 logger.info("[SYNC_ORCHESTRATOR] Module loaded with CS score filtering enabled")
-
-# Batch size for IN queries
-BATCH_SIZE = 500
 
 
 class ServingLayerOrchestrator:
@@ -36,20 +34,13 @@ class ServingLayerOrchestrator:
 
     async def _batch_get_std_authors(self, author_ids: list[str]) -> list[StdAuthor]:
         """Get StdAuthors by IDs in batches."""
-        if not author_ids:
-            return []
-
-        results = []
-        for i in range(0, len(author_ids), BATCH_SIZE):
-            batch = author_ids[i:i + BATCH_SIZE]
-            result = await self.session.execute(
-                select(StdAuthor)
+        return await batch_in_query_flat(
+            self.session,
+            lambda batch: select(StdAuthor)
                 .options(selectinload(StdAuthor.school))
-                .where(StdAuthor.openalex_author_id.in_(batch))
-            )
-            results.extend(result.scalars().all())
-
-        return results
+                .where(StdAuthor.openalex_author_id.in_(batch)),
+            author_ids
+        )
 
     async def sync_all_for_task(
         self,
@@ -114,7 +105,7 @@ class ServingLayerOrchestrator:
         author_ids = list({b.openalex_author_id for b in belongs})
         logger.info(f"[BULK_SYNC] Found {len(belongs)} tech belong records, {len(author_ids)} unique authors")
 
-        # Get StdAuthors with their schools
+        # Get StdAuthors with their schools (batched)
         std_authors = await self._batch_get_std_authors(author_ids)
         logger.info(f"[BULK_SYNC] Found {len(std_authors)} standardized authors")
 
@@ -125,39 +116,7 @@ class ServingLayerOrchestrator:
             logger.info(f"[BULK_SYNC] CS score distribution: {len(cs_scores)} authors, {above_threshold} >= {CS_SCORE_THRESHOLD}")
 
         # 1. Bulk sync schools first
-        # Collect all institution IDs to sync:
-        # - legacy: std_author.school (via std_school_id FK)
-        # - new: primary_education_id, primary_company_id (OpenAlex IDs, need lookup)
-        schools_to_sync = {}
-        openalex_inst_ids_to_lookup = set()
-
-        # Legacy: schools via FK relationship
-        for std_author in std_authors:
-            if std_author.school and std_author.school.openalex_institution_id:
-                inst_id = std_author.school.openalex_institution_id
-                if inst_id not in schools_to_sync:
-                    schools_to_sync[inst_id] = std_author.school
-
-            # Collect primary education/company OpenAlex IDs for lookup
-            if std_author.primary_education_id:
-                openalex_inst_ids_to_lookup.add(std_author.primary_education_id)
-            if std_author.primary_company_id:
-                openalex_inst_ids_to_lookup.add(std_author.primary_company_id)
-
-        # Lookup StdSchool by OpenAlex institution ID for primary education/company
-        if openalex_inst_ids_to_lookup:
-            # Remove IDs already in schools_to_sync
-            openalex_inst_ids_to_lookup -= set(schools_to_sync.keys())
-
-            if openalex_inst_ids_to_lookup:
-                result = await self.session.execute(
-                    select(StdSchool).where(
-                        StdSchool.openalex_institution_id.in_(openalex_inst_ids_to_lookup)
-                    )
-                )
-                for std_school in result.scalars().all():
-                    if std_school.openalex_institution_id:
-                        schools_to_sync[std_school.openalex_institution_id] = std_school
+        schools_to_sync = await self._collect_schools_to_sync(std_authors)
 
         if schools_to_sync:
             school_result = await self.school_sync.bulk_sync_schools(list(schools_to_sync.values()))
@@ -179,20 +138,22 @@ class ServingLayerOrchestrator:
         affected_school_ids = set(school_id_map.values())
         stats["affected_school_ids"] = affected_school_ids
 
-        # 3. Sync tech tags (still individual, but batched)
-        # Get all talents that were synced
+        # 3. Sync tech tags
         synced_author_ids = [
             a.openalex_author_id for a in std_authors
             if (a.cs_concepts_score or 0.0) >= CS_SCORE_THRESHOLD
         ]
 
         if synced_author_ids:
-            talent_result = await self.session.execute(
-                select(Talent.talent_id, Talent.source_record_id).where(
-                    Talent.source_record_id.in_(synced_author_ids)
-                )
+            # Batch query talent IDs (batched)
+            talent_map = await batch_in_query_map(
+                self.session,
+                lambda batch: select(Talent.talent_id, Talent.source_record_id)
+                    .where(Talent.source_record_id.in_(batch)),
+                synced_author_ids,
+                key_func=lambda row: row.source_record_id,
+                value_func=lambda row: row.talent_id
             )
-            talent_map = {row.source_record_id: row.talent_id for row in talent_result.all()}
 
             # Build belongs map by author
             belongs_by_author = {}
@@ -222,3 +183,45 @@ class ServingLayerOrchestrator:
         )
 
         return stats
+
+    async def _collect_schools_to_sync(self, std_authors: list[StdAuthor]) -> dict:
+        """Collect all schools to sync from std_authors.
+
+        Returns:
+            dict: Map of openalex_institution_id -> StdSchool
+        """
+        schools_to_sync = {}
+        openalex_inst_ids_to_lookup = set()
+
+        # Legacy: schools via FK relationship
+        for std_author in std_authors:
+            if std_author.school and std_author.school.openalex_institution_id:
+                inst_id = std_author.school.openalex_institution_id
+                if inst_id not in schools_to_sync:
+                    schools_to_sync[inst_id] = std_author.school
+
+            # Collect primary education/company OpenAlex IDs for lookup
+            if std_author.primary_education_id:
+                openalex_inst_ids_to_lookup.add(std_author.primary_education_id)
+            if std_author.primary_company_id:
+                openalex_inst_ids_to_lookup.add(std_author.primary_company_id)
+
+        # Lookup StdSchool by OpenAlex institution ID for primary education/company
+        if openalex_inst_ids_to_lookup:
+            # Remove IDs already in schools_to_sync
+            openalex_inst_ids_to_lookup -= set(schools_to_sync.keys())
+
+            if openalex_inst_ids_to_lookup:
+                # Batch query StdSchools (batched)
+                std_schools = await batch_in_query_flat(
+                    self.session,
+                    lambda batch: select(StdSchool).where(
+                        StdSchool.openalex_institution_id.in_(batch)
+                    ),
+                    list(openalex_inst_ids_to_lookup)
+                )
+                for std_school in std_schools:
+                    if std_school.openalex_institution_id:
+                        schools_to_sync[std_school.openalex_institution_id] = std_school
+
+        return schools_to_sync

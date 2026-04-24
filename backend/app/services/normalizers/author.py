@@ -197,6 +197,7 @@ class AuthorNormalizer:
             existing.primary_company_name = raw_author.primary_company_name
             existing.openalex_topics = topics
             existing.cs_concepts_score = cs_score
+            existing.source_task_id = task_id
             existing.normalized_at = datetime.utcnow()
             await self.session.flush()
             return existing

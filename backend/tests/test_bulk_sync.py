@@ -397,9 +397,9 @@ class TestServingLayerOrchestrator:
 
         # Verify the threshold is working as expected
         # Authors with CS scores: 0.40, 0.55, 0.70, 0.85, 1.0
-        # With default threshold 0.5, should have 4 above threshold
-        assert above_threshold == 4
-        assert len(data["authors"]) - above_threshold == 1  # Only 0.40 is below
+        # With threshold 0.7, should have 3 above threshold (0.70, 0.85, 1.0)
+        assert above_threshold == 3
+        assert len(data["authors"]) - above_threshold == 2  # 0.40 and 0.55 are below
 
     @pytest.mark.asyncio
     async def test_orchestrator_no_data_for_task(

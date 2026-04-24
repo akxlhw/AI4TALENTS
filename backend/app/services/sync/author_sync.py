@@ -14,6 +14,7 @@ from app.models.enums import VisibilityStatus
 from app.models.school import School
 from app.models.standardized import StdAuthor
 from app.models.talent import RoleProfile, Talent
+from app.services.common.batch_utils import batch_in_query, batch_in_query_map
 from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
 from app.services.role_identifier import RoleIdentifier
 
@@ -312,19 +313,14 @@ class AuthorSyncService:
 
         # Get existing talents in batches to avoid parameter limit
         author_ids = [a.openalex_author_id for a in std_authors]
-        existing_map = {}
-
-        # Process IN query in batches
-        BATCH_SIZE = 5000
-        for i in range(0, len(author_ids), BATCH_SIZE):
-            batch_ids = author_ids[i:i + BATCH_SIZE]
-            existing_result = await self.session.execute(
-                select(Talent.source_record_id, Talent.talent_id).where(
-                    Talent.source_record_id.in_(batch_ids)
-                )
-            )
-            for row in existing_result.all():
-                existing_map[row.source_record_id] = row.talent_id
+        existing_map = await batch_in_query_map(
+            self.session,
+            lambda batch: select(Talent.source_record_id, Talent.talent_id)
+                .where(Talent.source_record_id.in_(batch)),
+            author_ids,
+            key_func=lambda row: row.source_record_id,
+            value_func=lambda row: row.talent_id
+        )
 
         # Prepare bulk data
         now = datetime.utcnow().isoformat()
@@ -415,49 +411,56 @@ class AuthorSyncService:
 
         # Bulk create role profiles (separate query for new talents)
         if result["created"] > 0:
-            # Get newly created talent IDs in batches
+            # Get newly created talent IDs
             new_author_ids = [
                 a.openalex_author_id for a in std_authors
                 if a.openalex_author_id not in existing_map
             ]
 
-            for i in range(0, len(new_author_ids), BATCH_SIZE):
-                batch_ids = new_author_ids[i:i + BATCH_SIZE]
-                new_result = await self.session.execute(
-                    select(Talent.talent_id, Talent.source_record_id, Talent.role_type,
-                           Talent.role_confidence).where(
-                        Talent.source_record_id.in_(batch_ids)
-                    )
-                )
+            # Build author lookup map for O(1) access
+            author_by_id = {a.openalex_author_id: a for a in std_authors}
 
-                for row in new_result.all():
-                    # Get role reason from original author
-                    author = next(
-                        (a for a in std_authors if a.openalex_author_id == row.source_record_id),
-                        None
-                    )
+            # Batch query new talent info
+            def process_new_talents(result):
+                rows = []
+                for row in result.all():
+                    author = author_by_id.get(row.source_record_id)
                     if author:
-                        role_result = RoleIdentifier.identify(
-                            works_count=author.works_count or 0,
-                            cited_by_count=author.cited_by_count or 0,
-                            h_index=author.h_index or 0
-                        )
-                        profile_data.append({
-                            "talent_id": row.talent_id,
-                            "role_type": row.role_type,
-                            "role_confidence": row.role_confidence,
-                            "role_reason": role_result.reason,
-                            "identification_method": "heuristic",
-                            "identified_at": now,
-                        })
+                        rows.append((row, author))
+                return rows
 
-                        # Track new professors for work fetching
-                        if row.role_type == "professor":
-                            result["new_talents"].append({
-                                "talent_id": row.talent_id,
-                                "openalex_author_id": row.source_record_id,
-                                "works_count": author.works_count or 0 if author else 0,
-                            })
+            new_talent_rows = await batch_in_query(
+                self.session,
+                lambda batch: select(
+                    Talent.talent_id, Talent.source_record_id, Talent.role_type,
+                    Talent.role_confidence
+                ).where(Talent.source_record_id.in_(batch)),
+                new_author_ids,
+                process_new_talents
+            )
+
+            for row, author in new_talent_rows:
+                role_result = RoleIdentifier.identify(
+                    works_count=author.works_count or 0,
+                    cited_by_count=author.cited_by_count or 0,
+                    h_index=author.h_index or 0
+                )
+                profile_data.append({
+                    "talent_id": row.talent_id,
+                    "role_type": row.role_type,
+                    "role_confidence": row.role_confidence,
+                    "role_reason": role_result.reason,
+                    "identification_method": "heuristic",
+                    "identified_at": now,
+                })
+
+                # Track new professors for work fetching
+                if row.role_type == "professor":
+                    result["new_talents"].append({
+                        "talent_id": row.talent_id,
+                        "openalex_author_id": row.source_record_id,
+                        "works_count": author.works_count or 0,
+                    })
 
             if profile_data:
                 # Batch insert profiles as well

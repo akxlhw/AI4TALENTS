@@ -84,12 +84,12 @@ class TechBelongCalculator:
             belong = existing.scalar_one_or_none()
 
             if belong:
-                # Update existing record (but preserve original source_task_id)
+                # Update existing record
                 belong.work_count_in_venue = stats["work_count"]
                 belong.first_work_year = stats["first_year"]
                 belong.last_work_year = stats["last_year"]
                 belong.source_venue_id = venue_id
-                # NOTE: Do NOT update source_task_id - keep the original collection task ID
+                belong.source_task_id = task_id
             else:
                 # Create new record
                 belong = AuthorTechBelong(

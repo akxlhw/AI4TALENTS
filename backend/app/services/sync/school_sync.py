@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.constants.countries import get_country_name_cn, normalize_country_code
 from app.models.school import School, SchoolAlias
 from app.models.standardized import StdSchool
+from app.services.common.batch_utils import batch_in_query_map
 
 logger = logging.getLogger(__name__)
 
@@ -167,19 +168,14 @@ class SchoolSyncService:
 
         # Get existing schools in batches
         inst_ids = [s.openalex_institution_id for s in std_schools]
-        existing_map = {}
-
-        # Process IN query in batches to avoid parameter limit
-        BATCH_SIZE = 5000
-        for i in range(0, len(inst_ids), BATCH_SIZE):
-            batch_ids = inst_ids[i:i + BATCH_SIZE]
-            existing_result = await self.session.execute(
-                select(School.source_record_id, School.school_id).where(
-                    School.source_record_id.in_(batch_ids)
-                )
-            )
-            for row in existing_result.all():
-                existing_map[row.source_record_id] = row.school_id
+        existing_map = await batch_in_query_map(
+            self.session,
+            lambda batch: select(School.source_record_id, School.school_id)
+                .where(School.source_record_id.in_(batch)),
+            inst_ids,
+            key_func=lambda row: row.source_record_id,
+            value_func=lambda row: row.school_id
+        )
 
         # Prepare bulk data
         school_data = []
@@ -207,10 +203,10 @@ class SchoolSyncService:
 
         # Execute bulk upsert in batches (PostgreSQL has 32767 parameter limit)
         # Each school has ~8 parameters, so batch size of 2000 is safe
+        UPSERT_BATCH_SIZE = 2000
         if school_data:
-            BATCH_SIZE = 2000
-            for i in range(0, len(school_data), BATCH_SIZE):
-                batch = school_data[i:i + BATCH_SIZE]
+            for i in range(0, len(school_data), UPSERT_BATCH_SIZE):
+                batch = school_data[i:i + UPSERT_BATCH_SIZE]
                 stmt = pg_insert(School).values(batch)
                 stmt = stmt.on_conflict_do_update(
                     index_elements=["source_record_id"],
@@ -225,16 +221,14 @@ class SchoolSyncService:
                 await self.session.execute(stmt)
 
         # Get all school IDs (both existing and newly created) in batches
-        school_id_map = {}
-        for i in range(0, len(inst_ids), BATCH_SIZE):
-            batch_ids = inst_ids[i:i + BATCH_SIZE]
-            id_result = await self.session.execute(
-                select(School.source_record_id, School.school_id).where(
-                    School.source_record_id.in_(batch_ids)
-                )
-            )
-            for row in id_result.all():
-                school_id_map[row.source_record_id] = row.school_id
+        school_id_map = await batch_in_query_map(
+            self.session,
+            lambda batch: select(School.source_record_id, School.school_id)
+                .where(School.source_record_id.in_(batch)),
+            inst_ids,
+            key_func=lambda row: row.source_record_id,
+            value_func=lambda row: row.school_id
+        )
 
         result["school_id_map"] = school_id_map
         result["synced"] = len(std_schools)
