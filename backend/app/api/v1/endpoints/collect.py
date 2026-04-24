@@ -16,7 +16,6 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.endpoints.auth import require_user
@@ -64,22 +63,15 @@ async def run_collect_task_background(task_id: int):
     Runs the collection task in-process using async/await.
     This avoids SQLite database locking issues with separate processes.
     """
-    from datetime import datetime
-
     from app.core.database import AsyncSessionLocal
-    from app.models.sync import CollectTask
+    from app.repositories.collect_repository import CollectTaskRepository
 
     # First, update task status to running immediately
     async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
-        task = result.scalar_one_or_none()
+        repo = CollectTaskRepository(session)
+        task = await repo.get_by_id(task_id)
         if task and task.status == "pending":
-            task.status = "running"
-            task.started_at = datetime.utcnow()
-            task.current_step = "正在初始化..."
-            await session.commit()
+            await repo.start_task_and_commit(task_id)
             logger.info(f"Task {task_id} status updated to running")
 
     try:
@@ -88,16 +80,10 @@ async def run_collect_task_background(task_id: int):
         logger.error(f"Background task {task_id} failed: {e}")
         # Update task status to failed
         async with AsyncSessionLocal() as session:
-            result = await session.execute(
-                select(CollectTask).where(CollectTask.task_id == task_id)
-            )
-            task = result.scalar_one_or_none()
+            repo = CollectTaskRepository(session)
+            task = await repo.get_by_id(task_id)
             if task and task.status == "running":
-                task.status = "failed"
-                task.error_message = str(e)
-                task.completed_at = datetime.utcnow()
-                task.current_step = "执行失败"
-                await session.commit()
+                await repo.fail_task_and_commit(task_id, str(e))
             logger.error(f"Task {task_id} marked as failed: {e}")
 
 

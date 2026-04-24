@@ -331,8 +331,6 @@ async def _run_embedding_generation(force: bool, batch_size: int, vector_types: 
                     _embedding_progress["failed"] = failed
                     logger.info(f"Progress: {processed}/{_embedding_progress['total']} processed, {failed} failed")
 
-                    await session.commit()
-
                 except Exception as e:
                     logger.error(f"Batch {i // actual_batch_size + 1} failed: {e}")
                     failed += len(batch) * len(vector_types)

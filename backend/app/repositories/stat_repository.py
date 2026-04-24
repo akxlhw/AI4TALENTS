@@ -130,3 +130,17 @@ class StatisticsRepository:
             .where(TechDirection.is_enabled.is_(True))
         )
         return result.scalar() or 0
+
+    async def check_database_connection(self) -> bool:
+        """
+        Check database connection by executing a simple query.
+
+        Returns:
+            True if connection is healthy, False otherwise
+        """
+        from sqlalchemy import text
+        try:
+            result = await self.session.execute(text("SELECT 1"))
+            return result.scalar() == 1
+        except Exception:
+            return False

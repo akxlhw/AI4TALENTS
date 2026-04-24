@@ -5,12 +5,12 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import get_cache_connection
 from app.core.config import settings
 from app.core.database import async_engine, get_async_session
+from app.repositories.stat_repository import StatisticsRepository
 
 router = APIRouter(tags=["Health"])
 
@@ -70,9 +70,9 @@ async def health_check(
     }
 
     # Check database connection
+    repo = StatisticsRepository(session)
     try:
-        result = await session.execute(text("SELECT 1"))
-        if result.scalar() == 1:
+        if await repo.check_database_connection():
             health_status["database"]["status"] = "connected"
         else:
             health_status["database"]["status"] = "error"
@@ -135,11 +135,8 @@ async def readiness_check(
     }
 
     # Check database
-    try:
-        await session.execute(text("SELECT 1"))
-        checks["database"] = True
-    except Exception:
-        pass
+    repo = StatisticsRepository(session)
+    checks["database"] = await repo.check_database_connection()
 
     # Check cache (optional)
     if settings.REDIS_ENABLED:

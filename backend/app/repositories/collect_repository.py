@@ -129,6 +129,45 @@ class CollectTaskRepository(BaseRepository[CollectTask]):
 
         return task
 
+    async def update_task_status_and_commit(
+        self,
+        task_id: int,
+        status: str,
+        progress_percent: int | None = None,
+        current_step: str | None = None,
+        started_at: datetime | None = None,
+        completed_at: datetime | None = None,
+        error_message: str | None = None,
+        error_details: dict | None = None,
+    ) -> CollectTask | None:
+        """Update task status and commit."""
+        task = await self.update_task_status(
+            task_id, status, progress_percent, current_step,
+            started_at, completed_at, error_message, error_details
+        )
+        if task:
+            await self.session.commit()
+        return task
+
+    async def start_task_and_commit(self, task_id: int) -> CollectTask | None:
+        """Mark task as running and commit."""
+        return await self.update_task_status_and_commit(
+            task_id=task_id,
+            status="running",
+            started_at=datetime.utcnow(),
+            current_step="正在初始化...",
+        )
+
+    async def fail_task_and_commit(self, task_id: int, error_message: str) -> CollectTask | None:
+        """Mark task as failed and commit."""
+        return await self.update_task_status_and_commit(
+            task_id=task_id,
+            status="failed",
+            completed_at=datetime.utcnow(),
+            error_message=error_message,
+            current_step="执行失败",
+        )
+
     async def update_task_counts(
         self,
         task_id: int,
