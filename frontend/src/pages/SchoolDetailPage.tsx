@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -80,19 +80,7 @@ const SchoolDetailPage: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState<string | undefined>()
   const pageSize = 20
 
-  useEffect(() => {
-    if (id) {
-      fetchSchoolDetail(parseInt(id))
-    }
-  }, [id])
-
-  useEffect(() => {
-    if (school) {
-      fetchTalents(1)
-    }
-  }, [school, roleFilter])
-
-  const fetchSchoolDetail = async (schoolId: number) => {
+  const fetchSchoolDetail = useCallback(async (schoolId: number) => {
     setLoading(true)
     try {
       const response = await api.schools.get(schoolId)
@@ -102,9 +90,9 @@ const SchoolDetailPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const fetchTalents = async (pageNum: number) => {
+  const fetchTalents = useCallback(async (pageNum: number) => {
     if (!school) return
 
     setTalentsLoading(true)
@@ -122,7 +110,19 @@ const SchoolDetailPage: React.FC = () => {
     } finally {
       setTalentsLoading(false)
     }
-  }
+  }, [school, roleFilter])
+
+  useEffect(() => {
+    if (id) {
+      fetchSchoolDetail(parseInt(id))
+    }
+  }, [id, fetchSchoolDetail])
+
+  useEffect(() => {
+    if (school) {
+      fetchTalents(1)
+    }
+  }, [school, fetchTalents])
 
   if (loading) {
     return (

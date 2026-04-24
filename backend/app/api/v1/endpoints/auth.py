@@ -240,7 +240,7 @@ async def logout(
     Note: JWT tokens are stateless, so actual logout happens on client side.
     In production, you may want to implement token blacklisting.
     """
-    return {"message": "已成功登出"}
+    return SuccessResponse(message="已成功登出")
 
 
 @router.post(
@@ -361,7 +361,7 @@ async def change_password(
     await repo.update_password(user.user_id, new_hash)
     await session.commit()
 
-    return {"message": "密码修改成功"}
+    return SuccessResponse(message="密码修改成功")
 
 
 # Export dependencies for use in other routes

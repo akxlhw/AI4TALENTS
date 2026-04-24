@@ -64,6 +64,28 @@ class SuccessResponse(BaseModel):
     message: str = "Operation completed successfully"
 
 
+class CountResponse(BaseModel):
+    """Operation response with count."""
+
+    message: str = Field(description="Result message")
+    count: int = Field(description="Affected count")
+
+
+class TaskStartResponse(BaseModel):
+    """Background task start response."""
+
+    message: str = Field(description="Task start message")
+    talent_id: int | None = Field(default=None, description="Related talent ID if any")
+    sync_all: bool = Field(default=False, description="Whether syncing all data")
+
+
+class SyncStatusResponse(BaseModel):
+    """Background sync status response."""
+
+    sync_progress: dict = Field(description="Current sync progress")
+    data_status: dict = Field(description="Overall data status")
+
+
 class HealthResponse(BaseModel):
     """Health check response."""
 

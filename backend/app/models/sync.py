@@ -41,7 +41,7 @@ class SyncBatch(Base, TimestampMixin):
     created_by = Column(String(50), default="system")
     config_snapshot = Column(JSON, nullable=True)  # Store sync configuration
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<SyncBatch(batch_id={self.batch_id}, status={self.status})>"
 
 
@@ -67,7 +67,7 @@ class CollectScope(Base, TimestampMixin):
     # Created by
     created_by = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<CollectScope(scope_id={self.scope_id}, name={self.scope_name})>"
 
 
@@ -108,7 +108,7 @@ class CollectStrategy(Base, TimestampMixin):
     last_run_at = Column(DateTime, nullable=True)
     last_run_status = Column(String(20), nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<CollectStrategy(strategy_id={self.strategy_id}, name={self.strategy_name})>"
 
 
@@ -172,7 +172,7 @@ class CollectTask(Base, TimestampMixin):
     # Relationships
     tech_domain = relationship("TechDomain")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<CollectTask(task_id={self.task_id}, status={self.status})>"
 
 
@@ -208,7 +208,7 @@ class DataVersion(Base, TimestampMixin):
     # Description
     description = Column(Text, nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<DataVersion(version_id={self.version_id}, code={self.version_code})>"
 
 
@@ -233,7 +233,7 @@ class DataPublishRecord(Base, TimestampMixin):
     # Notes
     notes = Column(Text, nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<DataPublishRecord(publish_id={self.publish_id}, action={self.action})>"
 
 
@@ -268,7 +268,7 @@ class DataCorrectionRecord(Base, TimestampMixin):
     # Status
     status = Column(String(20), default="applied", nullable=False)  # 'pending', 'applied', 'reverted'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<DataCorrectionRecord(correction_id={self.correction_id}, target={self.target_type}:{self.target_id})>"
 
 
@@ -313,6 +313,6 @@ class DataQualitySummary(Base, TimestampMixin):
     # Additional details
     details = Column(JSON, nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<DataQualitySummary(summary_id={self.summary_id}, version_id={self.version_id})>"
 

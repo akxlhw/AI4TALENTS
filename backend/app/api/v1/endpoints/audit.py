@@ -41,6 +41,16 @@ class AuditLogListResponse(BaseModel):
     page_size: int
 
 
+class EventTypesResponse(BaseModel):
+    """Event types response."""
+    event_types: list[str]
+
+
+class ResourceTypesResponse(BaseModel):
+    """Resource types response."""
+    resource_types: list[str]
+
+
 @router.get(
     "/logs",
     response_model=AuditLogListResponse,
@@ -124,6 +134,7 @@ async def get_audit_logs(
 
 @router.get(
     "/event-types",
+    response_model=EventTypesResponse,
     summary="获取事件类型列表",
     description="获取所有事件类型",
 )
@@ -136,11 +147,12 @@ async def get_event_types(
         select(AuditOperationLog.event_type).distinct()
     )
     types = [row[0] for row in result.fetchall()]
-    return {"event_types": types}
+    return EventTypesResponse(event_types=types)
 
 
 @router.get(
     "/resource-types",
+    response_model=ResourceTypesResponse,
     summary="获取资源类型列表",
     description="获取所有资源类型",
 )
@@ -153,4 +165,4 @@ async def get_resource_types(
         select(AuditOperationLog.resource_type).distinct()
     )
     types = [row[0] for row in result.fetchall() if row[0]]
-    return {"resource_types": types}
+    return ResourceTypesResponse(resource_types=types)

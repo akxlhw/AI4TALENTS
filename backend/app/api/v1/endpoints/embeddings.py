@@ -15,6 +15,7 @@ from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
 from app.models.talent import Talent
 from app.models.embedding import TalentEmbedding
+from app.schemas.common import SuccessResponse
 from app.services.config_service import ConfigService
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,17 @@ class EmbeddingGenerateResponse(BaseModel):
     message: str
     total_talents: int
     status: str
+
+
+class EmbeddingProgressResponse(BaseModel):
+    """Response for embedding generation progress."""
+    status: str
+    processed: int
+    total: int
+    failed: int
+    started_at: str | None
+    completed_at: str | None
+    error_message: str | None
 
 
 # Global progress tracking (in-memory, resets on restart)
@@ -103,6 +115,7 @@ async def get_embedding_status(
 
 @router.get(
     "/progress",
+    response_model=EmbeddingProgressResponse,
     summary="获取生成进度",
     description="获取当前向量生成的实时进度"
 )
@@ -110,7 +123,7 @@ async def get_generation_progress(
     current_user: dict = Depends(require_super_admin),
 ):
     """Get current generation progress."""
-    return _embedding_progress
+    return EmbeddingProgressResponse(**_embedding_progress)
 
 
 @router.post(
@@ -213,6 +226,7 @@ async def trigger_generation(
 
 @router.post(
     "/cancel",
+    response_model=SuccessResponse,
     summary="取消生成任务",
     description="取消正在运行的向量生成任务"
 )
@@ -231,7 +245,7 @@ async def cancel_generation(
     _embedding_progress["status"] = "cancelled"
     _embedding_progress["completed_at"] = datetime.utcnow().isoformat()
 
-    return {"message": "Generation task cancelled"}
+    return SuccessResponse(message="Generation task cancelled")
 
 
 async def _run_embedding_generation(force: bool, batch_size: int, vector_types: List[str]):

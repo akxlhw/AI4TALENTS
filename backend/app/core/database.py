@@ -1,6 +1,9 @@
 """
 Database connection and session management.
 """
+from collections.abc import AsyncGenerator, Generator
+from typing import Any
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
@@ -11,7 +14,7 @@ from app.core.config import settings
 IS_SQLITE = "sqlite" in settings.DATABASE_URL
 
 
-def _set_sqlite_pragma(dbapi_connection, connection_record):
+def _set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
     """Enable SQLite WAL mode for concurrent read/write access."""
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
@@ -79,7 +82,7 @@ class Base(DeclarativeBase):
     pass
 
 
-async def get_async_session() -> AsyncSession:
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for getting async database session."""
     async with AsyncSessionLocal() as session:
         try:
@@ -88,7 +91,7 @@ async def get_async_session() -> AsyncSession:
             await session.close()
 
 
-def get_sync_session():
+def get_sync_session() -> Generator[Any, None, None]:
     """Dependency for getting sync database session (for migrations)."""
     session = SyncSessionLocal()
     try:

@@ -4,6 +4,7 @@ Health check endpoint.
 from datetime import datetime
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,8 +15,29 @@ from app.core.database import async_engine, get_async_session
 router = APIRouter(tags=["Health"])
 
 
+class HealthCheckResponse(BaseModel):
+    """Health check response."""
+    status: str
+    timestamp: str
+    service: dict
+    database: dict
+    cache: dict
+
+
+class ReadinessResponse(BaseModel):
+    """Readiness check response."""
+    status: str
+    checks: dict
+
+
+class LivenessResponse(BaseModel):
+    """Liveness check response."""
+    status: str
+
+
 @router.get(
     "/health",
+    response_model=HealthCheckResponse,
     summary="健康检查",
     description="检查服务和数据库连接状态",
 )
@@ -26,7 +48,7 @@ async def health_check(
     Health check endpoint.
 
     Returns:
-        dict: Health status of the service, database, and cache.
+        HealthCheckResponse: Health status of the service, database, and cache.
     """
     health_status = {
         "status": "healthy",
@@ -89,11 +111,12 @@ async def health_check(
             if health_status["status"] == "healthy":
                 health_status["status"] = "degraded"
 
-    return health_status
+    return HealthCheckResponse(**health_status)
 
 
 @router.get(
     "/health/ready",
+    response_model=ReadinessResponse,
     summary="就绪检查",
     description="检查服务是否准备好接收请求",
 )
@@ -126,14 +149,15 @@ async def readiness_check(
     # Service is ready if database is available
     is_ready = checks["database"]
 
-    return {
-        "status": "ready" if is_ready else "not_ready",
-        "checks": checks,
-    }
+    return ReadinessResponse(
+        status="ready" if is_ready else "not_ready",
+        checks=checks,
+    )
 
 
 @router.get(
     "/health/live",
+    response_model=LivenessResponse,
     summary="存活检查",
     description="检查服务是否存活",
 )
@@ -142,6 +166,6 @@ async def liveness_check():
     Liveness check endpoint.
 
     Returns:
-        dict: Liveness status.
+        LivenessResponse: Liveness status.
     """
-    return {"status": "alive"}
+    return LivenessResponse(status="alive")

@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.router import api_router
 from app.core.cache import close_cache_connection, get_cache_connection
@@ -106,25 +105,9 @@ def create_application() -> FastAPI:
     from app.middleware.request_logging import RequestLoggingMiddleware
     app.add_middleware(RequestLoggingMiddleware)
 
-    # Global exception handler
-    @app.exception_handler(Exception)
-    async def global_exception_handler(request: Request, exc: Exception):
-        logger.error(
-            f"Unhandled exception: {exc}",
-            extra={
-                "request_id": getattr(request.state, "request_id", "unknown"),
-                "path": request.url.path,
-                "method": request.method,
-            },
-            exc_info=True,
-        )
-        return JSONResponse(
-            status_code=500,
-            content={
-                "detail": "Internal server error",
-                "request_id": getattr(request.state, "request_id", "unknown"),
-            },
-        )
+    # Register global exception handlers
+    from app.core.exceptions import register_exception_handlers
+    register_exception_handlers(app)
 
     # Include API router
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)

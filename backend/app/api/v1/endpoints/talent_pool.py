@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
 from app.repositories.talent_pool_repository import FavoriteRepository, TalentPoolRepository
-from app.schemas.common import PaginatedResponse
+from app.schemas.common import PaginatedResponse, SuccessResponse
 from app.schemas.talent_pool import (
     FOLLOWUP_STATUS_OPTIONS,
     AddMemberRequest,
@@ -190,7 +190,7 @@ async def delete_pool(
     await repo.delete_pool(pool_id)
     await session.commit()
 
-    return {"message": "Talent pool archived"}
+    return SuccessResponse(message="Talent pool archived")
 
 
 @router.post(
@@ -226,7 +226,7 @@ async def add_member(
     )
     await session.commit()
 
-    return {"message": "Talent added to pool"}
+    return SuccessResponse(message="Talent added to pool")
 
 
 @router.delete(
@@ -256,7 +256,7 @@ async def remove_member(
     if not removed:
         raise HTTPException(status_code=404, detail="Talent not in pool")
 
-    return {"message": "Talent removed from pool"}
+    return SuccessResponse(message="Talent removed from pool")
 
 
 @router.get(
@@ -320,7 +320,7 @@ async def update_followup_status(
     if not favorite:
         raise HTTPException(status_code=404, detail="Favorite not found")
 
-    return {"message": "Followup status updated", "followup_status": request.followup_status}
+    return SuccessResponse(message="Followup status updated")
 
 
 @router.get(

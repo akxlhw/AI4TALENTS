@@ -57,7 +57,7 @@ class Venue(Base, TimestampMixin):
     # Relationships
     tech_bindings = relationship("VenueTechBinding", back_populates="venue")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Venue(venue_id={self.venue_id}, name={self.venue_name}, type={self.venue_type})>"
 
 
@@ -95,7 +95,7 @@ class VenueTechBinding(Base, TimestampMixin):
     venue = relationship("Venue", back_populates="tech_bindings")
     tech_domain = relationship("TechDomain", back_populates="venue_bindings")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<VenueTechBinding(venue_id={self.venue_id}, tech_domain_id={self.tech_domain_id})>"
 
 
@@ -137,5 +137,5 @@ class VenueSubTask(Base, TimestampMixin):
     task = relationship("CollectTask")
     venue = relationship("Venue")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<VenueSubTask(sub_task_id={self.sub_task_id}, venue_id={self.venue_id}, status={self.status})>"

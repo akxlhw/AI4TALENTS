@@ -6,18 +6,18 @@ from pydantic import BaseModel, Field
 
 class SystemConfigItem(BaseModel):
     """System configuration item."""
-    key: str
-    value: str | int | float | bool | None
-    display_value: str | int | float | bool | None
-    type: str
-    is_sensitive: bool
-    description: str | None = None
+    key: str = Field(description="配置键")
+    value: str | int | float | bool | None = Field(description="配置值")
+    display_value: str | int | float | bool | None = Field(description="显示值")
+    type: str = Field(description="值类型")
+    is_sensitive: bool = Field(description="是否为敏感信息")
+    description: str | None = Field(default=None, description="配置说明")
 
 
 class SystemConfigListResponse(BaseModel):
     """Response for listing system configurations."""
-    items: list[SystemConfigItem]
-    total: int
+    items: list[SystemConfigItem] = Field(description="配置项列表")
+    total: int = Field(description="总数")
 
 
 class UpdateConfigRequest(BaseModel):
@@ -43,18 +43,18 @@ class LLMConfigRequest(BaseModel):
 
 class LLMConfigResponse(BaseModel):
     """Response for LLM configuration."""
-    enabled: bool
-    embedding_enabled: bool
-    api_format: str
-    api_key_masked: str  # Masked API key for display
-    api_base: str
-    model: str
-    embedding_model: str
-    embedding_api_base: str
-    embedding_api_key_masked: str  # Masked embedding API key for display
-    embedding_api_format: str
-    embedding_dimension: int
-    timeout: int
+    enabled: bool = Field(description="对话模型是否启用")
+    embedding_enabled: bool = Field(description="嵌入模型是否启用")
+    api_format: str = Field(description="API格式")
+    api_key_masked: str = Field(description="脱敏显示的API Key")
+    api_base: str = Field(description="API基础URL")
+    model: str = Field(description="对话模型名称")
+    embedding_model: str = Field(description="嵌入模型名称")
+    embedding_api_base: str = Field(description="嵌入模型API基础URL")
+    embedding_api_key_masked: str = Field(description="脱敏显示的嵌入模型API Key")
+    embedding_api_format: str = Field(description="嵌入模型API格式")
+    embedding_dimension: int = Field(description="嵌入向量维度")
+    timeout: int = Field(description="请求超时时间(秒)")
 
 
 class ProxyConfigRequest(BaseModel):
@@ -69,12 +69,12 @@ class ProxyConfigRequest(BaseModel):
 
 class ProxyConfigResponse(BaseModel):
     """Response for proxy configuration."""
-    enabled: bool
-    url: str
-    username: str
-    password_masked: str  # Masked password for display
-    no_proxy: str  # Addresses to bypass proxy
-    ssl_verify: bool  # Whether to verify SSL certificates
+    enabled: bool = Field(description="是否启用代理")
+    url: str = Field(description="代理服务器URL")
+    username: str = Field(description="代理用户名")
+    password_masked: str = Field(description="脱敏显示的代理密码")
+    no_proxy: str = Field(description="不走代理的地址列表")
+    ssl_verify: bool = Field(description="是否验证SSL证书")
 
 
 class TestProxyRequest(BaseModel):
@@ -87,17 +87,17 @@ class TestProxyRequest(BaseModel):
 
 class TestProxyResult(BaseModel):
     """Result of a single proxy test."""
-    url: str
-    success: bool
-    message: str
-    used_proxy: bool = True
+    url: str = Field(description="测试URL")
+    success: bool = Field(description="是否成功")
+    message: str = Field(description="测试结果消息")
+    used_proxy: bool = Field(default=True, description="是否使用了代理")
 
 
 class TestProxyResponse(BaseModel):
     """Response for testing proxy connection."""
-    success: bool
-    message: str
-    details: dict | None = None
+    success: bool = Field(description="整体是否成功")
+    message: str = Field(description="结果消息")
+    details: dict | None = Field(default=None, description="详细数据")
     results: list[TestProxyResult] | None = Field(None, description="Individual test results")
 
 
@@ -111,9 +111,9 @@ class TestLLMRequest(BaseModel):
 
 class TestLLMResponse(BaseModel):
     """Response for testing LLM connection."""
-    success: bool
-    message: str
-    details: dict | None = None
+    success: bool = Field(description="是否成功")
+    message: str = Field(description="结果消息")
+    details: dict | None = Field(default=None, description="详细数据")
 
 
 class TestEmbeddingRequest(BaseModel):
@@ -126,6 +126,6 @@ class TestEmbeddingRequest(BaseModel):
 
 class TestEmbeddingResponse(BaseModel):
     """Response for testing embedding connection."""
-    success: bool
-    message: str
-    details: dict | None = None
+    success: bool = Field(description="是否成功")
+    message: str = Field(description="结果消息")
+    details: dict | None = Field(default=None, description="详细数据")

@@ -80,7 +80,7 @@ class Talent(Base, TimestampMixin):
     std_author = relationship("StdAuthor", back_populates="talent")
     embedding = relationship("TalentEmbedding", back_populates="talent", uselist=False)
 
-    def update_topic_tags_from_tech_tags(self):
+    def update_topic_tags_from_tech_tags(self) -> None:
         """
         Update topic_tags from the tech_tags relationship.
 
@@ -93,28 +93,28 @@ class Talent(Base, TimestampMixin):
             domain_names = set()
             for tag in self.tech_tags:
                 if tag.is_enabled and tag.tech_domain:
-                    domain_names.add(tag.tech_domain.domain_name)
-            self.topic_tags = sorted(domain_names)
+                    domain_names.add(tag.tech_domain.domain_name)  # type: ignore[union-attr]
+            self.topic_tags = sorted(domain_names)  # type: ignore[assignment]
         else:
-            self.topic_tags = []
+            self.topic_tags = []  # type: ignore[assignment]
 
     @property
     def primary_school_id(self) -> int | None:
         """Get primary school ID (education -> company -> legacy)."""
-        return self.education_school_id or self.company_school_id or self.school_id
+        return self.education_school_id or self.company_school_id or self.school_id  # type: ignore[return-value]
 
     @property
     def primary_school_name(self) -> str | None:
         """Get primary school name (education -> company -> legacy)."""
         if self.education_school:
-            return self.education_school.school_name
+            return self.education_school.school_name  # type: ignore[no-any-return, union-attr]
         if self.company_school:
-            return self.company_school.school_name
+            return self.company_school.school_name  # type: ignore[no-any-return, union-attr]
         if self.school:
-            return self.school.school_name
+            return self.school.school_name  # type: ignore[no-any-return, union-attr]
         return None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Talent(talent_id={self.talent_id}, name={self.name}, role={self.role_type})>"
 
 
@@ -142,7 +142,7 @@ class RoleProfile(Base, TimestampMixin):
     # Relationships
     talent = relationship("Talent", back_populates="role_profile")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<RoleProfile(talent_id={self.talent_id}, role={self.role_type})>"
 
 
@@ -170,5 +170,5 @@ class SelectedWork(Base, TimestampMixin):
     # Relationships
     talent = relationship("Talent", back_populates="selected_works")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<SelectedWork(work_id={self.work_id}, title={self.title[:30]}...)>"

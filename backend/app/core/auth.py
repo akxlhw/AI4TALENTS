@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import secrets
 from datetime import datetime, timedelta
+from typing import Any
 
 import bcrypt
 import jwt
@@ -112,7 +113,7 @@ def create_refresh_token(user_id: int) -> str:
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 
-def decode_token(token: str) -> dict | None:
+def decode_token(token: str) -> dict[str, Any] | None:
     """
     Decode and validate a JWT token.
 
@@ -123,7 +124,7 @@ def decode_token(token: str) -> dict | None:
         Decoded payload or None if invalid
     """
     try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        payload: dict[str, Any] = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
         return None
@@ -131,7 +132,7 @@ def decode_token(token: str) -> dict | None:
         return None
 
 
-def verify_access_token(token: str) -> dict | None:
+def verify_access_token(token: str) -> dict[str, Any] | None:
     """
     Verify an access token.
 
@@ -147,7 +148,7 @@ def verify_access_token(token: str) -> dict | None:
     return None
 
 
-def verify_refresh_token(token: str) -> dict | None:
+def verify_refresh_token(token: str) -> dict[str, Any] | None:
     """
     Verify a refresh token.
 

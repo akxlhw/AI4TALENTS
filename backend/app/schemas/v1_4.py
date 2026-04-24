@@ -36,30 +36,30 @@ class EnhancedSearchRequest(BaseModel):
 
 class SemanticSearchResult(BaseModel):
     """Semantic search result with similarity score."""
-    talent_id: int
-    name: str
-    name_en: Optional[str] = None
-    role_type: str
-    school_name: Optional[str] = None
-    current_title: Optional[str] = None
-    works_count: int = 0
-    cited_by_count: int = 0
-    h_index: int = 0
-    topic_tags: List[str] = Field(default_factory=list)
+    talent_id: int = Field(description="Talent ID")
+    name: str = Field(description="Name")
+    name_en: Optional[str] = Field(default=None, description="English name")
+    role_type: str = Field(description="Role type")
+    school_name: Optional[str] = Field(default=None, description="School name")
+    current_title: Optional[str] = Field(default=None, description="Current title/position")
+    works_count: int = Field(default=0, description="Number of works")
+    cited_by_count: int = Field(default=0, description="Citation count")
+    h_index: int = Field(default=0, description="H-index")
+    topic_tags: List[str] = Field(default_factory=list, description="Topic tags")
     openalex_topics: List[str] = Field(default_factory=list, description="OpenAlex research topics")
     similarity_score: Optional[float] = Field(default=None, description="Similarity score for semantic search")
     match_sources: List[str] = Field(default_factory=list, description="How this result was matched: fulltext, semantic_research, semantic_papers")
-    highlight: Optional[str] = None
+    highlight: Optional[str] = Field(default=None, description="Highlighted search snippet")
 
 
 class EnhancedSearchResponse(BaseModel):
     """Enhanced search response."""
-    items: List[SemanticSearchResult]
-    total: int
-    query: str
-    mode: str
-    page: int
-    page_size: int
+    items: List[SemanticSearchResult] = Field(description="Search results")
+    total: int = Field(description="Total count")
+    query: str = Field(description="Search query")
+    mode: str = Field(description="Search mode used")
+    page: int = Field(description="Current page number")
+    page_size: int = Field(description="Items per page")
     took_ms: float = Field(description="Query execution time in milliseconds")
     precise_count: int = Field(default=0, description="Number of precise matches (similarity >= 0.95)")
     similar_count: int = Field(default=0, description="Number of similar matches (0.7 <= similarity < 0.95)")
@@ -94,10 +94,10 @@ class MatchResultItemResponse(BaseModel):
 
     v1.4.1: Simplified to only return research_score and overall_score.
     """
-    talent_id: int
-    name: str
-    title: str
-    school_name: str
+    talent_id: int = Field(description="Talent ID")
+    name: str = Field(description="Name")
+    title: str = Field(description="Current title/position")
+    school_name: str = Field(description="School name")
     overall_score: float = Field(description="Overall match score (0-100)")
     research_score: float = Field(description="Research match score")
     match_reasons: List[str] = Field(default_factory=list, description="Match reasons")
@@ -105,9 +105,9 @@ class MatchResultItemResponse(BaseModel):
 
 class MatchResponse(BaseModel):
     """JD match response."""
-    session_id: int
-    total: int
-    items: List[MatchResultItemResponse]
+    session_id: int = Field(description="Match session ID")
+    total: int = Field(description="Total matched results")
+    items: List[MatchResultItemResponse] = Field(description="Match results")
     took_ms: float = Field(description="Match execution time in milliseconds")
 
 
@@ -138,18 +138,18 @@ class RecommendRequest(BaseModel):
 
 class RecommendResultItem(BaseModel):
     """Recommendation result item."""
-    talent_id: int
-    name: str
-    title: str
-    school_name: str
+    talent_id: int = Field(description="Talent ID")
+    name: str = Field(description="Name")
+    title: str = Field(description="Current title/position")
+    school_name: str = Field(description="School name")
     similarity_score: float = Field(description="Similarity score (0-1)")
     reasons: List[str] = Field(default_factory=list, description="Recommendation reasons")
 
 
 class RecommendResponse(BaseModel):
     """Recommendation response."""
-    reference_talents: List[int]
-    total: int
-    items: List[RecommendResultItem]
-    mode: str
+    reference_talents: List[int] = Field(description="Reference talent IDs")
+    total: int = Field(description="Total recommended results")
+    items: List[RecommendResultItem] = Field(description="Recommendation results")
+    mode: str = Field(description="Recommendation mode: vector/tag")
     took_ms: float = Field(description="Query execution time in milliseconds")

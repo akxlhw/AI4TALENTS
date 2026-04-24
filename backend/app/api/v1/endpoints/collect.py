@@ -29,13 +29,17 @@ from app.schemas.collect import (
     TASK_STATUS_OPTIONS,
     CollectTaskListResponse,
     CollectTaskResponse,
+    SubTaskActionResponse,
+    TaskActionResponse,
     TechDomainCollectListResponse,
     TechDomainCollectResponse,
     TriggerCollectTaskRequest,
     UpdateCollectSourcesRequest,
+    YearOptionsResponse,
     get_current_year,
     get_year_options,
 )
+from app.schemas.common import SuccessResponse
 from app.schemas.venue import VenueSubTaskListResponse, VenueSubTaskResponse
 
 logger = logging.getLogger(__name__)
@@ -525,11 +529,10 @@ async def execute_task(
     asyncio.create_task(run_collect_task_background(task_id))
     logger.info(f"Background task started for task #{task_id}")
 
-    return {
-        "message": "Task execution started",
-        "task_id": task_id,
-        "status": "running"
-    }
+    return TaskActionResponse(
+        message="Task execution started",
+        task_id=task_id
+    )
 
 
 @router.post(
@@ -558,7 +561,7 @@ async def cancel_task(
     task.current_step = "已取消"
 
     await session.commit()
-    return {"message": "Task cancelled"}
+    return SuccessResponse(message="Task cancelled")
 
 
 @router.delete(
@@ -586,7 +589,7 @@ async def delete_task(
 
     await session.commit()
 
-    return {"message": "Task deleted", "task_id": task_id}
+    return TaskActionResponse(message="Task deleted", task_id=task_id)
 
 
 @router.get(
@@ -649,12 +652,12 @@ async def get_task_statuses():
 )
 async def get_years():
     """Get year options for time range selection."""
-    return {
-        "start_years": get_year_options(),
-        "min_year": MIN_START_YEAR,
-        "default_year": DEFAULT_START_YEAR,
-        "current_year": get_current_year(),
-    }
+    return YearOptionsResponse(
+        start_years=get_year_options(),
+        min_year=MIN_START_YEAR,
+        default_year=DEFAULT_START_YEAR,
+        current_year=get_current_year(),
+    )
 
 
 # ============ Venue Sub-Task Endpoints ============
@@ -735,4 +738,4 @@ async def retry_sub_task(
     # TODO: Trigger retry execution
 
     await session.commit()
-    return {"message": "Sub-task reset for retry", "sub_task_id": sub_task_id}
+    return SubTaskActionResponse(message="Sub-task reset for retry", sub_task_id=sub_task_id)

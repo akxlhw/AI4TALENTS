@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Modal, Table, Tag, Spin, message, Typography, Space } from 'antd'
 import { api } from '../services/api'
 import { getRoleTypeConfig } from '../constants/roleType'
@@ -41,13 +41,7 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<CompareResponse | null>(null)
 
-  useEffect(() => {
-    if (visible && talentIds.length >= 2 && talentIds.length <= 4) {
-      fetchCompareData()
-    }
-  }, [visible, talentIds])
-
-  const fetchCompareData = async () => {
+  const fetchCompareData = useCallback(async () => {
     setLoading(true)
     try {
       const response = await api.talents.compare(talentIds)
@@ -57,7 +51,13 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
     } finally {
       setLoading(false)
     }
-  }
+  }, [talentIds])
+
+  useEffect(() => {
+    if (visible && talentIds.length >= 2 && talentIds.length <= 4) {
+      fetchCompareData()
+    }
+  }, [visible, talentIds, fetchCompareData])
 
   const renderValue = (key: string, talent: TalentCompareData) => {
     switch (key) {

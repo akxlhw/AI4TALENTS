@@ -13,6 +13,7 @@ from app.api.v1.endpoints.auth import require_admin, require_user
 from app.core.database import get_async_session
 from app.models.enums import UserRoleType
 from app.repositories.user_repository import UserRepository, UserScopeRepository
+from app.schemas.common import SuccessResponse
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
@@ -81,6 +82,17 @@ class ScopeCreateRequest(BaseModel):
 class DefaultViewRequest(BaseModel):
     """Update default view request."""
     default_view: str = Field(..., pattern="^(tech_domain|country_school)$")
+
+
+class SchoolAccessResponse(BaseModel):
+    """School access check response."""
+    school_id: int
+    has_access: bool
+
+
+class DefaultViewResponse(BaseModel):
+    """Default view response."""
+    default_view: str
 
 
 class ScopeListResponse(BaseModel):
@@ -285,6 +297,7 @@ async def update_user(
 
 @router.delete(
     "/{user_id}",
+    response_model=SuccessResponse,
     summary="删除/禁用用户",
     description="禁用用户账户",
 )
@@ -306,7 +319,7 @@ async def deactivate_user(
 
     await session.commit()
 
-    return {"message": "User deactivated"}
+    return SuccessResponse(message="User deactivated")
 
 
 # School Scopes
@@ -389,6 +402,7 @@ async def add_user_scope(
 
 @router.delete(
     "/{user_id}/scopes/{scope_id}",
+    response_model=SuccessResponse,
     summary="移除用户权限",
     description="移除用户的学校访问权限",
 )
@@ -407,7 +421,7 @@ async def remove_user_scope(
 
     await session.commit()
 
-    return {"message": "Scope removed"}
+    return SuccessResponse(message="Scope removed")
 
 
 @router.get(
@@ -428,6 +442,7 @@ async def get_my_accessible_schools(
 
 @router.get(
     "/me/scopes/check/{school_id}",
+    response_model=SchoolAccessResponse,
     summary="检查学校访问权限",
     description="检查当前用户是否有权访问指定学校",
 )
@@ -443,10 +458,10 @@ async def check_school_access(
         school_id,
     )
 
-    return {
-        "school_id": school_id,
-        "has_access": has_access,
-    }
+    return SchoolAccessResponse(
+        school_id=school_id,
+        has_access=has_access,
+    )
 
 
 @router.get(
@@ -483,6 +498,7 @@ async def get_my_accessible_countries(
 
 @router.get(
     "/me/default-view",
+    response_model=DefaultViewResponse,
     summary="获取当前用户默认视角",
     description="返回用户的默认视角配置",
 )
@@ -493,11 +509,12 @@ async def get_my_default_view(
     """Get current user's default view preference."""
     scope_repo = UserScopeRepository(session)
     default_view = await scope_repo.get_user_default_view(current_user["user_id"])
-    return {"default_view": default_view}
+    return DefaultViewResponse(default_view=default_view)
 
 
 @router.put(
     "/me/default-view",
+    response_model=SuccessResponse,
     summary="更新当前用户默认视角",
     description="更新用户的默认视角配置",
 )
@@ -516,4 +533,4 @@ async def update_my_default_view(
     user.default_view = data.default_view
     await session.commit()
 
-    return {"message": "Default view updated", "default_view": data.default_view}
+    return SuccessResponse(message="Default view updated")

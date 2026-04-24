@@ -68,7 +68,7 @@ class StdAuthor(Base, TimestampMixin):
     school = relationship("StdSchool", back_populates="authors")
     talent = relationship("Talent", back_populates="std_author", uselist=False)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<StdAuthor(id={self.std_author_id}, name={self.name_normalized})>"
 
 
@@ -118,7 +118,7 @@ class StdSchool(Base, TimestampMixin):
     # Relationships
     authors = relationship("StdAuthor", back_populates="school")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<StdSchool(id={self.std_school_id}, name={self.name_normalized})>"
 
 
@@ -139,5 +139,5 @@ class SchoolNameAlias(Base, TimestampMixin):
     # Source of this alias
     source = Column(String(50), nullable=True)  # openalex, manual, wikipedia
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<SchoolNameAlias(school_id={self.std_school_id}, alias={self.alias_name})>"

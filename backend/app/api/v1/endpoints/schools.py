@@ -13,7 +13,7 @@ from app.core.database import get_async_session
 from app.models.school import School
 from app.repositories.school_repository import SchoolRepository
 from app.repositories.talent_repository import TalentRepository
-from app.schemas.common import PaginatedResponse
+from app.schemas.common import PaginatedResponse, SuccessResponse
 from app.schemas.overview import SchoolDetail, SchoolStats, SchoolSummary, TalentSummary
 
 router = APIRouter(prefix="/schools", tags=["Schools"])
@@ -270,6 +270,7 @@ async def get_school(
 
 @router.put(
     "/{school_id}/set-top",
+    response_model=SuccessResponse,
     summary="设置为Top院校",
     description="将指定学校设置为Top院校",
 )
@@ -286,11 +287,12 @@ async def set_top_school(
     school.is_top_school = True
     await session.commit()
 
-    return {"message": "School set as top school", "school_id": school_id}
+    return SuccessResponse(message="School set as top school")
 
 
 @router.put(
     "/{school_id}/unset-top",
+    response_model=SuccessResponse,
     summary="取消Top院校",
     description="取消指定学校的Top院校标记",
 )
@@ -307,11 +309,12 @@ async def unset_top_school(
     school.is_top_school = False
     await session.commit()
 
-    return {"message": "School unset as top school", "school_id": school_id}
+    return SuccessResponse(message="School unset as top school")
 
 
 @router.post(
     "/batch-set-top",
+    response_model=SuccessResponse,
     summary="批量设置Top院校",
     description="批量将多个学校设置为Top院校",
 )
@@ -330,14 +333,12 @@ async def batch_set_top_schools(
     )
     await session.commit()
 
-    return {
-        "message": f"Set {result.rowcount} schools as top schools",
-        "updated_count": result.rowcount,
-    }
+    return SuccessResponse(message=f"Set {result.rowcount} schools as top schools")
 
 
 @router.post(
     "/batch-unset-top",
+    response_model=SuccessResponse,
     summary="批量取消Top院校",
     description="批量取消多个学校的Top院校标记",
 )
@@ -356,7 +357,4 @@ async def batch_unset_top_schools(
     )
     await session.commit()
 
-    return {
-        "message": f"Unset {result.rowcount} schools as top schools",
-        "updated_count": result.rowcount,
-    }
+    return SuccessResponse(message=f"Unset {result.rowcount} schools as top schools")

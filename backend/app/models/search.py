@@ -43,5 +43,5 @@ class SearchTalentDocument(Base):
     # Extended data (JSON for flexibility)
     extra_data = Column(JSON, nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<SearchTalentDocument(talent_id={self.talent_id}, name={self.name})>"

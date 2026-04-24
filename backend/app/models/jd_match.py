@@ -45,7 +45,7 @@ class JDMatchSession(Base, TimestampMixin):
         cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<JDMatchSession(session_id={self.session_id}, status={self.status})>"
 
     def to_dict(self) -> dict:
@@ -100,7 +100,7 @@ class JDMatchResult(Base, TimestampMixin):
     # Relationships
     session = relationship("JDMatchSession", back_populates="results")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<JDMatchResult(result_id={self.result_id}, score={self.overall_score})>"
 
     def to_dict(self) -> dict:

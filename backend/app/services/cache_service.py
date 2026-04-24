@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import logging
 import random
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
@@ -180,7 +180,7 @@ class CacheService:
                 keys.append(key)
 
             if keys:
-                deleted = await self._client.delete(*keys)
+                deleted: int = await self._client.delete(*keys)
                 logger.debug(f"Deleted {deleted} keys matching pattern '{pattern}'")
                 return deleted
 
@@ -192,7 +192,7 @@ class CacheService:
     async def get_or_set(
         self,
         key: str,
-        factory: Callable[[], T] | None = None,
+        factory: Callable[[], Awaitable[T]] | None = None,
         ttl: int = CacheTTL.MEDIUM,
         cache_empty: bool = True,
     ) -> T | None:
@@ -212,7 +212,7 @@ class CacheService:
         cached = await self.get(key)
         if cached is not None:
             logger.debug(f"Cache hit for key '{key}'")
-            return cached
+            return cached  # type: ignore[no-any-return]
 
         # Compute value if factory provided
         if factory is None:
@@ -306,7 +306,8 @@ class CacheService:
 
         try:
             full_key = self._build_key(key)
-            return await self._client.incr(full_key)
+            result: int = await self._client.incr(full_key)
+            return result
         except RedisError as e:
             logger.warning(f"Failed to increment '{key}': {e}")
             return None
@@ -327,7 +328,8 @@ class CacheService:
 
         try:
             full_key = self._build_key(key)
-            return await self._client.expire(full_key, ttl)
+            result: bool = await self._client.expire(full_key, ttl)
+            return result
         except RedisError as e:
             logger.warning(f"Failed to set TTL on '{key}': {e}")
             return False

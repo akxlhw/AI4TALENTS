@@ -29,7 +29,7 @@ class OverviewStatSnapshot(Base):
     generated_by_batch_id = Column(Integer, nullable=True)
     is_active = Column(Integer, default=1)  # 1 for active, 0 for inactive
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<OverviewStatSnapshot(version={self.stat_version}, schools={self.school_count})>"
 
 
@@ -59,5 +59,5 @@ class SchoolStatSnapshot(Base):
     # Relationships
     school = relationship("School")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<SchoolStatSnapshot(school_id={self.school_id}, version={self.stat_version})>"

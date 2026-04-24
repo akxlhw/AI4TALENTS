@@ -51,7 +51,7 @@ class UserAccount(Base, TimestampMixin):
     favorites = relationship("FavoriteTalent", back_populates="user", lazy="dynamic")
     talent_pools = relationship("TalentPool", back_populates="owner")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<UserAccount(user_id={self.user_id}, username={self.username}, role={self.role_type})>"
 
 
@@ -83,7 +83,7 @@ class UserSchoolScope(Base, TimestampMixin):
     # Relationships
     user = relationship("UserAccount", back_populates="school_scopes")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<UserSchoolScope(user_id={self.user_id}, scope={self.scope_type}:{self.scope_value})>"
 
 
@@ -107,7 +107,7 @@ class FavoriteTalent(Base, TimestampMixin):
         UniqueConstraint('user_id', 'talent_id', name='uq_user_favorite_talent'),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<FavoriteTalent(user_id={self.user_id}, talent_id={self.talent_id})>"
 
 
@@ -127,7 +127,7 @@ class TalentPool(Base, TimestampMixin):
     owner = relationship("UserAccount", back_populates="talent_pools")
     members = relationship("TalentPoolMember", back_populates="pool", cascade="all, delete-orphan")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<TalentPool(pool_id={self.pool_id}, name={self.pool_name})>"
 
 
@@ -150,5 +150,5 @@ class TalentPoolMember(Base, TimestampMixin):
         UniqueConstraint('pool_id', 'talent_id', name='uq_pool_talent'),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<TalentPoolMember(pool_id={self.pool_id}, talent_id={self.talent_id})>"

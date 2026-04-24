@@ -40,5 +40,5 @@ class AuditOperationLog(Base):
     request_id = Column(String(100), nullable=True, index=True)
     user_agent = Column(Text, nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<AuditOperationLog(log_id={self.log_id}, type={self.event_type}, operation={self.operation})>"

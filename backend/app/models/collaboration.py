@@ -29,7 +29,7 @@ class Collaboration(Base, TimestampMixin):
     # Source tracking
     source_batch_id = Column(Integer, nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Collaboration({self.talent_id_1} <-> {self.talent_id_2}, count={self.collaboration_count})>"
 
 
@@ -50,5 +50,5 @@ class WorkAuthor(Base, TimestampMixin):
     author_position = Column(Integer, nullable=True)  # Author order position
     author_name = Column(String(255), nullable=True)  # Original author name from OpenAlex
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<WorkAuthor(work={self.source_work_id}, author={self.author_name})>"

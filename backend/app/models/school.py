@@ -48,7 +48,7 @@ class School(Base, TimestampMixin):
     talents = relationship("Talent", back_populates="school", foreign_keys="Talent.school_id")
     aliases = relationship("SchoolAlias", back_populates="school")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<School(school_id={self.school_id}, name={self.school_name})>"
 
 
@@ -65,5 +65,5 @@ class SchoolAlias(Base, TimestampMixin):
     # Relationships
     school = relationship("School", back_populates="aliases")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<SchoolAlias(school_id={self.school_id}, alias={self.alias_name})>"

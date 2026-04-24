@@ -56,7 +56,7 @@ class TalentEmbedding(Base, TimestampMixin):
         UniqueConstraint('talent_id', 'vector_type', name='uq_talent_vector_type'),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<TalentEmbedding(talent_id={self.talent_id}, type={self.vector_type}, model={self.model_name})>"
 
     def to_dict(self) -> dict:

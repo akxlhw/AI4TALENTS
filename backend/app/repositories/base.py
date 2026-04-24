@@ -14,6 +14,7 @@ from typing import Any, Generic, TypeVar
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.sql.selectable import Select
 
 Model = TypeVar("Model", bound=DeclarativeBase)
 
@@ -124,7 +125,7 @@ class BaseRepository(Generic[Model]):
         )
         return {getattr(row, id_column): row for row in result.scalars().all()}
 
-    async def count(self, query=None) -> int:
+    async def count(self, query: Select[Any] | None = None) -> int:
         """
         Count records in a query or table.
 
@@ -142,7 +143,7 @@ class BaseRepository(Generic[Model]):
         result = await self.session.execute(count_query)
         return result.scalar() or 0
 
-    def paginate(self, query, page: int, page_size: int):
+    def paginate(self, query: Select[Any], page: int, page_size: int) -> Select[Any]:
         """
         Apply pagination to a query.
 
@@ -159,10 +160,10 @@ class BaseRepository(Generic[Model]):
 
     async def list_paginated(
         self,
-        query,
+        query: Select[Any],
         page: int = 1,
         page_size: int = 20,
-        order_by=None,
+        order_by: Any = None,
     ) -> tuple[list[Model], int]:
         """
         Execute query with pagination and return items with total count.

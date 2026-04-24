@@ -39,7 +39,7 @@ class TechDomain(Base, TimestampMixin):
     directions = relationship("TechDirection", back_populates="tech_domain")
     venue_bindings = relationship("VenueTechBinding", back_populates="tech_domain")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<TechDomain(id={self.tech_domain_id}, name={self.domain_name})>"
 
 
@@ -61,7 +61,7 @@ class TechDirection(Base, TimestampMixin):
     tech_domain = relationship("TechDomain", back_populates="directions")
     talent_tags = relationship("TalentTechTag", back_populates="tech_direction")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<TechDirection(id={self.tech_direction_id}, name={self.direction_name})>"
 
 
@@ -89,5 +89,5 @@ class TalentTechTag(Base, TimestampMixin):
     tech_domain = relationship("TechDomain")
     tech_direction = relationship("TechDirection", back_populates="talent_tags")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<TalentTechTag(talent_id={self.talent_id}, direction_id={self.tech_direction_id})>"

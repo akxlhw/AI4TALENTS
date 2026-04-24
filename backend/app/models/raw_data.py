@@ -50,7 +50,7 @@ class RawWork(Base, TimestampMixin):
     # Sub-task reference
     sub_task_id = Column(Integer, ForeignKey("sync_venue_sub_task.sub_task_id"), nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<RawWork(id={self.openalex_work_id}, year={self.publication_year})>"
 
 
@@ -99,7 +99,7 @@ class RawAuthor(Base, TimestampMixin):
     # Normalized reference (after standardization)
     std_author_id = Column(Integer, nullable=True, index=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<RawAuthor(id={self.openalex_author_id}, name={self.display_name})>"
 
 
@@ -135,7 +135,7 @@ class RawInstitution(Base, TimestampMixin):
     # Normalized reference
     std_school_id = Column(Integer, nullable=True, index=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<RawInstitution(id={self.openalex_institution_id}, name={self.display_name})>"
 
 
@@ -173,5 +173,5 @@ class AuthorTechBelong(Base, TimestampMixin):
     tech_domain = relationship("TechDomain")
     venue = relationship("Venue")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<AuthorTechBelong(author={self.openalex_author_id}, domain={self.tech_domain_id})>"

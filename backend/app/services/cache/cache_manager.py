@@ -31,12 +31,12 @@ class CacheBackend(ABC):
         ...
 
     @abstractmethod
-    async def set(self, key: str, value: Any, ttl: int = 3600):
+    async def set(self, key: str, value: Any, ttl: int = 3600) -> None:
         """设置缓存"""
         ...
 
     @abstractmethod
-    async def delete(self, key: str):
+    async def delete(self, key: str) -> None:
         """删除缓存"""
         ...
 
@@ -44,16 +44,16 @@ class CacheBackend(ABC):
 class MemoryCacheBackend(CacheBackend):
     """内存缓存后端（用于测试和简单场景）"""
 
-    def __init__(self):
-        self._cache: dict = {}
+    def __init__(self) -> None:
+        self._cache: dict[str, Any] = {}
 
     async def get(self, key: str) -> Optional[Any]:
         return self._cache.get(key)
 
-    async def set(self, key: str, value: Any, ttl: int = 3600):
+    async def set(self, key: str, value: Any, ttl: int = 3600) -> None:
         self._cache[key] = value
 
-    async def delete(self, key: str):
+    async def delete(self, key: str) -> None:
         self._cache.pop(key, None)
 
 
@@ -72,7 +72,7 @@ class CacheManager:
         """
         self.backend = backend
 
-    def _cache_key(self, prefix: str, *args) -> str:
+    def _cache_key(self, prefix: str, *args: Any) -> str:
         """
         生成缓存键
 
@@ -114,7 +114,7 @@ class CacheManager:
         jd_text: str,
         features: JDFeatures,
         ttl: int = 86400  # 24 小时
-    ):
+    ) -> None:
         """
         缓存 JD 解析结果
 
@@ -152,7 +152,7 @@ class CacheManager:
         talent_id: int,
         embedding: List[float],
         ttl: int = 604800  # 7 天
-    ):
+    ) -> None:
         """
         缓存人才嵌入向量
 
@@ -175,13 +175,13 @@ class CacheManager:
             return None
         return await self.backend.get(key)
 
-    async def set(self, key: str, value: Any, ttl: int = 3600):
+    async def set(self, key: str, value: Any, ttl: int = 3600) -> None:
         """通用设置"""
         if not self.backend:
             return
         await self.backend.set(key, value, ttl)
 
-    async def delete(self, key: str):
+    async def delete(self, key: str) -> None:
         """通用删除"""
         if not self.backend:
             return

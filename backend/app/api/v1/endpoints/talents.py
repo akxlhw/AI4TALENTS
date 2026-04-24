@@ -15,8 +15,19 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.schemas.common import PaginatedResponse
-from app.schemas.overview import SelectedWorkResponse, TalentDetail, TalentSummary, TechTagItem
+from app.schemas.common import (
+    CountResponse,
+    PaginatedResponse,
+    SyncStatusResponse,
+    TaskStartResponse,
+)
+from app.schemas.overview import (
+    SelectedWorkResponse,
+    TalentCompareResponse,
+    TalentDetail,
+    TalentSummary,
+    TechTagItem,
+)
 from app.services.talent_service import TalentService
 
 router = APIRouter(prefix="/talents", tags=["Talents"])
@@ -318,6 +329,7 @@ async def export_talents(
 
 @router.post(
     "/compare",
+    response_model=TalentCompareResponse,
     summary="对比候选人",
     description="获取多个候选人的对比数据",
 )
@@ -341,48 +353,50 @@ async def compare_talents(
         raise HTTPException(status_code=404, detail="未找到要对比的人才")
 
     # Build comparison data
+    from app.schemas.overview import TalentCompareItem, ComparisonFieldItem
     comparison_data = []
     for t in talents:
-        comparison_data.append({
-            "talent_id": t.talent_id,
-            "name": t.name,
-            "name_en": t.name_en,
-            "orcid": t.orcid,
-            "role_type": t.role_type,
-            "school_id": t.school_id,
-            "school_name": t.school.school_name if t.school else None,
-            "current_title": t.current_title,
-            "department_name": t.department_name,
-            "lab_name": t.lab_name,
-            "works_count": t.works_count,
-            "cited_by_count": t.cited_by_count,
-            "h_index": t.h_index,
-            "latest_active_year": t.latest_active_year,
-            "topic_tags": t.topic_tags or [],
-            "openalex_topics": t.openalex_topics or [],
-            "academic_age": t.role_profile.academic_age if t.role_profile else None,
-        })
+        comparison_data.append(TalentCompareItem(
+            talent_id=t.talent_id,
+            name=t.name,
+            name_en=t.name_en,
+            orcid=t.orcid,
+            role_type=t.role_type,
+            school_id=t.school_id,
+            school_name=t.school.school_name if t.school else None,
+            current_title=t.current_title,
+            department_name=t.department_name,
+            lab_name=t.lab_name,
+            works_count=t.works_count,
+            cited_by_count=t.cited_by_count,
+            h_index=t.h_index,
+            latest_active_year=t.latest_active_year,
+            topic_tags=t.topic_tags or [],
+            openalex_topics=t.openalex_topics or [],
+            academic_age=t.role_profile.academic_age if t.role_profile else None,
+        ))
 
-    return {
-        "talents": comparison_data,
-        "comparison_fields": [
-            {"key": "name", "label": "姓名"},
-            {"key": "role_type", "label": "角色"},
-            {"key": "school_name", "label": "学校"},
-            {"key": "current_title", "label": "职位"},
-            {"key": "department_name", "label": "院系"},
-            {"key": "works_count", "label": "论文数"},
-            {"key": "cited_by_count", "label": "引用数"},
-            {"key": "h_index", "label": "H指数"},
-            {"key": "latest_active_year", "label": "最近活跃年份"},
-            {"key": "academic_age", "label": "学术年龄"},
-            {"key": "topic_tags", "label": "研究方向"},
+    return TalentCompareResponse(
+        talents=comparison_data,
+        comparison_fields=[
+            ComparisonFieldItem(key="name", label="姓名"),
+            ComparisonFieldItem(key="role_type", label="角色"),
+            ComparisonFieldItem(key="school_name", label="学校"),
+            ComparisonFieldItem(key="current_title", label="职位"),
+            ComparisonFieldItem(key="department_name", label="院系"),
+            ComparisonFieldItem(key="works_count", label="论文数"),
+            ComparisonFieldItem(key="cited_by_count", label="引用数"),
+            ComparisonFieldItem(key="h_index", label="H指数"),
+            ComparisonFieldItem(key="latest_active_year", label="最近活跃年份"),
+            ComparisonFieldItem(key="academic_age", label="学术年龄"),
+            ComparisonFieldItem(key="topic_tags", label="研究方向"),
         ]
-    }
+    )
 
 
 @router.post(
     "/collaborations/generate-sample",
+    response_model=CountResponse,
     summary="生成示例合作数据",
     description="为测试目的生成随机合作数据",
 )
@@ -398,7 +412,7 @@ async def generate_sample_collaborations(
     service = CollaborationService(session)
     try:
         count = await service.generate_sample_collaborations(num_samples)
-        return {"message": f"已生成 {count} 条合作数据", "count": count}
+        return CountResponse(message=f"已生成 {count} 条合作数据", count=count)
     finally:
         await service.close()
 
@@ -439,6 +453,7 @@ _sync_progress = {"status": "idle", "processed": 0, "total": 0, "collaborations"
 
 @router.post(
     "/collaborations/sync",
+    response_model=TaskStartResponse,
     summary="同步合作网络数据",
     description="从已采集的论文数据中提取学者合作关系，无需重复调用 OpenAlex API",
 )
@@ -462,11 +477,11 @@ async def sync_collaborations(
     # This keeps the task in the same event loop, avoiding "Future attached to a different loop" errors
     background_tasks.add_task(run_sync_background, talent_id)
 
-    return {
-        "message": "同步任务已启动",
-        "talent_id": talent_id,
-        "sync_all": talent_id is None
-    }
+    return TaskStartResponse(
+        message="同步任务已启动",
+        talent_id=talent_id,
+        sync_all=talent_id is None
+    )
 
 
 async def run_sync_background(talent_id: int | None = None):
@@ -506,6 +521,7 @@ async def run_sync_background(talent_id: int | None = None):
 
 @router.get(
     "/collaborations/status",
+    response_model=SyncStatusResponse,
     summary="获取同步状态",
     description="获取合作网络数据同步的进度状态",
 )
@@ -522,9 +538,9 @@ async def get_sync_status(
     service = CollaborationService(session)
     try:
         data_status = await service.get_sync_status()
-        return {
-            "sync_progress": _sync_progress,
-            "data_status": data_status
-        }
+        return SyncStatusResponse(
+            sync_progress=_sync_progress,
+            data_status=data_status
+        )
     finally:
         await service.close()

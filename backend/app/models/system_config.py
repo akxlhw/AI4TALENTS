@@ -19,5 +19,5 @@ class SystemConfig(Base, TimestampMixin):
     is_sensitive = Column(Boolean, default=False, nullable=False)
     description = Column(String(500), nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<SystemConfig(key={self.config_key}, type={self.config_type})>"

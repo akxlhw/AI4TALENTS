@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
 from app.repositories.favorite_repository import FavoriteRepository
-from app.schemas.common import PaginatedResponse
+from app.schemas.common import PaginatedResponse, SuccessResponse
 
 router = APIRouter(prefix="/favorites", tags=["Favorites"])
 
@@ -243,6 +243,7 @@ async def update_favorite(
 
 @router.delete(
     "/{talent_id}",
+    response_model=SuccessResponse,
     summary="取消收藏",
     description="将指定人才从用户的收藏列表中移除",
 )
@@ -262,7 +263,7 @@ async def remove_favorite(
         raise HTTPException(status_code=404, detail="未找到该收藏记录")
 
     await session.commit()
-    return {"success": True, "message": "已取消收藏"}
+    return SuccessResponse(success=True, message="已取消收藏")
 
 
 def _build_favorite_response(favorite) -> FavoriteTalentResponse:
