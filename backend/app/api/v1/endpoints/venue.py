@@ -5,13 +5,11 @@ Venue configuration API endpoints.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.models.tech_domain import TechDomain
-from app.models.venue import Venue, VenueTechBinding
+from app.core.exceptions import BadRequestError, NotFoundError
 from app.repositories.venue_repository import VenueRepository, VenueTechBindingRepository
 from app.schemas.common import SuccessResponse
 from app.schemas.venue import (
@@ -28,6 +26,7 @@ from app.schemas.venue import (
     VenueTechBindingUpdate,
     VenueUpdate,
 )
+from app.services.venue_service import VenueService
 
 router = APIRouter(prefix="/venues", tags=["Venue Configuration"])
 
@@ -51,60 +50,17 @@ async def batch_create_bindings(
     传入的 venue_ids 会被标记为启用(is_enabled=True)，
     该技术领域的其他绑定会被标记为禁用(is_enabled=False)
     """
+    service = VenueService(session)
     try:
-        binding_repo = VenueTechBindingRepository(session)
-
-        # Check tech domain exists
-        tech_result = await session.execute(
-            select(TechDomain).where(TechDomain.tech_domain_id == data.tech_domain_id)
-        )
-        tech_domain = tech_result.scalar_one_or_none()
-        if not tech_domain:
-            raise HTTPException(status_code=404, detail="Tech domain not found")
-
-        # 获取该技术领域的所有绑定
-        all_bindings = await binding_repo.get_by_tech_domain(data.tech_domain_id)
-
-        selected_venue_ids = set(data.venue_ids)
-
-        # 更新绑定状态
-        updated_bindings = []
-        for binding in all_bindings:
-            new_enabled = binding.venue_id in selected_venue_ids
-            if binding.is_enabled != new_enabled:
-                binding.is_enabled = new_enabled
-                updated_bindings.append(binding)
-
-        await session.commit()
-
-        # 同步更新 TechDomain.collect_sources 字段
-        # 只包含启用的 venues
-        enabled_bindings = await binding_repo.get_list_with_venue(data.tech_domain_id, is_enabled=True)
-        collect_sources = [
-            {
-                "id": b.venue.openalex_source_id or b.venue.venue_code,
-                "name": b.venue.venue_name,
-                "type": b.venue.venue_type
-            }
-            for b in enabled_bindings if b.venue
-        ]
-        tech_domain.collect_sources = collect_sources
-        await session.commit()
-
-        # 返回更新后的绑定数量
-        enabled_count = len([b for b in all_bindings if b.is_enabled])
+        result = await service.batch_update_bindings(data)
         return BatchUpdateBindingsResponse(
             message="配置更新成功",
-            total_bindings=len(all_bindings),
-            enabled_bindings=enabled_count,
-            updated_count=len(updated_bindings)
+            **result
         )
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise NotFoundError(str(e))
+        raise BadRequestError(str(e))
 
 
 # ============================================
@@ -151,24 +107,12 @@ async def create_venue(
     session: AsyncSession = Depends(get_async_session)
 ):
     """创建Venue"""
-    repo = VenueRepository(session)
-
-    # Check if code exists
-    existing = await repo.get_by_code(data.venue_code)
-    if existing:
-        raise HTTPException(status_code=400, detail="Venue code already exists")
-
-    # Check if openalex_source_id exists
-    if data.openalex_source_id:
-        existing = await repo.get_by_openalex_id(data.openalex_source_id)
-        if existing:
-            raise HTTPException(status_code=400, detail="OpenAlex Source ID already exists")
-
-    venue = Venue(**data.model_dump())
-    venue = await repo.create(venue)
-    await session.commit()
-
-    return VenueResponse.model_validate(venue)
+    service = VenueService(session)
+    try:
+        venue = await service.create_venue(data)
+        return VenueResponse.model_validate(venue)
+    except ValueError as e:
+        raise BadRequestError(str(e))
 
 
 @router.get(
@@ -185,7 +129,7 @@ async def get_venue(
     repo = VenueRepository(session)
     venue = await repo.get_by_id(venue_id)
     if not venue:
-        raise HTTPException(status_code=404, detail="Venue not found")
+        raise NotFoundError("Venue not found")
     return VenueResponse.model_validate(venue)
 
 
@@ -201,20 +145,14 @@ async def update_venue(
     session: AsyncSession = Depends(get_async_session)
 ):
     """更新Venue"""
-    repo = VenueRepository(session)
-    venue = await repo.get_by_id(venue_id)
-    if not venue:
-        raise HTTPException(status_code=404, detail="Venue not found")
-
-    # Update fields
-    update_data = data.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(venue, key, value)
-
-    venue = await repo.update(venue)
-    await session.commit()
-
-    return VenueResponse.model_validate(venue)
+    service = VenueService(session)
+    try:
+        venue = await service.update_venue(venue_id, data)
+        return VenueResponse.model_validate(venue)
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise NotFoundError(str(e))
+        raise BadRequestError(str(e))
 
 
 @router.delete(
@@ -228,23 +166,14 @@ async def delete_venue(
     session: AsyncSession = Depends(get_async_session)
 ):
     """删除Venue"""
-    repo = VenueRepository(session)
-    binding_repo = VenueTechBindingRepository(session)
-
-    # Check if has bindings
-    bindings = await binding_repo.get_by_venue(venue_id)
-    if bindings:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot delete venue with {len(bindings)} bindings. Delete bindings first."
-        )
-
-    success = await repo.delete(venue_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Venue not found")
-
-    await session.commit()
-    return SuccessResponse(message="Venue deleted successfully")
+    service = VenueService(session)
+    try:
+        await service.delete_venue(venue_id)
+        return SuccessResponse(message="Venue deleted successfully")
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise NotFoundError(str(e))
+        raise BadRequestError(str(e))
 
 
 # ============================================
@@ -283,31 +212,14 @@ async def create_binding(
     session: AsyncSession = Depends(get_async_session)
 ):
     """创建Venue-TechDomain绑定"""
-    venue_repo = VenueRepository(session)
-    binding_repo = VenueTechBindingRepository(session)
-
-    # Check venue exists
-    venue = await venue_repo.get_by_id(data.venue_id)
-    if not venue:
-        raise HTTPException(status_code=404, detail="Venue not found")
-
-    # Check tech domain exists
-    tech_result = await session.execute(
-        select(TechDomain).where(TechDomain.tech_domain_id == data.tech_domain_id)
-    )
-    if not tech_result.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Tech domain not found")
-
-    # Check if binding already exists
-    existing = await binding_repo.get_by_venue_and_tech(data.venue_id, data.tech_domain_id)
-    if existing:
-        raise HTTPException(status_code=400, detail="Binding already exists")
-
-    binding = VenueTechBinding(**data.model_dump())
-    binding = await binding_repo.create(binding)
-    await session.commit()
-
-    return VenueTechBindingResponse.model_validate(binding)
+    service = VenueService(session)
+    try:
+        binding = await service.create_binding(data)
+        return VenueTechBindingResponse.model_validate(binding)
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise NotFoundError(str(e))
+        raise BadRequestError(str(e))
 
 
 @router.put(
@@ -322,19 +234,15 @@ async def update_binding(
     session: AsyncSession = Depends(get_async_session)
 ):
     """更新绑定"""
-    repo = VenueTechBindingRepository(session)
-    binding = await repo.get_by_id(binding_id)
-    if not binding:
-        raise HTTPException(status_code=404, detail="Binding not found")
-
-    update_data = data.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(binding, key, value)
-
-    binding = await repo.update(binding)
-    await session.commit()
-
-    return VenueTechBindingResponse.model_validate(binding)
+    service = VenueService(session)
+    try:
+        update_data = data.model_dump(exclude_unset=True)
+        binding = await service.update_binding(binding_id, update_data)
+        return VenueTechBindingResponse.model_validate(binding)
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise NotFoundError(str(e))
+        raise BadRequestError(str(e))
 
 
 @router.delete(
@@ -348,13 +256,14 @@ async def delete_binding(
     session: AsyncSession = Depends(get_async_session)
 ):
     """删除绑定"""
-    repo = VenueTechBindingRepository(session)
-    success = await repo.delete(binding_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Binding not found")
-
-    await session.commit()
-    return SuccessResponse(message="Binding deleted successfully")
+    service = VenueService(session)
+    try:
+        await service.delete_binding(binding_id)
+        return SuccessResponse(message="Binding deleted successfully")
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise NotFoundError(str(e))
+        raise BadRequestError(str(e))
 
 
 # ============================================
@@ -378,9 +287,7 @@ async def get_tech_domain_bindings(
 
     return VenueTechBindingListResponse(
         total=len(bindings),
-        items=[
-            VenueTechBindingResponse.model_validate(b) for b in bindings
-        ]
+        items=[VenueTechBindingResponse.model_validate(b) for b in bindings]
     )
 
 
@@ -399,95 +306,14 @@ async def migrate_collect_sources(
     session: AsyncSession = Depends(get_async_session)
 ):
     """迁移 TechDomain.collect_sources JSON 到 Venue 表"""
-    venue_repo = VenueRepository(session)
-    binding_repo = VenueTechBindingRepository(session)
-
-    # Get tech domain
-    tech_result = await session.execute(
-        select(TechDomain).where(TechDomain.tech_domain_id == data.tech_domain_id)
-    )
-    tech_domain = tech_result.scalar_one_or_none()
-    if not tech_domain:
-        raise HTTPException(status_code=404, detail="Tech domain not found")
-
-    collect_sources = tech_domain.collect_sources or []
-    if not collect_sources:
-        return MigrateCollectSourcesResponse(
+    service = VenueService(session)
+    try:
+        result = await service.migrate_collect_sources(
             tech_domain_id=data.tech_domain_id,
-            tech_domain_name=tech_domain.domain_name,
-            venues_found=0,
-            venues_created=0,
-            bindings_created=0,
-            venues=[],
-            message="No collect_sources to migrate"
+            dry_run=data.dry_run
         )
-
-    venues_created = 0
-    bindings_created = 0
-    venue_infos = []
-
-    for source in collect_sources:
-        source_id = source.get("id")
-        source_name = source.get("name", source_id)
-        source_type = source.get("type", "conference")
-
-        if not source_id:
-            continue
-
-        # Check if venue exists by openalex_source_id
-        venue = None
-        if source_id:
-            venue = await venue_repo.get_by_openalex_id(source_id)
-
-        # Check by code
-        if not venue:
-            venue = await venue_repo.get_by_code(source_id)
-
-        if not venue and not data.dry_run:
-            # Create new venue
-            venue = Venue(
-                venue_code=source_id,
-                venue_name=source_name,
-                openalex_source_id=source_id,
-                venue_type=source_type,
-                is_enabled=True
-            )
-            venue = await venue_repo.create(venue)
-            venues_created += 1
-
-        if venue:
-            venue_infos.append({
-                "venue_id": venue.venue_id,
-                "venue_code": venue.venue_code,
-                "venue_name": venue.venue_name,
-                "openalex_source_id": venue.openalex_source_id,
-                "is_new": venues_created > 0
-            })
-
-            # Create binding if not exists
-            if not data.dry_run:
-                existing_binding = await binding_repo.get_by_venue_and_tech(
-                    venue.venue_id, data.tech_domain_id
-                )
-                if not existing_binding:
-                    binding = VenueTechBinding(
-                        venue_id=venue.venue_id,
-                        tech_domain_id=data.tech_domain_id,
-                        priority=0,
-                        is_enabled=True
-                    )
-                    await binding_repo.create(binding)
-                    bindings_created += 1
-
-    if not data.dry_run:
-        await session.commit()
-
-    return MigrateCollectSourcesResponse(
-        tech_domain_id=data.tech_domain_id,
-        tech_domain_name=tech_domain.domain_name,
-        venues_found=len(collect_sources),
-        venues_created=venues_created,
-        bindings_created=bindings_created,
-        venues=venue_infos,
-        message=f"Migration {'simulated' if data.dry_run else 'completed'}: {venues_created} venues, {bindings_created} bindings"
-    )
+        return MigrateCollectSourcesResponse(**result)
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise NotFoundError(str(e))
+        raise BadRequestError(str(e))

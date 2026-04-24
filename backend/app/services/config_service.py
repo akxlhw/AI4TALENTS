@@ -316,6 +316,62 @@ class ConfigService:
         await self.session.commit()
         logger.info("[LLM Config] Configuration saved to database")
 
+    async def update_llm_config_with_dimension_change(
+        self, config: dict[str, Any], new_dimension: int
+    ) -> dict[str, Any]:
+        """
+        Update LLM configuration with vector dimension change.
+
+        This handles the special case where embedding dimension changes,
+        requiring database DDL to modify the vector column.
+
+        Args:
+            config: Dictionary of LLM configuration values
+            new_dimension: New embedding dimension
+
+        Returns:
+            Result dict with message and optional warning
+        """
+        from sqlalchemy import text
+
+        # Update config values first
+        await self.update_llm_config(config)
+
+        # Execute DDL to modify vector column
+        # Note: This will clear all existing embeddings
+        await self.session.execute(text("DROP INDEX IF EXISTS ix_talent_embedding_vector"))
+        await self.session.execute(text("DELETE FROM core_talent_embedding"))
+        await self.session.execute(
+            text(f"ALTER TABLE core_talent_embedding ALTER COLUMN embedding TYPE vector({new_dimension})")
+        )
+        await self.session.execute(text(f"""
+            CREATE INDEX ix_talent_embedding_vector
+            ON core_talent_embedding
+            USING ivfflat (embedding vector_cosine_ops)
+            WITH (lists = 100)
+        """))
+        await self.session.commit()
+
+        logger.info(f"[LLM Config] Vector column modified to vector({new_dimension}), existing embeddings cleared")
+
+        return {"message": "LLM configuration updated successfully"}
+
+    async def set_and_commit(self, key: str, value: Any, config_type: str = "string") -> SystemConfig:
+        """
+        Set configuration value and commit immediately.
+
+        Args:
+            key: Configuration key
+            value: Configuration value
+            config_type: Value type (string, int, float, bool, json)
+
+        Returns:
+            Updated or created SystemConfig
+        """
+        config = await self.set_value(key, value, config_type)
+        await self.session.commit()
+        return config
+
     async def get_proxy_config(self, use_cache: bool = True) -> ProxyConfig:
         """
         Get proxy configuration.

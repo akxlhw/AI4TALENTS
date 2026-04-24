@@ -41,6 +41,7 @@ from app.schemas.collect import (
 )
 from app.schemas.common import SuccessResponse
 from app.schemas.venue import VenueSubTaskListResponse, VenueSubTaskResponse
+from app.services.collect_service import CollectService
 
 logger = logging.getLogger(__name__)
 
@@ -355,56 +356,17 @@ async def trigger_task(
     else:
         time_end = datetime(end_year, 12, 31, 23, 59, 59)
 
-    # Generate unique task code
-    task_code = f"COLLECT-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
-
-    task = await task_repo.create_task(
-        task_code=task_code,
+    # Create task with sub-tasks using service
+    service = CollectService(session)
+    task = await service.create_task_with_subtasks(
         tech_domain_id=request.tech_domain_id,
-        collect_mode="full",  # 保留字段以兼容数据库，但不再使用
-        triggered_by=current_user.get("user_id"),
+        user_id=current_user.get("user_id"),
         time_window_start=time_start,
         time_window_end=time_end,
     )
 
-    # Set initial status
-    task.status = "pending"
-    task.current_step = "等待执行"
-
-    # Create VenueSubTask records for each venue binding
-    from app.models.venue import VenueSubTask
-    from app.repositories.venue_repository import VenueSubTaskRepository, VenueTechBindingRepository
-
-    binding_repo = VenueTechBindingRepository(session)
-    sub_task_repo = VenueSubTaskRepository(session)
-
-    bindings = await binding_repo.get_by_tech_domain(request.tech_domain_id, is_enabled=True)
-
-    # Save venue snapshot for this task
-    venue_snapshot = [
-        {
-            "id": b.venue.venue_code,
-            "name": b.venue.venue_name,
-            "type": b.venue.venue_type
-        }
-        for b in bindings if b.venue
-    ]
-    task.venue_snapshot = venue_snapshot
-
-    for binding in bindings:
-        sub_task = VenueSubTask(
-            task_id=task.task_id,
-            venue_id=binding.venue_id,
-            status="pending",
-            time_window_start=time_start,
-            time_window_end=time_end,
-        )
-        await sub_task_repo.create(sub_task)
-
-    await session.commit()
-
     logger.info(f"Created collect task {task.task_id} for {domain.domain_name} "
-                f"with {len(bindings)} venues, year range: {start_year}-{end_year or '至今'}")
+                f"with {len(task.venue_snapshot or [])} venues, year range: {start_year}-{end_year or '至今'}")
 
     # Start background task using asyncio (in-process, works reliably on Windows)
     asyncio.create_task(run_collect_task_background(task.task_id))
@@ -555,12 +517,10 @@ async def cancel_task(
     if task.status not in ["pending", "running"]:
         raise HTTPException(status_code=400, detail="Task cannot be cancelled")
 
-    # Update task status
-    task.status = "cancelled"
-    task.completed_at = datetime.utcnow()
-    task.current_step = "已取消"
+    # Update task status via service
+    service = CollectService(session)
+    await service.cancel_task(task_id)
 
-    await session.commit()
     return SuccessResponse(message="Task cancelled")
 
 
@@ -584,10 +544,9 @@ async def delete_task(
     if task.status in ["pending", "running"]:
         raise HTTPException(status_code=400, detail="Cannot delete running or pending task")
 
-    # Clear foreign key references and delete task via repository
-    await repo.cleanup_task_references(task_id)
-
-    await session.commit()
+    # Delete task via service
+    service = CollectService(session)
+    await service.delete_task(task_id)
 
     return TaskActionResponse(message="Task deleted", task_id=task_id)
 
@@ -732,10 +691,10 @@ async def retry_sub_task(
     if sub_task.status != "failed":
         raise HTTPException(status_code=400, detail="Only failed sub-tasks can be retried")
 
-    # Reset status
-    await sub_task_repo.update_status(sub_task_id, "pending")
+    # Reset status via service
+    service = CollectService(session)
+    await service.retry_sub_task(task_id, sub_task_id)
 
     # TODO: Trigger retry execution
 
-    await session.commit()
     return SubTaskActionResponse(message="Sub-task reset for retry", sub_task_id=sub_task_id)

@@ -119,29 +119,12 @@ async def update_llm_config(
     new_dimension = update_data.get("embedding_dimension")
     dimension_changed = new_dimension is not None and new_dimension != current_dimension
 
-    await config_service.update_llm_config(update_data)
-    await session.commit()
-
-    # Handle dimension change - modify database vector column
     if dimension_changed:
         logger.info(f"[LLM Config] Dimension changed: {current_dimension} -> {new_dimension}, modifying database column")
-
-        from sqlalchemy import text
-
-        # Execute DDL to modify vector column
-        # Note: This will clear all existing embeddings
-        await session.execute(text("DROP INDEX IF EXISTS ix_talent_embedding_vector"))
-        await session.execute(text("DELETE FROM core_talent_embedding"))
-        await session.execute(text(f"ALTER TABLE core_talent_embedding ALTER COLUMN embedding TYPE vector({new_dimension})"))
-        await session.execute(text(f"""
-            CREATE INDEX ix_talent_embedding_vector
-            ON core_talent_embedding
-            USING ivfflat (embedding vector_cosine_ops)
-            WITH (lists = 100)
-        """))
-        await session.commit()
-
-        logger.info(f"[LLM Config] Vector column modified to vector({new_dimension}), existing embeddings cleared")
+        result = await config_service.update_llm_config_with_dimension_change(update_data, new_dimension)
+    else:
+        await config_service.update_llm_config(update_data)
+        result = {"message": "LLM configuration updated successfully"}
 
     # Clear cache to force refresh
     ConfigService.clear_cache()
@@ -538,7 +521,6 @@ async def update_proxy_config(
         raise HTTPException(status_code=400, detail="No fields to update")
 
     await config_service.update_proxy_config(update_data)
-    await session.commit()
 
     # Clear cache to force refresh
     ConfigService.clear_cache()
@@ -801,8 +783,7 @@ async def update_config(
     else:
         config_type = "string"
 
-    config = await config_service.set_value(key, request.value, config_type)
-    await session.commit()
+    config = await config_service.set_and_commit(key, request.value, config_type)
 
     # Clear cache for this key
     if key in ConfigService._cache:
