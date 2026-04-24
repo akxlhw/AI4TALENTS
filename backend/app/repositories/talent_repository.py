@@ -12,9 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 
 from app.models.school import School
-from app.models.talent import RoleProfile, SelectedWork, Talent
+from app.models.talent import RoleProfile, SelectedWork, Talent, TalentTechTag
 from app.models.raw_data import RawWork
 from app.models.standardized import StdAuthor
+from app.models.tech_domain import TechDirection, TechDomain
 from app.schemas.filters import TalentFilterParams, PaginationParams
 
 logger = logging.getLogger(__name__)
@@ -264,6 +265,24 @@ class TalentRepository:
 
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
+
+    async def get_talent_tech_tags(self, talent_id: int) -> list[tuple]:
+        """
+        Get tech tags for a talent with domain and direction info.
+
+        Args:
+            talent_id: Talent ID
+
+        Returns:
+            List of tuples (TalentTechTag, TechDomain, TechDirection)
+        """
+        result = await self.session.execute(
+            select(TalentTechTag, TechDomain, TechDirection)
+            .join(TechDomain, TalentTechTag.tech_domain_id == TechDomain.tech_domain_id)
+            .outerjoin(TechDirection, TalentTechTag.tech_direction_id == TechDirection.tech_direction_id)
+            .where(TalentTechTag.talent_id == talent_id)
+        )
+        return result.fetchall()
 
     async def get_by_source_id(self, source_record_id: str) -> Talent | None:
         """

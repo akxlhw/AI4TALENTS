@@ -6,11 +6,9 @@ Provides school list, detail, and statistics.
 from __future__ import annotations
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.models.school import School
 from app.repositories.school_repository import SchoolRepository
 from app.repositories.talent_repository import TalentRepository
 from app.schemas.common import PaginatedResponse, SuccessResponse
@@ -280,12 +278,9 @@ async def set_top_school(
 ):
     """设置学校为Top院校"""
     repo = SchoolRepository(session)
-    school = await repo.get_by_id(school_id)
-    if not school:
+    success = await repo.set_top_school_and_commit(school_id)
+    if not success:
         raise HTTPException(status_code=404, detail="School not found")
-
-    school.is_top_school = True
-    await session.commit()
 
     return SuccessResponse(message="School set as top school")
 
@@ -302,12 +297,9 @@ async def unset_top_school(
 ):
     """取消学校的Top院校标记"""
     repo = SchoolRepository(session)
-    school = await repo.get_by_id(school_id)
-    if not school:
+    success = await repo.unset_top_school_and_commit(school_id)
+    if not success:
         raise HTTPException(status_code=404, detail="School not found")
-
-    school.is_top_school = False
-    await session.commit()
 
     return SuccessResponse(message="School unset as top school")
 
@@ -326,14 +318,10 @@ async def batch_set_top_schools(
     if not school_ids:
         raise HTTPException(status_code=400, detail="school_ids cannot be empty")
 
-    result = await session.execute(
-        update(School)
-        .where(School.school_id.in_(school_ids))
-        .values(is_top_school=True)
-    )
-    await session.commit()
+    repo = SchoolRepository(session)
+    count = await repo.batch_set_top_schools_and_commit(school_ids)
 
-    return SuccessResponse(message=f"Set {result.rowcount} schools as top schools")
+    return SuccessResponse(message=f"Set {count} schools as top schools")
 
 
 @router.post(
@@ -350,11 +338,7 @@ async def batch_unset_top_schools(
     if not school_ids:
         raise HTTPException(status_code=400, detail="school_ids cannot be empty")
 
-    result = await session.execute(
-        update(School)
-        .where(School.school_id.in_(school_ids))
-        .values(is_top_school=False)
-    )
-    await session.commit()
+    repo = SchoolRepository(session)
+    count = await repo.batch_unset_top_schools_and_commit(school_ids)
 
-    return SuccessResponse(message=f"Unset {result.rowcount} schools as top schools")
+    return SuccessResponse(message=f"Unset {count} schools as top schools")

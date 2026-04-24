@@ -15,6 +15,7 @@ from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
 from app.models.talent import Talent
 from app.models.embedding import TalentEmbedding
+from app.repositories.embedding_repository import EmbeddingRepository
 from app.schemas.common import SuccessResponse
 from app.services.config_service import ConfigService
 
@@ -80,27 +81,11 @@ async def get_embedding_status(
     current_user: dict = Depends(require_super_admin),
 ):
     """Get embedding generation status."""
-    # Count total visible talents
-    total_result = await session.execute(
-        select(func.count()).select_from(Talent).where(Talent.is_visible == True)
-    )
-    total_talents = total_result.scalar() or 0
+    repo = EmbeddingRepository(session)
+    status = await repo.get_embedding_status()
 
-    # Count talents with embeddings
-    embedded_result = await session.execute(
-        select(func.count()).select_from(TalentEmbedding)
-    )
-    embedded_talents = embedded_result.scalar() or 0
-
-    # Get last embedding creation time
-    last_result = await session.execute(
-        select(TalentEmbedding.created_at)
-        .order_by(TalentEmbedding.created_at.desc())
-        .limit(1)
-    )
-    last_row = last_result.scalar_one_or_none()
-    last_generated = last_row.isoformat() if last_row else None
-
+    total_talents = status["total_talents"]
+    embedded_talents = status["embedded_talents"]
     pending = max(0, total_talents - embedded_talents)
     progress = (embedded_talents / total_talents * 100) if total_talents > 0 else 0
 
@@ -108,7 +93,7 @@ async def get_embedding_status(
         total_talents=total_talents,
         embedded_talents=embedded_talents,
         pending_talents=pending,
-        last_generated=last_generated,
+        last_generated=status["last_generated"],
         progress_percent=round(progress, 1),
     )
 
@@ -189,11 +174,10 @@ async def trigger_generation(
                 detail=f"Invalid vector type: {t}. Valid types: research, papers"
             )
 
-    # Count talents
-    total_result = await session.execute(
-        select(func.count()).select_from(Talent).where(Talent.is_visible == True)
-    )
-    total_talents = total_result.scalar() or 0
+    # Count talents using repository
+    repo = EmbeddingRepository(session)
+    status = await repo.get_embedding_status()
+    total_talents = status["total_talents"]
 
     if total_talents == 0:
         raise HTTPException(
@@ -297,13 +281,9 @@ async def _run_embedding_generation(force: bool, batch_size: int, vector_types: 
 
             logger.info(f"LLMGateway api_format={llm_gateway.api_format}, embedding_api_format={llm_gateway.embedding_api_format}")
 
-            # Get talent IDs
-            query = select(Talent.talent_id).where(
-                Talent.is_visible == True
-            ).order_by(Talent.talent_id)
-
-            result = await session.execute(query)
-            talent_ids = [row[0] for row in result.fetchall()]
+            # Get talent IDs using repository
+            repo = EmbeddingRepository(session)
+            talent_ids = await repo.get_visible_talent_ids()
 
             # 使用用户配置的嵌入模型名称
             embedding_model = llm_config.embedding_model

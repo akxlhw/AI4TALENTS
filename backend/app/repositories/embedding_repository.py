@@ -371,6 +371,59 @@ class EmbeddingRepository:
         )
         return result.scalar() or 0
 
+    async def get_embedding_status(self) -> dict:
+        """
+        获取嵌入生成状态统计
+
+        Returns:
+            dict: 包含 total_talents, embedded_talents, last_generated
+        """
+        from sqlalchemy import func
+        from app.models.talent import Talent
+
+        # Count total visible talents
+        total_result = await self.session.execute(
+            select(func.count()).select_from(Talent).where(Talent.is_visible == True)
+        )
+        total_talents = total_result.scalar() or 0
+
+        # Count talents with embeddings
+        embedded_result = await self.session.execute(
+            select(func.count()).select_from(TalentEmbedding)
+        )
+        embedded_talents = embedded_result.scalar() or 0
+
+        # Get last embedding creation time
+        last_result = await self.session.execute(
+            select(TalentEmbedding.created_at)
+            .order_by(TalentEmbedding.created_at.desc())
+            .limit(1)
+        )
+        last_row = last_result.scalar_one_or_none()
+        last_generated = last_row.isoformat() if last_row else None
+
+        return {
+            "total_talents": total_talents,
+            "embedded_talents": embedded_talents,
+            "last_generated": last_generated,
+        }
+
+    async def get_visible_talent_ids(self) -> List[int]:
+        """
+        获取所有可见人才的 ID 列表
+
+        Returns:
+            List[int]: 人才 ID 列表
+        """
+        from app.models.talent import Talent
+
+        result = await self.session.execute(
+            select(Talent.talent_id)
+            .where(Talent.is_visible == True)
+            .order_by(Talent.talent_id)
+        )
+        return [row[0] for row in result.fetchall()]
+
     async def count_by_model(self, model_name: str) -> int:
         """
         统计指定模型的嵌入记录数

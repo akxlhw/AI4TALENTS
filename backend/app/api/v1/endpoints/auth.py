@@ -201,8 +201,7 @@ async def login(
 
     # Update last login
     client_ip = request.client.host if request.client else None
-    await repo.update_last_login(user.user_id, client_ip)
-    await session.commit()
+    await repo.update_last_login_and_commit(user.user_id, client_ip)
 
     # Create tokens
     access_token = create_access_token(
@@ -358,8 +357,7 @@ async def change_password(
 
     # Update password
     new_hash = hash_password(data.new_password)
-    await repo.update_password(user.user_id, new_hash)
-    await session.commit()
+    await repo.update_password_and_commit(user.user_id, new_hash)
 
     return SuccessResponse(message="密码修改成功")
 

@@ -146,6 +146,15 @@ class UserRepository:
             user.last_login_at = datetime.now()
             user.last_login_ip = ip_address
 
+    async def update_last_login_and_commit(
+        self,
+        user_id: int,
+        ip_address: str | None = None,
+    ) -> None:
+        """Update user's last login time and IP, then commit."""
+        await self.update_last_login(user_id, ip_address)
+        await self.session.commit()
+
     async def update_password(
         self,
         user_id: int,
@@ -166,6 +175,17 @@ class UserRepository:
             user.password_hash = new_password_hash
             return True
         return False
+
+    async def update_password_and_commit(
+        self,
+        user_id: int,
+        new_password_hash: str,
+    ) -> bool:
+        """Update user's password and commit."""
+        success = await self.update_password(user_id, new_password_hash)
+        if success:
+            await self.session.commit()
+        return success
 
     async def list_users(
         self,

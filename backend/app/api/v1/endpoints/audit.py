@@ -7,12 +7,11 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.endpoints.auth import require_admin
 from app.core.database import get_async_session
-from app.models.audit import AuditOperationLog
+from app.repositories.audit_repository import AuditRepository
 
 router = APIRouter(prefix="/audit", tags=["Audit Logs"])
 
@@ -77,35 +76,16 @@ async def get_audit_logs(
     - event_type: Filter by event type (authentication, authorization, data_operation)
     - resource_type: Filter by resource type (user, talent, school)
     """
-    query = select(AuditOperationLog)
-
-    # Apply filters
-    filters = []
-    if start_time:
-        filters.append(AuditOperationLog.event_time >= start_time)
-    if end_time:
-        filters.append(AuditOperationLog.event_time <= end_time)
-    if user_id:
-        filters.append(AuditOperationLog.user_id == user_id)
-    if event_type:
-        filters.append(AuditOperationLog.event_type == event_type)
-    if resource_type:
-        filters.append(AuditOperationLog.resource_type == resource_type)
-
-    if filters:
-        query = query.where(and_(*filters))
-
-    # Count total
-    count_query = select(func.count()).select_from(query.subquery())
-    total_result = await session.execute(count_query)
-    total = total_result.scalar() or 0
-
-    # Paginate
-    offset = (page - 1) * page_size
-    query = query.offset(offset).limit(page_size).order_by(AuditOperationLog.event_time.desc())
-
-    result = await session.execute(query)
-    logs = list(result.scalars().all())
+    repo = AuditRepository(session)
+    logs, total = await repo.list_logs(
+        start_time=start_time,
+        end_time=end_time,
+        user_id=user_id,
+        event_type=event_type,
+        resource_type=resource_type,
+        page=page,
+        page_size=page_size,
+    )
 
     items = [
         AuditLogResponse(
@@ -143,10 +123,8 @@ async def get_event_types(
     current_user: dict = Depends(require_admin),
 ):
     """Get distinct event types."""
-    result = await session.execute(
-        select(AuditOperationLog.event_type).distinct()
-    )
-    types = [row[0] for row in result.fetchall()]
+    repo = AuditRepository(session)
+    types = await repo.get_event_types()
     return EventTypesResponse(event_types=types)
 
 
@@ -161,8 +139,6 @@ async def get_resource_types(
     current_user: dict = Depends(require_admin),
 ):
     """Get distinct resource types."""
-    result = await session.execute(
-        select(AuditOperationLog.resource_type).distinct()
-    )
-    types = [row[0] for row in result.fetchall() if row[0]]
+    repo = AuditRepository(session)
+    types = await repo.get_resource_types()
     return ResourceTypesResponse(resource_types=types)

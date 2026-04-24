@@ -4,10 +4,13 @@ Repository for statistics operations.
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.school import School
 from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
+from app.models.talent import Talent
+from app.models.tech_domain import TechDirection, TechDomain
 
 
 class StatisticsRepository:
@@ -86,3 +89,44 @@ class StatisticsRepository:
             .order_by(SchoolStatSnapshot.school_id)
         )
         return list(result.scalars().all())
+
+    async def get_country_count(self) -> int:
+        """
+        Get count of distinct countries with visible talents.
+
+        Returns:
+            Number of countries
+        """
+        result = await self.session.execute(
+            select(func.count(func.distinct(School.country_code)))
+            .join(Talent, Talent.school_id == School.school_id)
+            .where(Talent.is_visible.is_(True))
+            .where(School.country_code.isnot(None))
+        )
+        return result.scalar() or 0
+
+    async def get_tech_domain_count(self) -> int:
+        """
+        Get count of enabled tech domains.
+
+        Returns:
+            Number of tech domains
+        """
+        result = await self.session.execute(
+            select(func.count(TechDomain.tech_domain_id))
+            .where(TechDomain.is_enabled.is_(True))
+        )
+        return result.scalar() or 0
+
+    async def get_tech_direction_count(self) -> int:
+        """
+        Get count of enabled tech directions.
+
+        Returns:
+            Number of tech directions
+        """
+        result = await self.session.execute(
+            select(func.count(TechDirection.tech_direction_id))
+            .where(TechDirection.is_enabled.is_(True))
+        )
+        return result.scalar() or 0

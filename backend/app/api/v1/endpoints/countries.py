@@ -4,12 +4,11 @@ Returns list of countries with school counts.
 Aggregated from core_school table using country_code.
 """
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.countries import COUNTRY_NAMES_CN, COUNTRY_NAMES_EN
 from app.core.database import get_async_session
-from app.models.school import School
+from app.repositories.school_repository import SchoolRepository
 from app.schemas.overview import CountryListResponse, CountrySummary
 
 router = APIRouter(prefix="/countries", tags=["Countries"])
@@ -34,23 +33,8 @@ async def list_countries(
     - Number of schools in each country
     - Number of professors in each country
     """
-    # Query schools grouped by country_code
-    query = (
-        select(
-            School.country_code,
-            func.count(School.school_id).label("school_count"),
-            func.sum(School.professor_count).label("professor_count"),
-        )
-        .where(
-            School.is_visible.is_(True),
-            School.country_code.isnot(None),
-        )
-        .group_by(School.country_code)
-        .order_by(func.sum(School.professor_count).desc())
-    )
-
-    result = await session.execute(query)
-    rows = result.all()
+    repo = SchoolRepository(session)
+    rows = await repo.get_country_stats()
 
     # Build response with country names from constants
     items = []

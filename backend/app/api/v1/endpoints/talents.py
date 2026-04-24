@@ -127,9 +127,7 @@ async def get_talent(
     - Selected works
     - Tech tags
     """
-    from sqlalchemy import select
-
-    from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
+    from app.repositories.talent_repository import TalentRepository
 
     service = TalentService(session)
     talent = await service.get_talent_by_id(talent_id)
@@ -151,20 +149,17 @@ async def get_talent(
     ]
 
     # Fetch tech tags
-    tech_tags = []
-    result = await session.execute(
-        select(TalentTechTag, TechDomain, TechDirection)
-        .join(TechDomain, TalentTechTag.tech_domain_id == TechDomain.tech_domain_id)
-        .outerjoin(TechDirection, TalentTechTag.tech_direction_id == TechDirection.tech_direction_id)
-        .where(TalentTechTag.talent_id == talent_id)
-    )
-    for _tag, domain, direction in result.fetchall():
-        tech_tags.append(TechTagItem(
+    talent_repo = TalentRepository(session)
+    tech_tag_rows = await talent_repo.get_talent_tech_tags(talent_id)
+    tech_tags = [
+        TechTagItem(
             tech_domain_id=domain.tech_domain_id,
             tech_domain_name=domain.domain_name,
             tech_direction_id=direction.tech_direction_id if direction else None,
             tech_direction_name=direction.direction_name if direction else None,
-        ))
+        )
+        for _tag, domain, direction in tech_tag_rows
+    ]
 
     return TalentDetail(
         talent_id=talent.talent_id,

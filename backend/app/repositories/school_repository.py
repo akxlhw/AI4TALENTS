@@ -4,7 +4,7 @@ Repository for school operations.
 
 from __future__ import annotations
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.school import School, SchoolAlias
@@ -210,3 +210,97 @@ class SchoolRepository:
             counts["total"] += row.count
 
         return counts
+
+    async def set_top_school_and_commit(self, school_id: int) -> bool:
+        """
+        Set a school as top school.
+
+        Args:
+            school_id: School ID
+
+        Returns:
+            True if successful, False if school not found
+        """
+        school = await self.get_by_id(school_id)
+        if not school:
+            return False
+
+        school.is_top_school = True
+        await self.session.commit()
+        return True
+
+    async def unset_top_school_and_commit(self, school_id: int) -> bool:
+        """
+        Unset a school as top school.
+
+        Args:
+            school_id: School ID
+
+        Returns:
+            True if successful, False if school not found
+        """
+        school = await self.get_by_id(school_id)
+        if not school:
+            return False
+
+        school.is_top_school = False
+        await self.session.commit()
+        return True
+
+    async def batch_set_top_schools_and_commit(self, school_ids: list[int]) -> int:
+        """
+        Batch set schools as top schools.
+
+        Args:
+            school_ids: List of school IDs
+
+        Returns:
+            Number of schools updated
+        """
+        result = await self.session.execute(
+            update(School)
+            .where(School.school_id.in_(school_ids))
+            .values(is_top_school=True)
+        )
+        await self.session.commit()
+        return result.rowcount
+
+    async def batch_unset_top_schools_and_commit(self, school_ids: list[int]) -> int:
+        """
+        Batch unset schools as top schools.
+
+        Args:
+            school_ids: List of school IDs
+
+        Returns:
+            Number of schools updated
+        """
+        result = await self.session.execute(
+            update(School)
+            .where(School.school_id.in_(school_ids))
+            .values(is_top_school=False)
+        )
+        await self.session.commit()
+        return result.rowcount
+
+    async def get_country_stats(self) -> list[tuple]:
+        """
+        Get school and professor counts grouped by country.
+
+        Returns:
+            List of tuples (country_code, school_count, professor_count)
+        """
+        result = await self.session.execute(
+            select(
+                School.country_code,
+                func.count(School.school_id).label("school_count"),
+                func.sum(School.professor_count).label("professor_count"),
+            )
+            .where(
+                School.is_visible.is_(True),
+                School.country_code.isnot(None),
+            )
+            .group_by(School.country_code)
+            .order_by(func.sum(School.professor_count).desc())
+        )
+        return result.all()

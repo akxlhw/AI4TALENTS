@@ -3,13 +3,9 @@ Overview API endpoint.
 Returns homepage statistics.
 """
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.models.school import School
-from app.models.talent import Talent
-from app.models.tech_domain import TechDirection, TechDomain
 from app.repositories.stat_repository import StatisticsRepository
 from app.schemas.overview import OverviewResponse, OverviewStats
 
@@ -46,28 +42,10 @@ async def get_overview(
             detail="No statistics available. Please run the build process first.",
         )
 
-    # 实时计算国家数（有人才的国家）
-    country_result = await session.execute(
-        select(func.count(func.distinct(School.country_code)))
-        .join(Talent, Talent.school_id == School.school_id)
-        .where(Talent.is_visible.is_(True))
-        .where(School.country_code.isnot(None))
-    )
-    country_count = country_result.scalar() or 0
-
-    # 实时计算技术领域数
-    tech_domain_result = await session.execute(
-        select(func.count(TechDomain.tech_domain_id))
-        .where(TechDomain.is_enabled.is_(True))
-    )
-    tech_domain_count = tech_domain_result.scalar() or 0
-
-    # 实时计算技术方向数
-    tech_direction_result = await session.execute(
-        select(func.count(TechDirection.tech_direction_id))
-        .where(TechDirection.is_enabled.is_(True))
-    )
-    tech_direction_count = tech_direction_result.scalar() or 0
+    # 实时计算统计数据
+    country_count = await repo.get_country_count()
+    tech_domain_count = await repo.get_tech_domain_count()
+    tech_direction_count = await repo.get_tech_direction_count()
 
     return OverviewResponse(
         stats=OverviewStats(
