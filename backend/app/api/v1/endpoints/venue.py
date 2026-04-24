@@ -13,7 +13,9 @@ from app.core.database import get_async_session
 from app.models.tech_domain import TechDomain
 from app.models.venue import Venue, VenueTechBinding
 from app.repositories.venue_repository import VenueRepository, VenueTechBindingRepository
+from app.schemas.common import SuccessResponse
 from app.schemas.venue import (
+    BatchUpdateBindingsResponse,
     MigrateCollectSourcesRequest,
     MigrateCollectSourcesResponse,
     VenueCreate,
@@ -36,6 +38,7 @@ router = APIRouter(prefix="/venues", tags=["Venue Configuration"])
 
 @router.post(
     "/bindings/batch",
+    response_model=BatchUpdateBindingsResponse,
     summary="批量更新技术领域绑定",
     description="批量更新指定技术领域的 Venue 绑定启用状态。传入的 venue_ids 会被标记为启用，该技术领域的其他绑定会被标记为禁用。"
 )
@@ -90,12 +93,12 @@ async def batch_create_bindings(
 
         # 返回更新后的绑定数量
         enabled_count = len([b for b in all_bindings if b.is_enabled])
-        return {
-            "message": "配置更新成功",
-            "total_bindings": len(all_bindings),
-            "enabled_bindings": enabled_count,
-            "updated_count": len(updated_bindings)
-        }
+        return BatchUpdateBindingsResponse(
+            message="配置更新成功",
+            total_bindings=len(all_bindings),
+            enabled_bindings=enabled_count,
+            updated_count=len(updated_bindings)
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -216,6 +219,7 @@ async def update_venue(
 
 @router.delete(
     "/{venue_id}",
+    response_model=SuccessResponse,
     summary="删除Venue",
     description="删除指定的顶会顶刊。如果存在技术领域绑定则无法删除，需先删除绑定。"
 )
@@ -240,7 +244,7 @@ async def delete_venue(
         raise HTTPException(status_code=404, detail="Venue not found")
 
     await session.commit()
-    return {"message": "Venue deleted successfully"}
+    return SuccessResponse(message="Venue deleted successfully")
 
 
 # ============================================
@@ -335,6 +339,7 @@ async def update_binding(
 
 @router.delete(
     "/bindings/{binding_id}",
+    response_model=SuccessResponse,
     summary="删除绑定",
     description="删除指定的 Venue-TechDomain 绑定关系。"
 )
@@ -349,7 +354,7 @@ async def delete_binding(
         raise HTTPException(status_code=404, detail="Binding not found")
 
     await session.commit()
-    return {"message": "Binding deleted successfully"}
+    return SuccessResponse(message="Binding deleted successfully")
 
 
 # ============================================

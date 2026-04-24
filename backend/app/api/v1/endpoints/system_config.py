@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
+from app.schemas.common import SuccessResponse
 from app.schemas.system_config import (
     LLMConfigRequest,
     LLMConfigResponse,
@@ -517,6 +518,7 @@ async def get_proxy_config(
 
 @router.put(
     "/proxy",
+    response_model=SuccessResponse,
     summary="更新代理配置",
     description="更新 HTTP 代理配置"
 )
@@ -558,7 +560,7 @@ async def update_proxy_config(
 
     logger.info(f"Proxy configuration updated by user {current_user.get('user_id')}")
 
-    return {"message": "Proxy configuration updated successfully"}
+    return SuccessResponse(message="Proxy configuration updated successfully")
 
 
 @router.post(
