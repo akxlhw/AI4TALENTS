@@ -5,16 +5,13 @@ Tests for Talents API endpoints.
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class TestTalentDetail:
     """Tests for /api/v1/talents/{talent_id} endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_talent_detail_success(
-        self, client: AsyncClient, sample_talent: dict
-    ):
+    async def test_get_talent_detail_success(self, client: AsyncClient, sample_talent: dict):
         """Test getting talent detail by ID."""
         talent = sample_talent["talent"]
         response = await client.get(f"/api/v1/talents/{talent.talent_id}")
@@ -25,9 +22,7 @@ class TestTalentDetail:
         assert data["name"] == talent.name
 
     @pytest.mark.asyncio
-    async def test_get_talent_detail_not_found(
-        self, client: AsyncClient
-    ):
+    async def test_get_talent_detail_not_found(self, client: AsyncClient):
         """Test getting non-existent talent returns 404."""
         response = await client.get("/api/v1/talents/99999")
 
@@ -38,9 +33,7 @@ class TestTalentList:
     """Tests for talents list endpoint."""
 
     @pytest.mark.asyncio
-    async def test_list_talents(
-        self, client: AsyncClient, sample_talent: dict
-    ):
+    async def test_list_talents(self, client: AsyncClient, sample_talent: dict):
         """Test listing talents."""
         response = await client.get("/api/v1/talents")
 
@@ -50,9 +43,7 @@ class TestTalentList:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_list_talents_with_pagination(
-        self, client: AsyncClient, sample_talent: dict
-    ):
+    async def test_list_talents_with_pagination(self, client: AsyncClient, sample_talent: dict):
         """Test listing talents with pagination."""
         response = await client.get(
             "/api/v1/talents",
@@ -69,9 +60,7 @@ class TestTalentExport:
     """Tests for talents export endpoint."""
 
     @pytest.mark.asyncio
-    async def test_export_talents_csv(
-        self, client: AsyncClient, sample_talent: dict
-    ):
+    async def test_export_talents_csv(self, client: AsyncClient, sample_talent: dict):
         """Test exporting talents as CSV."""
         talent = sample_talent["talent"]
         response = await client.post(
@@ -87,9 +76,7 @@ class TestTalentExport:
             ]
 
     @pytest.mark.asyncio
-    async def test_export_talents_xlsx(
-        self, client: AsyncClient, sample_talent: dict
-    ):
+    async def test_export_talents_xlsx(self, client: AsyncClient, sample_talent: dict):
         """Test exporting talents as Excel."""
         talent = sample_talent["talent"]
         response = await client.post(
@@ -106,9 +93,7 @@ class TestTalentWorks:
     """Tests for talent works endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_talent_works(
-        self, client: AsyncClient, sample_talent: dict
-    ):
+    async def test_get_talent_works(self, client: AsyncClient, sample_talent: dict):
         """Test getting talent works."""
         talent = sample_talent["talent"]
         response = await client.get(f"/api/v1/talents/{talent.talent_id}/works")
@@ -121,14 +106,10 @@ class TestTalentCollaborations:
     """Tests for talent collaborations endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_talent_collaborations(
-        self, client: AsyncClient, sample_talent: dict
-    ):
+    async def test_get_talent_collaborations(self, client: AsyncClient, sample_talent: dict):
         """Test getting talent collaborations."""
         talent = sample_talent["talent"]
-        response = await client.get(
-            f"/api/v1/talents/{talent.talent_id}/collaborations"
-        )
+        response = await client.get(f"/api/v1/talents/{talent.talent_id}/collaborations")
 
         # May return 404 if no collaborations or endpoint not implemented
         assert response.status_code in [200, 404]

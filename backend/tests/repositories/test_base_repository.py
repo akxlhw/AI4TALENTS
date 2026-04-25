@@ -4,6 +4,7 @@ Tests for BaseRepository class.
 Tests the common CRUD operations provided by the base repository.
 Uses School model for testing since it's a simple, self-contained model.
 """
+
 import pytest
 from sqlalchemy import select
 
@@ -161,10 +162,7 @@ class TestBaseRepository:
         """Test list_paginated with order_by."""
         query = select(School)
         items, total = await repo.list_paginated(
-            query,
-            page=1,
-            page_size=10,
-            order_by=School.school_name.desc()
+            query, page=1, page_size=10, order_by=School.school_name.desc()
         )
 
         assert total == 3
@@ -178,10 +176,7 @@ class TestBaseRepository:
     async def test_create(self, repo):
         """Test creating a new record."""
         new_school = School(
-            school_name="Stanford",
-            country_code="US",
-            country_name="美国",
-            is_visible=True
+            school_name="Stanford", country_code="US", country_name="美国", is_visible=True
         )
         result = await repo.create(new_school)
 

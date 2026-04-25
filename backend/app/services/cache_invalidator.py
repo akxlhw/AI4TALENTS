@@ -3,6 +3,7 @@ Cache invalidation manager.
 
 Handles cache invalidation when data changes in the system.
 """
+
 from __future__ import annotations
 
 import logging

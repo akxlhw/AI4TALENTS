@@ -1,6 +1,7 @@
 """
 Sync and data pipeline models.
 """
+
 from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
@@ -81,7 +82,9 @@ class CollectStrategy(Base, TimestampMixin):
     strategy_name = Column(String(100), nullable=False)
 
     # Strategy type
-    strategy_type = Column(String(30), default="scheduled", nullable=False)  # 'scheduled', 'manual', 'event_triggered'
+    strategy_type = Column(
+        String(30), default="scheduled", nullable=False
+    )  # 'scheduled', 'manual', 'event_triggered'
 
     # Schedule config (for scheduled type)
     schedule_cron = Column(String(100), nullable=True)  # Cron expression
@@ -125,7 +128,9 @@ class CollectTask(Base, TimestampMixin):
     task_type = Column(String(30), default="manual", nullable=False)  # 保留兼容
 
     # 关联技术领域（采集最小单位）
-    tech_domain_id = Column(Integer, ForeignKey("core_tech_domain.tech_domain_id"), nullable=True, index=True)
+    tech_domain_id = Column(
+        Integer, ForeignKey("core_tech_domain.tech_domain_id"), nullable=True, index=True
+    )
 
     # 采集模式：full=全量, incremental=增量
     collect_mode = Column(String(20), default="full", nullable=False)
@@ -139,7 +144,9 @@ class CollectTask(Base, TimestampMixin):
     triggered_at = Column(DateTime, nullable=False)
 
     # Status
-    status = Column(String(20), default="pending", nullable=False, index=True)  # pending/running/completed/failed/cancelled
+    status = Column(
+        String(20), default="pending", nullable=False, index=True
+    )  # pending/running/completed/failed/cancelled
 
     # Progress
     progress_percent = Column(Integer, default=0)
@@ -198,7 +205,9 @@ class DataVersion(Base, TimestampMixin):
     total_works = Column(Integer, default=0)
 
     # Status
-    is_active = Column(Boolean, default=False, nullable=False, index=True)  # Currently active version
+    is_active = Column(
+        Boolean, default=False, nullable=False, index=True
+    )  # Currently active version
     is_published = Column(Boolean, default=False, nullable=False)
 
     # Publish info
@@ -266,7 +275,9 @@ class DataCorrectionRecord(Base, TimestampMixin):
     corrected_by = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=False)
 
     # Status
-    status = Column(String(20), default="applied", nullable=False)  # 'pending', 'applied', 'reverted'
+    status = Column(
+        String(20), default="applied", nullable=False
+    )  # 'pending', 'applied', 'reverted'
 
     def __repr__(self) -> str:
         return f"<DataCorrectionRecord(correction_id={self.correction_id}, target={self.target_type}:{self.target_id})>"
@@ -315,4 +326,3 @@ class DataQualitySummary(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<DataQualitySummary(summary_id={self.summary_id}, version_id={self.version_id})>"
-

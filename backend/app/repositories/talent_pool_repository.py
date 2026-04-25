@@ -19,7 +19,9 @@ class TalentPoolRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_pool(self, user_id: int, name: str, pool_type: str = "custom", desc: str = None) -> TalentPool:
+    async def create_pool(
+        self, user_id: int, name: str, pool_type: str = "custom", desc: str = None
+    ) -> TalentPool:
         """Create a new talent pool."""
         pool = TalentPool(
             pool_name=name,
@@ -31,7 +33,9 @@ class TalentPoolRepository:
         await self.session.flush()
         return pool
 
-    async def create_pool_and_commit(self, user_id: int, name: str, pool_type: str = "custom", desc: str = None) -> TalentPool:
+    async def create_pool_and_commit(
+        self, user_id: int, name: str, pool_type: str = "custom", desc: str = None
+    ) -> TalentPool:
         """Create a new talent pool and commit."""
         pool = await self.create_pool(user_id, name, pool_type, desc)
         await self.session.commit()
@@ -39,24 +43,21 @@ class TalentPoolRepository:
 
     async def get_pool_by_id(self, pool_id: int) -> TalentPool | None:
         """Get talent pool by ID."""
-        result = await self.session.execute(
-            select(TalentPool).where(TalentPool.pool_id == pool_id)
-        )
+        result = await self.session.execute(select(TalentPool).where(TalentPool.pool_id == pool_id))
         return result.scalar_one_or_none()
 
     async def list_user_pools(self, user_id: int) -> list[TalentPool]:
         """List all talent pools for a user."""
         result = await self.session.execute(
             select(TalentPool)
-            .where(and_(
-                TalentPool.owner_user_id == user_id,
-                TalentPool.pool_status == 'active'
-            ))
+            .where(and_(TalentPool.owner_user_id == user_id, TalentPool.pool_status == "active"))
             .order_by(TalentPool.created_at.desc())
         )
         return list(result.scalars().all())
 
-    async def update_pool(self, pool_id: int, name: str = None, desc: str = None, status: str = None) -> TalentPool | None:
+    async def update_pool(
+        self, pool_id: int, name: str = None, desc: str = None, status: str = None
+    ) -> TalentPool | None:
         """Update talent pool."""
         pool = await self.get_pool_by_id(pool_id)
         if not pool:
@@ -70,7 +71,9 @@ class TalentPoolRepository:
         await self.session.flush()
         return pool
 
-    async def update_pool_and_commit(self, pool_id: int, name: str = None, desc: str = None, status: str = None) -> TalentPool | None:
+    async def update_pool_and_commit(
+        self, pool_id: int, name: str = None, desc: str = None, status: str = None
+    ) -> TalentPool | None:
         """Update talent pool and commit."""
         pool = await self.update_pool(pool_id, name, desc, status)
         if pool:
@@ -82,7 +85,7 @@ class TalentPoolRepository:
         pool = await self.get_pool_by_id(pool_id)
         if not pool:
             return False
-        pool.pool_status = 'archived'
+        pool.pool_status = "archived"
         await self.session.flush()
         return True
 
@@ -93,7 +96,9 @@ class TalentPoolRepository:
             await self.session.commit()
         return success
 
-    async def add_member(self, pool_id: int, talent_id: int, added_by: int, notes: str = None) -> TalentPoolMember:
+    async def add_member(
+        self, pool_id: int, talent_id: int, added_by: int, notes: str = None
+    ) -> TalentPoolMember:
         """Add talent to pool."""
         member = TalentPoolMember(
             pool_id=pool_id,
@@ -105,7 +110,9 @@ class TalentPoolRepository:
         await self.session.flush()
         return member
 
-    async def add_member_and_commit(self, pool_id: int, talent_id: int, added_by: int, notes: str = None) -> TalentPoolMember:
+    async def add_member_and_commit(
+        self, pool_id: int, talent_id: int, added_by: int, notes: str = None
+    ) -> TalentPoolMember:
         """Add talent to pool and commit."""
         member = await self.add_member(pool_id, talent_id, added_by, notes)
         await self.session.commit()
@@ -114,10 +121,9 @@ class TalentPoolRepository:
     async def remove_member(self, pool_id: int, talent_id: int) -> bool:
         """Remove talent from pool."""
         result = await self.session.execute(
-            select(TalentPoolMember).where(and_(
-                TalentPoolMember.pool_id == pool_id,
-                TalentPoolMember.talent_id == talent_id
-            ))
+            select(TalentPoolMember).where(
+                and_(TalentPoolMember.pool_id == pool_id, TalentPoolMember.talent_id == talent_id)
+            )
         )
         member = result.scalar_one_or_none()
         if member:
@@ -133,7 +139,9 @@ class TalentPoolRepository:
             await self.session.commit()
         return success
 
-    async def get_pool_members(self, pool_id: int, page: int = 1, page_size: int = 20) -> tuple[list[dict], int]:
+    async def get_pool_members(
+        self, pool_id: int, page: int = 1, page_size: int = 20
+    ) -> tuple[list[dict], int]:
         """Get members of a talent pool with pagination."""
         # Count query
         count_result = await self.session.execute(
@@ -156,32 +164,33 @@ class TalentPoolRepository:
 
         items = []
         for member, talent in result.all():
-            items.append({
-                'member_id': member.member_id,
-                'pool_id': member.pool_id,
-                'talent_id': talent.talent_id,
-                'name': talent.name,
-                'name_en': talent.name_en,
-                'role_type': talent.role_type,
-                'school_id': talent.school_id,
-                'school_name': talent.school.school_name if talent.school else None,
-                'current_title': talent.current_title,
-                'works_count': talent.works_count,
-                'cited_by_count': talent.cited_by_count,
-                'h_index': talent.h_index,
-                'notes': member.notes,
-                'added_at': member.created_at.isoformat() if member.created_at else None,
-            })
+            items.append(
+                {
+                    "member_id": member.member_id,
+                    "pool_id": member.pool_id,
+                    "talent_id": talent.talent_id,
+                    "name": talent.name,
+                    "name_en": talent.name_en,
+                    "role_type": talent.role_type,
+                    "school_id": talent.school_id,
+                    "school_name": talent.school.school_name if talent.school else None,
+                    "current_title": talent.current_title,
+                    "works_count": talent.works_count,
+                    "cited_by_count": talent.cited_by_count,
+                    "h_index": talent.h_index,
+                    "notes": member.notes,
+                    "added_at": member.created_at.isoformat() if member.created_at else None,
+                }
+            )
 
         return items, total
 
     async def is_member(self, pool_id: int, talent_id: int) -> bool:
         """Check if talent is in pool."""
         result = await self.session.execute(
-            select(TalentPoolMember).where(and_(
-                TalentPoolMember.pool_id == pool_id,
-                TalentPoolMember.talent_id == talent_id
-            ))
+            select(TalentPoolMember).where(
+                and_(TalentPoolMember.pool_id == pool_id, TalentPoolMember.talent_id == talent_id)
+            )
         )
         return result.scalar_one_or_none() is not None
 
@@ -192,14 +201,18 @@ class FavoriteRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def update_followup_status(self, user_id: int, talent_id: int, status: str) -> FavoriteTalent | None:
+    async def update_followup_status(
+        self, user_id: int, talent_id: int, status: str
+    ) -> FavoriteTalent | None:
         """Update followup status for a favorite."""
         result = await self.session.execute(
-            select(FavoriteTalent).where(and_(
-                FavoriteTalent.user_id == user_id,
-                FavoriteTalent.talent_id == talent_id,
-                FavoriteTalent.is_active.is_(True)
-            ))
+            select(FavoriteTalent).where(
+                and_(
+                    FavoriteTalent.user_id == user_id,
+                    FavoriteTalent.talent_id == talent_id,
+                    FavoriteTalent.is_active.is_(True),
+                )
+            )
         )
         favorite = result.scalar_one_or_none()
         if favorite:
@@ -207,7 +220,9 @@ class FavoriteRepository:
             await self.session.flush()
         return favorite
 
-    async def update_followup_status_and_commit(self, user_id: int, talent_id: int, status: str) -> FavoriteTalent | None:
+    async def update_followup_status_and_commit(
+        self, user_id: int, talent_id: int, status: str
+    ) -> FavoriteTalent | None:
         """Update followup status for a favorite and commit."""
         favorite = await self.update_followup_status(user_id, talent_id, status)
         if favorite:
@@ -217,10 +232,12 @@ class FavoriteRepository:
     async def get_favorites_by_status(self, user_id: int, status: str) -> list[FavoriteTalent]:
         """Get favorites filtered by followup status."""
         result = await self.session.execute(
-            select(FavoriteTalent).where(and_(
-                FavoriteTalent.user_id == user_id,
-                FavoriteTalent.followup_status == status,
-                FavoriteTalent.is_active.is_(True)
-            ))
+            select(FavoriteTalent).where(
+                and_(
+                    FavoriteTalent.user_id == user_id,
+                    FavoriteTalent.followup_status == status,
+                    FavoriteTalent.is_active.is_(True),
+                )
+            )
         )
         return list(result.scalars().all())

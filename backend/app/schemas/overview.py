@@ -1,6 +1,7 @@
 """
 Overview API schemas.
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
@@ -97,10 +98,18 @@ class TalentSummary(BaseModel):
     school_id: int | None = Field(default=None, description="School ID")
     school_name: str | None = Field(default=None, description="School name")
     # Primary institutions (v1.5)
-    education_school_id: int | None = Field(default=None, description="Primary education institution ID")
-    education_school_name: str | None = Field(default=None, description="Primary education institution name")
-    company_school_id: int | None = Field(default=None, description="Primary company/organization ID")
-    company_school_name: str | None = Field(default=None, description="Primary company/organization name")
+    education_school_id: int | None = Field(
+        default=None, description="Primary education institution ID"
+    )
+    education_school_name: str | None = Field(
+        default=None, description="Primary education institution name"
+    )
+    company_school_id: int | None = Field(
+        default=None, description="Primary company/organization ID"
+    )
+    company_school_name: str | None = Field(
+        default=None, description="Primary company/organization name"
+    )
     current_title: str | None = Field(default=None, description="Current title/position")
     works_count: int = Field(default=0, description="Number of works")
     cited_by_count: int = Field(default=0, description="Citation count")
@@ -130,15 +139,25 @@ class TalentDetail(BaseModel):
     school_id: int | None = Field(default=None, description="School ID")
     school_name: str | None = Field(default=None, description="School name")
     # Primary institutions (v1.5)
-    education_school_id: int | None = Field(default=None, description="Primary education institution ID")
-    education_school_name: str | None = Field(default=None, description="Primary education institution name")
-    company_school_id: int | None = Field(default=None, description="Primary company/organization ID")
-    company_school_name: str | None = Field(default=None, description="Primary company/organization name")
+    education_school_id: int | None = Field(
+        default=None, description="Primary education institution ID"
+    )
+    education_school_name: str | None = Field(
+        default=None, description="Primary education institution name"
+    )
+    company_school_id: int | None = Field(
+        default=None, description="Primary company/organization ID"
+    )
+    company_school_name: str | None = Field(
+        default=None, description="Primary company/organization name"
+    )
     current_title: str | None = Field(default=None, description="Current title/position")
     works_count: int = Field(default=0, description="Number of works")
     cited_by_count: int = Field(default=0, description="Citation count")
     h_index: int = Field(default=0, description="H-index")
-    latest_active_year: int | None = Field(default=None, description="Latest active publication year")
+    latest_active_year: int | None = Field(
+        default=None, description="Latest active publication year"
+    )
     topic_tags: list[str] = Field(default_factory=list, description="Topic tags")
     openalex_topics: list[str] = Field(default_factory=list, description="OpenAlex研究主题")
     tech_tags: list[TechTagItem] = Field(default_factory=list, description="技术领域标签")
@@ -148,10 +167,14 @@ class TalentDetail(BaseModel):
 
     # Role profile details
     role_reason: str | None = Field(default=None, description="Reason for role classification")
-    academic_age: int | None = Field(default=None, description="Academic age (years since first work)")
+    academic_age: int | None = Field(
+        default=None, description="Academic age (years since first work)"
+    )
 
     # Representative works
-    selected_works: list[SelectedWorkResponse] = Field(default_factory=list, description="Selected representative works")
+    selected_works: list[SelectedWorkResponse] = Field(
+        default_factory=list, description="Selected representative works"
+    )
 
 
 class SelectedWorkResponse(BaseModel):
@@ -226,7 +249,9 @@ class TalentCompareItem(BaseModel):
     works_count: int = Field(default=0, description="Number of works")
     cited_by_count: int = Field(default=0, description="Citation count")
     h_index: int = Field(default=0, description="H-index")
-    latest_active_year: int | None = Field(default=None, description="Latest active publication year")
+    latest_active_year: int | None = Field(
+        default=None, description="Latest active publication year"
+    )
     topic_tags: list[str] = Field(default_factory=list, description="Topic tags")
     openalex_topics: list[str] = Field(default_factory=list, description="OpenAlex研究主题")
     academic_age: int | None = Field(default=None, description="Academic age")

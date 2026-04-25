@@ -4,9 +4,10 @@ Talent Service - 统一的人才服务入口
 提供人才相关的业务逻辑操作，封装 Repository 调用。
 遵循架构规范：Endpoint -> Service -> Repository
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +45,7 @@ class TalentService:
         min_citations: int | None = None,
         keyword: str | None = None,
         page: int = 1,
-        page_size: int = 20
+        page_size: int = 20,
     ) -> tuple[list[Talent], int]:
         """
         获取人才列表（带筛选）
@@ -161,11 +162,7 @@ class TalentService:
         talent = await self.get_talent_by_id(talent_id, include_relations=False)
         return talent is not None
 
-    async def get_talent_collaborations(
-        self,
-        talent_id: int,
-        limit: int = 10
-    ) -> list[dict]:
+    async def get_talent_collaborations(self, talent_id: int, limit: int = 10) -> list[dict]:
         """
         获取人才的合作者
 
@@ -187,22 +184,17 @@ class TalentService:
             dict: 统计信息
         """
         # 总人数
-        total_count = await self.session.execute(
-            select(func.count(Talent.talent_id))
-        )
+        total_count = await self.session.execute(select(func.count(Talent.talent_id)))
         total = total_count.scalar() or 0
 
         # 按角色统计
         role_stats = await self.session.execute(
-            select(Talent.role_type, func.count(Talent.talent_id))
-            .group_by(Talent.role_type)
+            select(Talent.role_type, func.count(Talent.talent_id)).group_by(Talent.role_type)
         )
         by_role = {row[0]: row[1] for row in role_stats.all()}
 
         # 学校数
-        school_count = await self.session.execute(
-            select(func.count(School.school_id))
-        )
+        school_count = await self.session.execute(select(func.count(School.school_id)))
         schools = school_count.scalar() or 0
 
         return {
@@ -212,10 +204,7 @@ class TalentService:
         }
 
     async def search_talents(
-        self,
-        query: str,
-        page: int = 1,
-        page_size: int = 20
+        self, query: str, page: int = 1, page_size: int = 20
     ) -> tuple[list[Talent], int]:
         """
         搜索人才（关键词搜索）
@@ -230,11 +219,7 @@ class TalentService:
         """
         return await self.talent_repo.search(query, page, page_size)
 
-    async def update_talent(
-        self,
-        talent_id: int,
-        updates: dict
-    ) -> Talent | None:
+    async def update_talent(self, talent_id: int, updates: dict) -> Talent | None:
         """
         更新人才信息
 

@@ -48,9 +48,7 @@ class RateLimiter:
 
         with self.lock:
             # Clean up old requests
-            self.requests[key] = [
-                ts for ts in self.requests[key] if ts > window_start
-            ]
+            self.requests[key] = [ts for ts in self.requests[key] if ts > window_start]
 
             # Check if under limit
             if len(self.requests[key]) < self.requests_per_minute:
@@ -70,9 +68,7 @@ class RateLimiter:
 
         with self.lock:
             for key in list(self.requests.keys()):
-                self.requests[key] = [
-                    ts for ts in self.requests[key] if ts > window_start
-                ]
+                self.requests[key] = [ts for ts in self.requests[key] if ts > window_start]
                 if not self.requests[key]:
                     del self.requests[key]
 

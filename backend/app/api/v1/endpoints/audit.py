@@ -1,6 +1,7 @@
 """
 Audit log API endpoints.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -19,6 +20,7 @@ router = APIRouter(prefix="/audit", tags=["Audit Logs"])
 # Pydantic models
 class AuditLogResponse(BaseModel):
     """Audit log response."""
+
     log_id: int
     event_time: datetime
     user_id: int | None
@@ -34,6 +36,7 @@ class AuditLogResponse(BaseModel):
 
 class AuditLogListResponse(BaseModel):
     """Audit log list response."""
+
     items: list[AuditLogResponse]
     total: int
     page: int
@@ -42,11 +45,13 @@ class AuditLogListResponse(BaseModel):
 
 class EventTypesResponse(BaseModel):
     """Event types response."""
+
     event_types: list[str]
 
 
 class ResourceTypesResponse(BaseModel):
     """Resource types response."""
+
     resource_types: list[str]
 
 

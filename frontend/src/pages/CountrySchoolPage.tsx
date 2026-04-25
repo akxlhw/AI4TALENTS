@@ -209,7 +209,7 @@ const CountrySchoolPage: React.FC = () => {
     fetchCountries()
     fetchSummary()
     fetchSchools()
-  }, [])
+  }, [fetchCountries, fetchSchools, fetchSummary])
 
   // CR-01: 根据URL中的country_code自动切换区域标签
   useEffect(() => {

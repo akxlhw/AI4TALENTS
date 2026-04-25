@@ -2,13 +2,14 @@
 Tests for Tech Domain API endpoints.
 技术领域API测试
 """
+
 import pytest
 from httpx import AsyncClient
 
-from app.models.iam import UserAccount
-from app.models.tech_domain import TechDomain, TechDirection
-from app.models.enums import UserRoleType
 from app.core.auth import hash_password
+from app.models.enums import UserRoleType
+from app.models.iam import UserAccount
+from app.models.tech_domain import TechDirection, TechDomain
 
 
 @pytest.fixture
@@ -84,9 +85,7 @@ class TestListTechDomains:
     """Tests for GET /tech-domains endpoint."""
 
     @pytest.mark.asyncio
-    async def test_list_tech_domains_success(
-        self, client: AsyncClient, test_tech_domain
-    ):
+    async def test_list_tech_domains_success(self, client: AsyncClient, test_tech_domain):
         """Test listing tech domains."""
         response = await client.get("/api/v1/tech-domains")
 
@@ -106,9 +105,7 @@ class TestListTechDomains:
         assert response.status_code == 200
         data = response.json()
 
-        ai_domain = next(
-            (d for d in data["items"] if d["domain_code"] == "AI"), None
-        )
+        ai_domain = next((d for d in data["items"] if d["domain_code"] == "AI"), None)
         assert ai_domain is not None
         assert len(ai_domain["directions"]) >= 1
         assert ai_domain["directions"][0]["direction_name"] == "机器学习"
@@ -129,9 +126,7 @@ class TestGetTechDomain:
     """Tests for GET /tech-domains/{domain_id} endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_tech_domain_success(
-        self, client: AsyncClient, test_tech_domain
-    ):
+    async def test_get_tech_domain_success(self, client: AsyncClient, test_tech_domain):
         """Test getting a specific tech domain."""
         domain_id = test_tech_domain["domain"].tech_domain_id
 
@@ -227,9 +222,7 @@ class TestOverallSchools:
     @pytest.mark.asyncio
     async def test_get_overall_schools_pagination(self, client: AsyncClient):
         """Test pagination for school distribution."""
-        response = await client.get(
-            "/api/v1/tech-domains/overall-schools?page=1&page_size=10"
-        )
+        response = await client.get("/api/v1/tech-domains/overall-schools?page=1&page_size=10")
 
         assert response.status_code == 200
         data = response.json()
@@ -253,9 +246,7 @@ class TestOverallTalents:
         assert "page_size" in data
 
     @pytest.mark.asyncio
-    async def test_get_overall_talents_with_filters(
-        self, client: AsyncClient
-    ):
+    async def test_get_overall_talents_with_filters(self, client: AsyncClient):
         """Test getting talent list with filters."""
         response = await client.get(
             "/api/v1/tech-domains/overall-talents",
@@ -272,9 +263,7 @@ class TestOverallTalents:
     @pytest.mark.asyncio
     async def test_get_overall_talents_pagination(self, client: AsyncClient):
         """Test pagination for talent list."""
-        response = await client.get(
-            "/api/v1/tech-domains/overall-talents?page=1&page_size=10"
-        )
+        response = await client.get("/api/v1/tech-domains/overall-talents?page=1&page_size=10")
 
         assert response.status_code == 200
         data = response.json()
@@ -286,9 +275,7 @@ class TestDomainStats:
     """Tests for GET /tech-domains/{domain_id}/stats endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_domain_stats_success(
-        self, client: AsyncClient, test_tech_domain
-    ):
+    async def test_get_domain_stats_success(self, client: AsyncClient, test_tech_domain):
         """Test getting domain statistics."""
         domain_id = test_tech_domain["domain"].tech_domain_id
 
@@ -312,15 +299,11 @@ class TestDomainCountries:
     """Tests for GET /tech-domains/{domain_id}/countries endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_domain_countries_success(
-        self, client: AsyncClient, test_tech_domain
-    ):
+    async def test_get_domain_countries_success(self, client: AsyncClient, test_tech_domain):
         """Test getting domain country distribution."""
         domain_id = test_tech_domain["domain"].tech_domain_id
 
-        response = await client.get(
-            f"/api/v1/tech-domains/{domain_id}/countries"
-        )
+        response = await client.get(f"/api/v1/tech-domains/{domain_id}/countries")
 
         assert response.status_code == 200
         data = response.json()
@@ -339,15 +322,11 @@ class TestDomainSchools:
     """Tests for GET /tech-domains/{domain_id}/schools endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_domain_schools_success(
-        self, client: AsyncClient, test_tech_domain
-    ):
+    async def test_get_domain_schools_success(self, client: AsyncClient, test_tech_domain):
         """Test getting domain school distribution."""
         domain_id = test_tech_domain["domain"].tech_domain_id
 
-        response = await client.get(
-            f"/api/v1/tech-domains/{domain_id}/schools"
-        )
+        response = await client.get(f"/api/v1/tech-domains/{domain_id}/schools")
 
         assert response.status_code == 200
         data = response.json()
@@ -355,9 +334,7 @@ class TestDomainSchools:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_get_domain_schools_with_filters(
-        self, client: AsyncClient, test_tech_domain
-    ):
+    async def test_get_domain_schools_with_filters(self, client: AsyncClient, test_tech_domain):
         """Test getting schools with country filter."""
         domain_id = test_tech_domain["domain"].tech_domain_id
 
@@ -373,15 +350,11 @@ class TestDomainTalents:
     """Tests for GET /tech-domains/{domain_id}/talents endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_domain_talents_success(
-        self, client: AsyncClient, test_tech_domain
-    ):
+    async def test_get_domain_talents_success(self, client: AsyncClient, test_tech_domain):
         """Test getting domain talent list."""
         domain_id = test_tech_domain["domain"].tech_domain_id
 
-        response = await client.get(
-            f"/api/v1/tech-domains/{domain_id}/talents"
-        )
+        response = await client.get(f"/api/v1/tech-domains/{domain_id}/talents")
 
         assert response.status_code == 200
         data = response.json()
@@ -389,9 +362,7 @@ class TestDomainTalents:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_get_domain_talents_with_filters(
-        self, client: AsyncClient, test_tech_domain
-    ):
+    async def test_get_domain_talents_with_filters(self, client: AsyncClient, test_tech_domain):
         """Test getting talents with filters."""
         domain_id = test_tech_domain["domain"].tech_domain_id
 

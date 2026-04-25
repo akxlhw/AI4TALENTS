@@ -1,6 +1,7 @@
 """
 Database connection and session management.
 """
+
 from collections.abc import AsyncGenerator, Generator
 from typing import Any
 
@@ -79,6 +80,7 @@ SyncSessionLocal = sessionmaker(
 
 class Base(DeclarativeBase):
     """Base class for all SQLAlchemy models."""
+
     pass
 
 

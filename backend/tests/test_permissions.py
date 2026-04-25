@@ -2,14 +2,14 @@
 Tests for Permissions API endpoints.
 权限隔离API测试
 """
+
 import pytest
 from httpx import AsyncClient
-from datetime import datetime
 
-from app.models.iam import UserAccount, UserSchoolScope
-from app.models.school import School
-from app.models.enums import UserRoleType
 from app.core.auth import hash_password
+from app.models.enums import UserRoleType
+from app.models.iam import UserAccount
+from app.models.school import School
 
 
 @pytest.fixture
@@ -121,9 +121,7 @@ class TestRoleBasedAccess:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_normal_user_cannot_list_users(
-        self, client: AsyncClient, normal_user_token
-    ):
+    async def test_normal_user_cannot_list_users(self, client: AsyncClient, normal_user_token):
         """Test that normal user cannot list users."""
         response = await client.get(
             "/api/v1/users",
@@ -159,9 +157,7 @@ class TestRoleBasedAccess:
         assert data["role"] == "user"
 
     @pytest.mark.asyncio
-    async def test_normal_user_cannot_create_user(
-        self, client: AsyncClient, normal_user_token
-    ):
+    async def test_normal_user_cannot_create_user(self, client: AsyncClient, normal_user_token):
         """Test that normal user cannot create users."""
         response = await client.post(
             "/api/v1/users",
@@ -280,9 +276,7 @@ class TestThreeDimensionalScopes:
     """Tests for three-dimensional permission scopes."""
 
     @pytest.mark.asyncio
-    async def test_get_accessible_schools(
-        self, client: AsyncClient, normal_user_token
-    ):
+    async def test_get_accessible_schools(self, client: AsyncClient, normal_user_token):
         """Test getting accessible schools."""
         response = await client.get(
             "/api/v1/users/me/scopes/schools",
@@ -294,9 +288,7 @@ class TestThreeDimensionalScopes:
         assert isinstance(data, list)
 
     @pytest.mark.asyncio
-    async def test_get_accessible_countries(
-        self, client: AsyncClient, normal_user_token
-    ):
+    async def test_get_accessible_countries(self, client: AsyncClient, normal_user_token):
         """Test getting accessible countries."""
         response = await client.get(
             "/api/v1/users/me/scopes/countries",
@@ -308,9 +300,7 @@ class TestThreeDimensionalScopes:
         assert isinstance(data, list)
 
     @pytest.mark.asyncio
-    async def test_get_accessible_tech_domains(
-        self, client: AsyncClient, normal_user_token
-    ):
+    async def test_get_accessible_tech_domains(self, client: AsyncClient, normal_user_token):
         """Test getting accessible tech domains."""
         response = await client.get(
             "/api/v1/users/me/scopes/tech-domains",
@@ -322,9 +312,7 @@ class TestThreeDimensionalScopes:
         assert isinstance(data, list)
 
     @pytest.mark.asyncio
-    async def test_check_school_access(
-        self, client: AsyncClient, normal_user_token, test_school
-    ):
+    async def test_check_school_access(self, client: AsyncClient, normal_user_token, test_school):
         """Test checking school access."""
         response = await client.get(
             f"/api/v1/users/me/scopes/check/{test_school.school_id}",
@@ -367,9 +355,7 @@ class TestDefaultView:
         assert data["default_view"] == "country_school"
 
     @pytest.mark.asyncio
-    async def test_update_default_view_invalid(
-        self, client: AsyncClient, normal_user_token
-    ):
+    async def test_update_default_view_invalid(self, client: AsyncClient, normal_user_token):
         """Test updating with invalid view value."""
         response = await client.put(
             "/api/v1/users/me/default-view",
@@ -384,9 +370,7 @@ class TestSuperAdminPrivileges:
     """Tests for super admin specific privileges."""
 
     @pytest.mark.asyncio
-    async def test_super_admin_can_create_admin(
-        self, client: AsyncClient, super_admin_token
-    ):
+    async def test_super_admin_can_create_admin(self, client: AsyncClient, super_admin_token):
         """Test that super admin can create admin users."""
         response = await client.post(
             "/api/v1/users",
@@ -404,9 +388,7 @@ class TestSuperAdminPrivileges:
         assert data["role"] == "admin"
 
     @pytest.mark.asyncio
-    async def test_admin_cannot_create_super_admin(
-        self, client: AsyncClient, admin_token
-    ):
+    async def test_admin_cannot_create_super_admin(self, client: AsyncClient, admin_token):
         """Test that regular admin cannot create super admin."""
         response = await client.post(
             "/api/v1/users",
@@ -438,9 +420,7 @@ class TestUserDeactivation:
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_admin_cannot_deactivate_self(
-        self, client: AsyncClient, admin_token, test_admin
-    ):
+    async def test_admin_cannot_deactivate_self(self, client: AsyncClient, admin_token, test_admin):
         """Test that admin cannot deactivate themselves."""
         response = await client.delete(
             f"/api/v1/users/{test_admin.user_id}",

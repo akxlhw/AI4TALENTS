@@ -2,6 +2,7 @@
 Data version schemas.
 数据版本相关 DTO
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -10,8 +11,10 @@ from pydantic import BaseModel, Field
 
 # ============ Data Version Schemas ============
 
+
 class DataVersionResponse(BaseModel):
     """Data version response."""
+
     version_id: int = Field(description="版本ID")
     version_code: str = Field(description="版本编码")
     version_name: str = Field(description="版本名称")
@@ -34,6 +37,7 @@ class DataVersionResponse(BaseModel):
 
 class DataVersionListResponse(BaseModel):
     """Data version list response."""
+
     items: list[DataVersionResponse] = Field(description="版本列表")
     total: int = Field(description="总数")
     page: int = Field(description="当前页码")
@@ -42,9 +46,12 @@ class DataVersionListResponse(BaseModel):
 
 class CreateVersionRequest(BaseModel):
     """Create data version request."""
+
     version_code: str = Field(..., min_length=1, max_length=50, description="版本编码")
     version_name: str = Field(..., min_length=1, max_length=100, description="版本名称")
-    version_type: str = Field(default="snapshot", pattern="^(snapshot|release)$", description="版本类型: snapshot/release")
+    version_type: str = Field(
+        default="snapshot", pattern="^(snapshot|release)$", description="版本类型: snapshot/release"
+    )
     base_version_id: int | None = Field(default=None, description="基线版本ID")
     source_task_id: int | None = Field(default=None, description="来源采集任务ID")
     description: str | None = Field(default=None, description="版本描述")
@@ -52,13 +59,16 @@ class CreateVersionRequest(BaseModel):
 
 class PublishVersionRequest(BaseModel):
     """Publish version request."""
+
     notes: str | None = Field(default=None, description="发布备注")
 
 
 # ============ Publish Record Schemas ============
 
+
 class PublishRecordResponse(BaseModel):
     """Publish record response."""
+
     publish_id: int = Field(description="发布记录ID")
     version_id: int = Field(description="版本ID")
     action: str = Field(description="操作类型: publish/rollback/activate/deactivate")
@@ -73,26 +83,32 @@ class PublishRecordResponse(BaseModel):
 
 class PublishRecordListResponse(BaseModel):
     """Publish record list response."""
+
     items: list[PublishRecordResponse] = Field(description="发布记录列表")
     total: int = Field(description="总数")
 
 
 # ============ Correction Schemas ============
 
+
 class CreateCorrectionRequest(BaseModel):
     """Create correction request."""
+
     target_type: str = Field(..., pattern="^(talent|school|tech_tag)$", description="修正目标类型")
     target_id: int = Field(..., description="目标ID")
     field_name: str = Field(..., min_length=1, max_length=50, description="字段名称")
     original_value: str | None = Field(default=None, description="原始值")
     corrected_value: str | None = Field(default=None, description="修正值")
-    correction_type: str = Field(default="manual", pattern="^(manual|system|import)$", description="修正类型")
+    correction_type: str = Field(
+        default="manual", pattern="^(manual|system|import)$", description="修正类型"
+    )
     reason: str | None = Field(default=None, description="修正原因")
     source: str | None = Field(default=None, description="数据来源")
 
 
 class CorrectionResponse(BaseModel):
     """Correction response."""
+
     correction_id: int = Field(description="修正记录ID")
     target_type: str = Field(description="目标类型")
     target_id: int = Field(description="目标ID")
@@ -112,6 +128,7 @@ class CorrectionResponse(BaseModel):
 
 class CorrectionListResponse(BaseModel):
     """Correction list response."""
+
     items: list[CorrectionResponse] = Field(description="修正记录列表")
     total: int = Field(description="总数")
     page: int = Field(description="当前页码")
@@ -120,8 +137,10 @@ class CorrectionListResponse(BaseModel):
 
 # ============ Quality Summary Schemas ============
 
+
 class QualitySummaryResponse(BaseModel):
     """Quality summary response."""
+
     summary_id: int = Field(description="摘要ID")
     version_id: int = Field(description="版本ID")
     summary_date: datetime = Field(description="摘要日期")
@@ -162,6 +181,7 @@ class QualitySummaryResponse(BaseModel):
 
 class QualityMetricsResponse(BaseModel):
     """Quality metrics for dashboard."""
+
     # Talent metrics with percentages
     talent_total: int = Field(description="人才总数")
     talent_orcid_rate: float = Field(description="ORCID覆盖率")

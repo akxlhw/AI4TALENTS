@@ -1,6 +1,7 @@
 """
 Authentication API endpoints.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -30,12 +31,14 @@ security = HTTPBearer(auto_error=False)
 # Pydantic models
 class LoginRequest(BaseModel):
     """Login request body."""
+
     username: str = Field(..., min_length=1, max_length=100)
     password: str = Field(..., min_length=1, max_length=100)
 
 
 class LoginResponse(BaseModel):
     """Login response."""
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -45,11 +48,13 @@ class LoginResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     """Refresh token request."""
+
     refresh_token: str
 
 
 class UserInfo(BaseModel):
     """User information."""
+
     user_id: int
     username: str
     email: str
@@ -60,12 +65,14 @@ class UserInfo(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     """Change password request."""
+
     current_password: str
     new_password: str = Field(..., min_length=8, max_length=100)
 
 
 class CurrentUser(BaseModel):
     """Current user response."""
+
     user_id: int
     username: str
     email: str
@@ -228,6 +235,7 @@ async def login(
 
 @router.post(
     "/logout",
+    response_model=SuccessResponse,
     summary="用户登出",
     description="登出当前用户（客户端应删除令牌）",
 )
@@ -332,6 +340,7 @@ async def get_current_user_info(
 
 @router.post(
     "/change-password",
+    response_model=SuccessResponse,
     summary="修改密码",
     description="修改当前用户密码",
 )

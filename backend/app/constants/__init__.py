@@ -1,6 +1,7 @@
 """
 Constants package for static configuration data.
 """
+
 from app.constants.collect_task import (
     DEFAULT_START_YEAR,
     MIN_START_YEAR,

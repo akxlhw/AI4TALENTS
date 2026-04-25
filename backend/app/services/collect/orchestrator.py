@@ -1,12 +1,13 @@
 """
 Collection orchestrator for managing the complete collection pipeline.
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, TypedDict
 
 from sqlalchemy import case, func, select
@@ -38,6 +39,7 @@ class PhaseProgress:
     用于统一管理采集流水线各阶段的进度显示。
     进度从 0% 到 100%，每个阶段分配一个合理的百分比区间。
     """
+
     # 任务启动
     TASK_START = 0
 
@@ -87,6 +89,7 @@ class NewTalentInfo(TypedDict):
 
     用于 _fetch_selected_works 方法的参数类型定义。
     """
+
     talent_id: int
     openalex_author_id: str
     works_count: int
@@ -109,7 +112,14 @@ class CollectionOrchestrator:
     Phase 11: 构建统计数据
     """
 
-    def __init__(self, session: AsyncSession, work_fetcher=None, author_fetcher=None, institution_fetcher=None, email: str | None = None):
+    def __init__(
+        self,
+        session: AsyncSession,
+        work_fetcher=None,
+        author_fetcher=None,
+        institution_fetcher=None,
+        email: str | None = None,
+    ):
         self.session = session
 
         # Repositories
@@ -172,9 +182,7 @@ class CollectionOrchestrator:
         self.progress_tracker.reset_logs()
 
         # Get task
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
         if not task:
             progress.status = "failed"
@@ -188,7 +196,9 @@ class CollectionOrchestrator:
 
         try:
             # Phase 0: Estimate total works count
-            await self.progress_tracker.update_progress(task, "预估任务规模", PhaseProgress.ESTIMATE)
+            await self.progress_tracker.update_progress(
+                task, "预估任务规模", PhaseProgress.ESTIMATE
+            )
             estimated_total = await self._estimate_total_works(task)
 
             # 处理预估失败的情况
@@ -210,7 +220,9 @@ class CollectionOrchestrator:
                 return progress
 
             # Phase 1: Execute venue sub-tasks
-            await self.progress_tracker.update_progress(task, "采集论文数据", PhaseProgress.COLLECT_START)
+            await self.progress_tracker.update_progress(
+                task, "采集论文数据", PhaseProgress.COLLECT_START
+            )
             await self._execute_venue_sub_tasks(task, progress)
 
             # Update total_records immediately after Phase 1 completes
@@ -224,7 +236,9 @@ class CollectionOrchestrator:
                 return progress
 
             # Phase 2: Fetch authors from collected author IDs
-            await self.progress_tracker.update_progress(task, "获取作者数据", PhaseProgress.FETCH_AUTHORS)
+            await self.progress_tracker.update_progress(
+                task, "获取作者数据", PhaseProgress.FETCH_AUTHORS
+            )
             await self._fetch_all_authors(task_id, progress)
 
             # 检查取消
@@ -233,7 +247,9 @@ class CollectionOrchestrator:
                 return progress
 
             # Phase 3: Fetch institutions from collected institution IDs
-            await self.progress_tracker.update_progress(task, "获取机构数据", PhaseProgress.FETCH_INSTITUTIONS)
+            await self.progress_tracker.update_progress(
+                task, "获取机构数据", PhaseProgress.FETCH_INSTITUTIONS
+            )
             await self._fetch_all_institutions(task_id, progress)
 
             # 检查取消
@@ -242,7 +258,9 @@ class CollectionOrchestrator:
                 return progress
 
             # Phase 4: Normalize schools
-            await self.progress_tracker.update_progress(task, "标准化学校", PhaseProgress.NORMALIZE_SCHOOLS)
+            await self.progress_tracker.update_progress(
+                task, "标准化学校", PhaseProgress.NORMALIZE_SCHOOLS
+            )
             await self._normalize_schools(task_id, progress)
 
             # 检查取消
@@ -251,7 +269,9 @@ class CollectionOrchestrator:
                 return progress
 
             # Phase 5: Normalize authors
-            await self.progress_tracker.update_progress(task, "标准化作者", PhaseProgress.NORMALIZE_AUTHORS)
+            await self.progress_tracker.update_progress(
+                task, "标准化作者", PhaseProgress.NORMALIZE_AUTHORS
+            )
             await self._normalize_authors(task_id, progress)
 
             # 检查取消
@@ -260,7 +280,9 @@ class CollectionOrchestrator:
                 return progress
 
             # Phase 6: Calculate tech belong relationships
-            await self.progress_tracker.update_progress(task, "计算技术归属", PhaseProgress.CALCULATE_TECH_BELONG)
+            await self.progress_tracker.update_progress(
+                task, "计算技术归属", PhaseProgress.CALCULATE_TECH_BELONG
+            )
             await self._calculate_tech_belong(task_id, task.tech_domain_id)
 
             # 检查取消
@@ -269,7 +291,9 @@ class CollectionOrchestrator:
                 return progress
 
             # Phase 7: Sync to serving layer (delegated to sync service)
-            await self.progress_tracker.update_progress(task, "同步到服务层", PhaseProgress.SYNC_SERVING_LAYER)
+            await self.progress_tracker.update_progress(
+                task, "同步到服务层", PhaseProgress.SYNC_SERVING_LAYER
+            )
             new_talents = await self._sync_to_serving_layer(task_id, task.tech_domain_id, progress)
 
             # 检查取消
@@ -278,7 +302,9 @@ class CollectionOrchestrator:
                 return progress
 
             # Phase 8: Fetch selected works for NEW talents
-            await self.progress_tracker.update_progress(task, "获取代表作品", PhaseProgress.FETCH_SELECTED_WORKS)
+            await self.progress_tracker.update_progress(
+                task, "获取代表作品", PhaseProgress.FETCH_SELECTED_WORKS
+            )
             await self._fetch_selected_works(new_talents, progress)
 
             # 检查取消
@@ -287,7 +313,9 @@ class CollectionOrchestrator:
                 return progress
 
             # Phase 9: Update talent topic_tags from tech tags
-            await self.progress_tracker.update_progress(task, "更新技术标签", PhaseProgress.UPDATE_TOPIC_TAGS)
+            await self.progress_tracker.update_progress(
+                task, "更新技术标签", PhaseProgress.UPDATE_TOPIC_TAGS
+            )
             await self._update_talent_topic_tags(task_id, progress)
 
             # 检查取消
@@ -296,7 +324,9 @@ class CollectionOrchestrator:
                 return progress
 
             # Phase 10: Update school statistics
-            await self.progress_tracker.update_progress(task, "更新学校统计", PhaseProgress.UPDATE_SCHOOL_STATS)
+            await self.progress_tracker.update_progress(
+                task, "更新学校统计", PhaseProgress.UPDATE_SCHOOL_STATS
+            )
             await self._update_school_statistics(task_id, progress)
 
             # 检查取消
@@ -305,7 +335,9 @@ class CollectionOrchestrator:
                 return progress
 
             # Phase 11: Build statistics for homepage
-            await self.progress_tracker.update_progress(task, "构建统计数据", PhaseProgress.BUILD_STATISTICS)
+            await self.progress_tracker.update_progress(
+                task, "构建统计数据", PhaseProgress.BUILD_STATISTICS
+            )
             await self._build_statistics(task_id, progress)
 
             # Update task statistics
@@ -350,7 +382,7 @@ class CollectionOrchestrator:
                 "error": str(e),
                 "type": type(e).__name__,
                 "traceback": traceback.format_exc(),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
             await self.progress_tracker.update_task_status(task, "failed", str(e))
             progress.status = "failed"
@@ -410,21 +442,25 @@ class CollectionOrchestrator:
                         venue, year_from=year_from, year_to=year_to
                     )
                     # 存储到子任务的 estimated_works 字段
-                    if hasattr(sub_task, 'estimated_works'):
+                    if hasattr(sub_task, "estimated_works"):
                         sub_task.estimated_works = count
                     total += count
-                    self.progress_tracker.add_log("info", f"{venue.venue_name}: 预估 {count} 篇论文")
+                    self.progress_tracker.add_log(
+                        "info", f"{venue.venue_name}: 预估 {count} 篇论文"
+                    )
                 except Exception as e:
                     failed_count += 1
-                    self.progress_tracker.add_log("warning", f"{venue.venue_name if venue else sub_task.venue_id}: 预估失败 - {str(e)}")
+                    self.progress_tracker.add_log(
+                        "warning",
+                        f"{venue.venue_name if venue else sub_task.venue_id}: 预估失败 - {str(e)}",
+                    )
 
         await self.session.flush()
 
         # 如果所有预估都失败，返回 -1 标记预估失败
         if failed_count == len(sub_tasks) and len(sub_tasks) > 0:
             self.progress_tracker.add_log(
-                "warning",
-                "所有 Venue 预估失败，进度显示将基于 Venue 数量而非论文数量"
+                "warning", "所有 Venue 预估失败，进度显示将基于 Venue 数量而非论文数量"
             )
             return -1
 
@@ -433,7 +469,9 @@ class CollectionOrchestrator:
     async def _execute_venue_sub_tasks(self, task: CollectTask, progress: CollectionProgress):
         """Phase 1: Execute all venue sub-tasks"""
         progress.current_step = "Fetching works from venues"
-        self.progress_tracker.add_log("info", f"开始执行 Venue 采集，共 {progress.total_venues} 个子任务")
+        self.progress_tracker.add_log(
+            "info", f"开始执行 Venue 采集，共 {progress.total_venues} 个子任务"
+        )
 
         sub_tasks = await self.sub_task_repo.get_by_task(task.task_id)
         progress.total_venues = len(sub_tasks)
@@ -469,7 +507,9 @@ class CollectionOrchestrator:
                 error_msg = f"Venue {sub_task.venue_id}: {str(e)}"
                 progress.errors.append(error_msg)
                 self.progress_tracker.add_log("error", f"采集失败: {venue_name}", {"error": str(e)})
-                await self.sub_task_repo.update_status(sub_task.sub_task_id, "failed", error_message=str(e))
+                await self.sub_task_repo.update_status(
+                    sub_task.sub_task_id, "failed", error_message=str(e)
+                )
                 # Commit on error to save status
                 await self.session.commit()
 
@@ -496,10 +536,11 @@ class CollectionOrchestrator:
         # Fetch missing authors
         if missing_ids:
             author_progress = await self.author_fetcher.fetch_authors_by_ids(
-                author_ids=missing_ids,
-                task_id=task_id
+                author_ids=missing_ids, task_id=task_id
             )
-            self.progress_tracker.add_log("info", f"获取作者: {author_progress.fetched}/{len(all_author_ids)}")
+            self.progress_tracker.add_log(
+                "info", f"获取作者: {author_progress.fetched}/{len(all_author_ids)}"
+            )
         else:
             logger.debug(f"All {len(all_author_ids)} authors already in database")
 
@@ -551,10 +592,11 @@ class CollectionOrchestrator:
         # Fetch missing institutions
         if missing_ids:
             inst_progress = await self.institution_fetcher.fetch_institutions_by_ids(
-                institution_ids=missing_ids,
-                task_id=task_id
+                institution_ids=missing_ids, task_id=task_id
             )
-            self.progress_tracker.add_log("info", f"获取机构: {inst_progress.fetched}/{len(institution_ids)}")
+            self.progress_tracker.add_log(
+                "info", f"获取机构: {inst_progress.fetched}/{len(institution_ids)}"
+            )
         else:
             logger.debug(f"All {len(institution_ids)} institutions already in database")
 
@@ -587,16 +629,11 @@ class CollectionOrchestrator:
         for sub_task in sub_tasks:
             if sub_task.status == "completed":
                 await self.tech_belong_calculator.calculate_for_venue(
-                    venue_id=sub_task.venue_id,
-                    tech_domain_id=tech_domain_id,
-                    task_id=task_id
+                    venue_id=sub_task.venue_id, tech_domain_id=tech_domain_id, task_id=task_id
                 )
 
     async def _sync_to_serving_layer(
-        self,
-        task_id: int,
-        tech_domain_id: int,
-        progress: CollectionProgress
+        self, task_id: int, tech_domain_id: int, progress: CollectionProgress
     ) -> list[dict]:
         """Phase 7: Sync to serving layer (calls external sync service)
 
@@ -616,7 +653,7 @@ class CollectionOrchestrator:
         stats = await sync.sync_all_for_task(
             task_id=task_id,
             tech_domain_id=tech_domain_id,
-            default_tech_direction_id=default_direction_id
+            default_tech_direction_id=default_direction_id,
         )
 
         # Update progress
@@ -635,15 +672,15 @@ class CollectionOrchestrator:
 
         # Log summary
         if progress.created_talents > 0 or progress.synced_authors > 0:
-            self.progress_tracker.add_log("info", f"入库人才: {progress.created_talents}, 更新: {progress.updated_talents}")
+            self.progress_tracker.add_log(
+                "info", f"入库人才: {progress.created_talents}, 更新: {progress.updated_talents}"
+            )
 
         # 返回新创建的学者列表（用于获取代表作品）
         return stats.get("new_talents_for_works", [])
 
     async def _fetch_selected_works(
-        self,
-        new_talents: list[NewTalentInfo],
-        progress: CollectionProgress
+        self, new_talents: list[NewTalentInfo], progress: CollectionProgress
     ):
         """Phase 8: Fetch selected works for newly created talents
 
@@ -683,8 +720,7 @@ class CollectionOrchestrator:
 
                     # 获取代表作品（按引用数排序，最多 10 篇）
                     works = await self.work_fetcher.fetch_author_top_works(
-                        openalex_author_id=openalex_author_id,
-                        max_works=10
+                        openalex_author_id=openalex_author_id, max_works=10
                     )
 
                     if not works:
@@ -699,11 +735,19 @@ class CollectionOrchestrator:
                             talent_id=talent_id,
                             title=work.get("title", "")[:500],  # 截断超长标题
                             publication_year=work.get("publication_year"),
-                            venue_name=work.get("venue_name", "")[:255] if work.get("venue_name") else None,  # 截断超长期刊名
+                            venue_name=(
+                                work.get("venue_name", "")[:255] if work.get("venue_name") else None
+                            ),  # 截断超长期刊名
                             citation_count=work.get("citation_count", 0),
-                            source_work_id=work.get("source_work_id", "")[:100] if work.get("source_work_id") else None,  # 截断超长 ID
-                            doi=work.get("doi", "")[:100] if work.get("doi") else None,  # 截断超长 DOI
-                            display_order=order
+                            source_work_id=(
+                                work.get("source_work_id", "")[:100]
+                                if work.get("source_work_id")
+                                else None
+                            ),  # 截断超长 ID
+                            doi=(
+                                work.get("doi", "")[:100] if work.get("doi") else None
+                            ),  # 截断超长 DOI
+                            display_order=order,
                         )
                         self.session.add(selected_work)
                         total_inserted += 1
@@ -725,14 +769,15 @@ class CollectionOrchestrator:
         for error in errors:
             self.progress_tracker.add_log("warning", f"获取代表作品失败: {error}")
 
-        self.progress_tracker.add_log("info", f"代表作品获取完成: {total_fetched} 位教授，{total_inserted} 篇作品")
+        self.progress_tracker.add_log(
+            "info", f"代表作品获取完成: {total_fetched} 位教授，{total_inserted} 篇作品"
+        )
 
     async def _update_talent_topic_tags(self, task_id: int, progress: CollectionProgress):
         """Phase 9: Update talent topic_tags from OpenAlex topics
 
         以 OpenAlex 返回的研究主题为准，不再自动根据 venue 打标签。
         """
-        from sqlalchemy.orm import selectinload
 
         from app.models.talent import Talent
         from app.models.tech_domain import TalentTechTag
@@ -753,9 +798,9 @@ class CollectionOrchestrator:
 
         # 先获取去重后的 talent_id 列表（避免 JSON 列的 DISTINCT 问题）
         distinct_ids_result = await self.session.execute(
-            select(TalentTechTag.talent_id).where(
-                TalentTechTag.tech_domain_id == tech_domain_id
-            ).distinct()
+            select(TalentTechTag.talent_id)
+            .where(TalentTechTag.tech_domain_id == tech_domain_id)
+            .distinct()
         )
         talent_ids = [row[0] for row in distinct_ids_result.all()]
 
@@ -768,7 +813,7 @@ class CollectionOrchestrator:
         talents = await batch_in_query_flat(
             self.session,
             lambda batch: select(Talent).where(Talent.talent_id.in_(batch)),
-            talent_ids
+            talent_ids,
         )
 
         for talent in talents:
@@ -803,8 +848,7 @@ class CollectionOrchestrator:
         if affected_school_ids:
             # Incremental update: only update affected schools
             self.progress_tracker.add_log(
-                "info",
-                f"增量更新 {len(affected_school_ids)} 所受影响的学校"
+                "info", f"增量更新 {len(affected_school_ids)} 所受影响的学校"
             )
 
             # 分批处理，避免 PostgreSQL 参数上限 (32767)
@@ -814,7 +858,7 @@ class CollectionOrchestrator:
             school_id_list = list(affected_school_ids)
 
             for batch_start in range(0, len(school_id_list), SCHOOL_BATCH_SIZE):
-                batch_ids = school_id_list[batch_start:batch_start + SCHOOL_BATCH_SIZE]
+                batch_ids = school_id_list[batch_start : batch_start + SCHOOL_BATCH_SIZE]
 
                 # Reset counts for affected schools only
                 await self.session.execute(
@@ -827,12 +871,15 @@ class CollectionOrchestrator:
                 result = await self.session.execute(
                     select(
                         Talent.school_id,
-                        func.count(case((Talent.role_type == 'professor', 1))).label('professor_count'),
-                        func.count(case((Talent.role_type.in_(['student', 'graduate']), 1))).label('student_count')
-                    ).where(
-                        Talent.school_id.in_(batch_ids),
-                        Talent.is_visible.is_(True)
-                    ).group_by(Talent.school_id)
+                        func.count(case((Talent.role_type == "professor", 1))).label(
+                            "professor_count"
+                        ),
+                        func.count(case((Talent.role_type.in_(["student", "graduate"]), 1))).label(
+                            "student_count"
+                        ),
+                    )
+                    .where(Talent.school_id.in_(batch_ids), Talent.is_visible.is_(True))
+                    .group_by(Talent.school_id)
                 )
 
                 for row in result:
@@ -846,10 +893,7 @@ class CollectionOrchestrator:
                         updated_schools += 1
         else:
             # Fallback: Full update (first run or no tracked schools)
-            self.progress_tracker.add_log(
-                "info",
-                "执行全量学校统计更新"
-            )
+            self.progress_tracker.add_log("info", "执行全量学校统计更新")
 
             # Reset all school counts
             await self.session.execute(
@@ -860,12 +904,13 @@ class CollectionOrchestrator:
             result = await self.session.execute(
                 select(
                     Talent.school_id,
-                    func.count(case((Talent.role_type == 'professor', 1))).label('professor_count'),
-                    func.count(case((Talent.role_type.in_(['student', 'graduate']), 1))).label('student_count')
-                ).where(
-                    Talent.school_id.isnot(None),
-                    Talent.is_visible.is_(True)
-                ).group_by(Talent.school_id)
+                    func.count(case((Talent.role_type == "professor", 1))).label("professor_count"),
+                    func.count(case((Talent.role_type.in_(["student", "graduate"]), 1))).label(
+                        "student_count"
+                    ),
+                )
+                .where(Talent.school_id.isnot(None), Talent.is_visible.is_(True))
+                .group_by(Talent.school_id)
             )
 
             updated_schools = 0
@@ -898,9 +943,9 @@ class CollectionOrchestrator:
             result = await builder.build()
 
             if result.success:
-                self.progress_tracker.add_log("info", "统计数据生成完成", {
-                    "records_created": result.records_created
-                })
+                self.progress_tracker.add_log(
+                    "info", "统计数据生成完成", {"records_created": result.records_created}
+                )
             else:
                 self.progress_tracker.add_log("warning", f"统计数据生成失败: {result.errors}")
         except Exception as e:
@@ -916,10 +961,12 @@ class CollectionOrchestrator:
             默认技术方向ID，如果不存在返回 None
         """
         result = await self.session.execute(
-            select(TechDirection.tech_direction_id).where(
-                TechDirection.tech_domain_id == tech_domain_id,
-                TechDirection.is_enabled.is_(True)
-            ).order_by(TechDirection.sort_order).limit(1)
+            select(TechDirection.tech_direction_id)
+            .where(
+                TechDirection.tech_domain_id == tech_domain_id, TechDirection.is_enabled.is_(True)
+            )
+            .order_by(TechDirection.sort_order)
+            .limit(1)
         )
         return result.scalar_one_or_none()
 
@@ -938,7 +985,9 @@ class CollectionOrchestrator:
         tech_domain = td_result.scalar_one_or_none()
 
         if not tech_domain:
-            logger.warning(f"Tech domain {tech_domain_id} not found, cannot create default direction")
+            logger.warning(
+                f"Tech domain {tech_domain_id} not found, cannot create default direction"
+            )
             return None
 
         new_direction = TechDirection(
@@ -946,7 +995,7 @@ class CollectionOrchestrator:
             direction_name=f"{tech_domain.domain_name}（默认）",
             tech_domain_id=tech_domain_id,
             sort_order=0,
-            is_enabled=True
+            is_enabled=True,
         )
         self.session.add(new_direction)
         await self.session.flush()
@@ -975,9 +1024,7 @@ class CollectionOrchestrator:
 
     async def get_task_progress(self, task_id: int) -> dict[str, Any]:
         """Get progress for a task"""
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
 
         if not task:
@@ -1000,7 +1047,7 @@ class CollectionOrchestrator:
             "progress_percent": int((completed / len(sub_tasks)) * 100) if sub_tasks else 0,
             "started_at": task.started_at.isoformat() if task.started_at else None,
             "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-            "error_message": task.error_message
+            "error_message": task.error_message,
         }
 
     async def _build_venue_details(self, task_id: int) -> list[dict]:
@@ -1012,7 +1059,6 @@ class CollectionOrchestrator:
         Returns:
             采集源详情列表
         """
-        from app.models.venue import Venue
 
         sub_tasks = await self.sub_task_repo.get_by_task(task_id)
         venue_details = []
@@ -1034,15 +1080,17 @@ class CollectionOrchestrator:
                     else:
                         duration = f"{total_seconds}秒"
 
-                venue_details.append({
-                    "venue_id": venue.venue_code or str(sub_task.venue_id),
-                    "venue_name": venue.venue_name,
-                    "status": sub_task.status or "unknown",
-                    "fetched": sub_task.works_fetched or 0,
-                    "saved": sub_task.new_authors or 0,
-                    "duration": duration,
-                    "error": sub_task.error_message,
-                })
+                venue_details.append(
+                    {
+                        "venue_id": venue.venue_code or str(sub_task.venue_id),
+                        "venue_name": venue.venue_name,
+                        "status": sub_task.status or "unknown",
+                        "fetched": sub_task.works_fetched or 0,
+                        "saved": sub_task.new_authors or 0,
+                        "duration": duration,
+                        "error": sub_task.error_message,
+                    }
+                )
 
         return venue_details
 

@@ -1,8 +1,9 @@
 """
 Venue sub-task executor for collection tasks.
 """
+
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,10 +30,7 @@ class VenueSubTaskExecutor:
         self.work_fetcher = work_fetcher
 
     async def execute(
-        self,
-        task: CollectTask,
-        sub_task: VenueSubTask,
-        progress: CollectionProgress
+        self, task: CollectTask, sub_task: VenueSubTask, progress: CollectionProgress
     ) -> int:
         """Execute collection for a single venue
 
@@ -56,21 +54,17 @@ class VenueSubTaskExecutor:
             year_from=year_from,
             year_to=year_to,
             task_id=task.task_id,
-            sub_task_id=sub_task.sub_task_id
+            sub_task_id=sub_task.sub_task_id,
         )
 
         # Update sub-task with counts
         await self.sub_task_repo.update_status(
-            sub_task.sub_task_id,
-            "completed",
-            works_fetched=work_progress.fetched
+            sub_task.sub_task_id, "completed", works_fetched=work_progress.fetched
         )
 
         # Update binding status
         await self.binding_repo.update_collect_status(
-            venue.venue_id,
-            task.tech_domain_id,
-            "completed"
+            venue.venue_id, task.tech_domain_id, "completed"
         )
 
         # Update venue last_collect_at

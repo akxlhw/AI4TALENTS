@@ -1,6 +1,7 @@
 """
 Cache key definitions and TTL constants.
 """
+
 from __future__ import annotations
 
 

@@ -65,9 +65,7 @@ class FavoriteRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_user_and_talent(
-        self, user_id: int, talent_id: int
-    ) -> FavoriteTalent | None:
+    async def get_by_user_and_talent(self, user_id: int, talent_id: int) -> FavoriteTalent | None:
         """
         Get a favorite by user and talent IDs.
 
@@ -147,9 +145,7 @@ class FavoriteRepository:
         # Apply keyword filter
         if keyword:
             keyword_pattern = f"%{keyword}%"
-            query = query.join(Talent).where(
-                Talent.name.ilike(keyword_pattern)
-            )
+            query = query.join(Talent).where(Talent.name.ilike(keyword_pattern))
 
         # Get total count
         count_query = select(func.count()).select_from(query.subquery())

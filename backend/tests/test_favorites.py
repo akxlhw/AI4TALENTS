@@ -2,14 +2,15 @@
 Tests for Favorites API endpoints.
 收藏功能API测试
 """
+
 import pytest
 from httpx import AsyncClient
 
-from app.models.iam import UserAccount, FavoriteTalent
-from app.models.talent import Talent
+from app.core.auth import hash_password
+from app.models.enums import RoleType, UserRoleType, VisibilityStatus
+from app.models.iam import UserAccount
 from app.models.school import School
-from app.models.enums import UserRoleType, RoleType, VisibilityStatus
-from app.core.auth import hash_password, create_access_token
+from app.models.talent import Talent
 
 
 @pytest.fixture
@@ -97,9 +98,7 @@ class TestAddFavorite:
     """Tests for POST /favorites endpoint."""
 
     @pytest.mark.asyncio
-    async def test_add_favorite_success(
-        self, client: AsyncClient, test_user_token, test_talent
-    ):
+    async def test_add_favorite_success(self, client: AsyncClient, test_user_token, test_talent):
         """Test successfully adding a talent to favorites."""
         talent_id = test_talent["talent"].talent_id
 
@@ -117,9 +116,7 @@ class TestAddFavorite:
         assert data["notes"] == "Great candidate"
 
     @pytest.mark.asyncio
-    async def test_add_favorite_duplicate(
-        self, client: AsyncClient, test_user_token, test_talent
-    ):
+    async def test_add_favorite_duplicate(self, client: AsyncClient, test_user_token, test_talent):
         """Test adding same talent twice returns error."""
         talent_id = test_talent["talent"].talent_id
 
@@ -297,9 +294,7 @@ class TestCheckFavorite:
     """Tests for GET /favorites/{talent_id}/check endpoint."""
 
     @pytest.mark.asyncio
-    async def test_check_favorite_true(
-        self, client: AsyncClient, test_user_token, test_talent
-    ):
+    async def test_check_favorite_true(self, client: AsyncClient, test_user_token, test_talent):
         """Test checking a favorited talent returns true."""
         talent_id = test_talent["talent"].talent_id
 
@@ -321,9 +316,7 @@ class TestCheckFavorite:
         assert data["notes"] == "Test notes"
 
     @pytest.mark.asyncio
-    async def test_check_favorite_false(
-        self, client: AsyncClient, test_user_token, test_talent
-    ):
+    async def test_check_favorite_false(self, client: AsyncClient, test_user_token, test_talent):
         """Test checking a non-favorited talent returns false."""
         talent_id = test_talent["talent"].talent_id
 
@@ -342,9 +335,7 @@ class TestUpdateFavorite:
     """Tests for PUT /favorites/{talent_id} endpoint."""
 
     @pytest.mark.asyncio
-    async def test_update_favorite_notes(
-        self, client: AsyncClient, test_user_token, test_talent
-    ):
+    async def test_update_favorite_notes(self, client: AsyncClient, test_user_token, test_talent):
         """Test updating favorite notes."""
         talent_id = test_talent["talent"].talent_id
 
@@ -386,9 +377,7 @@ class TestRemoveFavorite:
     """Tests for DELETE /favorites/{talent_id} endpoint."""
 
     @pytest.mark.asyncio
-    async def test_remove_favorite_success(
-        self, client: AsyncClient, test_user_token, test_talent
-    ):
+    async def test_remove_favorite_success(self, client: AsyncClient, test_user_token, test_talent):
         """Test successfully removing a favorite."""
         talent_id = test_talent["talent"].talent_id
 
@@ -430,9 +419,7 @@ class TestRemoveFavorite:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_remove_favorite_unauthenticated(
-        self, client: AsyncClient, test_talent
-    ):
+    async def test_remove_favorite_unauthenticated(self, client: AsyncClient, test_talent):
         """Test removing favorite without authentication."""
         talent_id = test_talent["talent"].talent_id
 

@@ -5,16 +5,13 @@ Tests for Search API endpoints.
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class TestSearchEndpoint:
     """Tests for /api/v1/search/talents endpoint."""
 
     @pytest.mark.asyncio
-    async def test_search_with_keyword(
-        self, client: AsyncClient, sample_talent: dict
-    ):
+    async def test_search_with_keyword(self, client: AsyncClient, sample_talent: dict):
         """Test search with keyword returns results."""
         response = await client.get(
             "/api/v1/search/talents",
@@ -28,9 +25,7 @@ class TestSearchEndpoint:
         assert data["total"] >= 1
 
     @pytest.mark.asyncio
-    async def test_search_with_role_filter(
-        self, client: AsyncClient, sample_talent: dict
-    ):
+    async def test_search_with_role_filter(self, client: AsyncClient, sample_talent: dict):
         """Test search with role type filter."""
         response = await client.get(
             "/api/v1/search/talents",
@@ -45,9 +40,7 @@ class TestSearchEndpoint:
         assert "items" in data
 
     @pytest.mark.asyncio
-    async def test_search_pagination(
-        self, client: AsyncClient, sample_talent: dict
-    ):
+    async def test_search_pagination(self, client: AsyncClient, sample_talent: dict):
         """Test search pagination."""
         response = await client.get(
             "/api/v1/search/talents",
@@ -60,9 +53,7 @@ class TestSearchEndpoint:
         assert data["page"] == 1
 
     @pytest.mark.asyncio
-    async def test_search_min_length_validation(
-        self, client: AsyncClient
-    ):
+    async def test_search_min_length_validation(self, client: AsyncClient):
         """Test search with keyword shorter than minimum length."""
         response = await client.get(
             "/api/v1/search/talents",
@@ -73,9 +64,7 @@ class TestSearchEndpoint:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_search_no_results(
-        self, client: AsyncClient
-    ):
+    async def test_search_no_results(self, client: AsyncClient):
         """Test search with keyword that returns no results."""
         response = await client.get(
             "/api/v1/search/talents",
@@ -88,9 +77,7 @@ class TestSearchEndpoint:
         assert len(data["items"]) == 0
 
     @pytest.mark.asyncio
-    async def test_search_page_size_limit(
-        self, client: AsyncClient, sample_talent: dict
-    ):
+    async def test_search_page_size_limit(self, client: AsyncClient, sample_talent: dict):
         """Test search page size limit is enforced."""
         response = await client.get(
             "/api/v1/search/talents",

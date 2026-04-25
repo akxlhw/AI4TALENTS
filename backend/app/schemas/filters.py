@@ -4,9 +4,10 @@ Filter parameter dataclasses for repository methods.
 Provides structured filter objects to reduce parameter sprawl
 and enable reusable filter logic.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -23,7 +24,7 @@ class PaginationParams:
         return (self.page - 1) * self.page_size
 
     @classmethod
-    def from_dict(cls, data: dict) -> "PaginationParams":
+    def from_dict(cls, data: dict) -> PaginationParams:
         """Create from dictionary."""
         return cls(
             page=data.get("page", 1),
@@ -66,18 +67,20 @@ class TalentFilterParams:
 
     def has_filters(self) -> bool:
         """Check if any filter is set."""
-        return any([
-            self.school_id,
-            self.country_code,
-            self.role_type,
-            self.min_works,
-            self.min_citations,
-            self.tech_domain_id,
-            self.tech_direction_id,
-            self.keyword,
-            self.is_graduated is not None,
-            self.confirm_status,
-        ])
+        return any(
+            [
+                self.school_id,
+                self.country_code,
+                self.role_type,
+                self.min_works,
+                self.min_citations,
+                self.tech_domain_id,
+                self.tech_direction_id,
+                self.keyword,
+                self.is_graduated is not None,
+                self.confirm_status,
+            ]
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -105,7 +108,7 @@ class TalentFilterParams:
         return result
 
     @classmethod
-    def from_dict(cls, data: dict) -> "TalentFilterParams":
+    def from_dict(cls, data: dict) -> TalentFilterParams:
         """Create from dictionary."""
         return cls(
             school_id=data.get("school_id"),
@@ -133,15 +136,17 @@ class VenueFilterParams:
 
     def has_filters(self) -> bool:
         """Check if any filter is set."""
-        return any([
-            self.venue_type,
-            self.is_enabled is not None,
-            self.keyword,
-            self.tech_domain_id,
-        ])
+        return any(
+            [
+                self.venue_type,
+                self.is_enabled is not None,
+                self.keyword,
+                self.tech_domain_id,
+            ]
+        )
 
     @classmethod
-    def from_dict(cls, data: dict) -> "VenueFilterParams":
+    def from_dict(cls, data: dict) -> VenueFilterParams:
         """Create from dictionary."""
         return cls(
             venue_type=data.get("venue_type"),
@@ -163,7 +168,7 @@ class CollectTaskFilterParams:
         return any([self.status, self.tech_domain_id])
 
     @classmethod
-    def from_dict(cls, data: dict) -> "CollectTaskFilterParams":
+    def from_dict(cls, data: dict) -> CollectTaskFilterParams:
         """Create from dictionary."""
         return cls(
             status=data.get("status"),

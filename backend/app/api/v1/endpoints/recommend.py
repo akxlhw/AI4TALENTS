@@ -7,6 +7,7 @@ v1.4 Feature.
 from __future__ import annotations
 
 import time
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,9 +17,9 @@ from app.schemas.v1_4 import (
     RecommendResponse,
     RecommendResultItem,
 )
-from app.services.recommend.recommend_service import RecommendService
 from app.services.embedding.embedding_service import EmbeddingService
 from app.services.llm.errors import RecommendError
+from app.services.recommend.recommend_service import RecommendService
 
 router = APIRouter(prefix="/recommend", tags=["Recommend"])
 
@@ -53,7 +54,7 @@ async def recommend_talents(
 
     **Note:** Requires pre-computed embeddings in database.
     """
-    start_time = time.time()
+    time.time()
 
     # Validate reference IDs
     if not request.reference_talent_ids:
@@ -96,9 +97,9 @@ async def recommend_talents(
         )
 
     except RecommendError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get(
@@ -117,7 +118,7 @@ async def find_similar_talents(
 
     This is a convenience wrapper around the main recommend endpoint.
     """
-    start_time = time.time()
+    time.time()
 
     try:
         embed_service = EmbeddingService(session=session)
@@ -152,6 +153,6 @@ async def find_similar_talents(
         )
 
     except RecommendError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

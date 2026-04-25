@@ -8,9 +8,7 @@ Simplified to only calculate research direction matching score.
 """
 
 import logging
-from typing import List, Dict, Any
-
-from app.core.config import settings
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +21,8 @@ class MatchScorer:
 
     def calculate_research_score(
         self,
-        jd_areas: List[str],
-        candidate_matchable: List[str],
+        jd_areas: list[str],
+        candidate_matchable: list[str],
     ) -> float:
         """
         计算研究方向匹配分数（支持子串匹配）
@@ -91,8 +89,8 @@ class MatchScorer:
     def generate_match_reasons(
         self,
         jd_features: Any,
-        candidate: Dict[str, Any],
-    ) -> List[str]:
+        candidate: dict[str, Any],
+    ) -> list[str]:
         """
         生成匹配原因
 

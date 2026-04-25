@@ -16,15 +16,14 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import List, Optional, Any
+from typing import Any
 
-import httpx
-from openai import AsyncOpenAI, APIError, RateLimitError, APIConnectionError
+from openai import APIConnectionError, APIError, AsyncOpenAI, RateLimitError
 
-from app.services.llm.protocols import LLMGatewayProtocol, JDFeatures, EmbeddingResult
-from app.services.llm.errors import LLMError, LLMErrorType
-from app.services.llm.retry import with_retry, with_timeout
 from app.core.config import settings
+from app.services.llm.errors import LLMError, LLMErrorType
+from app.services.llm.protocols import EmbeddingResult, JDFeatures, LLMGatewayProtocol
+from app.services.llm.retry import with_retry, with_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +107,9 @@ class LLMGateway(LLMGatewayProtocol):
         # Embedding API format: defaults to chat api_format if not specified
         self.embedding_api_format = embedding_api_format or api_format
 
-        logger.info(f"LLM Gateway initialized: api_format={self.api_format}, embedding_api_format={self.embedding_api_format}")
+        logger.info(
+            f"LLM Gateway initialized: api_format={self.api_format}, embedding_api_format={self.embedding_api_format}"
+        )
 
         # Create HTTP client using factory (handles proxy/no_proxy automatically)
         http_client = HttpClientFactory.create_client_for_url(self.api_base, timeout=self.timeout)
@@ -135,7 +136,9 @@ class LLMGateway(LLMGatewayProtocol):
             if HttpClientFactory.should_use_proxy(self.embedding_api_base):
                 logger.info(f"Embedding client using proxy for: {self.embedding_api_base}")
             else:
-                logger.info(f"Embedding client using direct connection for: {self.embedding_api_base}")
+                logger.info(
+                    f"Embedding client using direct connection for: {self.embedding_api_base}"
+                )
 
             self.embedding_client = AsyncOpenAI(
                 api_key=self.embedding_api_key or "no-key",  # Local deployment may not need key
@@ -167,7 +170,7 @@ class LLMGateway(LLMGatewayProtocol):
         if self.cache:
             cached = await self.cache.get_jd_features(jd_text)
             if cached:
-                logger.debug(f"JD features cache hit for text hash")
+                logger.debug("JD features cache hit for text hash")
                 return cached
 
         try:
@@ -178,7 +181,7 @@ class LLMGateway(LLMGatewayProtocol):
                 "model": self.model,
                 "messages": [
                     {"role": "system", "content": JD_PARSE_PROMPT},
-                    {"role": "user", "content": jd_text}
+                    {"role": "user", "content": jd_text},
                 ],
                 "temperature": 0.1,  # 低温度保证稳定性
             }
@@ -194,23 +197,24 @@ class LLMGateway(LLMGatewayProtocol):
 
             # 解析响应
             content = response.choices[0].message.content
-            logger.info(f"LLM raw response (first 500 chars): {content[:500] if content else 'None'}")
+            logger.info(
+                f"LLM raw response (first 500 chars): {content[:500] if content else 'None'}"
+            )
             if not content:
                 raise LLMError(
-                    error_type=LLMErrorType.INVALID_RESPONSE,
-                    message="Empty response from LLM"
+                    error_type=LLMErrorType.INVALID_RESPONSE, message="Empty response from LLM"
                 )
 
             # MiniMax 可能返回包含额外文本的响应，需要提取 JSON 部分
             if self.api_format == "minimax":
                 # 尝试找到 JSON 对象的开始和结束位置
-                json_start = content.find('{')
-                json_end = content.rfind('}')
+                json_start = content.find("{")
+                json_end = content.rfind("}")
                 if json_start != -1 and json_end != -1 and json_end > json_start:
-                    content = content[json_start:json_end + 1]
+                    content = content[json_start : json_end + 1]
                     logger.info(f"Extracted JSON from MiniMax response: {content[:200]}...")
                 else:
-                    logger.warning(f"No JSON object found in MiniMax response")
+                    logger.warning("No JSON object found in MiniMax response")
 
             data = json.loads(content)
             logger.info(f"Parsed JSON data: {data}")
@@ -227,40 +231,32 @@ class LLMGateway(LLMGatewayProtocol):
             if self.enable_fallback:
                 return self._fallback_parse(jd_text)
             raise LLMError(
-                error_type=LLMErrorType.INVALID_RESPONSE,
-                message=f"Invalid JSON response: {e}"
-            )
+                error_type=LLMErrorType.INVALID_RESPONSE, message=f"Invalid JSON response: {e}"
+            ) from e
 
         except RateLimitError as e:
             logger.warning(f"Rate limit hit: {e}")
             raise LLMError(
                 error_type=LLMErrorType.RATE_LIMIT,
                 message="Rate limit exceeded",
-                retry_after=getattr(e, 'retry_after', 60)
-            )
+                retry_after=getattr(e, "retry_after", 60),
+            ) from e
 
         except APIConnectionError as e:
             logger.error(f"API connection error: {e}")
-            raise LLMError(
-                error_type=LLMErrorType.NETWORK_ERROR,
-                message=str(e)
-            )
+            raise LLMError(error_type=LLMErrorType.NETWORK_ERROR, message=str(e)) from e
 
         except APIError as e:
             # 检查是否是 529 服务过载错误
-            status_code = getattr(e, 'status_code', None)
+            status_code = getattr(e, "status_code", None)
             if status_code == 529:
                 logger.warning(f"Service overloaded (529), will retry: {e}")
                 raise LLMError(
-                    error_type=LLMErrorType.API_ERROR,
-                    message=f"Service overloaded: {e}"
-                )
+                    error_type=LLMErrorType.API_ERROR, message=f"Service overloaded: {e}"
+                ) from e
             # 其他 API 错误
             logger.error(f"API error: {e}")
-            raise LLMError(
-                error_type=LLMErrorType.API_ERROR,
-                message=str(e)
-            )
+            raise LLMError(error_type=LLMErrorType.API_ERROR, message=str(e)) from e
 
         except LLMError:
             # 让 LLMError 继续向上传播给重试装饰器
@@ -269,9 +265,8 @@ class LLMGateway(LLMGatewayProtocol):
         except Exception as e:
             logger.error(f"Unexpected error during JD parsing: {e}")
             raise LLMError(
-                error_type=LLMErrorType.API_ERROR,
-                message=f"Unexpected error: {e}"
-            )
+                error_type=LLMErrorType.API_ERROR, message=f"Unexpected error: {e}"
+            ) from e
 
     async def parse_jd_with_fallback(self, jd_text: str) -> JDFeatures:
         """
@@ -307,8 +302,7 @@ class LLMGateway(LLMGatewayProtocol):
         """
         if not self.embedding_client:
             raise LLMError(
-                LLMErrorType.CONFIG_ERROR,
-                "嵌入模型未配置。请配置嵌入 API Key 和 API 地址。"
+                LLMErrorType.CONFIG_ERROR, "嵌入模型未配置。请配置嵌入 API Key 和 API 地址。"
             )
 
         try:
@@ -317,10 +311,10 @@ class LLMGateway(LLMGatewayProtocol):
             # MiniMax 使用不同的 API 格式
             if self.embedding_api_format == "minimax":
                 results = await self._generate_embedding_batch_minimax([text])
-                return results[0] if results else EmbeddingResult(
-                    embedding=[],
-                    model=self.embedding_model,
-                    tokens_used=0
+                return (
+                    results[0]
+                    if results
+                    else EmbeddingResult(embedding=[], model=self.embedding_model, tokens_used=0)
                 )
 
             response = await self.embedding_client.embeddings.create(
@@ -335,9 +329,7 @@ class LLMGateway(LLMGatewayProtocol):
             tokens_used = response.usage.total_tokens
 
             return EmbeddingResult(
-                embedding=embedding,
-                model=self.embedding_model,
-                tokens_used=tokens_used
+                embedding=embedding, model=self.embedding_model, tokens_used=tokens_used
             )
 
         except RateLimitError as e:
@@ -345,19 +337,16 @@ class LLMGateway(LLMGatewayProtocol):
             raise LLMError(
                 error_type=LLMErrorType.RATE_LIMIT,
                 message="Rate limit exceeded",
-                retry_after=getattr(e, 'retry_after', 60)
-            )
+                retry_after=getattr(e, "retry_after", 60),
+            ) from e
 
         except APIError as e:
             logger.error(f"API error during embedding: {e}")
-            raise LLMError(
-                error_type=LLMErrorType.API_ERROR,
-                message=str(e)
-            )
+            raise LLMError(error_type=LLMErrorType.API_ERROR, message=str(e)) from e
 
     @with_retry(max_retries=3)
     @with_timeout(timeout_seconds=120.0)
-    async def generate_embedding_batch(self, texts: List[str]) -> List[EmbeddingResult]:
+    async def generate_embedding_batch(self, texts: list[str]) -> list[EmbeddingResult]:
         """
         批量生成嵌入向量
 
@@ -375,14 +364,15 @@ class LLMGateway(LLMGatewayProtocol):
 
         if not self.embedding_client:
             raise LLMError(
-                LLMErrorType.CONFIG_ERROR,
-                "嵌入模型未配置。请配置嵌入 API Key 和 API 地址。"
+                LLMErrorType.CONFIG_ERROR, "嵌入模型未配置。请配置嵌入 API Key 和 API 地址。"
             )
 
         try:
             start_time = time.time()
 
-            logger.info(f"Calling embedding API: model={self.embedding_model}, texts_count={len(texts)}, api_format={self.embedding_api_format}")
+            logger.info(
+                f"Calling embedding API: model={self.embedding_model}, texts_count={len(texts)}, api_format={self.embedding_api_format}"
+            )
 
             # MiniMax 使用不同的 API 格式
             if self.embedding_api_format == "minimax":
@@ -402,7 +392,7 @@ class LLMGateway(LLMGatewayProtocol):
                 logger.error(f"Empty response from embedding API. Raw response: {response}")
                 raise LLMError(
                     error_type=LLMErrorType.INVALID_RESPONSE,
-                    message="No embedding data received from API"
+                    message="No embedding data received from API",
                 )
 
             results = []
@@ -410,11 +400,13 @@ class LLMGateway(LLMGatewayProtocol):
                 if not item.embedding:
                     logger.warning(f"Empty embedding at index {i}")
                     continue
-                results.append(EmbeddingResult(
-                    embedding=item.embedding,
-                    model=self.embedding_model,
-                    tokens_used=response.usage.total_tokens // len(texts)  # 平均
-                ))
+                results.append(
+                    EmbeddingResult(
+                        embedding=item.embedding,
+                        model=self.embedding_model,
+                        tokens_used=response.usage.total_tokens // len(texts),  # 平均
+                    )
+                )
 
             return results
 
@@ -423,17 +415,14 @@ class LLMGateway(LLMGatewayProtocol):
             raise LLMError(
                 error_type=LLMErrorType.RATE_LIMIT,
                 message="Rate limit exceeded",
-                retry_after=getattr(e, 'retry_after', 60)
-            )
+                retry_after=getattr(e, "retry_after", 60),
+            ) from e
 
         except APIError as e:
             logger.error(f"API error during batch embedding: {e}")
-            raise LLMError(
-                error_type=LLMErrorType.API_ERROR,
-                message=str(e)
-            )
+            raise LLMError(error_type=LLMErrorType.API_ERROR, message=str(e)) from e
 
-    async def _generate_embedding_batch_minimax(self, texts: List[str]) -> List[EmbeddingResult]:
+    async def _generate_embedding_batch_minimax(self, texts: list[str]) -> list[EmbeddingResult]:
         """MiniMax 专用的嵌入生成方法
 
         性能优化说明：
@@ -466,15 +455,17 @@ class LLMGateway(LLMGatewayProtocol):
             # - 每批最多 16 个文本（根据文本长度可能更少）
             # - RPM 约 60，即每秒 1 个请求
             max_batch_size = 16  # 提高批次大小
-            batch_delay = 1.0    # 减少批次间延迟到 1 秒
+            batch_delay = 1.0  # 减少批次间延迟到 1 秒
             all_results = []
 
             for i in range(0, len(texts), max_batch_size):
-                batch = texts[i:i + max_batch_size]
+                batch = texts[i : i + max_batch_size]
                 batch_num = i // max_batch_size + 1
                 total_batches = (len(texts) + max_batch_size - 1) // max_batch_size
 
-                logger.info(f"MiniMax batch {batch_num}/{total_batches}: processing {len(batch)} texts")
+                logger.info(
+                    f"MiniMax batch {batch_num}/{total_batches}: processing {len(batch)} texts"
+                )
 
                 # 重试机制
                 max_retries = 3
@@ -491,20 +482,24 @@ class LLMGateway(LLMGatewayProtocol):
                                 "model": model,
                                 "texts": batch,
                                 "type": "db",  # db 类型用于文档存储和检索
-                            }
+                            },
                         )
 
                         if response.status_code != 200:
                             error_text = response.text[:500]
-                            logger.error(f"MiniMax API error: {response.status_code} - {error_text}")
+                            logger.error(
+                                f"MiniMax API error: {response.status_code} - {error_text}"
+                            )
                             if retry < max_retries - 1:
                                 wait_time = 10 * (retry + 1)
-                                logger.info(f"Retrying in {wait_time}s (attempt {retry + 2}/{max_retries})...")
+                                logger.info(
+                                    f"Retrying in {wait_time}s (attempt {retry + 2}/{max_retries})..."
+                                )
                                 await asyncio.sleep(wait_time)
                                 continue
                             raise LLMError(
                                 error_type=LLMErrorType.API_ERROR,
-                                message=f"MiniMax API error: {response.status_code}"
+                                message=f"MiniMax API error: {response.status_code}",
                             )
 
                         data = response.json()
@@ -519,20 +514,22 @@ class LLMGateway(LLMGatewayProtocol):
                                 logger.warning(f"Rate limit hit: {status_msg}")
                                 if retry < max_retries - 1:
                                     wait_time = 30 * (retry + 1)  # 30s, 60s, 90s
-                                    logger.info(f"Waiting {wait_time}s before retry (attempt {retry + 2}/{max_retries})...")
+                                    logger.info(
+                                        f"Waiting {wait_time}s before retry (attempt {retry + 2}/{max_retries})..."
+                                    )
                                     await asyncio.sleep(wait_time)
                                     continue
                                 else:
                                     logger.error(f"Max retries reached for batch {batch_num}")
                                     raise LLMError(
                                         error_type=LLMErrorType.RATE_LIMIT,
-                                        message=f"MiniMax rate limit exceeded after {max_retries} retries"
+                                        message=f"MiniMax rate limit exceeded after {max_retries} retries",
                                     )
                             else:
                                 logger.error(f"MiniMax returned no vectors: {status_msg}")
                                 raise LLMError(
                                     error_type=LLMErrorType.INVALID_RESPONSE,
-                                    message=f"MiniMax API error: {status_msg}"
+                                    message=f"MiniMax API error: {status_msg}",
                                 )
 
                         # 成功获取向量
@@ -548,23 +545,29 @@ class LLMGateway(LLMGatewayProtocol):
                             # 如果向量数量不对，视为失败，重试
                             if retry < max_retries - 1:
                                 wait_time = 10 * (retry + 1)
-                                logger.info(f"Retrying due to vector count mismatch (attempt {retry + 2}/{max_retries})...")
+                                logger.info(
+                                    f"Retrying due to vector count mismatch (attempt {retry + 2}/{max_retries})..."
+                                )
                                 await asyncio.sleep(wait_time)
                                 continue
                             else:
                                 raise LLMError(
                                     error_type=LLMErrorType.INVALID_RESPONSE,
-                                    message=f"MiniMax returned {len(vectors)} vectors for {len(batch)} texts"
+                                    message=f"MiniMax returned {len(vectors)} vectors for {len(batch)} texts",
                                 )
 
-                        for j, vector in enumerate(vectors):
-                            all_results.append(EmbeddingResult(
-                                embedding=vector,
-                                model=model,
-                                tokens_used=total_tokens // len(batch) if batch else 0
-                            ))
+                        for _j, vector in enumerate(vectors):
+                            all_results.append(
+                                EmbeddingResult(
+                                    embedding=vector,
+                                    model=model,
+                                    tokens_used=total_tokens // len(batch) if batch else 0,
+                                )
+                            )
 
-                        logger.info(f"MiniMax batch {batch_num}/{total_batches} success: {len(vectors)} vectors")
+                        logger.info(
+                            f"MiniMax batch {batch_num}/{total_batches} success: {len(vectors)} vectors"
+                        )
                         break  # 成功，跳出重试循环
 
                     except LLMError:
@@ -609,7 +612,7 @@ def create_llm_gateway(
     embedding_api_key: str | None = None,
     embedding_api_base: str | None = None,
     embedding_api_format: str = "",
-    **kwargs
+    **kwargs,
 ) -> LLMGateway | None:
     """
     工厂函数：创建 LLM 网关
@@ -642,12 +645,12 @@ def create_llm_gateway(
     return LLMGateway(
         api_key=final_api_key,
         api_base=api_base or settings.LLM_API_BASE,
-        model=kwargs.get('model') or settings.LLM_MODEL,
-        embedding_model=kwargs.get('embedding_model') or settings.LLM_EMBEDDING_MODEL,
+        model=kwargs.get("model") or settings.LLM_MODEL,
+        embedding_model=kwargs.get("embedding_model") or settings.LLM_EMBEDDING_MODEL,
         embedding_api_key=embedding_api_key,
         embedding_api_base=embedding_api_base,
-        timeout=kwargs.get('timeout') or settings.LLM_TIMEOUT,
-        enable_fallback=kwargs.get('enable_fallback', settings.LLM_ENABLE_FALLBACK),
+        timeout=kwargs.get("timeout") or settings.LLM_TIMEOUT,
+        enable_fallback=kwargs.get("enable_fallback", settings.LLM_ENABLE_FALLBACK),
         api_format=api_format,
         embedding_api_format=embedding_api_format,
     )

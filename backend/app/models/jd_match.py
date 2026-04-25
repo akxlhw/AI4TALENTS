@@ -3,7 +3,7 @@ JD Match models.
 岗位匹配模型 - v1.4
 """
 
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, JSON
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -24,7 +24,7 @@ class JDMatchSession(Base, TimestampMixin):
         ForeignKey("iam_user_account.user_id"),
         nullable=False,
         index=True,
-        comment="用户ID"
+        comment="用户ID",
     )
     jd_text = Column(Text, nullable=False, comment="原始 JD 文本")
     jd_features = Column(JSON, nullable=True, comment="LLM 解析出的 JD 特征")
@@ -33,17 +33,13 @@ class JDMatchSession(Base, TimestampMixin):
         nullable=False,
         default="pending",
         index=True,
-        comment="状态: pending/completed/failed"
+        comment="状态: pending/completed/failed",
     )
     created_at = Column(DateTime, nullable=False)
     completed_at = Column(DateTime, nullable=True, comment="完成时间")
 
     # Relationships
-    results = relationship(
-        "JDMatchResult",
-        back_populates="session",
-        cascade="all, delete-orphan"
-    )
+    results = relationship("JDMatchResult", back_populates="session", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<JDMatchSession(session_id={self.session_id}, status={self.status})>"
@@ -53,7 +49,9 @@ class JDMatchSession(Base, TimestampMixin):
         return {
             "session_id": self.session_id,
             "user_id": self.user_id,
-            "jd_text": self.jd_text[:100] + "..." if len(self.jd_text or "") > 100 else self.jd_text,
+            "jd_text": (
+                self.jd_text[:100] + "..." if len(self.jd_text or "") > 100 else self.jd_text
+            ),
             "jd_features": self.jd_features,
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -75,14 +73,10 @@ class JDMatchResult(Base, TimestampMixin):
         ForeignKey("jd_match_session.session_id", ondelete="CASCADE"),
         nullable=False,
         index=True,
-        comment="会话ID"
+        comment="会话ID",
     )
     talent_id = Column(
-        Integer,
-        ForeignKey("core_talent.talent_id"),
-        nullable=False,
-        index=True,
-        comment="人才ID"
+        Integer, ForeignKey("core_talent.talent_id"), nullable=False, index=True, comment="人才ID"
     )
 
     # Scores

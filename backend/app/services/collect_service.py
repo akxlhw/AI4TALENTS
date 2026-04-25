@@ -2,6 +2,7 @@
 Collect service layer.
 采集任务业务逻辑层
 """
+
 from __future__ import annotations
 
 import uuid
@@ -45,7 +46,9 @@ class CollectService:
             Created CollectTask
         """
         # Generate unique task code
-        task_code = f"COLLECT-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
+        task_code = (
+            f"COLLECT-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
+        )
 
         # Create task
         task = await self.task_repo.create_task(
@@ -66,12 +69,9 @@ class CollectService:
 
         # Save venue snapshot
         task.venue_snapshot = [
-            {
-                "id": b.venue.venue_code,
-                "name": b.venue.venue_name,
-                "type": b.venue.venue_type
-            }
-            for b in bindings if b.venue
+            {"id": b.venue.venue_code, "name": b.venue.venue_name, "type": b.venue.venue_type}
+            for b in bindings
+            if b.venue
         ]
 
         # Create sub-tasks for each venue binding

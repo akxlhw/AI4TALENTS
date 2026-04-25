@@ -1,14 +1,15 @@
 """
 Tests for API endpoints (Overview, Countries, Schools, Talents, Search).
 """
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.school import School
-from app.models.talent import Talent, RoleProfile
-from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
 from app.models.enums import RoleType
+from app.models.school import School
+from app.models.statistics import OverviewStatSnapshot
+from app.models.talent import RoleProfile, Talent
 
 
 class TestOverviewEndpoint:
@@ -23,9 +24,7 @@ class TestOverviewEndpoint:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_overview_with_stats(
-        self, client: AsyncClient, test_session: AsyncSession
-    ):
+    async def test_overview_with_stats(self, client: AsyncClient, test_session: AsyncSession):
         """Test overview with statistics."""
         # Create test statistics
         stats = OverviewStatSnapshot(
@@ -67,9 +66,7 @@ class TestCountriesEndpoint:
         assert data["items"] == []
 
     @pytest.mark.asyncio
-    async def test_list_countries_with_data(
-        self, client: AsyncClient, test_session: AsyncSession
-    ):
+    async def test_list_countries_with_data(self, client: AsyncClient, test_session: AsyncSession):
         """Test countries list with data (aggregated from schools)."""
         # Create test schools with different countries
         school1 = School(
@@ -115,9 +112,7 @@ class TestSchoolsEndpoint:
         assert data["items"] == []
 
     @pytest.mark.asyncio
-    async def test_list_schools_with_data(
-        self, client: AsyncClient, test_session: AsyncSession
-    ):
+    async def test_list_schools_with_data(self, client: AsyncClient, test_session: AsyncSession):
         """Test schools list with data."""
         # Create test schools
         school1 = School(
@@ -146,9 +141,7 @@ class TestSchoolsEndpoint:
         assert len(data["items"]) == 2
 
     @pytest.mark.asyncio
-    async def test_get_school_detail(
-        self, client: AsyncClient, test_session: AsyncSession
-    ):
+    async def test_get_school_detail(self, client: AsyncClient, test_session: AsyncSession):
         """Test get school detail."""
         # Create test data
         school = School(
@@ -213,9 +206,7 @@ class TestTalentsEndpoint:
         assert data["items"] == []
 
     @pytest.mark.asyncio
-    async def test_list_talents_with_data(
-        self, client: AsyncClient, test_session: AsyncSession
-    ):
+    async def test_list_talents_with_data(self, client: AsyncClient, test_session: AsyncSession):
         """Test talents list with data."""
         # Create test data
         school = School(school_name="MIT", country_code="US", country_name="美国")
@@ -251,9 +242,7 @@ class TestTalentsEndpoint:
         assert len(data["items"]) == 2
 
     @pytest.mark.asyncio
-    async def test_get_talent_detail(
-        self, client: AsyncClient, test_session: AsyncSession
-    ):
+    async def test_get_talent_detail(self, client: AsyncClient, test_session: AsyncSession):
         """Test get talent detail."""
         # Create test data
         school = School(school_name="MIT", country_code="US", country_name="美国")
@@ -350,9 +339,7 @@ class TestSearchEndpoint:
         assert data["query"] == "nonexistent"
 
     @pytest.mark.asyncio
-    async def test_search_with_results(
-        self, client: AsyncClient, test_session: AsyncSession
-    ):
+    async def test_search_with_results(self, client: AsyncClient, test_session: AsyncSession):
         """Test search with results."""
         # Create test data
         school = School(school_name="MIT", country_code="US", country_name="美国")
@@ -383,9 +370,7 @@ class TestSearchEndpoint:
         assert "John" in data["items"][0]["name"]
 
     @pytest.mark.asyncio
-    async def test_search_with_role_filter(
-        self, client: AsyncClient, test_session: AsyncSession
-    ):
+    async def test_search_with_role_filter(self, client: AsyncClient, test_session: AsyncSession):
         """Test search with role filter."""
         # Create test data
         school = School(school_name="MIT", country_code="US", country_name="美国")

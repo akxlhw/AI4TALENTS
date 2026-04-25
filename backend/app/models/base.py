@@ -1,6 +1,7 @@
 """
 Base model with common fields.
 """
+
 # type: ignore  # SQLAlchemy declared_attr type annotations conflict with mypy
 from sqlalchemy import Boolean, Column, DateTime, Integer
 from sqlalchemy.orm import declared_attr

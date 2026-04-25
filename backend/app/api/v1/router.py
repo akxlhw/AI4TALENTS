@@ -2,6 +2,7 @@
 API v1 router.
 Aggregates all endpoint routers.
 """
+
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (

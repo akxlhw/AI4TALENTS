@@ -44,10 +44,9 @@ class TechDomainRepository:
         """Get all directions for a tech domain."""
         result = await self.session.execute(
             select(TechDirection)
-            .where(and_(
-                TechDirection.tech_domain_id == domain_id,
-                TechDirection.is_enabled.is_(True)
-            ))
+            .where(
+                and_(TechDirection.tech_domain_id == domain_id, TechDirection.is_enabled.is_(True))
+            )
             .order_by(TechDirection.sort_order, TechDirection.tech_direction_id)
         )
         return list(result.scalars().all())
@@ -60,7 +59,8 @@ class TechDomainRepository:
         if domain_id:
             if not IS_SQLITE:
                 # PostgreSQL: Single CTE query
-                cte_query = text("""
+                cte_query = text(
+                    """
                     WITH domain_tags AS (
                         SELECT DISTINCT ttt.talent_id, ttt.tech_direction_id,
                                t.role_type, t.school_id
@@ -82,62 +82,66 @@ class TechDomainRepository:
                         (SELECT COUNT(DISTINCT s.school_id)
                          FROM domain_tags et
                          INNER JOIN core_school s ON et.school_id = s.school_id) AS school_count
-                """)
+                """
+                )
 
-                result = await self.session.execute(cte_query, {'domain_id': domain_id})
+                result = await self.session.execute(cte_query, {"domain_id": domain_id})
                 row = result.one()
 
                 return {
-                    'talent_count': row.talent_count or 0,
-                    'professor_count': row.professor_count or 0,
-                    'student_count': row.student_count or 0,
-                    'direction_count': row.direction_count or 0,
-                    'country_count': row.country_count or 0,
-                    'school_count': row.school_count or 0,
+                    "talent_count": row.talent_count or 0,
+                    "professor_count": row.professor_count or 0,
+                    "student_count": row.student_count or 0,
+                    "direction_count": row.direction_count or 0,
+                    "country_count": row.country_count or 0,
+                    "school_count": row.school_count or 0,
                 }
 
             # SQLite fallback: Separate queries
             base_query = select(
-                func.count(func.distinct(TalentTechTag.talent_id)).label('talent_count'),
-                func.count(func.distinct(TalentTechTag.tech_direction_id)).label('direction_count'),
+                func.count(func.distinct(TalentTechTag.talent_id)).label("talent_count"),
+                func.count(func.distinct(TalentTechTag.tech_direction_id)).label("direction_count"),
             ).where(TalentTechTag.tech_domain_id == domain_id)
 
-            professor_count_query = select(
-                func.count(func.distinct(Talent.talent_id))
-            ).select_from(TalentTechTag).join(
-                Talent, TalentTechTag.talent_id == Talent.talent_id
-            ).where(and_(
-                TalentTechTag.tech_domain_id == domain_id,
-                Talent.role_type == 'professor'
-            ))
-
-            student_count_query = select(
-                func.count(func.distinct(Talent.talent_id))
-            ).select_from(TalentTechTag).join(
-                Talent, TalentTechTag.talent_id == Talent.talent_id
-            ).where(and_(
-                TalentTechTag.tech_domain_id == domain_id,
-                Talent.role_type.in_(['student', 'graduated'])
-            ))
-
-            country_count_query = select(
-                func.count(func.distinct(School.country_code))
-            ).select_from(TalentTechTag).join(
-                Talent, TalentTechTag.talent_id == Talent.talent_id
-            ).join(
-                School, Talent.school_id == School.school_id
-            ).where(
-                TalentTechTag.tech_domain_id == domain_id,
-                School.country_code.isnot(None),
+            professor_count_query = (
+                select(func.count(func.distinct(Talent.talent_id)))
+                .select_from(TalentTechTag)
+                .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
+                .where(
+                    and_(TalentTechTag.tech_domain_id == domain_id, Talent.role_type == "professor")
+                )
             )
 
-            school_count_query = select(
-                func.count(func.distinct(School.school_id))
-            ).select_from(TalentTechTag).join(
-                Talent, TalentTechTag.talent_id == Talent.talent_id
-            ).join(
-                School, Talent.school_id == School.school_id
-            ).where(TalentTechTag.tech_domain_id == domain_id)
+            student_count_query = (
+                select(func.count(func.distinct(Talent.talent_id)))
+                .select_from(TalentTechTag)
+                .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
+                .where(
+                    and_(
+                        TalentTechTag.tech_domain_id == domain_id,
+                        Talent.role_type.in_(["student", "graduated"]),
+                    )
+                )
+            )
+
+            country_count_query = (
+                select(func.count(func.distinct(School.country_code)))
+                .select_from(TalentTechTag)
+                .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
+                .join(School, Talent.school_id == School.school_id)
+                .where(
+                    TalentTechTag.tech_domain_id == domain_id,
+                    School.country_code.isnot(None),
+                )
+            )
+
+            school_count_query = (
+                select(func.count(func.distinct(School.school_id)))
+                .select_from(TalentTechTag)
+                .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
+                .join(School, Talent.school_id == School.school_id)
+                .where(TalentTechTag.tech_domain_id == domain_id)
+            )
 
             result = await self.session.execute(base_query)
             row = result.one()
@@ -148,12 +152,12 @@ class TechDomainRepository:
             school_result = await self.session.execute(school_count_query)
 
             return {
-                'talent_count': row.talent_count or 0,
-                'professor_count': professor_result.scalar() or 0,
-                'student_count': student_result.scalar() or 0,
-                'direction_count': row.direction_count or 0,
-                'country_count': country_result.scalar() or 0,
-                'school_count': school_result.scalar() or 0,
+                "talent_count": row.talent_count or 0,
+                "professor_count": professor_result.scalar() or 0,
+                "student_count": student_result.scalar() or 0,
+                "direction_count": row.direction_count or 0,
+                "country_count": country_result.scalar() or 0,
+                "school_count": school_result.scalar() or 0,
             }
         else:
             # Global stats
@@ -161,16 +165,18 @@ class TechDomainRepository:
                 select(func.count(TechDomain.tech_domain_id)).where(TechDomain.is_enabled.is_(True))
             )
             directions_count = await self.session.execute(
-                select(func.count(TechDirection.tech_direction_id)).where(TechDirection.is_enabled.is_(True))
+                select(func.count(TechDirection.tech_direction_id)).where(
+                    TechDirection.is_enabled.is_(True)
+                )
             )
             talents_count = await self.session.execute(
                 select(func.count(func.distinct(TalentTechTag.talent_id)))
             )
 
             return {
-                'domain_count': domains_count.scalar() or 0,
-                'direction_count': directions_count.scalar() or 0,
-                'talent_count': talents_count.scalar() or 0,
+                "domain_count": domains_count.scalar() or 0,
+                "direction_count": directions_count.scalar() or 0,
+                "talent_count": talents_count.scalar() or 0,
             }
 
     async def get_overall_stats(self) -> dict:
@@ -182,7 +188,8 @@ class TechDomainRepository:
         """
         if not IS_SQLITE:
             # PostgreSQL: Use single CTE query for efficiency
-            cte_query = text("""
+            cte_query = text(
+                """
                 WITH enabled_tags AS (
                     SELECT DISTINCT ttt.talent_id, ttt.tech_domain_id,
                            ttt.tech_direction_id, t.role_type, t.school_id
@@ -205,76 +212,80 @@ class TechDomainRepository:
                     (SELECT COUNT(DISTINCT s.school_id)
                      FROM enabled_tags et
                      INNER JOIN core_school s ON et.school_id = s.school_id) AS school_count
-            """)
+            """
+            )
 
             result = await self.session.execute(cte_query)
             row = result.one()
 
             return {
-                'talent_count': row.talent_count or 0,
-                'professor_count': row.professor_count or 0,
-                'student_count': row.student_count or 0,
-                'country_count': row.country_count or 0,
-                'school_count': row.school_count or 0,
-                'tech_domain_count': row.tech_domain_count or 0,
-                'tech_direction_count': row.tech_direction_count or 0,
+                "talent_count": row.talent_count or 0,
+                "professor_count": row.professor_count or 0,
+                "student_count": row.student_count or 0,
+                "country_count": row.country_count or 0,
+                "school_count": row.school_count or 0,
+                "tech_domain_count": row.tech_domain_count or 0,
+                "tech_direction_count": row.tech_direction_count or 0,
             }
 
         # SQLite fallback: Use separate queries
         # Total talent count with tech tags
-        talent_count_query = select(
-            func.count(func.distinct(Talent.talent_id))
-        ).select_from(TalentTechTag).join(
-            Talent, TalentTechTag.talent_id == Talent.talent_id
-        ).where(TalentTechTag.is_enabled.is_(True))
+        talent_count_query = (
+            select(func.count(func.distinct(Talent.talent_id)))
+            .select_from(TalentTechTag)
+            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
+            .where(TalentTechTag.is_enabled.is_(True))
+        )
 
         # Professor count
-        professor_count_query = select(
-            func.count(func.distinct(Talent.talent_id))
-        ).select_from(TalentTechTag).join(
-            Talent, TalentTechTag.talent_id == Talent.talent_id
-        ).where(and_(
-            TalentTechTag.is_enabled.is_(True),
-            Talent.role_type == 'professor'
-        ))
+        professor_count_query = (
+            select(func.count(func.distinct(Talent.talent_id)))
+            .select_from(TalentTechTag)
+            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
+            .where(and_(TalentTechTag.is_enabled.is_(True), Talent.role_type == "professor"))
+        )
 
         # Student count
-        student_count_query = select(
-            func.count(func.distinct(Talent.talent_id))
-        ).select_from(TalentTechTag).join(
-            Talent, TalentTechTag.talent_id == Talent.talent_id
-        ).where(and_(
-            TalentTechTag.is_enabled.is_(True),
-            Talent.role_type.in_(['student', 'graduated'])
-        ))
+        student_count_query = (
+            select(func.count(func.distinct(Talent.talent_id)))
+            .select_from(TalentTechTag)
+            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
+            .where(
+                and_(
+                    TalentTechTag.is_enabled.is_(True),
+                    Talent.role_type.in_(["student", "graduated"]),
+                )
+            )
+        )
 
         # Country count
-        country_count_query = select(
-            func.count(func.distinct(School.country_code))
-        ).select_from(TalentTechTag).join(
-            Talent, TalentTechTag.talent_id == Talent.talent_id
-        ).join(
-            School, Talent.school_id == School.school_id
-        ).where(
-            TalentTechTag.is_enabled.is_(True),
-            School.country_code.isnot(None),
+        country_count_query = (
+            select(func.count(func.distinct(School.country_code)))
+            .select_from(TalentTechTag)
+            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
+            .join(School, Talent.school_id == School.school_id)
+            .where(
+                TalentTechTag.is_enabled.is_(True),
+                School.country_code.isnot(None),
+            )
         )
 
         # School count
-        school_count_query = select(
-            func.count(func.distinct(School.school_id))
-        ).select_from(TalentTechTag).join(
-            Talent, TalentTechTag.talent_id == Talent.talent_id
-        ).join(
-            School, Talent.school_id == School.school_id
-        ).where(TalentTechTag.is_enabled.is_(True))
+        school_count_query = (
+            select(func.count(func.distinct(School.school_id)))
+            .select_from(TalentTechTag)
+            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
+            .join(School, Talent.school_id == School.school_id)
+            .where(TalentTechTag.is_enabled.is_(True))
+        )
 
         # Tech domain count
-        domain_count_query = select(
-            func.count(func.distinct(TechDomain.tech_domain_id))
-        ).select_from(TalentTechTag).join(
-            TechDomain, TalentTechTag.tech_domain_id == TechDomain.tech_domain_id
-        ).where(TalentTechTag.is_enabled.is_(True))
+        domain_count_query = (
+            select(func.count(func.distinct(TechDomain.tech_domain_id)))
+            .select_from(TalentTechTag)
+            .join(TechDomain, TalentTechTag.tech_domain_id == TechDomain.tech_domain_id)
+            .where(TalentTechTag.is_enabled.is_(True))
+        )
 
         # Tech direction count
         direction_count_query = select(
@@ -291,32 +302,34 @@ class TechDomainRepository:
         direction_count = await self.session.execute(direction_count_query)
 
         return {
-            'talent_count': talent_count.scalar() or 0,
-            'professor_count': professor_count.scalar() or 0,
-            'student_count': student_count.scalar() or 0,
-            'country_count': country_count.scalar() or 0,
-            'school_count': school_count.scalar() or 0,
-            'tech_domain_count': domain_count.scalar() or 0,
-            'tech_direction_count': direction_count.scalar() or 0,
+            "talent_count": talent_count.scalar() or 0,
+            "professor_count": professor_count.scalar() or 0,
+            "student_count": student_count.scalar() or 0,
+            "country_count": country_count.scalar() or 0,
+            "school_count": school_count.scalar() or 0,
+            "tech_domain_count": domain_count.scalar() or 0,
+            "tech_direction_count": direction_count.scalar() or 0,
         }
 
     async def get_country_distribution(
         self, domain_id: int | None = None, direction_id: int | None = None
     ) -> list[dict]:
         """Get talent distribution by country."""
-        query = select(
-            School.country_code,
-            School.country_name,
-            func.count(func.distinct(Talent.talent_id)).label('talent_count'),
-        ).select_from(TalentTechTag).join(
-            Talent, TalentTechTag.talent_id == Talent.talent_id
-        ).join(
-            School, Talent.school_id == School.school_id
-        ).where(
-            School.country_code.isnot(None),
-        ).group_by(
-            School.country_code, School.country_name
-        ).order_by(func.count(func.distinct(Talent.talent_id)).desc())
+        query = (
+            select(
+                School.country_code,
+                School.country_name,
+                func.count(func.distinct(Talent.talent_id)).label("talent_count"),
+            )
+            .select_from(TalentTechTag)
+            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
+            .join(School, Talent.school_id == School.school_id)
+            .where(
+                School.country_code.isnot(None),
+            )
+            .group_by(School.country_code, School.country_name)
+            .order_by(func.count(func.distinct(Talent.talent_id)).desc())
+        )
 
         conditions = [TalentTechTag.is_enabled.is_(True)]
         if domain_id:
@@ -329,40 +342,44 @@ class TechDomainRepository:
         result = await self.session.execute(query)
         return [
             {
-                'country_code': row.country_code,
-                'country_name': row.country_name or row.country_code,
-                'talent_count': row.talent_count,
+                "country_code": row.country_code,
+                "country_name": row.country_name or row.country_code,
+                "talent_count": row.talent_count,
             }
             for row in result.all()
         ]
 
     async def get_school_distribution(
-        self, domain_id: int | None = None, direction_id: int | None = None,
-        country_code: str | None = None, page: int = 1, page_size: int = 20
+        self,
+        domain_id: int | None = None,
+        direction_id: int | None = None,
+        country_code: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
     ) -> tuple[list[dict], int]:
         """Get talent distribution by school."""
         # Base query for counting
-        count_query = select(
-            func.count(func.distinct(School.school_id))
-        ).select_from(TalentTechTag).join(
-            Talent, TalentTechTag.talent_id == Talent.talent_id
-        ).join(
-            School, Talent.school_id == School.school_id
+        count_query = (
+            select(func.count(func.distinct(School.school_id)))
+            .select_from(TalentTechTag)
+            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
+            .join(School, Talent.school_id == School.school_id)
         )
 
         # Main query
-        query = select(
-            School.school_id,
-            School.school_name,
-            School.country_name.label('country_name'),
-            func.count(func.distinct(Talent.talent_id)).label('talent_count'),
-        ).select_from(TalentTechTag).join(
-            Talent, TalentTechTag.talent_id == Talent.talent_id
-        ).join(
-            School, Talent.school_id == School.school_id
-        ).group_by(
-            School.school_id, School.school_name, School.country_name
-        ).order_by(func.count(func.distinct(Talent.talent_id)).desc())
+        query = (
+            select(
+                School.school_id,
+                School.school_name,
+                School.country_name.label("country_name"),
+                func.count(func.distinct(Talent.talent_id)).label("talent_count"),
+            )
+            .select_from(TalentTechTag)
+            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
+            .join(School, Talent.school_id == School.school_id)
+            .group_by(School.school_id, School.school_name, School.country_name)
+            .order_by(func.count(func.distinct(Talent.talent_id)).desc())
+        )
 
         conditions = [TalentTechTag.is_enabled.is_(True)]
         if domain_id:
@@ -386,10 +403,10 @@ class TechDomainRepository:
         result = await self.session.execute(query)
         items = [
             {
-                'school_id': row.school_id,
-                'school_name': row.school_name,
-                'country_name': row.country_name,
-                'talent_count': row.talent_count,
+                "school_id": row.school_id,
+                "school_name": row.school_name,
+                "country_name": row.country_name,
+                "talent_count": row.talent_count,
             }
             for row in result.all()
         ]
@@ -405,7 +422,7 @@ class TechDomainRepository:
         role_type: str | None = None,
         keyword: str | None = None,
         cursor: int | None = None,
-        page_size: int = 20
+        page_size: int = 20,
     ) -> tuple[list[Talent], int | None]:
         """
         Get talent list with cursor-based pagination (efficient for deep pagination).
@@ -433,33 +450,36 @@ class TechDomainRepository:
 
         if cursor is not None:
             conditions.append("t.talent_id < :cursor")
-            params['cursor'] = cursor
+            params["cursor"] = cursor
 
         if domain_id:
             conditions.append("ttt.tech_domain_id = :domain_id")
-            params['domain_id'] = domain_id
+            params["domain_id"] = domain_id
         if direction_id:
             conditions.append("ttt.tech_direction_id = :direction_id")
-            params['direction_id'] = direction_id
+            params["direction_id"] = direction_id
         if school_id:
-            conditions.append("(t.education_school_id = :school_id OR t.company_school_id = :school_id OR t.school_id = :school_id)")
-            params['school_id'] = school_id
+            conditions.append(
+                "(t.education_school_id = :school_id OR t.company_school_id = :school_id OR t.school_id = :school_id)"
+            )
+            params["school_id"] = school_id
         if country_code:
             conditions.append("s.country_code = :country_code")
-            params['country_code'] = country_code.upper()
+            params["country_code"] = country_code.upper()
         if role_type:
             conditions.append("t.role_type = :role_type")
-            params['role_type'] = role_type
+            params["role_type"] = role_type
         if keyword:
             conditions.append("t.name LIKE :keyword")
-            params['keyword'] = f'%{keyword}%'
+            params["keyword"] = f"%{keyword}%"
 
         where_clause = " AND ".join(conditions)
 
         # Main query with cursor pagination (fetch one extra for next_cursor)
         # Use DISTINCT ON to avoid JSON equality comparison issues in PostgreSQL
         # Priority: education_school -> company_school -> legacy school
-        main_sql = text(f"""
+        main_sql = text(
+            f"""
             SELECT DISTINCT ON (t.talent_id) t.talent_id, t.name, t.name_en, t.role_type,
                    t.current_title, t.h_index, t.works_count, t.topic_tags,
                    t.openalex_topics,
@@ -473,8 +493,9 @@ class TechDomainRepository:
             WHERE {where_clause}
             ORDER BY t.talent_id DESC
             LIMIT :limit
-        """)
-        params['limit'] = page_size + 1
+        """
+        )
+        params["limit"] = page_size + 1
 
         result = await self.session.execute(main_sql, params)
 
@@ -490,7 +511,7 @@ class TechDomainRepository:
                 except (json.JSONDecodeError, TypeError):
                     topic_tags = []
 
-            openalex_topics = row.openalex_topics if hasattr(row, 'openalex_topics') else []
+            openalex_topics = row.openalex_topics if hasattr(row, "openalex_topics") else []
             if openalex_topics is None:
                 openalex_topics = []
             if isinstance(openalex_topics, str):
@@ -526,10 +547,15 @@ class TechDomainRepository:
         return talents, next_cursor
 
     async def get_talent_list(
-        self, domain_id: int | None = None, direction_id: int | None = None,
-        country_code: str | None = None, school_id: int | None = None,
-        role_type: str | None = None, keyword: str | None = None,
-        page: int = 1, page_size: int = 20
+        self,
+        domain_id: int | None = None,
+        direction_id: int | None = None,
+        country_code: str | None = None,
+        school_id: int | None = None,
+        role_type: str | None = None,
+        keyword: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
     ) -> tuple[list[Talent], int]:
         """Get talent list with filters - optimized with raw SQL for speed."""
         from sqlalchemy import text
@@ -540,34 +566,38 @@ class TechDomainRepository:
 
         if domain_id:
             conditions.append("ttt.tech_domain_id = :domain_id")
-            params['domain_id'] = domain_id
+            params["domain_id"] = domain_id
         if direction_id:
             conditions.append("ttt.tech_direction_id = :direction_id")
-            params['direction_id'] = direction_id
+            params["direction_id"] = direction_id
         if school_id:
-            conditions.append("(t.education_school_id = :school_id OR t.company_school_id = :school_id OR t.school_id = :school_id)")
-            params['school_id'] = school_id
+            conditions.append(
+                "(t.education_school_id = :school_id OR t.company_school_id = :school_id OR t.school_id = :school_id)"
+            )
+            params["school_id"] = school_id
         if country_code:
             conditions.append("s.country_code = :country_code")
-            params['country_code'] = country_code.upper()
+            params["country_code"] = country_code.upper()
         if role_type:
             conditions.append("t.role_type = :role_type")
-            params['role_type'] = role_type
+            params["role_type"] = role_type
         if keyword:
             conditions.append("t.name LIKE :keyword")
-            params['keyword'] = f'%{keyword}%'
+            params["keyword"] = f"%{keyword}%"
 
         where_clause = " AND ".join(conditions)
 
         # Count query - fast with DISTINCT
         # JOIN all three school fields for country_code filtering
-        count_sql = text(f"""
+        count_sql = text(
+            f"""
             SELECT COUNT(DISTINCT t.talent_id)
             FROM core_talent_tech_tag ttt
             INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
             LEFT JOIN core_school s ON COALESCE(t.education_school_id, t.company_school_id, t.school_id) = s.school_id
             WHERE {where_clause}
-        """)
+        """
+        )
         total_result = await self.session.execute(count_sql, params)
         total = total_result.scalar() or 0
 
@@ -575,7 +605,8 @@ class TechDomainRepository:
         # Use subquery to avoid JSON equality comparison issues in PostgreSQL
         # Priority: education_school -> company_school -> legacy school
         offset = (page - 1) * page_size
-        main_sql = text(f"""
+        main_sql = text(
+            f"""
             SELECT t.talent_id, t.name, t.name_en, t.role_type,
                    t.current_title, t.h_index, t.works_count, t.topic_tags,
                    t.openalex_topics,
@@ -592,9 +623,10 @@ class TechDomainRepository:
             )
             ORDER BY t.h_index DESC NULLS LAST
             LIMIT :limit OFFSET :offset
-        """)
-        params['limit'] = page_size
-        params['offset'] = offset
+        """
+        )
+        params["limit"] = page_size
+        params["offset"] = offset
 
         result = await self.session.execute(main_sql, params)
 
@@ -606,17 +638,19 @@ class TechDomainRepository:
             if isinstance(topic_tags, str):
                 try:
                     import json
+
                     topic_tags = json.loads(topic_tags)
                 except (json.JSONDecodeError, TypeError):
                     topic_tags = []
 
             # Parse openalex_topics if it's a string (access by attribute name)
-            openalex_topics = row.openalex_topics if hasattr(row, 'openalex_topics') else []
+            openalex_topics = row.openalex_topics if hasattr(row, "openalex_topics") else []
             if openalex_topics is None:
                 openalex_topics = []
             if isinstance(openalex_topics, str):
                 try:
                     import json
+
                     openalex_topics = json.loads(openalex_topics)
                 except (json.JSONDecodeError, TypeError):
                     openalex_topics = []

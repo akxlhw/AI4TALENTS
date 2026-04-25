@@ -2,12 +2,12 @@
 Global exception handlers and custom exceptions.
 统一异常处理机制 - v1.4
 """
+
 from typing import Any
 
 from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.core.logging_config import get_logger
@@ -16,6 +16,7 @@ logger = get_logger(__name__)
 
 
 # ============ Custom Exceptions ============
+
 
 class AppException(Exception):
     """Base exception for application-specific errors."""
@@ -82,6 +83,7 @@ class ExternalServiceError(AppException):
 
 # ============ Error Response Builder ============
 
+
 def build_error_response(
     status_code: int,
     message: str,
@@ -100,6 +102,7 @@ def build_error_response(
 
 
 # ============ Exception Handlers ============
+
 
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
     """Handle application-specific exceptions."""
@@ -154,18 +157,22 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     )
 
 
-async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     """Handle request validation errors."""
     request_id = getattr(request.state, "request_id", None)
 
     # Format validation errors
     errors = []
     for error in exc.errors():
-        errors.append({
-            "field": ".".join(str(loc) for loc in error["loc"]),
-            "message": error["msg"],
-            "type": error["type"],
-        })
+        errors.append(
+            {
+                "field": ".".join(str(loc) for loc in error["loc"]),
+                "message": error["msg"],
+                "type": error["type"],
+            }
+        )
 
     logger.warning(
         f"Validation error: {len(errors)} errors",
@@ -244,6 +251,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 
 
 # ============ Register Handlers ============
+
 
 def register_exception_handlers(app: Any) -> None:
     """Register all exception handlers with the FastAPI app."""

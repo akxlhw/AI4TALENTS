@@ -2,6 +2,7 @@
 Tech Domain API endpoints.
 技术领域相关接口
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -52,15 +53,16 @@ async def list_tech_domains(
             sort_order=d.sort_order,
             directions=[
                 {
-                    'tech_direction_id': dir.tech_direction_id,
-                    'direction_code': dir.direction_code,
-                    'direction_name': dir.direction_name,
-                    'direction_name_en': dir.direction_name_en,
-                    'tech_domain_id': dir.tech_domain_id,
-                    'sort_order': dir.sort_order,
+                    "tech_direction_id": dir.tech_direction_id,
+                    "direction_code": dir.direction_code,
+                    "direction_name": dir.direction_name,
+                    "direction_name_en": dir.direction_name_en,
+                    "tech_domain_id": dir.tech_domain_id,
+                    "sort_order": dir.sort_order,
                 }
-                for dir in d.directions if dir.is_enabled
-            ]
+                for dir in d.directions
+                if dir.is_enabled
+            ],
         )
         for d in domains
     ]
@@ -225,15 +227,16 @@ async def get_tech_domain(
         sort_order=domain.sort_order,
         directions=[
             {
-                'tech_direction_id': d.tech_direction_id,
-                'direction_code': d.direction_code,
-                'direction_name': d.direction_name,
-                'direction_name_en': d.direction_name_en,
-                'tech_domain_id': d.tech_domain_id,
-                'sort_order': d.sort_order,
+                "tech_direction_id": d.tech_direction_id,
+                "direction_code": d.direction_code,
+                "direction_name": d.direction_name,
+                "direction_name_en": d.direction_name_en,
+                "tech_domain_id": d.tech_domain_id,
+                "sort_order": d.sort_order,
             }
-            for d in domain.directions if d.is_enabled
-        ]
+            for d in domain.directions
+            if d.is_enabled
+        ],
     )
 
 

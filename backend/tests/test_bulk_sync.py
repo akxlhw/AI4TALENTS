@@ -1,6 +1,7 @@
 """
 Tests for bulk sync operations (TP3).
 """
+
 import os
 
 os.environ["REDIS_ENABLED"] = "false"
@@ -8,12 +9,10 @@ os.environ["REDIS_ENABLED"] = "false"
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import RoleType, VisibilityStatus
-from app.models.school import School
 from app.models.standardized import StdAuthor, StdSchool
+from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
 from app.services.sync.author_sync import AuthorSyncService
 from app.services.sync.school_sync import SchoolSyncService
-from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
 
 
 @pytest.fixture
@@ -97,9 +96,7 @@ class TestBulkSchoolSync:
         assert result2["updated"] == 5
 
     @pytest.mark.asyncio
-    async def test_bulk_sync_schools_empty_list(
-        self, test_session: AsyncSession
-    ):
+    async def test_bulk_sync_schools_empty_list(self, test_session: AsyncSession):
         """Test bulk sync with empty list."""
         service = SchoolSyncService(test_session)
 
@@ -138,6 +135,7 @@ class TestBulkAuthorSync:
 
         # Sync schools first to get school_id_map
         from sqlalchemy import select
+
         from app.models.standardized import StdSchool
 
         school_service = SchoolSyncService(test_session)
@@ -152,8 +150,7 @@ class TestBulkAuthorSync:
 
         # Count authors above threshold
         above_threshold = sum(
-            1 for a in setup_std_authors
-            if (a.cs_concepts_score or 0) >= CS_SCORE_THRESHOLD
+            1 for a in setup_std_authors if (a.cs_concepts_score or 0) >= CS_SCORE_THRESHOLD
         )
 
         assert result["filtered"] == len(setup_std_authors) - above_threshold
@@ -165,6 +162,7 @@ class TestBulkAuthorSync:
     ):
         """Test bulk sync creates talent records."""
         from sqlalchemy import select
+
         from app.models.standardized import StdSchool
         from app.models.talent import Talent
 
@@ -188,9 +186,7 @@ class TestBulkAuthorSync:
         assert len(talents) == result["synced"]
 
     @pytest.mark.asyncio
-    async def test_bulk_sync_authors_empty_list(
-        self, test_session: AsyncSession
-    ):
+    async def test_bulk_sync_authors_empty_list(self, test_session: AsyncSession):
         """Test bulk sync with empty author list."""
         service = AuthorSyncService(test_session)
 
@@ -207,6 +203,7 @@ class TestBulkAuthorSync:
     ):
         """Test bulk sync identifies newly created talents for work fetching."""
         from sqlalchemy import select
+
         from app.models.standardized import StdSchool
 
         # Sync schools first
@@ -236,11 +233,10 @@ class TestBulkSyncWithExistingData:
     """Tests for bulk sync with existing data."""
 
     @pytest.mark.asyncio
-    async def test_bulk_sync_handles_mixed_new_and_existing(
-        self, test_session: AsyncSession
-    ):
+    async def test_bulk_sync_handles_mixed_new_and_existing(self, test_session: AsyncSession):
         """Test bulk sync handles mix of new and existing records."""
         from sqlalchemy import select
+
         from app.models.standardized import StdSchool
 
         # Create some schools
@@ -357,9 +353,7 @@ class TestServingLayerOrchestrator:
         }
 
     @pytest.mark.asyncio
-    async def test_orchestrator_sync_all(
-        self, test_session: AsyncSession, setup_orchestrator_data
-    ):
+    async def test_orchestrator_sync_all(self, test_session: AsyncSession, setup_orchestrator_data):
         """Test full sync via ServingLayerOrchestrator - with no matching task records."""
         from app.services.sync.orchestrator import ServingLayerOrchestrator
 
@@ -391,8 +385,7 @@ class TestServingLayerOrchestrator:
         # Verify CS score threshold is being applied correctly
         # Count authors above threshold
         above_threshold = sum(
-            1 for a in data["authors"]
-            if (a.cs_concepts_score or 0) >= CS_SCORE_THRESHOLD
+            1 for a in data["authors"] if (a.cs_concepts_score or 0) >= CS_SCORE_THRESHOLD
         )
 
         # Verify the threshold is working as expected
@@ -402,12 +395,10 @@ class TestServingLayerOrchestrator:
         assert len(data["authors"]) - above_threshold == 2  # 0.40 and 0.55 are below
 
     @pytest.mark.asyncio
-    async def test_orchestrator_no_data_for_task(
-        self, test_session: AsyncSession
-    ):
+    async def test_orchestrator_no_data_for_task(self, test_session: AsyncSession):
         """Test orchestrator handles task with no data."""
-        from app.services.sync.orchestrator import ServingLayerOrchestrator
         from app.models.tech_domain import TechDomain
+        from app.services.sync.orchestrator import ServingLayerOrchestrator
 
         # Create tech domain
         domain = TechDomain(
@@ -435,9 +426,7 @@ class TestBulkSyncErrorHandling:
     """Tests for bulk sync error handling."""
 
     @pytest.mark.asyncio
-    async def test_bulk_sync_school_with_missing_fields(
-        self, test_session: AsyncSession
-    ):
+    async def test_bulk_sync_school_with_missing_fields(self, test_session: AsyncSession):
         """Test bulk sync handles schools with missing optional fields."""
         school = StdSchool(
             openalex_institution_id="I000001",
@@ -454,11 +443,8 @@ class TestBulkSyncErrorHandling:
         assert result["created"] == 1
 
     @pytest.mark.asyncio
-    async def test_bulk_sync_author_without_school(
-        self, test_session: AsyncSession
-    ):
+    async def test_bulk_sync_author_without_school(self, test_session: AsyncSession):
         """Test bulk sync handles author without school."""
-        from app.models.talent import Talent
 
         author = StdAuthor(
             openalex_author_id="A000001",
@@ -476,9 +462,7 @@ class TestBulkSyncErrorHandling:
         assert result["synced"] == 1
 
     @pytest.mark.asyncio
-    async def test_bulk_sync_author_with_null_cs_score(
-        self, test_session: AsyncSession
-    ):
+    async def test_bulk_sync_author_with_null_cs_score(self, test_session: AsyncSession):
         """Test bulk sync filters author with null CS score."""
         author = StdAuthor(
             openalex_author_id="A000002",
@@ -496,9 +480,7 @@ class TestBulkSyncErrorHandling:
         assert result["synced"] == 0
 
     @pytest.mark.asyncio
-    async def test_bulk_sync_large_batch(
-        self, test_session: AsyncSession
-    ):
+    async def test_bulk_sync_large_batch(self, test_session: AsyncSession):
         """Test bulk sync handles large batch of schools."""
         # Create 100 schools
         schools = []

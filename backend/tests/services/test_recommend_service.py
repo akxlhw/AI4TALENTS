@@ -8,42 +8,40 @@ Coverage:
 - Filter application
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import List
 from dataclasses import dataclass
-import numpy as np
+from unittest.mock import AsyncMock
 
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-
-from tests.mocks.mock_llm_gateway import MockLLMGateway
-
 
 # ============ Test Data Classes ============
+
 
 @dataclass
 class RecommendResultItem:
     """推荐结果项"""
+
     talent_id: int
     name: str
     title: str
     school_name: str
     similarity_score: float
-    reasons: List[str]
+    reasons: list[str]
 
 
 @dataclass
 class RecommendResult:
     """推荐结果"""
-    reference_talents: List[int]
+
+    reference_talents: list[int]
     total: int
-    items: List[RecommendResultItem]
+    items: list[RecommendResultItem]
     mode: str
     took_ms: float
 
 
 # ============ Tests ============
+
 
 class TestRecommendServiceSimilar:
     """相似推荐测试"""
@@ -59,15 +57,11 @@ class TestRecommendServiceSimilar:
         mock_embed = AsyncMock()
         mock_embed.get_embedding = AsyncMock(return_value=[0.1] * 1536)
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
         # Act
         result = await service.get_similar(
-            reference_talent_ids=[sample_talent["talent"].talent_id],
-            limit=10
+            reference_talent_ids=[sample_talent["talent"].talent_id], limit=10
         )
 
         # Assert
@@ -84,18 +78,12 @@ class TestRecommendServiceSimilar:
 
         mock_embed = AsyncMock()
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
         reference_id = sample_talent["talent"].talent_id
 
         # Act
-        result = await service.get_similar(
-            reference_talent_ids=[reference_id],
-            limit=10
-        )
+        result = await service.get_similar(reference_talent_ids=[reference_id], limit=10)
 
         # Assert
         for item in result.items:
@@ -111,15 +99,11 @@ class TestRecommendServiceSimilar:
 
         mock_embed = AsyncMock()
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
         # Act
         result = await service.get_similar(
-            reference_talent_ids=[sample_talent["talent"].talent_id],
-            limit=5
+            reference_talent_ids=[sample_talent["talent"].talent_id], limit=5
         )
 
         # Assert
@@ -136,15 +120,11 @@ class TestRecommendServiceSimilar:
         mock_embed = AsyncMock()
         mock_embed.get_embedding = AsyncMock(return_value=[0.1] * 1536)
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
         # Act
         result = await service.get_similar(
-            reference_talent_ids=[sample_talent["talent"].talent_id],
-            limit=10
+            reference_talent_ids=[sample_talent["talent"].talent_id], limit=10
         )
 
         # Assert - 验证结果正确返回
@@ -223,61 +203,43 @@ class TestRecommendServiceFilters:
     """过滤测试"""
 
     @pytest.mark.asyncio
-    async def test_filter_by_school(
-        self, test_session: AsyncSession, sample_talent: dict
-    ):
+    async def test_filter_by_school(self, test_session: AsyncSession, sample_talent: dict):
         """应按学校过滤"""
         # Arrange
         from app.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
-        filters = {
-            "school_ids": [sample_talent["school"].school_id]
-        }
+        filters = {"school_ids": [sample_talent["school"].school_id]}
 
         # Act
         result = await service.get_similar(
-            reference_talent_ids=[sample_talent["talent"].talent_id],
-            limit=10,
-            filters=filters
+            reference_talent_ids=[sample_talent["talent"].talent_id], limit=10, filters=filters
         )
 
         # Assert
-        for item in result.items:
+        for _item in result.items:
             # 应该是指定学校
             pass
 
     @pytest.mark.asyncio
-    async def test_filter_by_exclude_ids(
-        self, test_session: AsyncSession, sample_talent: dict
-    ):
+    async def test_filter_by_exclude_ids(self, test_session: AsyncSession, sample_talent: dict):
         """应排除指定ID"""
         # Arrange
         from app.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
         exclude_id = sample_talent["talent"].talent_id
-        filters = {
-            "exclude_ids": [exclude_id]
-        }
+        filters = {"exclude_ids": [exclude_id]}
 
         # Act
         result = await service.get_similar(
-            reference_talent_ids=[sample_talent["talent"].talent_id],
-            limit=10,
-            filters=filters
+            reference_talent_ids=[sample_talent["talent"].talent_id], limit=10, filters=filters
         )
 
         # Assert
@@ -294,20 +256,13 @@ class TestRecommendServiceFilters:
 
         mock_embed = AsyncMock()
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
-        filters = {
-            "tech_domains": ["AI"]
-        }
+        filters = {"tech_domains": ["AI"]}
 
         # Act
-        result = await service.get_similar(
-            reference_talent_ids=[sample_talent["talent"].talent_id],
-            limit=10,
-            filters=filters
+        await service.get_similar(
+            reference_talent_ids=[sample_talent["talent"].talent_id], limit=10, filters=filters
         )
 
         # Assert - 结果应符合技术领域过滤
@@ -318,48 +273,38 @@ class TestRecommendServiceReasons:
     """推荐原因测试"""
 
     @pytest.mark.asyncio
-    async def test_generate_reasons_includes_similarity(
-        self, test_session: AsyncSession
-    ):
+    async def test_generate_reasons_includes_similarity(self, test_session: AsyncSession):
         """推荐原因应包含相似度信息"""
         # Arrange
         from app.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
         # Act
         reasons = service.generate_reasons(
             similarity_score=0.85,
             reference_talent={"openalex_topics": ["Machine Learning"]},
-            candidate_talent={"openalex_topics": ["Deep Learning"]}
+            candidate_talent={"openalex_topics": ["Deep Learning"]},
         )
 
         # Assert
         assert len(reasons) > 0
 
     @pytest.mark.asyncio
-    async def test_reasons_includes_research_match(
-        self, test_session: AsyncSession
-    ):
+    async def test_reasons_includes_research_match(self, test_session: AsyncSession):
         """推荐原因应包含研究方向匹配"""
         # Arrange
         from app.services.recommend.recommend_service import RecommendService
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=AsyncMock()
-        )
+        service = RecommendService(session=test_session, embed_service=AsyncMock())
 
         # Act
         reasons = service.generate_reasons(
             similarity_score=0.9,
             reference_talent={"openalex_topics": ["NLP", "Deep Learning"]},
-            candidate_talent={"openalex_topics": ["Deep Learning", "Machine Learning"]}
+            candidate_talent={"openalex_topics": ["Deep Learning", "Machine Learning"]},
         )
 
         # Assert
@@ -380,15 +325,11 @@ class TestRecommendServiceMultiReference:
         mock_embed = AsyncMock()
         mock_embed.get_average_embedding = AsyncMock(return_value=[0.1] * 1536)
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
         # Act - 使用多个已存在的参考人才
         result = await service.get_similar(
-            reference_talent_ids=[sample_talent["talent"].talent_id],
-            limit=10
+            reference_talent_ids=[sample_talent["talent"].talent_id], limit=10
         )
 
         # Assert - 验证结果正确返回
@@ -404,18 +345,12 @@ class TestRecommendServiceMultiReference:
 
         mock_embed = AsyncMock()
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
         reference_ids = [sample_talent["talent"].talent_id]
 
         # Act
-        result = await service.get_similar(
-            reference_talent_ids=reference_ids,
-            limit=10
-        )
+        result = await service.get_similar(reference_talent_ids=reference_ids, limit=10)
 
         # Assert
         assert result.reference_talents == reference_ids
@@ -425,66 +360,44 @@ class TestRecommendServiceErrorHandling:
     """错误处理测试"""
 
     @pytest.mark.asyncio
-    async def test_handles_invalid_reference_id(
-        self, test_session: AsyncSession
-    ):
+    async def test_handles_invalid_reference_id(self, test_session: AsyncSession):
         """应处理无效参考ID"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService, RecommendError
+        from app.services.recommend.recommend_service import RecommendError, RecommendService
 
         mock_embed = AsyncMock()
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
         # Act & Assert
         with pytest.raises((ValueError, RecommendError)):
-            await service.get_similar(
-                reference_talent_ids=[99999],
-                    limit=10
-            )
+            await service.get_similar(reference_talent_ids=[99999], limit=10)
 
     @pytest.mark.asyncio
-    async def test_handles_empty_reference_list(
-        self, test_session: AsyncSession
-    ):
+    async def test_handles_empty_reference_list(self, test_session: AsyncSession):
         """应处理空参考列表"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService, RecommendError
+        from app.services.recommend.recommend_service import RecommendError, RecommendService
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=AsyncMock()
-        )
+        service = RecommendService(session=test_session, embed_service=AsyncMock())
 
         # Act & Assert
         with pytest.raises((ValueError, RecommendError)):
-            await service.get_similar(
-                reference_talent_ids=[],
-                    limit=10
-            )
+            await service.get_similar(reference_talent_ids=[], limit=10)
 
     @pytest.mark.asyncio
-    async def test_handles_no_candidates(
-        self, test_session: AsyncSession, sample_talent: dict
-    ):
+    async def test_handles_no_candidates(self, test_session: AsyncSession, sample_talent: dict):
         """应处理无候选人的情况"""
         # Arrange
         from app.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
         # Act - 使用已存在的参考人才
         result = await service.get_similar(
-            reference_talent_ids=[sample_talent["talent"].talent_id],
-            limit=10
+            reference_talent_ids=[sample_talent["talent"].talent_id], limit=10
         )
 
         # Assert - 应该返回结果
@@ -495,28 +408,22 @@ class TestRecommendServiceTiming:
     """性能测试"""
 
     @pytest.mark.asyncio
-    async def test_returns_timing_info(
-        self, test_session: AsyncSession, sample_talent: dict
-    ):
+    async def test_returns_timing_info(self, test_session: AsyncSession, sample_talent: dict):
         """应返回耗时信息"""
         # Arrange
         from app.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
         # Act
         result = await service.get_similar(
-            reference_talent_ids=[sample_talent["talent"].talent_id],
-            limit=10
+            reference_talent_ids=[sample_talent["talent"].talent_id], limit=10
         )
 
         # Assert
-        assert hasattr(result, 'took_ms')
+        assert hasattr(result, "took_ms")
         assert result.took_ms > 0
 
     @pytest.mark.asyncio
@@ -525,21 +432,18 @@ class TestRecommendServiceTiming:
     ):
         """应在合理时间内完成"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
         import time
+
+        from app.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
-        service = RecommendService(
-            session=test_session,
-            embed_service=mock_embed
-        )
+        service = RecommendService(session=test_session, embed_service=mock_embed)
 
         # Act
         start = time.time()
         await service.get_similar(
-            reference_talent_ids=[sample_talent["talent"].talent_id],
-            limit=10
+            reference_talent_ids=[sample_talent["talent"].talent_id], limit=10
         )
         elapsed = time.time() - start
 

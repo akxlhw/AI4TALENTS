@@ -1,17 +1,19 @@
 """
 Unit tests for cache service.
 """
+
 import os
 
 # Disable Redis for tests by default
 os.environ["REDIS_ENABLED"] = "false"
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.core.cache import CacheConnection
-from app.services.cache_service import CacheService
 from app.services.cache_keys import CacheKeys, CacheTTL
+from app.services.cache_service import CacheService
 
 
 class TestCacheConnection:

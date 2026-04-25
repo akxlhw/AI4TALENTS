@@ -1,11 +1,11 @@
 """
 FastAPI application entry point.
 """
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_router
 from app.core.cache import close_cache_connection, get_cache_connection
@@ -20,8 +20,8 @@ logger = get_logger(__name__)
 
 async def init_proxy_config() -> None:
     """Initialize proxy configuration from database."""
-    from app.services.config_service import ConfigService
     from app.services.common.http_client import HttpClientFactory
+    from app.services.config_service import ConfigService
 
     try:
         async with async_session_factory() as session:
@@ -94,19 +94,23 @@ def create_application() -> FastAPI:
 
     # Metrics middleware (must be early to capture all requests)
     from app.middleware.metrics import MetricsMiddleware
+
     app.add_middleware(MetricsMiddleware)
 
     # Rate limiting middleware (must be added before request logging)
     if settings.RATE_LIMIT_ENABLED:
         from app.middleware.rate_limit import RateLimitMiddleware
+
         app.add_middleware(RateLimitMiddleware)
 
     # Request logging middleware
     from app.middleware.request_logging import RequestLoggingMiddleware
+
     app.add_middleware(RequestLoggingMiddleware)
 
     # Register global exception handlers
     from app.core.exceptions import register_exception_handlers
+
     register_exception_handlers(app)
 
     # Include API router

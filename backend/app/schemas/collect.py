@@ -7,6 +7,7 @@ Collect configuration schemas - MVP v1.2
 - 数据类型：固定为学者+论文+机构
 - 时间范围：用户可配置年份范围（2015年至今）
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -18,6 +19,7 @@ from pydantic import BaseModel, Field
 def get_current_year() -> int:
     """Get current year."""
     from datetime import date
+
     return date.today().year
 
 
@@ -28,8 +30,10 @@ DEFAULT_START_YEAR = 2020
 
 # ============ Venue (顶会顶刊) Schema ============
 
+
 class VenueItem(BaseModel):
     """顶会顶刊项"""
+
     id: str = Field(..., description="OpenAlex venue ID 或简称，如 NeurIPS")
     name: str = Field(..., description="完整名称")
     type: str = Field(default="conference", description="类型: conference/journal")
@@ -37,8 +41,10 @@ class VenueItem(BaseModel):
 
 # ============ Tech Domain with Collect Config ============
 
+
 class TechDomainCollectResponse(BaseModel):
     """技术领域采集配置响应"""
+
     tech_domain_id: int = Field(description="技术领域ID")
     domain_code: str = Field(description="领域代码")
     domain_name: str = Field(description="领域名称")
@@ -56,33 +62,35 @@ class TechDomainCollectResponse(BaseModel):
 
 class TechDomainCollectListResponse(BaseModel):
     """技术领域采集配置列表响应"""
+
     items: list[TechDomainCollectResponse] = Field(description="技术领域列表")
     total: int = Field(description="总数")
 
 
 class UpdateCollectSourcesRequest(BaseModel):
     """更新技术领域的采集源配置"""
+
     collect_sources: list[VenueItem] = Field(..., min_length=1, description="关联的顶会顶刊列表")
 
 
 # ============ Collect Task Schemas ============
 
+
 class TriggerCollectTaskRequest(BaseModel):
     """触发采集任务请求"""
+
     tech_domain_id: int = Field(..., description="技术领域ID")
     start_year: int = Field(
         default=DEFAULT_START_YEAR,
         ge=MIN_START_YEAR,
-        description=f"起始年份，最小{MIN_START_YEAR}年"
+        description=f"起始年份，最小{MIN_START_YEAR}年",
     )
-    end_year: int | None = Field(
-        default=None,
-        description="截止年份，None表示至今"
-    )
+    end_year: int | None = Field(default=None, description="截止年份，None表示至今")
 
 
 class CollectTaskResponse(BaseModel):
     """采集任务响应"""
+
     task_id: int = Field(description="任务ID")
     task_code: str = Field(description="任务编码")
     tech_domain_id: int | None = Field(default=None, description="技术领域ID")
@@ -114,6 +122,7 @@ class CollectTaskResponse(BaseModel):
 
 class CollectTaskListResponse(BaseModel):
     """采集任务列表响应"""
+
     items: list[CollectTaskResponse] = Field(description="任务列表")
     total: int = Field(description="总数")
     page: int = Field(description="当前页码")
@@ -133,6 +142,7 @@ TASK_STATUS_OPTIONS = [
 
 # ============ Year Options ============
 
+
 def get_year_options() -> list[dict]:
     """获取年份选项列表"""
     current_year = get_current_year()
@@ -144,12 +154,14 @@ def get_year_options() -> list[dict]:
 
 class TaskActionResponse(BaseModel):
     """采集任务操作响应"""
+
     message: str = Field(description="操作结果消息")
     task_id: int = Field(description="任务ID")
 
 
 class YearOptionsResponse(BaseModel):
     """年份选项响应"""
+
     start_years: list[dict] = Field(description="起始年份选项列表")
     min_year: int = Field(description="最小可选年份")
     default_year: int = Field(description="默认起始年份")
@@ -158,6 +170,7 @@ class YearOptionsResponse(BaseModel):
 
 class SubTaskActionResponse(BaseModel):
     """子任务操作响应"""
+
     message: str = Field(description="操作结果消息")
     sub_task_id: int = Field(description="子任务ID")
 
@@ -166,8 +179,7 @@ def get_end_year_options(start_year: int) -> list[dict]:
     """获取截止年份选项列表（包含"至今"选项）"""
     current_year = get_current_year()
     options = [
-        {"value": year, "label": f"{year}年"}
-        for year in range(current_year, start_year - 1, -1)
+        {"value": year, "label": f"{year}年"} for year in range(current_year, start_year - 1, -1)
     ]
     options.insert(0, {"value": None, "label": "至今"})
     return options

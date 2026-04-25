@@ -3,13 +3,12 @@ Tests for filter parameter dataclasses.
 
 Tests the filter parameter objects used by repository methods.
 """
-import pytest
 
 from app.schemas.filters import (
+    CollectTaskFilterParams,
     PaginationParams,
     TalentFilterParams,
     VenueFilterParams,
-    CollectTaskFilterParams,
 )
 
 
@@ -117,12 +116,14 @@ class TestTalentFilterParams:
 
     def test_from_dict(self):
         """Test creating from dictionary."""
-        params = TalentFilterParams.from_dict({
-            "school_id": 1,
-            "country_code": "CN",
-            "role_type": "phd",
-            "visible_only": False,
-        })
+        params = TalentFilterParams.from_dict(
+            {
+                "school_id": 1,
+                "country_code": "CN",
+                "role_type": "phd",
+                "visible_only": False,
+            }
+        )
 
         assert params.school_id == 1
         assert params.country_code == "CN"
@@ -159,10 +160,12 @@ class TestVenueFilterParams:
 
     def test_from_dict(self):
         """Test creating from dictionary."""
-        params = VenueFilterParams.from_dict({
-            "venue_type": "journal",
-            "is_enabled": True,
-        })
+        params = VenueFilterParams.from_dict(
+            {
+                "venue_type": "journal",
+                "is_enabled": True,
+            }
+        )
 
         assert params.venue_type == "journal"
         assert params.is_enabled is True
@@ -190,10 +193,12 @@ class TestCollectTaskFilterParams:
 
     def test_from_dict(self):
         """Test creating from dictionary."""
-        params = CollectTaskFilterParams.from_dict({
-            "status": "running",
-            "tech_domain_id": 2,
-        })
+        params = CollectTaskFilterParams.from_dict(
+            {
+                "status": "running",
+                "tech_domain_id": 2,
+            }
+        )
 
         assert params.status == "running"
         assert params.tech_domain_id == 2

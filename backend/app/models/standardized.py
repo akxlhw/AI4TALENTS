@@ -2,6 +2,7 @@
 Standardized data layer models.
 标准化层模型 - 经过清洗和归一的数据
 """
+
 from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 
@@ -31,7 +32,9 @@ class StdAuthor(Base, TimestampMixin):
     i10_index = Column(Integer, default=0)
 
     # Institution reference (after normalization) - legacy field
-    std_school_id = Column(Integer, ForeignKey("std_school.std_school_id"), nullable=True, index=True)
+    std_school_id = Column(
+        Integer, ForeignKey("std_school.std_school_id"), nullable=True, index=True
+    )
 
     # Raw institution info for matching (legacy field)
     raw_institution_name = Column(String(255), nullable=True)
@@ -126,15 +129,17 @@ class SchoolNameAlias(Base, TimestampMixin):
     """学校名称别名表 - 用于学校归一匹配"""
 
     __tablename__ = "std_school_alias"
-    __table_args__ = (
-        Index('ix_school_alias_name', 'alias_name'),
-    )
+    __table_args__ = (Index("ix_school_alias_name", "alias_name"),)
 
     alias_id = Column(Integer, primary_key=True, index=True)
-    std_school_id = Column(Integer, ForeignKey("std_school.std_school_id"), nullable=False, index=True)
+    std_school_id = Column(
+        Integer, ForeignKey("std_school.std_school_id"), nullable=False, index=True
+    )
 
     alias_name = Column(String(255), nullable=False, index=True)
-    alias_type = Column(String(30), nullable=True)  # abbreviation, former_name, local_name, translation
+    alias_type = Column(
+        String(30), nullable=True
+    )  # abbreviation, former_name, local_name, translation
 
     # Source of this alias
     source = Column(String(50), nullable=True)  # openalex, manual, wikipedia

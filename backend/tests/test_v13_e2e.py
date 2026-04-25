@@ -6,6 +6,7 @@ These tests verify the complete flow of v1.3 features including:
 - Metrics collection
 - Bulk sync operations
 """
+
 import os
 
 os.environ["REDIS_ENABLED"] = "false"
@@ -19,7 +20,7 @@ from app.main import app
 from app.models.enums import RoleType, VisibilityStatus
 from app.models.school import School
 from app.models.talent import Talent
-from app.models.tech_domain import TechDirection, TechDomain, TalentTechTag
+from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
 
 
 @pytest.fixture
@@ -109,9 +110,7 @@ class TestE2ECacheFlow:
     """E2E tests for cache flow."""
 
     @pytest.mark.asyncio
-    async def test_homepage_highlights_e2e(
-        self, test_session: AsyncSession, setup_e2e_data
-    ):
+    async def test_homepage_highlights_e2e(self, test_session: AsyncSession, setup_e2e_data):
         """Test homepage highlights API end-to-end."""
         async with AsyncClient(app=app, base_url="http://test") as client:
             # First request - should return data
@@ -133,9 +132,7 @@ class TestE2ECacheFlow:
             assert data1["version"] == data2["version"]
 
     @pytest.mark.asyncio
-    async def test_overall_stats_e2e(
-        self, test_session: AsyncSession, setup_e2e_data
-    ):
+    async def test_overall_stats_e2e(self, test_session: AsyncSession, setup_e2e_data):
         """Test overall stats API end-to-end."""
         async with AsyncClient(app=app, base_url="http://test") as client:
             response = await client.get("/api/v1/tech-domains/overall-stats")
@@ -152,9 +149,7 @@ class TestE2EMetricsFlow:
     """E2E tests for metrics collection."""
 
     @pytest.mark.asyncio
-    async def test_metrics_collected_on_requests(
-        self, test_session: AsyncSession, setup_e2e_data
-    ):
+    async def test_metrics_collected_on_requests(self, test_session: AsyncSession, setup_e2e_data):
         """Test that metrics are collected when making API requests."""
         # Reset metrics
         metrics.reset_all()
@@ -174,9 +169,7 @@ class TestE2EMetricsFlow:
             assert "http_requests_total" in content
 
     @pytest.mark.asyncio
-    async def test_metrics_json_format(
-        self, test_session: AsyncSession, setup_e2e_data
-    ):
+    async def test_metrics_json_format(self, test_session: AsyncSession, setup_e2e_data):
         """Test metrics in JSON format."""
         async with AsyncClient(app=app, base_url="http://test") as client:
             response = await client.get("/api/v1/metrics/json")
@@ -191,9 +184,7 @@ class TestE2EHealthCheck:
     """E2E tests for health check endpoints."""
 
     @pytest.mark.asyncio
-    async def test_health_check_e2e(
-        self, test_session: AsyncSession, setup_e2e_data
-    ):
+    async def test_health_check_e2e(self, test_session: AsyncSession, setup_e2e_data):
         """Test comprehensive health check."""
         async with AsyncClient(app=app, base_url="http://test") as client:
             response = await client.get("/api/v1/health")
@@ -208,9 +199,7 @@ class TestE2EHealthCheck:
             assert data["cache"]["enabled"] is False
 
     @pytest.mark.asyncio
-    async def test_readiness_check_e2e(
-        self, test_session: AsyncSession, setup_e2e_data
-    ):
+    async def test_readiness_check_e2e(self, test_session: AsyncSession, setup_e2e_data):
         """Test readiness check."""
         async with AsyncClient(app=app, base_url="http://test") as client:
             response = await client.get("/api/v1/health/ready")
@@ -221,9 +210,7 @@ class TestE2EHealthCheck:
             assert data["checks"]["database"] is True
 
     @pytest.mark.asyncio
-    async def test_liveness_check_e2e(
-        self, test_session: AsyncSession, setup_e2e_data
-    ):
+    async def test_liveness_check_e2e(self, test_session: AsyncSession, setup_e2e_data):
         """Test liveness check."""
         async with AsyncClient(app=app, base_url="http://test") as client:
             response = await client.get("/api/v1/health/live")
@@ -237,9 +224,7 @@ class TestE2ETechDomainFlow:
     """E2E tests for tech domain API flow."""
 
     @pytest.mark.asyncio
-    async def test_tech_domain_list_e2e(
-        self, test_session: AsyncSession, setup_e2e_data
-    ):
+    async def test_tech_domain_list_e2e(self, test_session: AsyncSession, setup_e2e_data):
         """Test tech domain list API."""
         async with AsyncClient(app=app, base_url="http://test") as client:
             response = await client.get("/api/v1/tech-domains")
@@ -250,9 +235,7 @@ class TestE2ETechDomainFlow:
             assert len(data["items"]) >= 2  # Should have AI and ROBOTICS
 
     @pytest.mark.asyncio
-    async def test_tech_domain_talents_pagination_e2e(
-        self, client: AsyncClient, setup_e2e_data
-    ):
+    async def test_tech_domain_talents_pagination_e2e(self, client: AsyncClient, setup_e2e_data):
         """Test tech domain talents pagination."""
         data = setup_e2e_data
         domain_id = data["domains"][0].tech_domain_id
@@ -273,9 +256,7 @@ class TestE2ETalentList:
     """E2E tests for talent list with filters."""
 
     @pytest.mark.asyncio
-    async def test_talent_list_with_role_filter(
-        self, test_session: AsyncSession, setup_e2e_data
-    ):
+    async def test_talent_list_with_role_filter(self, test_session: AsyncSession, setup_e2e_data):
         """Test talent list filtered by role type."""
         async with AsyncClient(app=app, base_url="http://test") as client:
             response = await client.get(
@@ -307,9 +288,7 @@ class TestE2ETalentList:
             assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_talent_detail_e2e(
-        self, test_session: AsyncSession, setup_e2e_data
-    ):
+    async def test_talent_detail_e2e(self, test_session: AsyncSession, setup_e2e_data):
         """Test talent detail endpoint."""
         data = setup_e2e_data
         talent = data["talents"][0]

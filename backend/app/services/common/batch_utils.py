@@ -24,7 +24,9 @@ Usage:
     )
 """
 
-from typing import TypeVar, Callable, Awaitable, List, Any
+from collections.abc import Callable
+from typing import Any, TypeVar
+
 from sqlalchemy import Select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,17 +34,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Using 5000 as safe batch size for IN queries (allows for other query params)
 BATCH_SIZE = 5000
 
-T = TypeVar('T')
-R = TypeVar('R')
+T = TypeVar("T")
+R = TypeVar("R")
 
 
 async def batch_in_query(
     session: AsyncSession,
-    query_builder: Callable[[List[Any]], Select],
-    items: List[Any],
+    query_builder: Callable[[list[Any]], Select],
+    items: list[Any],
     result_processor: Callable[[Any], R],
-    batch_size: int = BATCH_SIZE
-) -> List[R]:
+    batch_size: int = BATCH_SIZE,
+) -> list[R]:
     """
     Execute a query with IN clause in batches.
 
@@ -67,10 +69,10 @@ async def batch_in_query(
     if not items:
         return []
 
-    all_results: List[R] = []
+    all_results: list[R] = []
 
     for i in range(0, len(items), batch_size):
-        batch = items[i:i + batch_size]
+        batch = items[i : i + batch_size]
         query = query_builder(batch)
         result = await session.execute(query)
         processed = result_processor(result)
@@ -81,10 +83,10 @@ async def batch_in_query(
 
 async def batch_in_query_flat(
     session: AsyncSession,
-    query_builder: Callable[[List[Any]], Select],
-    items: List[Any],
-    batch_size: int = BATCH_SIZE
-) -> List[Any]:
+    query_builder: Callable[[list[Any]], Select],
+    items: list[Any],
+    batch_size: int = BATCH_SIZE,
+) -> list[Any]:
     """
     Execute a query with IN clause in batches, returning flattened scalar results.
 
@@ -107,21 +109,17 @@ async def batch_in_query_flat(
         )
     """
     return await batch_in_query(
-        session,
-        query_builder,
-        items,
-        lambda result: result.scalars().all(),
-        batch_size
+        session, query_builder, items, lambda result: result.scalars().all(), batch_size
     )
 
 
 async def batch_in_query_map(
     session: AsyncSession,
-    query_builder: Callable[[List[Any]], Select],
-    items: List[Any],
+    query_builder: Callable[[list[Any]], Select],
+    items: list[Any],
     key_func: Callable[[Any], Any],
     value_func: Callable[[Any], Any] = lambda row: row,
-    batch_size: int = BATCH_SIZE
+    batch_size: int = BATCH_SIZE,
 ) -> dict:
     """
     Execute a query with IN clause in batches, returning a dictionary.
@@ -155,7 +153,7 @@ async def batch_in_query_map(
     result_map: dict = {}
 
     for i in range(0, len(items), batch_size):
-        batch = items[i:i + batch_size]
+        batch = items[i : i + batch_size]
         query = query_builder(batch)
         result = await session.execute(query)
         for row in result.all():

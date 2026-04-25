@@ -2,6 +2,7 @@
 Homepage API endpoint.
 首页聚合数据接口
 """
+
 from datetime import datetime
 
 from fastapi import APIRouter, Depends
@@ -80,15 +81,9 @@ async def get_highlights(
     version = now.strftime("%Y%m%d-%H%M%S")
 
     return HomepageHighlightsResponse(
-        hot_tech_domains=[
-            HotTechDomainItem(**item) for item in hot_tech_domains
-        ],
-        top_countries=[
-            TopCountryItem(**item) for item in top_countries
-        ],
-        top_schools=[
-            TopSchoolItem(**item) for item in top_schools
-        ],
+        hot_tech_domains=[HotTechDomainItem(**item) for item in hot_tech_domains],
+        top_countries=[TopCountryItem(**item) for item in top_countries],
+        top_schools=[TopSchoolItem(**item) for item in top_schools],
         version=version,
         generated_at=now.isoformat(),
     )

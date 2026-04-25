@@ -2,6 +2,7 @@
 Common API schemas.
 Shared models for request/response handling.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -34,9 +35,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
     total_pages: int = Field(description="Total number of pages")
 
     @classmethod
-    def create(
-        cls, items: list[T], total: int, page: int, page_size: int
-    ) -> PaginatedResponse[T]:
+    def create(cls, items: list[T], total: int, page: int, page_size: int) -> PaginatedResponse[T]:
         """Create a paginated response."""
         total_pages = (total + page_size - 1) // page_size if page_size > 0 else 0
         return cls(

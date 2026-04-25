@@ -1,6 +1,7 @@
 """
 Repository for user operations.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -60,9 +61,7 @@ class UserRepository:
         Returns:
             UserAccount instance or None
         """
-        result = await self.session.execute(
-            select(UserAccount).where(UserAccount.email == email)
-        )
+        result = await self.session.execute(select(UserAccount).where(UserAccount.email == email))
         return result.scalar_one_or_none()
 
     async def get_with_scopes(self, user_id: int) -> UserAccount | None:
@@ -215,6 +214,7 @@ class UserRepository:
 
         # Count
         from sqlalchemy import func
+
         count_query = select(func.count()).select_from(query.subquery())
         total_result = await self.session.execute(count_query)
         total = total_result.scalar() or 0
@@ -274,7 +274,7 @@ class UserScopeRepository:
     """Repository for user scope operations (school/country/tech_domain)."""
 
     # Valid scope types
-    SCOPE_TYPES = ['school', 'country', 'tech_domain', 'all']
+    SCOPE_TYPES = ["school", "country", "tech_domain", "all"]
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -357,7 +357,9 @@ class UserScopeRepository:
         notes: str | None = None,
     ) -> UserSchoolScope:
         """Add a scope to a user and commit."""
-        scope = await self.add_scope(user_id, scope_type, scope_value, granted_by, expires_at, notes)
+        scope = await self.add_scope(
+            user_id, scope_type, scope_value, granted_by, expires_at, notes
+        )
         await self.session.commit()
         return scope
 
@@ -507,9 +509,7 @@ class UserScopeRepository:
 
             if scope.scope_type == "country":
                 result = await self.session.execute(
-                    select(School.school_id).where(
-                        School.country_code == scope.scope_value
-                    )
+                    select(School.school_id).where(School.country_code == scope.scope_value)
                 )
                 for row in result.fetchall():
                     accessible_ids.add(row[0])

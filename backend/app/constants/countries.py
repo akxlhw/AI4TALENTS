@@ -4,6 +4,7 @@ Country constants for the talent system.
 This module contains static country data that was previously stored in the
 core_country table. Countries are identified by their ISO 3166-1 alpha-2 codes.
 """
+
 from __future__ import annotations
 
 # Country names mapping: country_code -> {cn, en}
@@ -125,27 +126,64 @@ COUNTRY_NAMES: dict[str, dict[str, str]] = {
 }
 
 # Convenience mappings for Chinese names only
-COUNTRY_NAMES_CN: dict[str, str] = {
-    code: names["cn"] for code, names in COUNTRY_NAMES.items()
-}
+COUNTRY_NAMES_CN: dict[str, str] = {code: names["cn"] for code, names in COUNTRY_NAMES.items()}
 
 # Convenience mappings for English names only
-COUNTRY_NAMES_EN: dict[str, str] = {
-    code: names["en"] for code, names in COUNTRY_NAMES.items()
-}
+COUNTRY_NAMES_EN: dict[str, str] = {code: names["en"] for code, names in COUNTRY_NAMES.items()}
 
 # Region mapping for UI display
 # Groups countries by geographic region for the CountrySchoolPage tabs
 REGION_MAPPING: dict[str, set[str]] = {
     "north_america": {"US", "CA"},
     "asia_pacific": {
-        "CN", "JP", "KR", "SG", "AU", "NZ", "HK", "MO", "TW", "IN", "MY", "TH",
+        "CN",
+        "JP",
+        "KR",
+        "SG",
+        "AU",
+        "NZ",
+        "HK",
+        "MO",
+        "TW",
+        "IN",
+        "MY",
+        "TH",
     },
     "europe": {
-        "GB", "DE", "FR", "CH", "NL", "IT", "ES", "SE", "AT", "BE",
-        "DK", "FI", "NO", "IE", "PT", "PL", "RU", "HU", "RO", "UA",
-        "RS", "SI", "SK", "BG", "HR", "LT", "LV", "EE", "IS", "LU",
-        "MT", "CY", "GR", "CZ",
+        "GB",
+        "DE",
+        "FR",
+        "CH",
+        "NL",
+        "IT",
+        "ES",
+        "SE",
+        "AT",
+        "BE",
+        "DK",
+        "FI",
+        "NO",
+        "IE",
+        "PT",
+        "PL",
+        "RU",
+        "HU",
+        "RO",
+        "UA",
+        "RS",
+        "SI",
+        "SK",
+        "BG",
+        "HR",
+        "LT",
+        "LV",
+        "EE",
+        "IS",
+        "LU",
+        "MT",
+        "CY",
+        "GR",
+        "CZ",
     },
     # "other" region is dynamically computed in the UI
 }

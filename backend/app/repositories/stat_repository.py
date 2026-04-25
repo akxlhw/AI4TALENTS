@@ -34,9 +34,7 @@ class StatisticsRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_overview_stats_by_version(
-        self, version: str
-    ) -> OverviewStatSnapshot | None:
+    async def get_overview_stats_by_version(self, version: str) -> OverviewStatSnapshot | None:
         """
         Get overview statistics by version.
 
@@ -47,15 +45,11 @@ class StatisticsRepository:
             OverviewStatSnapshot or None
         """
         result = await self.session.execute(
-            select(OverviewStatSnapshot).where(
-                OverviewStatSnapshot.stat_version == version
-            )
+            select(OverviewStatSnapshot).where(OverviewStatSnapshot.stat_version == version)
         )
         return result.scalar_one_or_none()
 
-    async def get_school_stats(
-        self, school_id: int
-    ) -> SchoolStatSnapshot | None:
+    async def get_school_stats(self, school_id: int) -> SchoolStatSnapshot | None:
         """
         Get the active statistics snapshot for a school.
 
@@ -113,8 +107,7 @@ class StatisticsRepository:
             Number of tech domains
         """
         result = await self.session.execute(
-            select(func.count(TechDomain.tech_domain_id))
-            .where(TechDomain.is_enabled.is_(True))
+            select(func.count(TechDomain.tech_domain_id)).where(TechDomain.is_enabled.is_(True))
         )
         return result.scalar() or 0
 
@@ -126,8 +119,9 @@ class StatisticsRepository:
             Number of tech directions
         """
         result = await self.session.execute(
-            select(func.count(TechDirection.tech_direction_id))
-            .where(TechDirection.is_enabled.is_(True))
+            select(func.count(TechDirection.tech_direction_id)).where(
+                TechDirection.is_enabled.is_(True)
+            )
         )
         return result.scalar() or 0
 
@@ -139,6 +133,7 @@ class StatisticsRepository:
             True if connection is healthy, False otherwise
         """
         from sqlalchemy import text
+
         try:
             result = await self.session.execute(text("SELECT 1"))
             return result.scalar() == 1

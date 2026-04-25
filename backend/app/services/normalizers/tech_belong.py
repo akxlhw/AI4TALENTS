@@ -1,6 +1,7 @@
 """
 Tech belong calculator for author-tech element relationships.
 """
+
 from __future__ import annotations
 
 import json
@@ -19,19 +20,14 @@ class TechBelongCalculator:
         self.session = session
 
     async def calculate_for_venue(
-        self,
-        venue_id: int,
-        tech_domain_id: int,
-        task_id: int | None = None
+        self, venue_id: int, tech_domain_id: int, task_id: int | None = None
     ) -> int:
         """Calculate author-tech relationships for a venue
 
         Returns number of relationships created
         """
         # Get the Venue to find its openalex_source_id
-        venue_result = await self.session.execute(
-            select(Venue).where(Venue.venue_id == venue_id)
-        )
+        venue_result = await self.session.execute(select(Venue).where(Venue.venue_id == venue_id))
         venue = venue_result.scalar_one_or_none()
         if not venue or not venue.openalex_source_id:
             return 0
@@ -54,19 +50,17 @@ class TechBelongCalculator:
                             author_stats[author_id] = {
                                 "work_count": 0,
                                 "first_year": work.publication_year,
-                                "last_year": work.publication_year
+                                "last_year": work.publication_year,
                             }
                         author_stats[author_id]["work_count"] += 1
                         if work.publication_year:
                             if author_stats[author_id]["first_year"]:
                                 author_stats[author_id]["first_year"] = min(
-                                    author_stats[author_id]["first_year"],
-                                    work.publication_year
+                                    author_stats[author_id]["first_year"], work.publication_year
                                 )
                             if author_stats[author_id]["last_year"]:
                                 author_stats[author_id]["last_year"] = max(
-                                    author_stats[author_id]["last_year"],
-                                    work.publication_year
+                                    author_stats[author_id]["last_year"], work.publication_year
                                 )
                 except (KeyError, TypeError):
                     pass
@@ -78,7 +72,7 @@ class TechBelongCalculator:
             existing = await self.session.execute(
                 select(AuthorTechBelong).where(
                     AuthorTechBelong.openalex_author_id == author_id,
-                    AuthorTechBelong.tech_domain_id == tech_domain_id
+                    AuthorTechBelong.tech_domain_id == tech_domain_id,
                 )
             )
             belong = existing.scalar_one_or_none()
@@ -99,7 +93,7 @@ class TechBelongCalculator:
                     work_count_in_venue=stats["work_count"],
                     first_work_year=stats["first_year"],
                     last_work_year=stats["last_year"],
-                    source_task_id=task_id
+                    source_task_id=task_id,
                 )
                 self.session.add(belong)
             count += 1

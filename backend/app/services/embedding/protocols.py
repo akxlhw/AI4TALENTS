@@ -3,7 +3,7 @@ Embedding Service Protocol definitions.
 嵌入服务协议定义
 """
 
-from typing import Protocol, List, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -13,7 +13,7 @@ class EmbedServiceProtocol(Protocol):
     定义嵌入服务必须实现的方法。
     """
 
-    async def get_or_create_embedding(self, talent_id: int) -> List[float]:
+    async def get_or_create_embedding(self, talent_id: int) -> list[float]:
         """获取或创建人才嵌入向量
 
         优先从缓存/数据库获取，不存在则生成。
@@ -30,11 +30,7 @@ class EmbedServiceProtocol(Protocol):
         """
         ...
 
-    async def batch_generate_embeddings(
-        self,
-        talent_ids: List[int],
-        batch_size: int = 100
-    ) -> int:
+    async def batch_generate_embeddings(self, talent_ids: list[int], batch_size: int = 100) -> int:
         """批量生成嵌入向量
 
         Args:
@@ -46,7 +42,7 @@ class EmbedServiceProtocol(Protocol):
         """
         ...
 
-    async def get_average_embedding(self, talent_ids: List[int]) -> List[float]:
+    async def get_average_embedding(self, talent_ids: list[int]) -> list[float]:
         """获取多个人才的平均嵌入向量
 
         Args:
@@ -57,7 +53,7 @@ class EmbedServiceProtocol(Protocol):
         """
         ...
 
-    async def get_query_embedding(self, query: str) -> List[float]:
+    async def get_query_embedding(self, query: str) -> list[float]:
         """获取查询文本的嵌入向量
 
         Args:

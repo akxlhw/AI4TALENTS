@@ -2,6 +2,7 @@
 Talent Pool Schemas.
 人才池相关DTO
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -11,6 +12,7 @@ from pydantic import BaseModel, Field
 
 class CreatePoolRequest(BaseModel):
     """创建人才池请求"""
+
     pool_name: str = Field(..., min_length=1, max_length=100, description="人才池名称")
     pool_type: str = Field(default="custom", description="人才池类型: custom/system")
     scope_desc: str | None = Field(default=None, description="范围描述")
@@ -18,19 +20,24 @@ class CreatePoolRequest(BaseModel):
 
 class UpdatePoolRequest(BaseModel):
     """更新人才池请求"""
-    pool_name: str | None = Field(default=None, min_length=1, max_length=100, description="人才池名称")
+
+    pool_name: str | None = Field(
+        default=None, min_length=1, max_length=100, description="人才池名称"
+    )
     scope_desc: str | None = Field(default=None, description="范围描述")
     pool_status: str | None = Field(default=None, description="状态: active/archived")
 
 
 class AddMemberRequest(BaseModel):
     """添加成员请求"""
+
     talent_id: int = Field(..., description="人才ID")
     notes: str | None = Field(default=None, description="备注")
 
 
 class TalentPoolResponse(BaseModel):
     """人才池响应"""
+
     pool_id: int = Field(description="人才池ID")
     pool_name: str = Field(description="人才池名称")
     pool_type: str = Field(description="人才池类型")
@@ -46,6 +53,7 @@ class TalentPoolResponse(BaseModel):
 
 class PoolMemberResponse(BaseModel):
     """人才池成员响应"""
+
     member_id: int = Field(description="成员记录ID")
     pool_id: int = Field(description="所属人才池ID")
     talent_id: int = Field(description="人才ID")
@@ -64,12 +72,14 @@ class PoolMemberResponse(BaseModel):
 
 class PoolListResponse(BaseModel):
     """人才池列表响应"""
+
     items: list[TalentPoolResponse] = Field(description="人才池列表")
     total: int = Field(description="总数")
 
 
 class UpdateFollowupRequest(BaseModel):
     """更新跟进状态请求"""
+
     followup_status: str = Field(..., description="跟进状态")
 
 

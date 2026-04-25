@@ -10,6 +10,7 @@ Role Types:
 - graduate: Early-career researchers who have recently graduated
 - unknown: Insufficient data to determine role
 """
+
 from __future__ import annotations
 
 import logging
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RoleIdentificationResult:
     """Result of role identification with metadata."""
+
     role_type: str
     confidence: float
     reason: str
@@ -94,21 +96,21 @@ class RoleIdentifier:
             return RoleIdentificationResult(
                 role_type=RoleType.PROFESSOR.value,
                 confidence=0.95,
-                reason=f"h_index >= {cls.PROFESSOR_H_INDEX_HIGH} ({h_index})"
+                reason=f"h_index >= {cls.PROFESSOR_H_INDEX_HIGH} ({h_index})",
             )
 
         if works_count >= cls.PROFESSOR_WORKS_HIGH and cited_by_count >= cls.PROFESSOR_CITED_HIGH:
             return RoleIdentificationResult(
                 role_type=RoleType.PROFESSOR.value,
                 confidence=0.90,
-                reason=f"works >= {cls.PROFESSOR_WORKS_HIGH} ({works_count}) and cited >= {cls.PROFESSOR_CITED_HIGH} ({cited_by_count})"
+                reason=f"works >= {cls.PROFESSOR_WORKS_HIGH} ({works_count}) and cited >= {cls.PROFESSOR_CITED_HIGH} ({cited_by_count})",
             )
 
         if works_count >= cls.PROFESSOR_WORKS_MEDIUM and h_index >= cls.PROFESSOR_H_INDEX_MEDIUM:
             return RoleIdentificationResult(
                 role_type=RoleType.PROFESSOR.value,
                 confidence=0.85,
-                reason=f"works >= {cls.PROFESSOR_WORKS_MEDIUM} ({works_count}) and h_index >= {cls.PROFESSOR_H_INDEX_MEDIUM} ({h_index})"
+                reason=f"works >= {cls.PROFESSOR_WORKS_MEDIUM} ({works_count}) and h_index >= {cls.PROFESSOR_H_INDEX_MEDIUM} ({h_index})",
             )
 
         # Student identification
@@ -116,14 +118,14 @@ class RoleIdentifier:
             return RoleIdentificationResult(
                 role_type=RoleType.STUDENT.value,
                 confidence=0.80,
-                reason=f"works <= {cls.STUDENT_WORKS_VERY_LOW} ({works_count})"
+                reason=f"works <= {cls.STUDENT_WORKS_VERY_LOW} ({works_count})",
             )
 
         if works_count <= cls.STUDENT_WORKS_LOW and cited_by_count < cls.STUDENT_CITED_LOW:
             return RoleIdentificationResult(
                 role_type=RoleType.STUDENT.value,
                 confidence=0.75,
-                reason=f"works <= {cls.STUDENT_WORKS_LOW} ({works_count}) and cited < {cls.STUDENT_CITED_LOW} ({cited_by_count})"
+                reason=f"works <= {cls.STUDENT_WORKS_LOW} ({works_count}) and cited < {cls.STUDENT_CITED_LOW} ({cited_by_count})",
             )
 
         # Graduate identification (early career researchers)
@@ -131,7 +133,7 @@ class RoleIdentifier:
             return RoleIdentificationResult(
                 role_type=RoleType.GRADUATE.value,
                 confidence=0.70,
-                reason=f"works between {cls.GRADUATE_WORKS_MIN} and {cls.GRADUATE_WORKS_MAX} ({works_count})"
+                reason=f"works between {cls.GRADUATE_WORKS_MIN} and {cls.GRADUATE_WORKS_MAX} ({works_count})",
             )
 
         # Default to unknown for edge cases
@@ -139,7 +141,7 @@ class RoleIdentifier:
         return RoleIdentificationResult(
             role_type=RoleType.UNKNOWN.value,
             confidence=0.50,
-            reason=f"Unable to classify: works={works_count}, cited={cited_by_count}, h_index={h_index}"
+            reason=f"Unable to classify: works={works_count}, cited={cited_by_count}, h_index={h_index}",
         )
 
     @classmethod

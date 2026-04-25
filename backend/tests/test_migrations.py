@@ -9,7 +9,9 @@ Test categories:
 - Static tests: Run always, no database required
 - Slow tests: Require ability to create/drop databases, run with: pytest tests/test_migrations.py -v --run-slow
 """
+
 import os
+
 import pytest
 from sqlalchemy import create_engine, text
 
@@ -17,11 +19,15 @@ from sqlalchemy import create_engine, text
 def get_postgres_connection(dbname: str = "postgres"):
     """Get a connection to PostgreSQL server."""
     from dotenv import load_dotenv
+
     load_dotenv()
 
-    database_url = os.getenv("DATABASE_SYNC_URL", "postgresql://talent_user:ai4recruit@localhost:5432/talent_db")
+    database_url = os.getenv(
+        "DATABASE_SYNC_URL", "postgresql://talent_user:ai4recruit@localhost:5432/talent_db"
+    )
 
     import re
+
     match = re.match(r"postgresql://(\w+):(\w+)@([^:]+):(\d+)/(\w+)", database_url)
     if not match:
         pytest.skip("Cannot parse DATABASE_SYNC_URL")
@@ -36,6 +42,7 @@ def get_postgres_connection(dbname: str = "postgres"):
 def temp_database():
     """Create a temporary database for testing migrations."""
     import secrets
+
     db_name = f"test_migration_{secrets.token_hex(4)}"
 
     engine = get_postgres_connection()
@@ -48,12 +55,16 @@ def temp_database():
 
     finally:
         with engine.connect() as conn:
-            conn.execute(text(f"""
+            conn.execute(
+                text(
+                    f"""
                 SELECT pg_terminate_backend(pg_stat_activity.pid)
                 FROM pg_stat_activity
                 WHERE pg_stat_activity.datname = '{db_name}'
                 AND pid <> pg_backend_pid()
-            """))
+            """
+                )
+            )
             conn.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
 
         engine.dispose()
@@ -62,6 +73,7 @@ def temp_database():
 # =============================================================================
 # STATIC TESTS - Always run, no database required
 # =============================================================================
+
 
 class TestMigrationStaticChecks:
     """Static checks on migration files - no database required."""
@@ -76,17 +88,16 @@ class TestMigrationStaticChecks:
 
         backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         result = subprocess.run(
-            ["alembic", "history", "--verbose"],
-            cwd=backend_dir,
-            capture_output=True,
-            text=True
+            ["alembic", "history", "--verbose"], cwd=backend_dir, capture_output=True, text=True
         )
 
         output = result.stdout
         assert "(head)" in output, "No head revision found"
 
         head_count = output.count("(head)")
-        assert head_count == 1, f"Multiple heads detected ({head_count} heads). Migration chain has branched!"
+        assert (
+            head_count == 1
+        ), f"Multiple heads detected ({head_count} heads). Migration chain has branched!"
 
     def test_migration_files_are_reasonable_size(self):
         """
@@ -107,12 +118,14 @@ class TestMigrationStaticChecks:
             if filename.startswith("__"):
                 continue
 
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, encoding="utf-8") as f:
                 content = f.read()
-                lines = content.count('\n')
+                lines = content.count("\n")
 
             if "001_initial" in filename:
-                assert lines < 500, f"Initial migration {filename} is too large ({lines} lines). Consider splitting."
+                assert (
+                    lines < 500
+                ), f"Initial migration {filename} is too large ({lines} lines). Consider splitting."
             else:
                 assert lines < 250, (
                     f"Migration {filename} is suspiciously large ({lines} lines). "
@@ -140,7 +153,7 @@ class TestMigrationStaticChecks:
             if filename.startswith("__"):
                 continue
 
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, encoding="utf-8") as f:
                 content = f.read()
 
             rev_match = regex.search(r"revision:\s*str\s*=\s*['\"]([^'\"]+)['\"]", content)
@@ -148,7 +161,9 @@ class TestMigrationStaticChecks:
                 continue
             revision = rev_match.group(1)
 
-            down_match = regex.search(r"down_revision:\s*Union\[str,\s*None\]\s*=\s*['\"]?([^'\"\n]+)['\"]?", content)
+            down_match = regex.search(
+                r"down_revision:\s*Union\[str,\s*None\]\s*=\s*['\"]?([^'\"\n]+)['\"]?", content
+            )
             down_revision = down_match.group(1) if down_match else None
             if down_revision == "None":
                 down_revision = None
@@ -179,7 +194,7 @@ class TestMigrationStaticChecks:
             if filename.startswith("__"):
                 continue
 
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, encoding="utf-8") as f:
                 content = f.read()
 
             rev_match = regex.search(r"revision:\s*str\s*=\s*['\"]([^'\"]+)['\"]", content)
@@ -216,7 +231,7 @@ class TestMigrationStaticChecks:
             if filename.startswith("__"):
                 continue
 
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, encoding="utf-8") as f:
                 content = f.read()
 
             creates = regex.findall(r"op\.create_table\(['\"](\w+)['\"]", content)
@@ -228,16 +243,13 @@ class TestMigrationStaticChecks:
 
         duplicates = {table: files for table, files in table_creates.items() if len(files) > 1}
 
-        assert not duplicates, (
-            f"Tables created in multiple migrations (likely bug): {duplicates}"
-        )
+        assert not duplicates, f"Tables created in multiple migrations (likely bug): {duplicates}"
 
     def test_all_migrations_have_upgrade_and_downgrade(self):
         """
         Verify that all migrations have both upgrade() and downgrade() functions.
         """
         import glob
-        import re as regex
 
         backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         migrations_dir = os.path.join(backend_dir, "migrations", "versions")
@@ -249,7 +261,7 @@ class TestMigrationStaticChecks:
             if filename.startswith("__"):
                 continue
 
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, encoding="utf-8") as f:
                 content = f.read()
 
             has_upgrade = "def upgrade()" in content
@@ -263,7 +275,6 @@ class TestMigrationStaticChecks:
         Verify that migrations use correct imports.
         """
         import glob
-        import re as regex
 
         backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         migrations_dir = os.path.join(backend_dir, "migrations", "versions")
@@ -275,22 +286,24 @@ class TestMigrationStaticChecks:
             if filename.startswith("__"):
                 continue
 
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, encoding="utf-8") as f:
                 content = f.read()
 
             # Check for common import issues
-            has_alembic_op = "from alembic import op" in content or "import alembic.op as op" in content
-            has_sqlalchemy = "import sqlalchemy as sa" in content
+            has_alembic_op = (
+                "from alembic import op" in content or "import alembic.op as op" in content
+            )
 
             # At minimum, migrations need 'op'
-            assert has_alembic_op or "op." in content, (
-                f"Migration {filename} doesn't import alembic.op"
-            )
+            assert (
+                has_alembic_op or "op." in content
+            ), f"Migration {filename} doesn't import alembic.op"
 
 
 # =============================================================================
 # SLOW TESTS - Require database, marked with @pytest.mark.slow
 # =============================================================================
+
 
 @pytest.mark.slow
 class TestFreshDeployment:
@@ -305,8 +318,11 @@ class TestFreshDeployment:
         """
         import subprocess
 
-        database_url = os.getenv("DATABASE_SYNC_URL", "postgresql://talent_user:ai4recruit@localhost:5432/talent_db")
+        database_url = os.getenv(
+            "DATABASE_SYNC_URL", "postgresql://talent_user:ai4recruit@localhost:5432/talent_db"
+        )
         import re
+
         match = re.match(r"postgresql://(\w+):(\w+)@([^:]+):(\d+)/(\w+)", database_url)
         user, password, host, port, _ = match.groups()
         temp_db_url = f"postgresql://{user}:{password}@{host}:{port}/{temp_database}"
@@ -317,18 +333,22 @@ class TestFreshDeployment:
             cwd=backend_dir,
             env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
             capture_output=True,
-            text=True
+            text=True,
         )
 
         assert result.returncode == 0, f"Migration failed: {result.stderr}"
 
         engine = get_postgres_connection(temp_database)
         with engine.connect() as conn:
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT table_name FROM information_schema.tables
                 WHERE table_schema = 'public'
                 ORDER BY table_name
-            """))
+            """
+                )
+            )
             tables = [row[0] for row in result.fetchall()]
 
         critical_tables = [
@@ -366,8 +386,11 @@ class TestUpgradeDeployment:
         """
         import subprocess
 
-        database_url = os.getenv("DATABASE_SYNC_URL", "postgresql://talent_user:ai4recruit@localhost:5432/talent_db")
+        database_url = os.getenv(
+            "DATABASE_SYNC_URL", "postgresql://talent_user:ai4recruit@localhost:5432/talent_db"
+        )
         import re
+
         match = re.match(r"postgresql://(\w+):(\w+)@([^:]+):(\d+)/(\w+)", database_url)
         user, password, host, port, _ = match.groups()
         temp_db_url = f"postgresql://{user}:{password}@{host}:{port}/{temp_database}"
@@ -379,29 +402,35 @@ class TestUpgradeDeployment:
             cwd=backend_dir,
             env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
             capture_output=True,
-            check=True
+            check=True,
         )
 
         engine = get_postgres_connection(temp_database)
         with engine.connect() as conn:
-            conn.execute(text("""
+            conn.execute(
+                text(
+                    """
                 INSERT INTO iam_user_account
                 (username, email, password_hash, role_type, is_active, status, display_name, created_at, updated_at)
                 VALUES ('testuser', 'test@example.com', 'test_hash', 'recruiter', true, 'active', 'Test User', NOW(), NOW())
-            """))
+            """
+                )
+            )
 
         result = subprocess.run(
             ["alembic", "upgrade", "head"],
             cwd=backend_dir,
             env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
             capture_output=True,
-            text=True
+            text=True,
         )
 
         assert result.returncode == 0, f"Re-running migrations failed: {result.stderr}"
 
         with engine.connect() as conn:
-            result = conn.execute(text("SELECT username, email FROM iam_user_account WHERE username = 'testuser'"))
+            result = conn.execute(
+                text("SELECT username, email FROM iam_user_account WHERE username = 'testuser'")
+            )
             user_row = result.fetchone()
 
         assert user_row is not None, "User data was lost after migration!"
@@ -421,8 +450,11 @@ class TestMigrationRollback:
         """
         import subprocess
 
-        database_url = os.getenv("DATABASE_SYNC_URL", "postgresql://talent_user:ai4recruit@localhost:5432/talent_db")
+        database_url = os.getenv(
+            "DATABASE_SYNC_URL", "postgresql://talent_user:ai4recruit@localhost:5432/talent_db"
+        )
         import re
+
         match = re.match(r"postgresql://(\w+):(\w+)@([^:]+):(\d+)/(\w+)", database_url)
         user, password, host, port, _ = match.groups()
         temp_db_url = f"postgresql://{user}:{password}@{host}:{port}/{temp_database}"
@@ -434,7 +466,7 @@ class TestMigrationRollback:
             cwd=backend_dir,
             env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
             capture_output=True,
-            check=True
+            check=True,
         )
 
         result = subprocess.run(
@@ -442,18 +474,24 @@ class TestMigrationRollback:
             cwd=backend_dir,
             env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
             capture_output=True,
-            text=True
+            text=True,
         )
 
         if result.returncode != 0:
-            pytest.skip(f"Downgrade failed (some migrations may lack proper downgrade): {result.stderr}")
+            pytest.skip(
+                f"Downgrade failed (some migrations may lack proper downgrade): {result.stderr}"
+            )
 
         engine = get_postgres_connection(temp_database)
         with engine.connect() as conn:
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT table_name FROM information_schema.tables
                 WHERE table_schema = 'public' AND table_name != 'alembic_version'
-            """))
+            """
+                )
+            )
             tables = [row[0] for row in result.fetchall()]
 
         assert len(tables) == 0, f"Tables not cleaned up after downgrade: {tables}"
@@ -463,15 +501,19 @@ class TestMigrationRollback:
             cwd=backend_dir,
             env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
             capture_output=True,
-            check=True
+            check=True,
         )
 
         with engine.connect() as conn:
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT table_name FROM information_schema.tables
                 WHERE table_schema = 'public'
                 ORDER BY table_name
-            """))
+            """
+                )
+            )
             tables = [row[0] for row in result.fetchall()]
 
         assert "iam_user_account" in tables
@@ -489,10 +531,14 @@ class TestModelMigrationConsistency:
         Verify that SQLAlchemy model definitions match the migrated table structure.
         """
         import subprocess
+
         from sqlalchemy import inspect
 
-        database_url = os.getenv("DATABASE_SYNC_URL", "postgresql://talent_user:ai4recruit@localhost:5432/talent_db")
+        database_url = os.getenv(
+            "DATABASE_SYNC_URL", "postgresql://talent_user:ai4recruit@localhost:5432/talent_db"
+        )
         import re
+
         match = re.match(r"postgresql://(\w+):(\w+)@([^:]+):(\d+)/(\w+)", database_url)
         user, password, host, port, _ = match.groups()
         temp_db_url = f"postgresql://{user}:{password}@{host}:{port}/{temp_database}"
@@ -504,13 +550,13 @@ class TestModelMigrationConsistency:
             cwd=backend_dir,
             env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
             capture_output=True,
-            check=True
+            check=True,
         )
 
         import sys
+
         sys.path.insert(0, backend_dir)
         from app.core.database import Base
-        from app.models import iam, talent, school, tech_domain, raw_data, standardized
 
         engine = create_engine(temp_db_url)
 
@@ -520,7 +566,9 @@ class TestModelMigrationConsistency:
         model_tables = set(Base.metadata.tables.keys())
 
         missing_in_db = model_tables - db_tables
-        assert not missing_in_db, f"Tables defined in models but missing in database: {missing_in_db}"
+        assert (
+            not missing_in_db
+        ), f"Tables defined in models but missing in database: {missing_in_db}"
 
         engine.dispose()
 
@@ -535,8 +583,11 @@ class TestMigrationIdempotency:
         """
         import subprocess
 
-        database_url = os.getenv("DATABASE_SYNC_URL", "postgresql://talent_user:ai4recruit@localhost:5432/talent_db")
+        database_url = os.getenv(
+            "DATABASE_SYNC_URL", "postgresql://talent_user:ai4recruit@localhost:5432/talent_db"
+        )
         import re
+
         match = re.match(r"postgresql://(\w+):(\w+)@([^:]+):(\d+)/(\w+)", database_url)
         user, password, host, port, _ = match.groups()
         temp_db_url = f"postgresql://{user}:{password}@{host}:{port}/{temp_database}"
@@ -548,7 +599,7 @@ class TestMigrationIdempotency:
             cwd=backend_dir,
             env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
             capture_output=True,
-            text=True
+            text=True,
         )
         assert result1.returncode == 0, f"First migration failed: {result1.stderr}"
 
@@ -557,6 +608,8 @@ class TestMigrationIdempotency:
             cwd=backend_dir,
             env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
             capture_output=True,
-            text=True
+            text=True,
         )
-        assert result2.returncode == 0, f"Second migration failed (not idempotent): {result2.stderr}"
+        assert (
+            result2.returncode == 0
+        ), f"Second migration failed (not idempotent): {result2.stderr}"

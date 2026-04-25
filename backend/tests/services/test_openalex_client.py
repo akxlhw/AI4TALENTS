@@ -1,13 +1,14 @@
 """
 Tests for OpenAlex client.
 """
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
+import pytest
 
 from app.services.openalex_client import (
     OpenAlexClient,
-    OpenAlexAPIError,
     OpenAlexRateLimitError,
 )
 

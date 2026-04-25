@@ -3,8 +3,8 @@ LLM Gateway Protocol definitions.
 LLM 网关协议定义 - 支持依赖倒置和 Mock 测试
 """
 
-from typing import Protocol, List, runtime_checkable
 from dataclasses import dataclass, field
+from typing import Protocol, runtime_checkable
 
 
 @dataclass
@@ -18,7 +18,8 @@ class JDFeatures:
     Attributes:
         research_areas: 研究方向列表（英文关键词）
     """
-    research_areas: List[str] = field(default_factory=list)
+
+    research_areas: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """转换为字典"""
@@ -43,7 +44,8 @@ class EmbeddingResult:
         model: 使用的模型名称
         tokens_used: 消耗的 token 数量
     """
-    embedding: List[float]
+
+    embedding: list[float]
     model: str
     tokens_used: int = 0
 
@@ -94,7 +96,7 @@ class LLMGatewayProtocol(Protocol):
         """
         ...
 
-    async def generate_embedding_batch(self, texts: List[str]) -> List[EmbeddingResult]:
+    async def generate_embedding_batch(self, texts: list[str]) -> list[EmbeddingResult]:
         """批量生成嵌入向量
 
         Args:

@@ -1,6 +1,7 @@
 """
 Tests for metrics collection and /metrics endpoint.
 """
+
 import os
 
 os.environ["REDIS_ENABLED"] = "false"
@@ -79,9 +80,9 @@ class TestMetricTypes:
 
         # Check bucket counts
         assert histogram.counts[0.1] == 1  # 0.05 <= 0.1
-        assert histogram.counts[0.5] == 2   # 0.05, 0.3 <= 0.5
-        assert histogram.counts[1.0] == 3   # 0.05, 0.3, 0.8 <= 1.0
-        assert histogram.counts[5.0] == 3   # 0.05, 0.3, 0.8 <= 5.0
+        assert histogram.counts[0.5] == 2  # 0.05, 0.3 <= 0.5
+        assert histogram.counts[1.0] == 3  # 0.05, 0.3, 0.8 <= 1.0
+        assert histogram.counts[5.0] == 3  # 0.05, 0.3, 0.8 <= 5.0
         assert histogram.counts["+Inf"] == 4  # All values
 
 
@@ -234,7 +235,7 @@ class TestHelperFunctions:
 
     def test_record_request(self):
         """Test record_request function."""
-        registry = MetricsRegistry()
+        MetricsRegistry()
 
         # Record some requests
         record_request("GET", "/api/v1/talents", 200, 0.1)
@@ -265,7 +266,7 @@ class TestHelperFunctions:
 
     def test_record_cache_request_hit(self):
         """Test record_cache_request for cache hit."""
-        from app.core.metrics import record_cache_request, metrics
+        from app.core.metrics import metrics, record_cache_request
 
         metrics.reset_all()
         record_cache_request(hit=True, key="test:key")
@@ -279,7 +280,7 @@ class TestHelperFunctions:
 
     def test_record_cache_request_miss(self):
         """Test record_cache_request for cache miss."""
-        from app.core.metrics import record_cache_request, metrics
+        from app.core.metrics import metrics, record_cache_request
 
         metrics.reset_all()
         record_cache_request(hit=False, key="test:key")
@@ -292,7 +293,7 @@ class TestHelperFunctions:
 
     def test_record_db_query(self):
         """Test record_db_query function."""
-        from app.core.metrics import record_db_query, metrics
+        from app.core.metrics import metrics, record_db_query
 
         # Get the histogram first (creates it with labels)
         histogram_select = metrics.histogram("db_query_duration_seconds", labels={"type": "select"})
@@ -351,9 +352,9 @@ class TestPredefinedMetrics:
     def test_collection_metrics_exist(self):
         """Test collection task metrics exist."""
         from app.core.metrics import (
+            COLLECTION_ERRORS_TOTAL,
             COLLECTION_TASKS_ACTIVE,
             COLLECTION_TASKS_TOTAL,
-            COLLECTION_ERRORS_TOTAL,
         )
 
         assert COLLECTION_TASKS_ACTIVE.name == "collection_tasks_active"

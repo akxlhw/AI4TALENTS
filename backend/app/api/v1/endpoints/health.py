@@ -1,6 +1,7 @@
 """
 Health check endpoint.
 """
+
 from datetime import datetime
 
 from fastapi import APIRouter, Depends
@@ -17,6 +18,7 @@ router = APIRouter(tags=["Health"])
 
 class HealthCheckResponse(BaseModel):
     """Health check response."""
+
     status: str
     timestamp: str
     service: dict
@@ -26,12 +28,14 @@ class HealthCheckResponse(BaseModel):
 
 class ReadinessResponse(BaseModel):
     """Readiness check response."""
+
     status: str
     checks: dict
 
 
 class LivenessResponse(BaseModel):
     """Liveness check response."""
+
     status: str
 
 

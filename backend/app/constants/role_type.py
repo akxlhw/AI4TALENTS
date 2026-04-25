@@ -4,6 +4,7 @@ Role Type Constants
 Unified role type definitions for academic talent identification.
 Matches frontend/src/constants/roleType.ts
 """
+
 from enum import Enum
 
 

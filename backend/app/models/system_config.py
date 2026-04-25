@@ -1,6 +1,7 @@
 """
 System configuration model.
 """
+
 from sqlalchemy import Boolean, Column, Integer, String, Text
 
 from app.core.database import Base
@@ -15,7 +16,9 @@ class SystemConfig(Base, TimestampMixin):
     config_id = Column(Integer, primary_key=True, index=True)
     config_key = Column(String(100), unique=True, nullable=False, index=True)
     config_value = Column(Text, nullable=True)
-    config_type = Column(String(20), default="string", nullable=False)  # string, int, float, bool, json
+    config_type = Column(
+        String(20), default="string", nullable=False
+    )  # string, int, float, bool, json
     is_sensitive = Column(Boolean, default=False, nullable=False)
     description = Column(String(500), nullable=True)
 

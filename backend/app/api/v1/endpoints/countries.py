@@ -3,6 +3,7 @@ Countries API endpoint.
 Returns list of countries with school counts.
 Aggregated from core_school table using country_code.
 """
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 

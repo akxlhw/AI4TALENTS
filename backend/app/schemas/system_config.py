@@ -1,11 +1,13 @@
 """
 Schemas for system configuration API.
 """
+
 from pydantic import BaseModel, Field
 
 
 class SystemConfigItem(BaseModel):
     """System configuration item."""
+
     key: str = Field(description="配置键")
     value: str | int | float | bool | None = Field(description="配置值")
     display_value: str | int | float | bool | None = Field(description="显示值")
@@ -16,17 +18,20 @@ class SystemConfigItem(BaseModel):
 
 class SystemConfigListResponse(BaseModel):
     """Response for listing system configurations."""
+
     items: list[SystemConfigItem] = Field(description="配置项列表")
     total: int = Field(description="总数")
 
 
 class UpdateConfigRequest(BaseModel):
     """Request for updating a configuration value."""
+
     value: str | int | float | bool = Field(..., description="Configuration value")
 
 
 class LLMConfigRequest(BaseModel):
     """Request for updating LLM configuration."""
+
     enabled: bool | None = Field(None, description="Enable chat model functionality")
     embedding_enabled: bool | None = Field(None, description="Enable embedding model functionality")
     api_format: str | None = Field(None, description="API format (openai/minimax)")
@@ -36,13 +41,18 @@ class LLMConfigRequest(BaseModel):
     embedding_model: str | None = Field(None, description="Embedding model name")
     embedding_api_base: str | None = Field(None, description="Embedding API base URL (optional)")
     embedding_api_key: str | None = Field(None, description="Embedding API key (optional)")
-    embedding_api_format: str | None = Field(None, description="Embedding API format (openai/minimax), defaults to api_format")
-    embedding_dimension: int | None = Field(None, ge=128, le=4096, description="Embedding vector dimension (128-4096)")
+    embedding_api_format: str | None = Field(
+        None, description="Embedding API format (openai/minimax), defaults to api_format"
+    )
+    embedding_dimension: int | None = Field(
+        None, ge=128, le=4096, description="Embedding vector dimension (128-4096)"
+    )
     timeout: int | None = Field(None, ge=1, le=600, description="Request timeout in seconds")
 
 
 class LLMConfigResponse(BaseModel):
     """Response for LLM configuration."""
+
     enabled: bool = Field(description="对话模型是否启用")
     embedding_enabled: bool = Field(description="嵌入模型是否启用")
     api_format: str = Field(description="API格式")
@@ -59,16 +69,25 @@ class LLMConfigResponse(BaseModel):
 
 class ProxyConfigRequest(BaseModel):
     """Request for updating proxy configuration."""
+
     enabled: bool | None = Field(None, description="Enable HTTP proxy")
-    url: str | None = Field(None, description="Proxy server URL (e.g., http://proxy.company.com:8080)")
+    url: str | None = Field(
+        None, description="Proxy server URL (e.g., http://proxy.company.com:8080)"
+    )
     username: str | None = Field(None, description="Proxy username (optional)")
     password: str | None = Field(None, description="Proxy password (optional)")
-    no_proxy: str | None = Field(None, description="Addresses to bypass proxy (comma-separated, e.g., localhost,*.internal.com)")
-    ssl_verify: bool | None = Field(None, description="Verify SSL certificates (set False for self-signed certs)")
+    no_proxy: str | None = Field(
+        None,
+        description="Addresses to bypass proxy (comma-separated, e.g., localhost,*.internal.com)",
+    )
+    ssl_verify: bool | None = Field(
+        None, description="Verify SSL certificates (set False for self-signed certs)"
+    )
 
 
 class ProxyConfigResponse(BaseModel):
     """Response for proxy configuration."""
+
     enabled: bool = Field(description="是否启用代理")
     url: str = Field(description="代理服务器URL")
     username: str = Field(description="代理用户名")
@@ -79,14 +98,20 @@ class ProxyConfigResponse(BaseModel):
 
 class TestProxyRequest(BaseModel):
     """Request for testing proxy connection."""
-    url: str | None = Field(None, description="Proxy URL to test (optional, uses saved config if not provided)")
+
+    url: str | None = Field(
+        None, description="Proxy URL to test (optional, uses saved config if not provided)"
+    )
     username: str | None = Field(None, description="Proxy username (optional)")
     password: str | None = Field(None, description="Proxy password (optional)")
-    test_internal_url: str | None = Field(None, description="Internal URL to test (optional, for no_proxy validation)")
+    test_internal_url: str | None = Field(
+        None, description="Internal URL to test (optional, for no_proxy validation)"
+    )
 
 
 class TestProxyResult(BaseModel):
     """Result of a single proxy test."""
+
     url: str = Field(description="测试URL")
     success: bool = Field(description="是否成功")
     message: str = Field(description="测试结果消息")
@@ -95,6 +120,7 @@ class TestProxyResult(BaseModel):
 
 class TestProxyResponse(BaseModel):
     """Response for testing proxy connection."""
+
     success: bool = Field(description="整体是否成功")
     message: str = Field(description="结果消息")
     details: dict | None = Field(default=None, description="详细数据")
@@ -103,6 +129,7 @@ class TestProxyResponse(BaseModel):
 
 class TestLLMRequest(BaseModel):
     """Request for testing LLM connection."""
+
     api_format: str | None = Field(None, description="API format (openai/minimax)")
     api_key: str | None = Field(None, description="API key to test (optional)")
     api_base: str | None = Field(None, description="API base URL to test (optional)")
@@ -111,6 +138,7 @@ class TestLLMRequest(BaseModel):
 
 class TestLLMResponse(BaseModel):
     """Response for testing LLM connection."""
+
     success: bool = Field(description="是否成功")
     message: str = Field(description="结果消息")
     details: dict | None = Field(default=None, description="详细数据")
@@ -118,6 +146,7 @@ class TestLLMResponse(BaseModel):
 
 class TestEmbeddingRequest(BaseModel):
     """Request for testing embedding model connection."""
+
     api_format: str | None = Field(None, description="API format (openai/minimax)")
     api_key: str | None = Field(None, description="API key to test (optional)")
     api_base: str | None = Field(None, description="API base URL to test (optional)")
@@ -126,6 +155,7 @@ class TestEmbeddingRequest(BaseModel):
 
 class TestEmbeddingResponse(BaseModel):
     """Response for testing embedding connection."""
+
     success: bool = Field(description="是否成功")
     message: str = Field(description="结果消息")
     details: dict | None = Field(default=None, description="详细数据")

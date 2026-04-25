@@ -2,6 +2,7 @@
 Raw data layer models for OpenAlex entities.
 原始数据层模型 - 支持数据回溯、重试和审计
 """
+
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
@@ -144,7 +145,7 @@ class AuthorTechBelong(Base, TimestampMixin):
 
     __tablename__ = "rel_author_tech_belong"
     __table_args__ = (
-        Index('ix_author_tech_author_domain', 'openalex_author_id', 'tech_domain_id', unique=True),
+        Index("ix_author_tech_author_domain", "openalex_author_id", "tech_domain_id", unique=True),
     )
 
     belong_id = Column(Integer, primary_key=True, index=True)
@@ -156,7 +157,9 @@ class AuthorTechBelong(Base, TimestampMixin):
     std_author_id = Column(Integer, nullable=True, index=True)
 
     # Tech domain reference
-    tech_domain_id = Column(Integer, ForeignKey("core_tech_domain.tech_domain_id"), nullable=False, index=True)
+    tech_domain_id = Column(
+        Integer, ForeignKey("core_tech_domain.tech_domain_id"), nullable=False, index=True
+    )
 
     # Source venue where this relationship was established
     source_venue_id = Column(Integer, ForeignKey("config_venue.venue_id"), nullable=True)

@@ -1,6 +1,7 @@
 """
 Collaboration model for co-author relationships.
 """
+
 from sqlalchemy import Column, ForeignKey, Integer, String, UniqueConstraint
 
 from app.core.database import Base
@@ -11,9 +12,7 @@ class Collaboration(Base, TimestampMixin):
     """Co-author collaboration relationship between two talents."""
 
     __tablename__ = "core_collaboration"
-    __table_args__ = (
-        UniqueConstraint('talent_id_1', 'talent_id_2', name='uq_collaboration_pair'),
-    )
+    __table_args__ = (UniqueConstraint("talent_id_1", "talent_id_2", name="uq_collaboration_pair"),)
 
     collaboration_id = Column(Integer, primary_key=True, index=True)
 

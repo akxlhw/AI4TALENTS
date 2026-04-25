@@ -2,6 +2,7 @@
 Homepage API schemas.
 首页数据响应模型
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
@@ -38,16 +39,9 @@ class HomepageHighlightsResponse(BaseModel):
     """首页聚合数据响应"""
 
     hot_tech_domains: list[HotTechDomainItem] = Field(
-        default_factory=list,
-        description="热门技术领域列表"
+        default_factory=list, description="热门技术领域列表"
     )
-    top_countries: list[TopCountryItem] = Field(
-        default_factory=list,
-        description="主要国家列表"
-    )
-    top_schools: list[TopSchoolItem] = Field(
-        default_factory=list,
-        description="Top院校列表"
-    )
+    top_countries: list[TopCountryItem] = Field(default_factory=list, description="主要国家列表")
+    top_schools: list[TopSchoolItem] = Field(default_factory=list, description="Top院校列表")
     version: str = Field(description="数据版本")
     generated_at: str = Field(description="生成时间")

@@ -4,9 +4,9 @@ Provides talent list, detail, and filtering.
 
 Architecture: Endpoint -> Service -> Repository
 """
+
 from __future__ import annotations
 
-import asyncio
 import csv
 import io
 
@@ -42,7 +42,9 @@ router = APIRouter(prefix="/talents", tags=["Talents"])
 async def list_talents(
     school_id: int | None = Query(None, description="按学校ID筛选"),
     country_code: str | None = Query(None, description="按国家代码筛选 (如 US, CN)"),
-    role_type: str | None = Query(None, description="按角色类型筛选 (professor/student/graduated/unknown)"),
+    role_type: str | None = Query(
+        None, description="按角色类型筛选 (professor/student/graduated/unknown)"
+    ),
     min_works: int | None = Query(None, description="最小论文数"),
     min_citations: int | None = Query(None, description="最小引用数"),
     keyword: str | None = Query(None, description="搜索关键词"),
@@ -85,9 +87,13 @@ async def list_talents(
             school_name=talent.primary_school_name,
             # Primary institutions
             education_school_id=talent.education_school_id,
-            education_school_name=talent.education_school.school_name if talent.education_school else None,
+            education_school_name=(
+                talent.education_school.school_name if talent.education_school else None
+            ),
             company_school_id=talent.company_school_id,
-            company_school_name=talent.company_school.school_name if talent.company_school else None,
+            company_school_name=(
+                talent.company_school.school_name if talent.company_school else None
+            ),
             current_title=talent.current_title,
             works_count=talent.works_count,
             cited_by_count=talent.cited_by_count,
@@ -172,7 +178,9 @@ async def get_talent(
         school_name=talent.primary_school_name,
         # Primary institutions
         education_school_id=talent.education_school_id,
-        education_school_name=talent.education_school.school_name if talent.education_school else None,
+        education_school_name=(
+            talent.education_school.school_name if talent.education_school else None
+        ),
         company_school_id=talent.company_school_id,
         company_school_name=talent.company_school.school_name if talent.company_school else None,
         current_title=talent.current_title,
@@ -231,6 +239,7 @@ async def get_talent_works(
 
 @router.post(
     "/export",
+    response_model=None,
     summary="导出候选人",
     description="导出选中的候选人数据为CSV或Excel格式",
 )
@@ -253,22 +262,36 @@ async def export_talents(
         raise HTTPException(status_code=404, detail="未找到要导出的人才")
 
     # Prepare data
-    headers = ["ID", "姓名", "英文名", "ORCID", "角色", "学校", "职位", "论文数", "引用数", "H指数", "研究方向"]
+    headers = [
+        "ID",
+        "姓名",
+        "英文名",
+        "ORCID",
+        "角色",
+        "学校",
+        "职位",
+        "论文数",
+        "引用数",
+        "H指数",
+        "研究方向",
+    ]
     rows = []
     for t in talents:
-        rows.append([
-            t.talent_id,
-            t.name,
-            t.name_en or "",
-            t.orcid or "",
-            t.role_type,
-            t.school.school_name if t.school else "",
-            t.current_title or "",
-            t.works_count,
-            t.cited_by_count,
-            t.h_index,
-            ", ".join(t.topic_tags or []),
-        ])
+        rows.append(
+            [
+                t.talent_id,
+                t.name,
+                t.name_en or "",
+                t.orcid or "",
+                t.role_type,
+                t.school.school_name if t.school else "",
+                t.current_title or "",
+                t.works_count,
+                t.cited_by_count,
+                t.h_index,
+                ", ".join(t.topic_tags or []),
+            ]
+        )
 
     if format == "xlsx":
         # Create Excel file
@@ -348,28 +371,31 @@ async def compare_talents(
         raise HTTPException(status_code=404, detail="未找到要对比的人才")
 
     # Build comparison data
-    from app.schemas.overview import TalentCompareItem, ComparisonFieldItem
+    from app.schemas.overview import ComparisonFieldItem, TalentCompareItem
+
     comparison_data = []
     for t in talents:
-        comparison_data.append(TalentCompareItem(
-            talent_id=t.talent_id,
-            name=t.name,
-            name_en=t.name_en,
-            orcid=t.orcid,
-            role_type=t.role_type,
-            school_id=t.school_id,
-            school_name=t.school.school_name if t.school else None,
-            current_title=t.current_title,
-            department_name=t.department_name,
-            lab_name=t.lab_name,
-            works_count=t.works_count,
-            cited_by_count=t.cited_by_count,
-            h_index=t.h_index,
-            latest_active_year=t.latest_active_year,
-            topic_tags=t.topic_tags or [],
-            openalex_topics=t.openalex_topics or [],
-            academic_age=t.role_profile.academic_age if t.role_profile else None,
-        ))
+        comparison_data.append(
+            TalentCompareItem(
+                talent_id=t.talent_id,
+                name=t.name,
+                name_en=t.name_en,
+                orcid=t.orcid,
+                role_type=t.role_type,
+                school_id=t.school_id,
+                school_name=t.school.school_name if t.school else None,
+                current_title=t.current_title,
+                department_name=t.department_name,
+                lab_name=t.lab_name,
+                works_count=t.works_count,
+                cited_by_count=t.cited_by_count,
+                h_index=t.h_index,
+                latest_active_year=t.latest_active_year,
+                topic_tags=t.topic_tags or [],
+                openalex_topics=t.openalex_topics or [],
+                academic_age=t.role_profile.academic_age if t.role_profile else None,
+            )
+        )
 
     return TalentCompareResponse(
         talents=comparison_data,
@@ -385,7 +411,7 @@ async def compare_talents(
             ComparisonFieldItem(key="latest_active_year", label="最近活跃年份"),
             ComparisonFieldItem(key="academic_age", label="学术年龄"),
             ComparisonFieldItem(key="topic_tags", label="研究方向"),
-        ]
+        ],
     )
 
 
@@ -414,6 +440,7 @@ async def generate_sample_collaborations(
 
 @router.get(
     "/{talent_id}/collaborations",
+    response_model=dict,
     summary="获取合作网络",
     description="获取学者的合作关系数据",
 )
@@ -473,9 +500,7 @@ async def sync_collaborations(
     background_tasks.add_task(run_sync_background, talent_id)
 
     return TaskStartResponse(
-        message="同步任务已启动",
-        talent_id=talent_id,
-        sync_all=talent_id is None
+        message="同步任务已启动", talent_id=talent_id, sync_all=talent_id is None
     )
 
 
@@ -492,6 +517,7 @@ async def run_sync_background(talent_id: int | None = None):
         try:
             if talent_id:
                 from app.services.talent_service import TalentService
+
                 talent_service = TalentService(session)
                 talent = await talent_service.get_talent_by_id(talent_id)
                 if talent:
@@ -501,15 +527,16 @@ async def run_sync_background(talent_id: int | None = None):
                     _sync_progress["collaborations"] = count
             else:
                 result = await service.sync_all_collaborations(
-                    progress_callback=lambda p, t, c: _sync_progress.update({
-                        "processed": p, "total": t, "collaborations": c
-                    })
+                    progress_callback=lambda p, t, c: _sync_progress.update(
+                        {"processed": p, "total": t, "collaborations": c}
+                    )
                 )
                 _sync_progress.update(result)
 
             _sync_progress["status"] = "completed"
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             _sync_progress["status"] = f"error: {str(e)}"
 
@@ -533,9 +560,6 @@ async def get_sync_status(
     service = CollaborationService(session)
     try:
         data_status = await service.get_sync_status()
-        return SyncStatusResponse(
-            sync_progress=_sync_progress,
-            data_status=data_status
-        )
+        return SyncStatusResponse(sync_progress=_sync_progress, data_status=data_status)
     finally:
         await service.close()

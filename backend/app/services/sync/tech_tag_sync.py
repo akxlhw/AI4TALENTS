@@ -1,6 +1,7 @@
 """
 Tech tag sync service for creating TalentTechTag records.
 """
+
 from __future__ import annotations
 
 import logging
@@ -25,7 +26,7 @@ class TechTagSyncService:
         self,
         talent: Talent,
         belongs: list[AuthorTechBelong],
-        default_tech_direction_id: int | None = None
+        default_tech_direction_id: int | None = None,
     ) -> int:
         """
         Create TalentTechTag records based on AuthorTechBelong
@@ -48,19 +49,23 @@ class TechTagSyncService:
         existing_result = await self.session.execute(
             select(TalentTechTag.tech_domain_id).where(
                 TalentTechTag.talent_id == talent.talent_id,
-                TalentTechTag.tech_domain_id.in_(domain_ids)
+                TalentTechTag.tech_domain_id.in_(domain_ids),
             )
         )
         existing_domain_ids = {row.tech_domain_id for row in existing_result.all()}
 
         # Pre-fetch tech directions for all domains to avoid N+1 in _get_tech_direction_id
-        domain_ids_needing_direction = [b.tech_domain_id for b in belongs if b.tech_domain_id not in existing_domain_ids]
+        domain_ids_needing_direction = [
+            b.tech_domain_id for b in belongs if b.tech_domain_id not in existing_domain_ids
+        ]
         if domain_ids_needing_direction:
             directions_result = await self.session.execute(
-                select(TechDirection).where(
+                select(TechDirection)
+                .where(
                     TechDirection.tech_domain_id.in_(domain_ids_needing_direction),
-                    TechDirection.is_enabled.is_(True)
-                ).order_by(TechDirection.tech_domain_id, TechDirection.sort_order)
+                    TechDirection.is_enabled.is_(True),
+                )
+                .order_by(TechDirection.tech_domain_id, TechDirection.sort_order)
             )
             # Build a map: tech_domain_id -> first tech_direction_id
             self._direction_map: dict[int, int] = {}
@@ -96,7 +101,11 @@ class TechTagSyncService:
                 tag_level="primary",
                 tag_source="auto_mapping",
                 confirm_status="auto_identified",
-                confidence_score=min(1.0, belong.work_count_in_venue / 10.0) if belong.work_count_in_venue else 0.5,
+                confidence_score=(
+                    min(1.0, belong.work_count_in_venue / 10.0)
+                    if belong.work_count_in_venue
+                    else 0.5
+                ),
                 is_enabled=True,
             )
 
@@ -110,9 +119,7 @@ class TechTagSyncService:
         return created_count
 
     async def _get_tech_direction_id(
-        self,
-        tech_domain_id: int,
-        default_id: int | None = None
+        self, tech_domain_id: int, default_id: int | None = None
     ) -> int | None:
         """Get tech direction ID for a tech domain"""
         if default_id:
@@ -120,10 +127,11 @@ class TechTagSyncService:
 
         # Try to get the first tech direction for this tech domain
         result = await self.session.execute(
-            select(TechDirection).where(
-                TechDirection.tech_domain_id == tech_domain_id,
-                TechDirection.is_enabled.is_(True)
-            ).order_by(TechDirection.sort_order)
+            select(TechDirection)
+            .where(
+                TechDirection.tech_domain_id == tech_domain_id, TechDirection.is_enabled.is_(True)
+            )
+            .order_by(TechDirection.sort_order)
         )
         direction = result.scalar_one_or_none()
         return direction.tech_direction_id if direction else None

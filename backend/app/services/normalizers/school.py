@@ -1,10 +1,11 @@
 """
 School normalizer for the standardized layer.
 """
+
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,10 +39,7 @@ class SchoolNormalizer:
         return name.strip().lower()
 
     async def find_matching_school(
-        self,
-        openalex_id: str | None,
-        raw_name: str,
-        country_code: str | None = None
+        self, openalex_id: str | None, raw_name: str, country_code: str | None = None
     ) -> tuple[StdSchool | None, str]:
         """Find matching school by OpenAlex ID or name
 
@@ -79,7 +77,8 @@ class SchoolNormalizer:
             # Try normalized name match
             normalized = self.normalize_school_name(raw_name)
             result = await self.session.execute(
-                select(StdSchool).where(StdSchool.name_normalized.ilike(f"%{normalized}%"))
+                select(StdSchool)
+                .where(StdSchool.name_normalized.ilike(f"%{normalized}%"))
                 .limit(1)  # 只取第一条匹配记录
             )
             school = result.scalars().first()
@@ -103,9 +102,7 @@ class SchoolNormalizer:
         return code
 
     async def create_std_school(
-        self,
-        raw_inst: RawInstitution,
-        task_id: int | None = None
+        self, raw_inst: RawInstitution, task_id: int | None = None
     ) -> StdSchool:
         """Create a new StdSchool from RawInstitution"""
         # Normalize country code (TW -> CN)
@@ -120,23 +117,19 @@ class SchoolNormalizer:
             inst_type=raw_inst.type,
             confirm_status="auto_identified",
             source_task_id=task_id,
-            normalized_at=datetime.utcnow()
+            normalized_at=datetime.utcnow(),
         )
         self.session.add(std_school)
         await self.session.flush()
         return std_school
 
     async def normalize_institution(
-        self,
-        raw_inst: RawInstitution,
-        task_id: int | None = None
+        self, raw_inst: RawInstitution, task_id: int | None = None
     ) -> StdSchool:
         """Normalize a raw institution to StdSchool"""
         # Try to find existing match
         matched, match_type = await self.find_matching_school(
-            raw_inst.openalex_institution_id,
-            raw_inst.display_name,
-            raw_inst.country_code
+            raw_inst.openalex_institution_id, raw_inst.display_name, raw_inst.country_code
         )
 
         if matched:
@@ -154,10 +147,7 @@ class SchoolNormalizer:
             # Create new
             return await self.create_std_school(raw_inst, task_id)
 
-    async def normalize_all_institutions(
-        self,
-        task_id: int | None = None
-    ) -> NormalizationResult:
+    async def normalize_all_institutions(self, task_id: int | None = None) -> NormalizationResult:
         """Normalize all pending institutions for a specific task.
 
         Args:
@@ -168,6 +158,7 @@ class SchoolNormalizer:
             NormalizationResult with statistics
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         result = NormalizationResult()
@@ -184,7 +175,9 @@ class SchoolNormalizer:
         for i, raw_inst in enumerate(pending):
             try:
                 std_school = await self.normalize_institution(raw_inst, task_id)
-                await raw_repo.mark_processed(raw_inst.raw_institution_id, "processed", std_school.std_school_id)
+                await raw_repo.mark_processed(
+                    raw_inst.raw_institution_id, "processed", std_school.std_school_id
+                )
                 result.processed += 1
                 if std_school.confirm_status == "pending_confirm":
                     result.pending_schools += 1
@@ -192,7 +185,9 @@ class SchoolNormalizer:
                 # Commit periodically to release database lock
                 if (i + 1) % commit_interval == 0:
                     await self.session.commit()
-                    logger.debug(f"School normalization progress: {result.processed}/{result.total}")
+                    logger.debug(
+                        f"School normalization progress: {result.processed}/{result.total}"
+                    )
 
             except Exception:
                 result.failed += 1

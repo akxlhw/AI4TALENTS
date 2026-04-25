@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Card,
   Table,
@@ -85,11 +85,7 @@ const AdminPage: React.FC = () => {
 
   const pageSize = 10
 
-  useEffect(() => {
-    loadUsers()
-  }, [page])
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setLoading(true)
     try {
       const response = await api.admin.listUsers({ page, page_size: pageSize })
@@ -100,7 +96,11 @@ const AdminPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [page])
+
+  useEffect(() => {
+    loadUsers()
+  }, [loadUsers])
 
   const handleCreateUser = () => {
     setEditingUser(null)

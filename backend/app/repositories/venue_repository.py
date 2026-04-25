@@ -2,6 +2,7 @@
 Venue and VenueTechBinding repository.
 顶会顶刊配置数据访问层
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -22,9 +23,7 @@ class VenueRepository(BaseRepository[Venue]):
 
     async def get_by_code(self, venue_code: str) -> Venue | None:
         """Get venue by code"""
-        result = await self.session.execute(
-            select(Venue).where(Venue.venue_code == venue_code)
-        )
+        result = await self.session.execute(select(Venue).where(Venue.venue_code == venue_code))
         return result.scalar_one_or_none()
 
     async def get_by_openalex_id(self, openalex_source_id: str) -> Venue | None:
@@ -40,7 +39,7 @@ class VenueRepository(BaseRepository[Venue]):
         is_enabled: bool | None = None,
         keyword: str | None = None,
         page: int = 1,
-        page_size: int = 20
+        page_size: int = 20,
     ) -> tuple[list[Venue], int]:
         """Get venue list with filters and pagination"""
         query = select(Venue)
@@ -57,7 +56,7 @@ class VenueRepository(BaseRepository[Venue]):
             keyword_filter = or_(
                 Venue.venue_name.contains(keyword),
                 Venue.venue_name_en.contains(keyword),
-                Venue.venue_code.contains(keyword)
+                Venue.venue_code.contains(keyword),
             )
             query = query.where(keyword_filter)
             count_query = count_query.where(keyword_filter)
@@ -83,17 +82,13 @@ class VenueRepository(BaseRepository[Venue]):
 
     async def delete(self, venue_id: int) -> bool:
         """Delete venue"""
-        result = await self.session.execute(
-            delete(Venue).where(Venue.venue_id == venue_id)
-        )
+        result = await self.session.execute(delete(Venue).where(Venue.venue_id == venue_id))
         return result.rowcount > 0
 
     async def update_last_collect_at(self, venue_id: int, collect_at: datetime) -> None:
         """Update last collection time"""
         await self.session.execute(
-            update(Venue)
-            .where(Venue.venue_id == venue_id)
-            .values(last_collect_at=collect_at)
+            update(Venue).where(Venue.venue_id == venue_id).values(last_collect_at=collect_at)
         )
 
 
@@ -117,26 +112,26 @@ class VenueTechBindingRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_venue_and_tech(self, venue_id: int, tech_domain_id: int) -> VenueTechBinding | None:
+    async def get_by_venue_and_tech(
+        self, venue_id: int, tech_domain_id: int
+    ) -> VenueTechBinding | None:
         """Get binding by venue and tech domain"""
         result = await self.session.execute(
             select(VenueTechBinding).where(
                 VenueTechBinding.venue_id == venue_id,
-                VenueTechBinding.tech_domain_id == tech_domain_id
+                VenueTechBinding.tech_domain_id == tech_domain_id,
             )
         )
         return result.scalar_one_or_none()
 
     async def get_by_tech_domain(
-        self,
-        tech_domain_id: int,
-        is_enabled: bool | None = None
+        self, tech_domain_id: int, is_enabled: bool | None = None
     ) -> list[VenueTechBinding]:
         """Get all bindings for a tech domain with venue eagerly loaded"""
-        query = select(VenueTechBinding).options(
-            selectinload(VenueTechBinding.venue)
-        ).where(
-            VenueTechBinding.tech_domain_id == tech_domain_id
+        query = (
+            select(VenueTechBinding)
+            .options(selectinload(VenueTechBinding.venue))
+            .where(VenueTechBinding.tech_domain_id == tech_domain_id)
         )
         if is_enabled is not None:
             query = query.where(VenueTechBinding.is_enabled == is_enabled)
@@ -146,14 +141,10 @@ class VenueTechBindingRepository:
         return list(result.scalars().all())
 
     async def get_by_venue(
-        self,
-        venue_id: int,
-        is_enabled: bool | None = None
+        self, venue_id: int, is_enabled: bool | None = None
     ) -> list[VenueTechBinding]:
         """Get all bindings for a venue"""
-        query = select(VenueTechBinding).where(
-            VenueTechBinding.venue_id == venue_id
-        )
+        query = select(VenueTechBinding).where(VenueTechBinding.venue_id == venue_id)
         if is_enabled is not None:
             query = query.where(VenueTechBinding.is_enabled == is_enabled)
 
@@ -161,15 +152,13 @@ class VenueTechBindingRepository:
         return list(result.scalars().all())
 
     async def get_list_with_venue(
-        self,
-        tech_domain_id: int,
-        is_enabled: bool | None = None
+        self, tech_domain_id: int, is_enabled: bool | None = None
     ) -> list[VenueTechBinding]:
         """Get bindings with venue info for a tech domain (venue eagerly loaded)"""
-        query = select(VenueTechBinding).options(
-            selectinload(VenueTechBinding.venue)
-        ).where(
-            VenueTechBinding.tech_domain_id == tech_domain_id
+        query = (
+            select(VenueTechBinding)
+            .options(selectinload(VenueTechBinding.venue))
+            .where(VenueTechBinding.tech_domain_id == tech_domain_id)
         )
         if is_enabled is not None:
             query = query.where(VenueTechBinding.is_enabled == is_enabled)
@@ -194,9 +183,7 @@ class VenueTechBindingRepository:
     async def delete_by_tech_domain(self, tech_domain_id: int) -> int:
         """Delete all bindings for a tech domain"""
         result = await self.session.execute(
-            delete(VenueTechBinding).where(
-                VenueTechBinding.tech_domain_id == tech_domain_id
-            )
+            delete(VenueTechBinding).where(VenueTechBinding.tech_domain_id == tech_domain_id)
         )
         return result.rowcount
 
@@ -206,13 +193,10 @@ class VenueTechBindingRepository:
         tech_domain_id: int,
         status: str,
         author_count: int | None = None,
-        work_count: int | None = None
+        work_count: int | None = None,
     ) -> None:
         """Update collection status for a binding"""
-        values = {
-            "collect_status": status,
-            "last_collect_at": datetime.utcnow()
-        }
+        values = {"collect_status": status, "last_collect_at": datetime.utcnow()}
         if author_count is not None:
             values["author_count"] = author_count
         if work_count is not None:
@@ -222,7 +206,7 @@ class VenueTechBindingRepository:
             update(VenueTechBinding)
             .where(
                 VenueTechBinding.venue_id == venue_id,
-                VenueTechBinding.tech_domain_id == tech_domain_id
+                VenueTechBinding.tech_domain_id == tech_domain_id,
             )
             .values(**values)
         )
@@ -270,7 +254,7 @@ class VenueSubTaskRepository:
         works_fetched: int | None = None,
         authors_fetched: int | None = None,
         new_authors: int | None = None,
-        error_message: str | None = None
+        error_message: str | None = None,
     ) -> None:
         """Update sub-task status"""
         values = {"status": status}
@@ -288,7 +272,5 @@ class VenueSubTaskRepository:
             values["error_message"] = error_message
 
         await self.session.execute(
-            update(VenueSubTask)
-            .where(VenueSubTask.sub_task_id == sub_task_id)
-            .values(**values)
+            update(VenueSubTask).where(VenueSubTask.sub_task_id == sub_task_id).values(**values)
         )

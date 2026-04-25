@@ -1,10 +1,11 @@
 """
 Author sync service for synchronizing StdAuthor to Talent.
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -31,9 +32,7 @@ class AuthorSyncService:
         self.session = session
 
     async def sync_author_to_talent(
-        self,
-        std_author: StdAuthor,
-        update_existing: bool = True
+        self, std_author: StdAuthor, update_existing: bool = True
     ) -> tuple[Talent | None, bool]:
         """
         Sync standardized author to serving layer Talent table
@@ -60,9 +59,7 @@ class AuthorSyncService:
 
         # 1. Find existing Talent by source ID
         result = await self.session.execute(
-            select(Talent).where(
-                Talent.source_record_id == std_author.openalex_author_id
-            )
+            select(Talent).where(Talent.source_record_id == std_author.openalex_author_id)
         )
         existing_talent = result.scalar_one_or_none()
 
@@ -70,7 +67,7 @@ class AuthorSyncService:
         role_result = RoleIdentifier.identify(
             works_count=std_author.works_count or 0,
             cited_by_count=std_author.cited_by_count or 0,
-            h_index=std_author.h_index or 0
+            h_index=std_author.h_index or 0,
         )
 
         # 3. Get or create school association (legacy field)
@@ -83,8 +80,12 @@ class AuthorSyncService:
             # Update existing record
             if update_existing:
                 await self._update_talent(
-                    existing_talent, std_author, role_result,
-                    school_id, education_school_id, company_school_id
+                    existing_talent,
+                    std_author,
+                    role_result,
+                    school_id,
+                    education_school_id,
+                    company_school_id,
                 )
 
             await self.session.flush()
@@ -120,27 +121,31 @@ class AuthorSyncService:
 
         return None
 
-    async def _get_school_id_by_openalex_id(self, openalex_institution_id: str | None) -> int | None:
+    async def _get_school_id_by_openalex_id(
+        self, openalex_institution_id: str | None
+    ) -> int | None:
         """Get school ID by OpenAlex institution ID"""
         if not openalex_institution_id:
             return None
 
         school_result = await self.session.execute(
-            select(School).where(
-                School.source_record_id == openalex_institution_id
-            )
+            select(School).where(School.source_record_id == openalex_institution_id)
         )
         school = school_result.scalar_one_or_none()
         return school.school_id if school else None
 
-    async def _get_institution_school_ids(self, std_author: StdAuthor) -> tuple[int | None, int | None]:
+    async def _get_institution_school_ids(
+        self, std_author: StdAuthor
+    ) -> tuple[int | None, int | None]:
         """
         Get education and company school IDs for author.
 
         Returns:
             Tuple of (education_school_id, company_school_id)
         """
-        education_school_id = await self._get_school_id_by_openalex_id(std_author.primary_education_id)
+        education_school_id = await self._get_school_id_by_openalex_id(
+            std_author.primary_education_id
+        )
         company_school_id = await self._get_school_id_by_openalex_id(std_author.primary_company_id)
         return education_school_id, company_school_id
 
@@ -286,8 +291,7 @@ class AuthorSyncService:
 
         # Filter by CS score first
         eligible_authors = [
-            a for a in std_authors
-            if (a.cs_concepts_score or 0.0) >= CS_SCORE_THRESHOLD
+            a for a in std_authors if (a.cs_concepts_score or 0.0) >= CS_SCORE_THRESHOLD
         ]
         result["filtered"] = len(std_authors) - len(eligible_authors)
 
@@ -315,11 +319,12 @@ class AuthorSyncService:
         author_ids = [a.openalex_author_id for a in std_authors]
         existing_map = await batch_in_query_map(
             self.session,
-            lambda batch: select(Talent.source_record_id, Talent.talent_id)
-                .where(Talent.source_record_id.in_(batch)),
+            lambda batch: select(Talent.source_record_id, Talent.talent_id).where(
+                Talent.source_record_id.in_(batch)
+            ),
             author_ids,
             key_func=lambda row: row.source_record_id,
-            value_func=lambda row: row.talent_id
+            value_func=lambda row: row.talent_id,
         )
 
         # Prepare bulk data
@@ -346,7 +351,7 @@ class AuthorSyncService:
             role_result = RoleIdentifier.identify(
                 works_count=std_author.works_count or 0,
                 cited_by_count=std_author.cited_by_count or 0,
-                h_index=std_author.h_index or 0
+                h_index=std_author.h_index or 0,
             )
 
             talent_dict = {
@@ -383,7 +388,7 @@ class AuthorSyncService:
         # Each talent has ~16 parameters, so batch size of 1000 is safe
         BATCH_SIZE = 1000
         for i in range(0, len(talent_data), BATCH_SIZE):
-            batch = talent_data[i:i + BATCH_SIZE]
+            batch = talent_data[i : i + BATCH_SIZE]
             stmt = pg_insert(Talent).values(batch)
             stmt = stmt.on_conflict_do_update(
                 index_elements=["source_record_id"],
@@ -402,7 +407,7 @@ class AuthorSyncService:
                     "h_index": stmt.excluded.h_index,
                     "openalex_topics": stmt.excluded.openalex_topics,
                     "updated_at": stmt.excluded.updated_at,
-                }
+                },
             )
             await self.session.execute(stmt)
             logger.debug(f"[BULK_SYNC] Upserted batch {i // BATCH_SIZE + 1}: {len(batch)} records")
@@ -413,7 +418,8 @@ class AuthorSyncService:
         if result["created"] > 0:
             # Get newly created talent IDs
             new_author_ids = [
-                a.openalex_author_id for a in std_authors
+                a.openalex_author_id
+                for a in std_authors
                 if a.openalex_author_id not in existing_map
             ]
 
@@ -432,40 +438,46 @@ class AuthorSyncService:
             new_talent_rows = await batch_in_query(
                 self.session,
                 lambda batch: select(
-                    Talent.talent_id, Talent.source_record_id, Talent.role_type,
-                    Talent.role_confidence
+                    Talent.talent_id,
+                    Talent.source_record_id,
+                    Talent.role_type,
+                    Talent.role_confidence,
                 ).where(Talent.source_record_id.in_(batch)),
                 new_author_ids,
-                process_new_talents
+                process_new_talents,
             )
 
             for row, author in new_talent_rows:
                 role_result = RoleIdentifier.identify(
                     works_count=author.works_count or 0,
                     cited_by_count=author.cited_by_count or 0,
-                    h_index=author.h_index or 0
+                    h_index=author.h_index or 0,
                 )
-                profile_data.append({
-                    "talent_id": row.talent_id,
-                    "role_type": row.role_type,
-                    "role_confidence": row.role_confidence,
-                    "role_reason": role_result.reason,
-                    "identification_method": "heuristic",
-                    "identified_at": now,
-                })
+                profile_data.append(
+                    {
+                        "talent_id": row.talent_id,
+                        "role_type": row.role_type,
+                        "role_confidence": row.role_confidence,
+                        "role_reason": role_result.reason,
+                        "identification_method": "heuristic",
+                        "identified_at": now,
+                    }
+                )
 
                 # Track new professors for work fetching
                 if row.role_type == "professor":
-                    result["new_talents"].append({
-                        "talent_id": row.talent_id,
-                        "openalex_author_id": row.source_record_id,
-                        "works_count": author.works_count or 0,
-                    })
+                    result["new_talents"].append(
+                        {
+                            "talent_id": row.talent_id,
+                            "openalex_author_id": row.source_record_id,
+                            "works_count": author.works_count or 0,
+                        }
+                    )
 
             if profile_data:
                 # Batch insert profiles as well
                 for i in range(0, len(profile_data), BATCH_SIZE):
-                    batch = profile_data[i:i + BATCH_SIZE]
+                    batch = profile_data[i : i + BATCH_SIZE]
                     profile_stmt = pg_insert(RoleProfile).values(batch)
                     profile_stmt = profile_stmt.on_conflict_do_update(
                         index_elements=["talent_id"],
@@ -475,7 +487,7 @@ class AuthorSyncService:
                             "role_reason": profile_stmt.excluded.role_reason,
                             "identification_method": profile_stmt.excluded.identification_method,
                             "identified_at": profile_stmt.excluded.identified_at,
-                        }
+                        },
                     )
                     await self.session.execute(profile_stmt)
 

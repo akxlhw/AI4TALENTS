@@ -8,30 +8,27 @@ Features:
 - Test data factories
 - Common test utilities
 """
-import asyncio
+
 import os
 
 # Disable rate limiting for tests - must be set before any app imports
 os.environ["RATE_LIMIT_ENABLED"] = "false"
 os.environ["ENVIRONMENT"] = "test"
 
-import pytest
-from typing import AsyncGenerator
-from datetime import datetime
+from collections.abc import AsyncGenerator
 
+import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import StaticPool
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 # Clear settings cache and import fresh
 from app.core import config
+
 config.get_settings.cache_clear()
-from app.core.config import settings
 
-from app.main import app
-from app.core.database import Base, get_async_session
-
+from app.core.database import Base, get_async_session  # noqa: E402
+from app.main import app  # noqa: E402
 
 # Test database URL (PostgreSQL for testing - MUST be a separate database)
 # IMPORTANT: Never use production database for tests! Tests will DROP ALL TABLES after each run.
@@ -47,7 +44,6 @@ def pytest_configure(config):
 # ============ Database Fixtures ============
 
 # Import all models to ensure they are registered with Base.metadata
-from app.models import school, talent, raw_data, standardized, venue, tech_domain, sync, enums
 
 
 @pytest.fixture(scope="function")
@@ -87,6 +83,7 @@ async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 
 # ============ HTTP Client Fixtures ============
 
+
 @pytest.fixture(scope="function")
 async def client(test_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Create test HTTP client with database session override."""
@@ -104,10 +101,11 @@ async def client(test_session: AsyncSession) -> AsyncGenerator[AsyncClient, None
 
 # ============ Test Data Fixtures ============
 
+
 @pytest.fixture
 async def sample_tech_domain(test_session: AsyncSession):
     """Create sample tech domain for testing."""
-    from app.models.tech_domain import TechDomain, TechDirection
+    from app.models.tech_domain import TechDirection, TechDomain
 
     domain = TechDomain(
         domain_code="TEST",
@@ -150,9 +148,9 @@ async def sample_venue(test_session: AsyncSession):
 @pytest.fixture
 async def sample_talent(test_session: AsyncSession):
     """Create sample talent for testing."""
-    from app.models.talent import Talent
-    from app.models.school import School
     from app.models.enums import RoleType, VisibilityStatus
+    from app.models.school import School
+    from app.models.talent import Talent
 
     school = School(
         school_name="Test University",
@@ -185,6 +183,7 @@ async def sample_talent(test_session: AsyncSession):
 
 # ============ Auth Fixtures ============
 
+
 @pytest.fixture
 def mock_admin_user():
     """Mock admin user for authenticated endpoints."""
@@ -208,8 +207,8 @@ def mock_normal_user():
 @pytest.fixture
 async def test_user(test_session: AsyncSession):
     """Create a test user in database for JD match tests."""
-    from app.models.iam import UserAccount
     from app.core.auth import hash_password
+    from app.models.iam import UserAccount
 
     # Check if user already exists
     result = await test_session.execute(
@@ -234,28 +233,34 @@ async def test_user(test_session: AsyncSession):
 
 # ============ Utility Fixtures ============
 
+
 @pytest.fixture
 def assert_response_ok():
     """Helper to assert response is successful."""
+
     def _assert(response, expected_status: int = 200):
-        assert response.status_code == expected_status, \
-            f"Expected {expected_status}, got {response.status_code}: {response.text}"
+        assert (
+            response.status_code == expected_status
+        ), f"Expected {expected_status}, got {response.status_code}: {response.text}"
+
     return _assert
 
 
 @pytest.fixture
 def count_records(test_session: AsyncSession):
     """Helper to count records in a table."""
+
     async def _count(model_class) -> int:
         from sqlalchemy import func
-        result = await test_session.execute(
-            select(func.count()).select_from(model_class)
-        )
+
+        result = await test_session.execute(select(func.count()).select_from(model_class))
         return result.scalar() or 0
+
     return _count
 
 
 # ============ Collection Test Fixtures ============
+
 
 @pytest.fixture
 async def full_setup(test_session: AsyncSession):
@@ -267,7 +272,7 @@ async def full_setup(test_session: AsyncSession):
     - Venue
     - Venue-Tech binding
     """
-    from app.models.tech_domain import TechDomain, TechDirection
+    from app.models.tech_domain import TechDirection, TechDomain
     from app.models.venue import Venue, VenueTechBinding
 
     # Create tech domain

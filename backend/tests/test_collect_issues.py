@@ -7,22 +7,22 @@ This test file ensures:
 3. Statistics are correctly reported even when data already exists
 4. MAX_WORKS_PER_VENUE limit behavior
 """
-import pytest
+
 import json
 from datetime import datetime
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.raw_data import RawWork, RawAuthor, RawInstitution, AuthorTechBelong
+from app.models.raw_data import AuthorTechBelong, RawAuthor, RawInstitution, RawWork
 from app.models.standardized import StdAuthor, StdSchool
-from app.models.talent import Talent
-from app.models.tech_domain import TalentTechTag, TechDomain, TechDirection
 from app.models.sync import CollectTask
-from app.services.collect.orchestrator import CollectionOrchestrator
-from app.services.normalizers import AuthorNormalizer, SchoolNormalizer
+from app.models.talent import Talent
+from app.models.tech_domain import TalentTechTag
 from app.services.data_fetchers import MAX_WORKS_PER_VENUE
+from app.services.normalizers import AuthorNormalizer, SchoolNormalizer
 
 
 class TestAuthorTechBelongSourceTask:
@@ -47,7 +47,7 @@ class TestAuthorTechBelongSourceTask:
             collect_mode="incremental",
             triggered_by=None,
             triggered_at=datetime.utcnow(),  # Required field
-            status="completed"
+            status="completed",
         )
         test_session.add(task)
         await test_session.flush()
@@ -57,7 +57,7 @@ class TestAuthorTechBelongSourceTask:
             openalex_institution_id="I-TEST",
             name_normalized="Test University",
             country_code="US",
-            source_task_id=task.task_id
+            source_task_id=task.task_id,
         )
         test_session.add(std_school)
         await test_session.flush()
@@ -69,7 +69,7 @@ class TestAuthorTechBelongSourceTask:
             cited_by_count=100,
             h_index=5,
             std_school_id=std_school.std_school_id,
-            source_task_id=task.task_id
+            source_task_id=task.task_id,
         )
         test_session.add(std_author)
         await test_session.flush()
@@ -81,7 +81,7 @@ class TestAuthorTechBelongSourceTask:
             tech_domain_id=setup["tech_domain"].tech_domain_id,
             source_venue_id=setup["venue"].venue_id,
             source_task_id=task.task_id,  # CRITICAL: must be set
-            work_count_in_venue=5
+            work_count_in_venue=5,
         )
         test_session.add(tech_belong)
         await test_session.commit()
@@ -90,7 +90,7 @@ class TestAuthorTechBelongSourceTask:
         result = await test_session.execute(
             select(AuthorTechBelong).where(
                 AuthorTechBelong.source_task_id == task.task_id,
-                AuthorTechBelong.tech_domain_id == setup["tech_domain"].tech_domain_id
+                AuthorTechBelong.tech_domain_id == setup["tech_domain"].tech_domain_id,
             )
         )
         found = result.scalars().all()
@@ -123,7 +123,7 @@ class TestTalentTopicTagsEagerLoading:
             cited_by_count=100,
             h_index=5,
             school_id=None,
-            topic_tags=[]
+            topic_tags=[],
         )
         test_session.add(talent)
         await test_session.flush()
@@ -133,7 +133,7 @@ class TestTalentTopicTagsEagerLoading:
             talent_id=talent.talent_id,
             tech_domain_id=setup["tech_domain"].tech_domain_id,
             tech_direction_id=setup["tech_direction"].tech_direction_id,
-            is_enabled=True
+            is_enabled=True,
         )
         test_session.add(tech_tag)
         await test_session.commit()
@@ -149,11 +149,13 @@ class TestTalentTopicTagsEagerLoading:
         updated_count = 0
         for t in talents:
             if t.tech_tags:
-                tech_names = list(set(
-                    tag.tech_domain.domain_name
-                    for tag in t.tech_tags
-                    if tag.tech_domain and tag.is_enabled
-                ))
+                tech_names = list(
+                    {
+                        tag.tech_domain.domain_name
+                        for tag in t.tech_tags
+                        if tag.tech_domain and tag.is_enabled
+                    }
+                )
                 if tech_names:
                     t.topic_tags = tech_names
                     updated_count += 1
@@ -173,9 +175,7 @@ class TestNormalizationStatistics:
     """Test that normalizers report correct statistics"""
 
     @pytest.mark.asyncio
-    async def test_normalize_authors_reports_existing_count(
-        self, test_session: AsyncSession
-    ):
+    async def test_normalize_authors_reports_existing_count(self, test_session: AsyncSession):
         """
         Test that normalizer correctly processes pending RawAuthors.
 
@@ -188,7 +188,7 @@ class TestNormalizationStatistics:
             collect_mode="incremental",
             triggered_by=None,
             triggered_at=datetime.utcnow(),
-            status="running"
+            status="running",
         )
         test_session.add(task)
         await test_session.flush()
@@ -203,7 +203,7 @@ class TestNormalizationStatistics:
                 cited_by_count=100,
                 h_index=5,
                 fetch_task_id=task.task_id,
-                processed_status="pending"
+                processed_status="pending",
             )
             test_session.add(raw_author)
         await test_session.commit()
@@ -217,9 +217,7 @@ class TestNormalizationStatistics:
         assert result.processed >= 5, f"Should have processed at least 5, got {result.processed}"
 
     @pytest.mark.asyncio
-    async def test_normalize_schools_reports_existing_count(
-        self, test_session: AsyncSession
-    ):
+    async def test_normalize_schools_reports_existing_count(self, test_session: AsyncSession):
         """
         Test that school normalizer correctly processes pending RawInstitutions.
         """
@@ -229,7 +227,7 @@ class TestNormalizationStatistics:
             collect_mode="incremental",
             triggered_by=None,
             triggered_at=datetime.utcnow(),
-            status="running"
+            status="running",
         )
         test_session.add(task)
         await test_session.flush()
@@ -238,11 +236,11 @@ class TestNormalizationStatistics:
         for i in range(3):
             raw_inst = RawInstitution(
                 openalex_institution_id=f"I-NORM-{i}",
-                raw_json='{}',
+                raw_json="{}",
                 display_name=f"University {i}",
                 country_code="US",
                 fetch_task_id=task.task_id,
-                processed_status="pending"
+                processed_status="pending",
             )
             test_session.add(raw_inst)
         await test_session.commit()
@@ -290,7 +288,7 @@ class TestCollectionProgressStatistics:
             collect_mode="incremental",
             triggered_by=None,
             triggered_at=datetime.utcnow(),  # Required field
-            status="running"
+            status="running",
         )
         test_session.add(task)
         await test_session.flush()
@@ -304,7 +302,7 @@ class TestCollectionProgressStatistics:
                 publication_year=2024,
                 author_ids=json.dumps([f"A-{i}", f"A-{i+10}"]),  # 2 authors each
                 source_id=setup["venue"].openalex_source_id,
-                fetch_task_id=task.task_id
+                fetch_task_id=task.task_id,
             )
             test_session.add(work)
         await test_session.commit()
@@ -318,7 +316,7 @@ class TestCollectionProgressStatistics:
                 works_count=10,
                 cited_by_count=100,
                 h_index=5,
-                fetch_task_id=task.task_id
+                fetch_task_id=task.task_id,
             )
             test_session.add(author)
         await test_session.commit()

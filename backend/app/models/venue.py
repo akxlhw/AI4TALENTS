@@ -2,6 +2,7 @@
 Venue and VenueTechBinding models.
 顶会顶刊配置与技术领域绑定模型
 """
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -65,28 +66,30 @@ class VenueTechBinding(Base, TimestampMixin):
     """Venue-技术领域绑定关系表"""
 
     __tablename__ = "config_venue_tech_binding"
-    __table_args__ = (
-        UniqueConstraint('venue_id', 'tech_domain_id', name='uq_venue_tech_domain'),
-    )
+    __table_args__ = (UniqueConstraint("venue_id", "tech_domain_id", name="uq_venue_tech_domain"),)
 
     binding_id = Column(Integer, primary_key=True, index=True)
 
     # Foreign keys
     venue_id = Column(Integer, ForeignKey("config_venue.venue_id"), nullable=False, index=True)
-    tech_domain_id = Column(Integer, ForeignKey("core_tech_domain.tech_domain_id"), nullable=False, index=True)
+    tech_domain_id = Column(
+        Integer, ForeignKey("core_tech_domain.tech_domain_id"), nullable=False, index=True
+    )
 
     # Priority within this tech domain (for display order)
     priority = Column(Integer, default=0)
 
     # Collection status for this venue-tech_domain pair
-    collect_status = Column(String(20), default="pending", nullable=False)  # pending/collecting/completed/failed
+    collect_status = Column(
+        String(20), default="pending", nullable=False
+    )  # pending/collecting/completed/failed
 
     # Last collection time for this binding
     last_collect_at = Column(DateTime, nullable=True)
 
     # Collection statistics
     author_count = Column(Integer, default=0)  # Number of authors collected
-    work_count = Column(Integer, default=0)    # Number of works collected
+    work_count = Column(Integer, default=0)  # Number of works collected
 
     # Status
     is_enabled = Column(Boolean, default=True, nullable=False)
@@ -113,7 +116,9 @@ class VenueSubTask(Base, TimestampMixin):
     venue_id = Column(Integer, ForeignKey("config_venue.venue_id"), nullable=False, index=True)
 
     # Status
-    status = Column(String(20), default="pending", nullable=False, index=True)  # pending/running/completed/failed/skipped
+    status = Column(
+        String(20), default="pending", nullable=False, index=True
+    )  # pending/running/completed/failed/skipped
 
     # Time window for this sub-task
     time_window_start = Column(DateTime, nullable=True)

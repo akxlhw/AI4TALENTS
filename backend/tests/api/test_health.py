@@ -1,6 +1,7 @@
 """
 Tests for health check endpoints.
 """
+
 import pytest
 from httpx import AsyncClient
 
@@ -137,7 +138,6 @@ class TestHealthCheckDetails:
     @pytest.mark.asyncio
     async def test_health_check_timestamp_format(self, client: AsyncClient):
         """Test health check timestamp is ISO format."""
-        import re
         from datetime import datetime
 
         response = await client.get("/api/v1/health")

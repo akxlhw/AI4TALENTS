@@ -36,10 +36,7 @@ class HomepageRepository:
                 func.count(func.distinct(TalentTechTag.talent_id)).label("talent_count"),
             )
             .select_from(TechDomain)
-            .outerjoin(
-                TalentTechTag,
-                TechDomain.tech_domain_id == TalentTechTag.tech_domain_id
-            )
+            .outerjoin(TalentTechTag, TechDomain.tech_domain_id == TalentTechTag.tech_domain_id)
             .where(TechDomain.is_enabled.is_(True))
             .group_by(TechDomain.tech_domain_id)
             .order_by(func.count(func.distinct(TalentTechTag.talent_id)).desc())

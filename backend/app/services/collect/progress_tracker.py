@@ -1,13 +1,13 @@
 """
 Progress tracking for collection tasks.
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sync import CollectTask
@@ -22,6 +22,7 @@ class LogLevel(str, Enum):
     用于类型安全的日志级别定义，避免字符串拼写错误。
     继承 str 使其可以直接用于 JSON 序列化。
     """
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -87,10 +88,7 @@ class ProgressTracker:
         return CollectionProgress(task_id=task_id)
 
     async def update_task_status(
-        self,
-        task: CollectTask,
-        status: str,
-        error_message: str | None = None
+        self, task: CollectTask, status: str, error_message: str | None = None
     ):
         """Update task status"""
         task.status = status
@@ -110,7 +108,7 @@ class ProgressTracker:
         self,
         task: CollectTask,
         current_step: str | None = None,
-        progress_percent: int | None = None
+        progress_percent: int | None = None,
     ):
         """Update task progress using main session only.
 
@@ -125,4 +123,3 @@ class ProgressTracker:
 
         # Flush to database - let the main transaction handle it
         await self.session.flush()
-

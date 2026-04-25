@@ -2,6 +2,7 @@
 Repository for data version operations.
 数据版本管理数据访问层
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -10,7 +11,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sync import DataCorrectionRecord, DataPublishRecord, DataQualitySummary, DataVersion
-from datetime import datetime
 
 
 class DataVersionRepository:
@@ -268,7 +268,11 @@ class DataCorrectionRepository:
 
         # Paginate
         offset = (page - 1) * page_size
-        query = query.offset(offset).limit(page_size).order_by(DataCorrectionRecord.correction_id.desc())
+        query = (
+            query.offset(offset)
+            .limit(page_size)
+            .order_by(DataCorrectionRecord.correction_id.desc())
+        )
 
         result = await self.session.execute(query)
         corrections = list(result.scalars().all())
@@ -325,8 +329,15 @@ class DataCorrectionRepository:
     ) -> DataCorrectionRecord:
         """Create a correction record and commit."""
         correction = await self.create_correction(
-            target_type, target_id, field_name, original_value, corrected_value,
-            correction_type, corrected_by, reason, source
+            target_type,
+            target_id,
+            field_name,
+            original_value,
+            corrected_value,
+            correction_type,
+            corrected_by,
+            reason,
+            source,
         )
         await self.session.commit()
         return correction
@@ -385,7 +396,9 @@ class DataQualityRepository:
 
         # Paginate
         offset = (page - 1) * page_size
-        query = query.offset(offset).limit(page_size).order_by(DataQualitySummary.summary_date.desc())
+        query = (
+            query.offset(offset).limit(page_size).order_by(DataQualitySummary.summary_date.desc())
+        )
 
         result = await self.session.execute(query)
         summaries = list(result.scalars().all())

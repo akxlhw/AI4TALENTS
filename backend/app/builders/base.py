@@ -1,6 +1,7 @@
 """
 Base builder class for object construction.
 """
+
 from __future__ import annotations
 
 import logging
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class BuildResult:
     """Result of a build operation."""
+
     success: bool
     records_processed: int
     records_created: int

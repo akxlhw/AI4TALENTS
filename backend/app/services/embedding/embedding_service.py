@@ -15,17 +15,15 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
-from typing import List, Optional, Any, Dict
-from datetime import datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.talent import Talent
-from app.models.embedding import TalentEmbedding
 from app.repositories.embedding_repository import EmbeddingRepository
-from app.services.llm.protocols import LLMGatewayProtocol
 from app.services.llm.errors import EmbeddingError, TalentNotFoundError
+from app.services.llm.protocols import LLMGatewayProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -70,10 +68,8 @@ class EmbeddingService:
         self.repository = EmbeddingRepository(session)
 
     async def get_or_create_embedding(
-        self,
-        talent_id: int,
-        vector_type: str = "research"
-    ) -> List[float]:
+        self, talent_id: int, vector_type: str = "research"
+    ) -> list[float]:
         """
         获取或创建人才嵌入向量
 
@@ -144,11 +140,11 @@ class EmbeddingService:
 
     async def batch_generate_embeddings(
         self,
-        talent_ids: List[int],
+        talent_ids: list[int],
         batch_size: int = 100,
         force_regenerate: bool = False,
         progress_callback: Any = None,
-        vector_types: List[str] | None = None,
+        vector_types: list[str] | None = None,
     ) -> dict:
         """
         批量生成嵌入向量
@@ -190,9 +186,10 @@ class EmbeddingService:
         talent_map = {t.talent_id: t for t in talents}
 
         # 获取论文标题（如果需要生成 papers 向量）
-        papers_map: Dict[int, List[str]] = {}
+        papers_map: dict[int, list[str]] = {}
         if self.VECTOR_TYPE_PAPERS in vector_types:
             from app.repositories.talent_repository import TalentRepository
+
             talent_repo = TalentRepository(self.session)
             papers_map = await talent_repo.get_paper_titles_for_talents(
                 list(talent_map.keys()), limit_per_talent=10
@@ -218,9 +215,9 @@ class EmbeddingService:
 
     async def _batch_generate_for_type(
         self,
-        talent_ids: List[int],
-        talent_map: Dict[int, Talent],
-        papers_map: Dict[int, List[str]],
+        talent_ids: list[int],
+        talent_map: dict[int, Talent],
+        papers_map: dict[int, list[str]],
         vector_type: str,
         batch_size: int,
         force_regenerate: bool,
@@ -243,7 +240,7 @@ class EmbeddingService:
 
         # 批量处理
         for i in range(0, len(talent_ids), batch_size):
-            batch = talent_ids[i:i + batch_size]
+            batch = talent_ids[i : i + batch_size]
             batch_num = i // batch_size + 1
 
             try:
@@ -268,7 +265,9 @@ class EmbeddingService:
                     logger.warning(f"Batch {batch_num}: No valid texts for {vector_type}")
                     continue
 
-                logger.info(f"Batch {batch_num}: Generating {vector_type} embeddings for {len(texts)} talents")
+                logger.info(
+                    f"Batch {batch_num}: Generating {vector_type} embeddings for {len(texts)} talents"
+                )
 
                 # 批量生成嵌入
                 results = await self.llm_gateway.generate_embedding_batch(texts)
@@ -285,20 +284,24 @@ class EmbeddingService:
 
                 # 批量存储结果
                 items_to_store = []
-                for tid, text, result in zip(valid_talent_ids, texts, results):
+                for tid, text, result in zip(valid_talent_ids, texts, results, strict=False):
                     source_hash = self.calculate_source_hash(text)
-                    items_to_store.append({
-                        'talent_id': tid,
-                        'embedding': result.embedding,
-                        'model_name': self.model_name,
-                        'source_text_hash': source_hash,
-                        'vector_type': vector_type,
-                    })
+                    items_to_store.append(
+                        {
+                            "talent_id": tid,
+                            "embedding": result.embedding,
+                            "model_name": self.model_name,
+                            "source_text_hash": source_hash,
+                            "vector_type": vector_type,
+                        }
+                    )
 
                 if items_to_store:
                     stored_count = await self.repository.batch_upsert(items_to_store)
                     stats["processed"] += stored_count
-                    logger.info(f"Batch {batch_num}: Stored {stored_count} {vector_type} embeddings")
+                    logger.info(
+                        f"Batch {batch_num}: Stored {stored_count} {vector_type} embeddings"
+                    )
 
                 # 提交事务
                 await self.session.commit()
@@ -306,9 +309,7 @@ class EmbeddingService:
                 # 进度回调
                 if progress_callback:
                     await progress_callback(
-                        processed=stats["processed"],
-                        total=len(talent_ids),
-                        batch_num=batch_num
+                        processed=stats["processed"], total=len(talent_ids), batch_num=batch_num
                     )
 
                 # 限流
@@ -324,10 +325,8 @@ class EmbeddingService:
         return stats
 
     async def get_average_embedding(
-        self,
-        talent_ids: List[int],
-        vector_type: str = "research"
-    ) -> List[float]:
+        self, talent_ids: list[int], vector_type: str = "research"
+    ) -> list[float]:
         """
         获取多个人才的平均嵌入向量
 
@@ -372,7 +371,7 @@ class EmbeddingService:
         avg = np.mean(embeddings, axis=0)
         return avg.tolist()
 
-    async def get_query_embedding(self, query: str) -> List[float]:
+    async def get_query_embedding(self, query: str) -> list[float]:
         """
         获取查询文本的嵌入向量
 
@@ -456,7 +455,7 @@ class EmbeddingService:
 
         return ". ".join(titles)
 
-    async def _get_talents_by_ids(self, talent_ids: List[int]) -> List[Talent]:
+    async def _get_talents_by_ids(self, talent_ids: list[int]) -> list[Talent]:
         """根据 ID 列表获取人才"""
         if not talent_ids:
             return []
@@ -466,7 +465,7 @@ class EmbeddingService:
         all_talents = []
 
         for i in range(0, len(talent_ids), BATCH_SIZE):
-            batch_ids = talent_ids[i:i + BATCH_SIZE]
+            batch_ids = talent_ids[i : i + BATCH_SIZE]
             query = select(Talent).where(Talent.talent_id.in_(batch_ids))
             result = await self.session.execute(query)
             all_talents.extend(result.scalars().all())

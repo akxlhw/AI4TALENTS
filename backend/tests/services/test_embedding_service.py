@@ -10,34 +10,32 @@ Coverage:
 - Error handling
 """
 
-import pytest
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import List
-from dataclasses import dataclass
-from pathlib import Path
 import json
 import tempfile
-import os
+from dataclasses import dataclass
+from pathlib import Path
+from unittest.mock import AsyncMock
 
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from tests.mocks.mock_llm_gateway import MockLLMGateway
 
-
 # ============ Test Data Classes ============
+
 
 @dataclass
 class Checkpoint:
     """进度检查点"""
+
     last_talent_id: int
     processed_count: int
-    failed_ids: List[int]
+    failed_ids: list[int]
     timestamp: str
 
 
 # ============ Tests ============
+
 
 class TestEmbeddingServiceGeneration:
     """嵌入生成测试"""
@@ -52,10 +50,7 @@ class TestEmbeddingServiceGeneration:
 
         mock_llm = MockLLMGateway()
 
-        service = EmbeddingService(
-            session=test_session,
-            llm_gateway=mock_llm
-        )
+        service = EmbeddingService(session=test_session, llm_gateway=mock_llm)
 
         talent_id = sample_talent["talent"].talent_id
 
@@ -78,16 +73,12 @@ class TestEmbeddingServiceGeneration:
         mock_cache = AsyncMock()
         mock_cache.get = AsyncMock(return_value=[0.2] * 1536)
 
-        service = EmbeddingService(
-            session=test_session,
-            llm_gateway=mock_llm,
-            cache=mock_cache
-        )
+        service = EmbeddingService(session=test_session, llm_gateway=mock_llm, cache=mock_cache)
 
         talent_id = sample_talent["talent"].talent_id
 
         # Act
-        result = await service.get_or_create_embedding(talent_id)
+        await service.get_or_create_embedding(talent_id)
 
         # Assert - 应从缓存获取，不调用 LLM
         assert mock_llm.call_count == 0
@@ -102,10 +93,7 @@ class TestEmbeddingServiceGeneration:
 
         mock_llm = MockLLMGateway()
 
-        service = EmbeddingService(
-            session=test_session,
-            llm_gateway=mock_llm
-        )
+        service = EmbeddingService(session=test_session, llm_gateway=mock_llm)
 
         talent_id = sample_talent["talent"].talent_id
 
@@ -129,10 +117,7 @@ class TestEmbeddingServiceBatch:
 
         mock_llm = MockLLMGateway()
 
-        service = EmbeddingService(
-            session=test_session,
-            llm_gateway=mock_llm
-        )
+        service = EmbeddingService(session=test_session, llm_gateway=mock_llm)
 
         talent_ids = [1, 2, 3]
 
@@ -143,19 +128,14 @@ class TestEmbeddingServiceBatch:
         assert result["processed"] >= 0
 
     @pytest.mark.asyncio
-    async def test_batch_generate_respects_batch_size(
-        self, test_session: AsyncSession
-    ):
+    async def test_batch_generate_respects_batch_size(self, test_session: AsyncSession):
         """批量生成应遵守批次大小"""
         # Arrange
         from app.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway()
 
-        service = EmbeddingService(
-            session=test_session,
-            llm_gateway=mock_llm
-        )
+        service = EmbeddingService(session=test_session, llm_gateway=mock_llm)
 
         talent_ids = list(range(1, 251))  # 250 个
 
@@ -166,19 +146,14 @@ class TestEmbeddingServiceBatch:
         # 具体断言取决于实现
 
     @pytest.mark.asyncio
-    async def test_batch_generate_handles_failures(
-        self, test_session: AsyncSession
-    ):
+    async def test_batch_generate_handles_failures(self, test_session: AsyncSession):
         """批量生成应处理失败"""
         # Arrange
         from app.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway(should_fail=True, fail_count=5)
 
-        service = EmbeddingService(
-            session=test_session,
-            llm_gateway=mock_llm
-        )
+        service = EmbeddingService(session=test_session, llm_gateway=mock_llm)
 
         # Act
         result = await service.batch_generate_embeddings([1, 2, 3], batch_size=10)
@@ -191,9 +166,7 @@ class TestEmbeddingServiceCheckpoint:
     """检查点测试"""
 
     @pytest.mark.asyncio
-    async def test_checkpoint_saves_progress(
-        self, test_session: AsyncSession
-    ):
+    async def test_checkpoint_saves_progress(self, test_session: AsyncSession):
         """检查点应保存进度"""
         # Arrange
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -204,7 +177,7 @@ class TestEmbeddingServiceCheckpoint:
                 last_talent_id=100,
                 processed_count=50,
                 failed_ids=[],
-                timestamp="2024-01-01T00:00:00"
+                timestamp="2024-01-01T00:00:00",
             )
             checkpoint_file.write_text(json.dumps(checkpoint.__dict__))
 
@@ -214,9 +187,7 @@ class TestEmbeddingServiceCheckpoint:
             assert data["last_talent_id"] == 100
 
     @pytest.mark.asyncio
-    async def test_checkpoint_loads_progress(
-        self, test_session: AsyncSession
-    ):
+    async def test_checkpoint_loads_progress(self, test_session: AsyncSession):
         """检查点应加载进度"""
         # Arrange
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -225,7 +196,7 @@ class TestEmbeddingServiceCheckpoint:
                 "last_talent_id": 75,
                 "processed_count": 30,
                 "failed_ids": [5, 10],
-                "timestamp": "2024-01-01T00:00:00"
+                "timestamp": "2024-01-01T00:00:00",
             }
             checkpoint_file.write_text(json.dumps(checkpoint_data))
 
@@ -237,9 +208,7 @@ class TestEmbeddingServiceCheckpoint:
             assert 5 in data["failed_ids"]
 
     @pytest.mark.asyncio
-    async def test_resume_from_checkpoint(
-        self, test_session: AsyncSession
-    ):
+    async def test_resume_from_checkpoint(self, test_session: AsyncSession):
         """应从检查点恢复"""
         # 这个测试验证批量生成脚本从检查点恢复
         # 具体实现取决于脚本设计
@@ -251,20 +220,17 @@ class TestEmbeddingServiceRateLimiting:
     """限流测试"""
 
     @pytest.mark.asyncio
-    async def test_rate_limit_delay_between_batches(
-        self, test_session: AsyncSession
-    ):
+    async def test_rate_limit_delay_between_batches(self, test_session: AsyncSession):
         """批次间应有延迟"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService
         import time
+
+        from app.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway()
 
         service = EmbeddingService(
-            session=test_session,
-            llm_gateway=mock_llm,
-            rate_limit_delay=0.05  # 50ms
+            session=test_session, llm_gateway=mock_llm, rate_limit_delay=0.05  # 50ms
         )
 
         # Act
@@ -280,17 +246,12 @@ class TestEmbeddingServiceHash:
     """源文本哈希测试"""
 
     @pytest.mark.asyncio
-    async def test_hash_changes_on_source_update(
-        self, test_session: AsyncSession
-    ):
+    async def test_hash_changes_on_source_update(self, test_session: AsyncSession):
         """源文本更新应改变哈希"""
         # Arrange
         from app.services.embedding.embedding_service import EmbeddingService
 
-        service = EmbeddingService(
-            session=test_session,
-            llm_gateway=MockLLMGateway()
-        )
+        service = EmbeddingService(session=test_session, llm_gateway=MockLLMGateway())
 
         # Act
         hash1 = service.calculate_source_hash("原始文本")
@@ -300,17 +261,12 @@ class TestEmbeddingServiceHash:
         assert hash1 != hash2
 
     @pytest.mark.asyncio
-    async def test_hash_same_for_same_text(
-        self, test_session: AsyncSession
-    ):
+    async def test_hash_same_for_same_text(self, test_session: AsyncSession):
         """相同文本应有相同哈希"""
         # Arrange
         from app.services.embedding.embedding_service import EmbeddingService
 
-        service = EmbeddingService(
-            session=test_session,
-            llm_gateway=MockLLMGateway()
-        )
+        service = EmbeddingService(session=test_session, llm_gateway=MockLLMGateway())
 
         # Act
         hash1 = service.calculate_source_hash("测试文本")
@@ -324,20 +280,14 @@ class TestEmbeddingServiceDimension:
     """向量维度测试"""
 
     @pytest.mark.asyncio
-    async def test_embedding_dimension_configurable(
-        self, test_session: AsyncSession
-    ):
+    async def test_embedding_dimension_configurable(self, test_session: AsyncSession):
         """向量维度应可配置"""
         # Arrange
         from app.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway(embedding=[0.1] * 768)
 
-        service = EmbeddingService(
-            session=test_session,
-            llm_gateway=mock_llm,
-            dimension=768
-        )
+        EmbeddingService(session=test_session, llm_gateway=mock_llm, dimension=768)
 
         # Act
         result = await mock_llm.generate_embedding("test")
@@ -360,9 +310,7 @@ class TestEmbeddingServiceModelTracking:
         mock_llm = MockLLMGateway()
 
         service = EmbeddingService(
-            session=test_session,
-            llm_gateway=mock_llm,
-            model_name="test-embedding-model"
+            session=test_session, llm_gateway=mock_llm, model_name="test-embedding-model"
         )
 
         # Act
@@ -372,9 +320,7 @@ class TestEmbeddingServiceModelTracking:
         # (具体验证取决于模型实现)
 
     @pytest.mark.asyncio
-    async def test_different_models_regenerate(
-        self, test_session: AsyncSession
-    ):
+    async def test_different_models_regenerate(self, test_session: AsyncSession):
         """不同模型应重新生成"""
         # 如果模型变更，应该重新生成嵌入
 
@@ -385,36 +331,26 @@ class TestEmbeddingServiceErrorHandling:
     """错误处理测试"""
 
     @pytest.mark.asyncio
-    async def test_handles_invalid_talent_id(
-        self, test_session: AsyncSession
-    ):
+    async def test_handles_invalid_talent_id(self, test_session: AsyncSession):
         """应处理无效人才ID"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService, EmbeddingError
+        from app.services.embedding.embedding_service import EmbeddingError, EmbeddingService
 
-        service = EmbeddingService(
-            session=test_session,
-            llm_gateway=MockLLMGateway()
-        )
+        service = EmbeddingService(session=test_session, llm_gateway=MockLLMGateway())
 
         # Act & Assert
         with pytest.raises((ValueError, EmbeddingError)):
             await service.get_or_create_embedding(99999)  # 不存在的ID
 
     @pytest.mark.asyncio
-    async def test_handles_llm_failure_gracefully(
-        self, test_session: AsyncSession
-    ):
+    async def test_handles_llm_failure_gracefully(self, test_session: AsyncSession):
         """应优雅处理 LLM 失败"""
         # Arrange
         from app.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway(should_fail=True, fail_count=100)
 
-        service = EmbeddingService(
-            session=test_session,
-            llm_gateway=mock_llm
-        )
+        EmbeddingService(session=test_session, llm_gateway=mock_llm)
 
         # Act & Assert - 应该抛出异常或返回 None
         try:

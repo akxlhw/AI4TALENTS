@@ -4,6 +4,7 @@ Collect Task Constants
 Unified constants for collect task management.
 Matches frontend/src/constants/collectTask.ts
 """
+
 from enum import Enum
 
 

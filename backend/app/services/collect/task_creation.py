@@ -1,10 +1,11 @@
 """
 Task creation service for collection tasks.
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,9 +31,7 @@ class TaskCreationService:
         self.sub_task_repo = VenueSubTaskRepository(session)
 
     def get_time_window(
-        self,
-        mode: str,
-        last_collect_at: datetime | None = None
+        self, mode: str, last_collect_at: datetime | None = None
     ) -> tuple[datetime, datetime]:
         """Calculate time window for collection"""
         end_date = datetime.utcnow()
@@ -47,10 +46,7 @@ class TaskCreationService:
         return start_date, end_date
 
     async def create_task(
-        self,
-        tech_domain_id: int,
-        mode: str = "full",
-        triggered_by: int | None = None
+        self, tech_domain_id: int, mode: str = "full", triggered_by: int | None = None
     ) -> CollectTask:
         """Create a new collection task"""
         # Generate task code
@@ -75,7 +71,7 @@ class TaskCreationService:
             time_window_end=end_date,
             triggered_by=triggered_by,
             triggered_at=datetime.utcnow(),
-            status="pending"
+            status="pending",
         )
         self.session.add(task)
         await self.session.flush()
@@ -85,12 +81,9 @@ class TaskCreationService:
 
         # Build venue snapshot for this task
         venue_snapshot = [
-            {
-                "id": b.venue.venue_code,
-                "name": b.venue.venue_name,
-                "type": b.venue.venue_type
-            }
-            for b in bindings if b.venue
+            {"id": b.venue.venue_code, "name": b.venue.venue_name, "type": b.venue.venue_type}
+            for b in bindings
+            if b.venue
         ]
         task.venue_snapshot = venue_snapshot
 
@@ -100,7 +93,7 @@ class TaskCreationService:
                 venue_id=binding.venue_id,
                 status="pending",
                 time_window_start=start_date,
-                time_window_end=end_date
+                time_window_end=end_date,
             )
             await self.sub_task_repo.create(venue_sub_task)
 

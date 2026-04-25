@@ -1,11 +1,12 @@
 """
 Author normalizer for the standardized layer.
 """
+
 from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +21,9 @@ from app.services.normalizers.school import SchoolNormalizer
 logger = logging.getLogger(__name__)
 
 # Log module load to verify code version
-logger.info(f"[AUTHOR_NORMALIZER] Module loaded. CORE_CS_CONCEPTS count: {len(CORE_CS_CONCEPTS)}, THRESHOLD: {CS_SCORE_THRESHOLD}")
+logger.info(
+    f"[AUTHOR_NORMALIZER] Module loaded. CORE_CS_CONCEPTS count: {len(CORE_CS_CONCEPTS)}, THRESHOLD: {CS_SCORE_THRESHOLD}"
+)
 
 
 class AuthorNormalizer:
@@ -68,7 +71,9 @@ class AuthorNormalizer:
 
             # Debug log for CS score calculation (only log if concepts exist)
             if concepts and len(matched_concepts) > 0:
-                logger.debug(f"CS score calculated: {cs_score:.3f} (matched {len(matched_concepts)}/{len(concepts)} concepts)")
+                logger.debug(
+                    f"CS score calculated: {cs_score:.3f} (matched {len(matched_concepts)}/{len(concepts)} concepts)"
+                )
 
         except (json.JSONDecodeError, TypeError) as e:
             logger.warning(f"Failed to parse raw_json: {e}")
@@ -116,18 +121,13 @@ class AuthorNormalizer:
         if not openalex_institution_id:
             return None
         result = await self.session.execute(
-            select(StdSchool).where(
-                StdSchool.openalex_institution_id == openalex_institution_id
-            )
+            select(StdSchool).where(StdSchool.openalex_institution_id == openalex_institution_id)
         )
         std_school = result.scalar_one_or_none()
         return std_school.std_school_id if std_school else None
 
     async def create_std_author(
-        self,
-        raw_author: RawAuthor,
-        std_school_id: int | None = None,
-        task_id: int | None = None
+        self, raw_author: RawAuthor, std_school_id: int | None = None, task_id: int | None = None
     ) -> StdAuthor:
         """Create a new StdAuthor from RawAuthor"""
         # Parse raw_json once to extract both topics and CS score
@@ -156,16 +156,14 @@ class AuthorNormalizer:
             openalex_topics=topics,
             cs_concepts_score=cs_score,
             source_task_id=task_id,
-            normalized_at=datetime.utcnow()
+            normalized_at=datetime.utcnow(),
         )
         self.session.add(std_author)
         await self.session.flush()
         return std_author
 
     async def normalize_author(
-        self,
-        raw_author: RawAuthor,
-        task_id: int | None = None
+        self, raw_author: RawAuthor, task_id: int | None = None
     ) -> StdAuthor:
         """Normalize a raw author to StdAuthor"""
         # Find or create school linkage first (legacy field)
@@ -205,10 +203,7 @@ class AuthorNormalizer:
         # Create new StdAuthor
         return await self.create_std_author(raw_author, std_school_id, task_id)
 
-    async def normalize_all_authors(
-        self,
-        task_id: int | None = None
-    ) -> NormalizationResult:
+    async def normalize_all_authors(self, task_id: int | None = None) -> NormalizationResult:
         """Normalize all pending authors for a specific task.
 
         Args:
@@ -233,16 +228,16 @@ class AuthorNormalizer:
             try:
                 std_author = await self.normalize_author(raw_author, task_id)
                 await raw_repo.mark_processed(
-                    raw_author.raw_author_id,
-                    "processed",
-                    std_author.std_author_id
+                    raw_author.raw_author_id, "processed", std_author.std_author_id
                 )
                 result.processed += 1
 
                 # Commit periodically to release database lock
                 if (i + 1) % commit_interval == 0:
                     await self.session.commit()
-                    logger.debug(f"Author normalization progress: {result.processed}/{result.total}")
+                    logger.debug(
+                        f"Author normalization progress: {result.processed}/{result.total}"
+                    )
 
             except Exception:
                 result.failed += 1

@@ -1,6 +1,7 @@
 """
 Audit log model.
 """
+
 from sqlalchemy import JSON, Column, DateTime, Integer, String, Text
 
 from app.core.database import Base
@@ -21,11 +22,15 @@ class AuditOperationLog(Base):
     user_ip = Column(String(50), nullable=True)
 
     # Event info
-    event_type = Column(String(50), nullable=False, index=True)  # 'authentication', 'authorization', 'data_operation', etc.
+    event_type = Column(
+        String(50), nullable=False, index=True
+    )  # 'authentication', 'authorization', 'data_operation', etc.
     event_subtype = Column(String(50), nullable=True)
 
     # Resource info
-    resource_type = Column(String(50), nullable=True, index=True)  # 'user', 'talent', 'school', etc.
+    resource_type = Column(
+        String(50), nullable=True, index=True
+    )  # 'user', 'talent', 'school', etc.
     resource_id = Column(String(100), nullable=True)
 
     # Operation

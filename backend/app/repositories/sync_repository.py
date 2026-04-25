@@ -1,6 +1,7 @@
 """
 Repository for sync batch operations.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -109,9 +110,7 @@ class SyncBatchRepository:
 
     async def get_batch(self, batch_id: int) -> SyncBatch | None:
         """Get batch by ID."""
-        result = await self.session.execute(
-            select(SyncBatch).where(SyncBatch.batch_id == batch_id)
-        )
+        result = await self.session.execute(select(SyncBatch).where(SyncBatch.batch_id == batch_id))
         return result.scalar_one_or_none()
 
     async def get_batch_by_code(self, batch_code: str) -> SyncBatch | None:

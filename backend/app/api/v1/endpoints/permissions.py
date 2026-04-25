@@ -1,6 +1,7 @@
 """
 User and permission management API endpoints.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -21,6 +22,7 @@ router = APIRouter(prefix="/users", tags=["User Management"])
 # Pydantic models
 class UserResponse(BaseModel):
     """User response."""
+
     user_id: int
     username: str
     email: str
@@ -34,6 +36,7 @@ class UserResponse(BaseModel):
 
 class UserListResponse(BaseModel):
     """User list response."""
+
     items: list[UserResponse]
     total: int
     page: int
@@ -42,6 +45,7 @@ class UserListResponse(BaseModel):
 
 class UserCreateRequest(BaseModel):
     """Create user request."""
+
     username: str = Field(..., min_length=3, max_length=100)
     email: str = Field(..., max_length=255)
     password: str = Field(..., min_length=8, max_length=100)
@@ -51,6 +55,7 @@ class UserCreateRequest(BaseModel):
 
 class UserUpdateRequest(BaseModel):
     """Update user request."""
+
     display_name: str | None = None
     department: str | None = None
     role: str | None = None
@@ -59,6 +64,7 @@ class UserUpdateRequest(BaseModel):
 
 class ScopeResponse(BaseModel):
     """User scope response."""
+
     scope_id: int
     user_id: int
     scope_type: str
@@ -72,6 +78,7 @@ class ScopeResponse(BaseModel):
 
 class ScopeCreateRequest(BaseModel):
     """Create scope request."""
+
     user_id: int
     scope_type: str = Field(..., pattern="^(school|country|tech_domain|all)$")
     scope_value: str
@@ -81,22 +88,26 @@ class ScopeCreateRequest(BaseModel):
 
 class DefaultViewRequest(BaseModel):
     """Update default view request."""
+
     default_view: str = Field(..., pattern="^(tech_domain|country_school)$")
 
 
 class SchoolAccessResponse(BaseModel):
     """School access check response."""
+
     school_id: int
     has_access: bool
 
 
 class DefaultViewResponse(BaseModel):
     """Default view response."""
+
     default_view: str
 
 
 class ScopeListResponse(BaseModel):
     """Scope list response."""
+
     items: list[ScopeResponse]
     total: int
 

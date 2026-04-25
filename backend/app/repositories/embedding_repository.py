@@ -7,12 +7,11 @@ Handles database operations for talent embeddings.
 
 from __future__ import annotations
 
-import logging
 import json
-from typing import List, Optional
+import logging
 from datetime import datetime
 
-from sqlalchemy import select, delete, text
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.embedding import TalentEmbedding
@@ -33,7 +32,7 @@ def _is_postgres(session: AsyncSession) -> bool:
     try:
         # 获取连接并检查方言
         bind = session.get_bind()
-        _is_postgres_cache = bind.dialect.name == 'postgresql'
+        _is_postgres_cache = bind.dialect.name == "postgresql"
         return _is_postgres_cache
     except Exception:
         # 如果无法获取 bind，默认为 PostgreSQL（生产环境）
@@ -61,10 +60,8 @@ class EmbeddingRepository:
         self.session = session
 
     async def get_by_talent_id(
-        self,
-        talent_id: int,
-        vector_type: str = "research"
-    ) -> Optional[TalentEmbedding]:
+        self, talent_id: int, vector_type: str = "research"
+    ) -> TalentEmbedding | None:
         """
         根据人才 ID 获取嵌入向量
 
@@ -77,13 +74,12 @@ class EmbeddingRepository:
         """
         result = await self.session.execute(
             select(TalentEmbedding).where(
-                TalentEmbedding.talent_id == talent_id,
-                TalentEmbedding.vector_type == vector_type
+                TalentEmbedding.talent_id == talent_id, TalentEmbedding.vector_type == vector_type
             )
         )
         return result.scalar_one_or_none()
 
-    async def get_all_by_talent_id(self, talent_id: int) -> List[TalentEmbedding]:
+    async def get_all_by_talent_id(self, talent_id: int) -> list[TalentEmbedding]:
         """
         获取人才的所有向量类型嵌入
 
@@ -99,10 +95,8 @@ class EmbeddingRepository:
         return list(result.scalars().all())
 
     async def get_by_talent_ids(
-        self,
-        talent_ids: List[int],
-        vector_type: str | None = None
-    ) -> List[TalentEmbedding]:
+        self, talent_ids: list[int], vector_type: str | None = None
+    ) -> list[TalentEmbedding]:
         """
         批量获取嵌入向量
 
@@ -121,7 +115,7 @@ class EmbeddingRepository:
         all_results = []
 
         for i in range(0, len(talent_ids), BATCH_SIZE):
-            batch_ids = talent_ids[i:i + BATCH_SIZE]
+            batch_ids = talent_ids[i : i + BATCH_SIZE]
             query = select(TalentEmbedding).where(TalentEmbedding.talent_id.in_(batch_ids))
             if vector_type:
                 query = query.where(TalentEmbedding.vector_type == vector_type)
@@ -133,7 +127,7 @@ class EmbeddingRepository:
     async def create(
         self,
         talent_id: int,
-        embedding: List[float],
+        embedding: list[float],
         model_name: str,
         source_text_hash: str,
         vector_type: str = "research",
@@ -155,14 +149,16 @@ class EmbeddingRepository:
 
         if _is_postgres(self.session):
             # PostgreSQL: 使用原生 SQL 插入向量
-            vector_str = '[' + ','.join(str(v) for v in embedding) + ']'
+            vector_str = "[" + ",".join(str(v) for v in embedding) + "]"
             # 使用 CAST 函数避免 :: 类型转换与 SQLAlchemy 参数冲突
             await self.session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO core_talent_embedding
                     (talent_id, vector_type, embedding, model_name, source_text_hash, created_at, updated_at)
                     VALUES (:talent_id, :vector_type, CAST(:embedding AS vector), :model_name, :source_text_hash, :created_at, :updated_at)
-                """),
+                """
+                ),
                 {
                     "talent_id": talent_id,
                     "vector_type": vector_type,
@@ -171,7 +167,7 @@ class EmbeddingRepository:
                     "source_text_hash": source_text_hash,
                     "created_at": now,
                     "updated_at": now,
-                }
+                },
             )
             await self.session.flush()
             # 返回记录（需要重新查询）
@@ -194,7 +190,7 @@ class EmbeddingRepository:
 
     async def batch_upsert(
         self,
-        items: List[dict],
+        items: list[dict],
     ) -> int:
         """
         批量创建或更新嵌入记录
@@ -223,16 +219,16 @@ class EmbeddingRepository:
             values_clauses = []
             params = {}
             for i, item in enumerate(items):
-                vector_str = '[' + ','.join(str(v) for v in item['embedding']) + ']'
-                vector_type = item.get('vector_type', 'research')
+                vector_str = "[" + ",".join(str(v) for v in item["embedding"]) + "]"
+                vector_type = item.get("vector_type", "research")
                 values_clauses.append(
                     f"(:talent_id_{i}, :vector_type_{i}, CAST(:embedding_{i} AS vector), :model_name_{i}, :hash_{i}, :created_at, :updated_at)"
                 )
-                params[f"talent_id_{i}"] = item['talent_id']
+                params[f"talent_id_{i}"] = item["talent_id"]
                 params[f"vector_type_{i}"] = vector_type
                 params[f"embedding_{i}"] = vector_str
-                params[f"model_name_{i}"] = item['model_name']
-                params[f"hash_{i}"] = item['source_text_hash']
+                params[f"model_name_{i}"] = item["model_name"]
+                params[f"hash_{i}"] = item["source_text_hash"]
 
             params["created_at"] = now
             params["updated_at"] = now
@@ -255,18 +251,18 @@ class EmbeddingRepository:
             # SQLite: 逐个处理（SQLite 不支持多行 ON CONFLICT）
             for item in items:
                 await self.upsert(
-                    talent_id=item['talent_id'],
-                    embedding=item['embedding'],
-                    model_name=item['model_name'],
-                    source_text_hash=item['source_text_hash'],
-                    vector_type=item.get('vector_type', 'research'),
+                    talent_id=item["talent_id"],
+                    embedding=item["embedding"],
+                    model_name=item["model_name"],
+                    source_text_hash=item["source_text_hash"],
+                    vector_type=item.get("vector_type", "research"),
                 )
             return len(items)
 
     async def upsert(
         self,
         talent_id: int,
-        embedding: List[float],
+        embedding: list[float],
         model_name: str,
         source_text_hash: str,
         vector_type: str = "research",
@@ -288,10 +284,11 @@ class EmbeddingRepository:
 
         if _is_postgres(self.session):
             # PostgreSQL: 使用原生 SQL UPSERT
-            vector_str = '[' + ','.join(str(v) for v in embedding) + ']'
+            vector_str = "[" + ",".join(str(v) for v in embedding) + "]"
             # 使用 CAST 函数避免 :: 类型转换与 SQLAlchemy 参数冲突
             await self.session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO core_talent_embedding
                     (talent_id, vector_type, embedding, model_name, source_text_hash, created_at, updated_at)
                     VALUES (:talent_id, :vector_type, CAST(:embedding AS vector), :model_name, :source_text_hash, :created_at, :updated_at)
@@ -300,7 +297,8 @@ class EmbeddingRepository:
                         model_name = EXCLUDED.model_name,
                         source_text_hash = EXCLUDED.source_text_hash,
                         updated_at = EXCLUDED.updated_at
-                """),
+                """
+                ),
                 {
                     "talent_id": talent_id,
                     "vector_type": vector_type,
@@ -309,7 +307,7 @@ class EmbeddingRepository:
                     "source_text_hash": source_text_hash,
                     "created_at": now,
                     "updated_at": now,
-                }
+                },
             )
             await self.session.flush()
             return await self.get_by_talent_id(talent_id, vector_type)
@@ -325,7 +323,9 @@ class EmbeddingRepository:
                 await self.session.flush()
                 return existing
             else:
-                return await self.create(talent_id, embedding, model_name, source_text_hash, vector_type)
+                return await self.create(
+                    talent_id, embedding, model_name, source_text_hash, vector_type
+                )
 
     async def delete_by_talent_id(self, talent_id: int) -> bool:
         """
@@ -366,9 +366,7 @@ class EmbeddingRepository:
         """
         from sqlalchemy import func
 
-        result = await self.session.execute(
-            select(func.count()).select_from(TalentEmbedding)
-        )
+        result = await self.session.execute(select(func.count()).select_from(TalentEmbedding))
         return result.scalar() or 0
 
     async def get_embedding_status(self) -> dict:
@@ -379,11 +377,12 @@ class EmbeddingRepository:
             dict: 包含 total_talents, embedded_talents, last_generated
         """
         from sqlalchemy import func
+
         from app.models.talent import Talent
 
         # Count total visible talents
         total_result = await self.session.execute(
-            select(func.count()).select_from(Talent).where(Talent.is_visible == True)
+            select(func.count()).select_from(Talent).where(Talent.is_visible is True)
         )
         total_talents = total_result.scalar() or 0
 
@@ -395,9 +394,7 @@ class EmbeddingRepository:
 
         # Get last embedding creation time
         last_result = await self.session.execute(
-            select(TalentEmbedding.created_at)
-            .order_by(TalentEmbedding.created_at.desc())
-            .limit(1)
+            select(TalentEmbedding.created_at).order_by(TalentEmbedding.created_at.desc()).limit(1)
         )
         last_row = last_result.scalar_one_or_none()
         last_generated = last_row.isoformat() if last_row else None
@@ -408,7 +405,7 @@ class EmbeddingRepository:
             "last_generated": last_generated,
         }
 
-    async def get_visible_talent_ids(self) -> List[int]:
+    async def get_visible_talent_ids(self) -> list[int]:
         """
         获取所有可见人才的 ID 列表
 
@@ -418,9 +415,7 @@ class EmbeddingRepository:
         from app.models.talent import Talent
 
         result = await self.session.execute(
-            select(Talent.talent_id)
-            .where(Talent.is_visible == True)
-            .order_by(Talent.talent_id)
+            select(Talent.talent_id).where(Talent.is_visible is True).order_by(Talent.talent_id)
         )
         return [row[0] for row in result.fetchall()]
 
@@ -444,11 +439,8 @@ class EmbeddingRepository:
         return result.scalar() or 0
 
     async def get_missing_talent_ids(
-        self,
-        talent_ids: List[int],
-        model_name: str | None = None,
-        vector_type: str | None = None
-    ) -> List[int]:
+        self, talent_ids: list[int], model_name: str | None = None, vector_type: str | None = None
+    ) -> list[int]:
         """
         获取没有嵌入向量的人才 ID
 
@@ -468,7 +460,7 @@ class EmbeddingRepository:
         existing_ids = set()
 
         for i in range(0, len(talent_ids), BATCH_SIZE):
-            batch_ids = talent_ids[i:i + BATCH_SIZE]
+            batch_ids = talent_ids[i : i + BATCH_SIZE]
             query = select(TalentEmbedding.talent_id).where(
                 TalentEmbedding.talent_id.in_(batch_ids)
             )
@@ -498,9 +490,9 @@ class EmbeddingRepository:
         if vector_type:
             query = query.where(TalentEmbedding.vector_type == vector_type)
         result = await self.session.execute(query)
-        return set(row[0] for row in result.fetchall())
+        return {row[0] for row in result.fetchall()}
 
-    def _str_to_embedding(self, embedding_str: str) -> List[float]:
+    def _str_to_embedding(self, embedding_str: str) -> list[float]:
         """
         将字符串转换为嵌入向量
 
@@ -519,9 +511,9 @@ class EmbeddingRepository:
             return json.loads(embedding_str)
         except json.JSONDecodeError:
             # 尝试解析 PostgreSQL vector 格式
-            return [float(v.strip()) for v in embedding_str.strip('[]').split(',') if v.strip()]
+            return [float(v.strip()) for v in embedding_str.strip("[]").split(",") if v.strip()]
 
-    def get_embedding_vector(self, record: TalentEmbedding) -> List[float]:
+    def get_embedding_vector(self, record: TalentEmbedding) -> list[float]:
         """
         从记录中获取嵌入向量
 

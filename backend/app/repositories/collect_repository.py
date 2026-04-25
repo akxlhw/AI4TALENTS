@@ -8,9 +8,10 @@ Repository for collect configuration operations - Simplified for MVP v1.1
 - 数据类型固定：学者+论文+机构
 - 时间范围固定：2010.1.1至今
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -143,8 +144,14 @@ class CollectTaskRepository(BaseRepository[CollectTask]):
     ) -> CollectTask | None:
         """Update task status and commit."""
         task = await self.update_task_status(
-            task_id, status, progress_percent, current_step,
-            started_at, completed_at, error_message, error_details
+            task_id,
+            status,
+            progress_percent,
+            current_step,
+            started_at,
+            completed_at,
+            error_message,
+            error_details,
         )
         if task:
             await self.session.commit()
@@ -222,9 +229,9 @@ class CollectTaskRepository(BaseRepository[CollectTask]):
     async def get_active_tasks(self) -> list[CollectTask]:
         """Get all currently active (pending or running) tasks."""
         result = await self.session.execute(
-            select(CollectTask).where(
-                CollectTask.status.in_(["pending", "running"])
-            ).order_by(CollectTask.task_id)
+            select(CollectTask)
+            .where(CollectTask.status.in_(["pending", "running"]))
+            .order_by(CollectTask.task_id)
         )
         return list(result.scalars().all())
 
@@ -238,43 +245,45 @@ class CollectTaskRepository(BaseRepository[CollectTask]):
         # Clear raw data layer references
         await self.session.execute(
             text("UPDATE raw_work SET fetch_task_id = NULL WHERE fetch_task_id = :task_id"),
-            {"task_id": task_id}
+            {"task_id": task_id},
         )
         await self.session.execute(
             text("UPDATE raw_author SET fetch_task_id = NULL WHERE fetch_task_id = :task_id"),
-            {"task_id": task_id}
+            {"task_id": task_id},
         )
         await self.session.execute(
             text("UPDATE raw_institution SET fetch_task_id = NULL WHERE fetch_task_id = :task_id"),
-            {"task_id": task_id}
+            {"task_id": task_id},
         )
 
         # Clear standardized layer references
         await self.session.execute(
             text("UPDATE std_author SET source_task_id = NULL WHERE source_task_id = :task_id"),
-            {"task_id": task_id}
+            {"task_id": task_id},
         )
         await self.session.execute(
             text("UPDATE std_school SET source_task_id = NULL WHERE source_task_id = :task_id"),
-            {"task_id": task_id}
+            {"task_id": task_id},
         )
 
         # Clear tech belong references
         await self.session.execute(
-            text("UPDATE rel_author_tech_belong SET source_task_id = NULL WHERE source_task_id = :task_id"),
-            {"task_id": task_id}
+            text(
+                "UPDATE rel_author_tech_belong SET source_task_id = NULL WHERE source_task_id = :task_id"
+            ),
+            {"task_id": task_id},
         )
 
         # Clear data version references
         await self.session.execute(
             text("UPDATE data_version SET source_task_id = NULL WHERE source_task_id = :task_id"),
-            {"task_id": task_id}
+            {"task_id": task_id},
         )
 
         # Get sub-task IDs before clearing
         sub_task_result = await self.session.execute(
             text("SELECT sub_task_id FROM sync_venue_sub_task WHERE task_id = :task_id"),
-            {"task_id": task_id}
+            {"task_id": task_id},
         )
         sub_task_ids = [row[0] for row in sub_task_result.fetchall()]
 
@@ -288,14 +297,12 @@ class CollectTaskRepository(BaseRepository[CollectTask]):
 
         # Delete sub-tasks
         await self.session.execute(
-            text("DELETE FROM sync_venue_sub_task WHERE task_id = :task_id"),
-            {"task_id": task_id}
+            text("DELETE FROM sync_venue_sub_task WHERE task_id = :task_id"), {"task_id": task_id}
         )
 
         # Delete the task itself
         await self.session.execute(
-            text("DELETE FROM sync_collect_task WHERE task_id = :task_id"),
-            {"task_id": task_id}
+            text("DELETE FROM sync_collect_task WHERE task_id = :task_id"), {"task_id": task_id}
         )
 
         return sub_task_ids

@@ -3,13 +3,14 @@ Configuration service for system configuration management.
 
 Provides caching with TTL to avoid frequent database queries.
 """
+
 from __future__ import annotations
 
 import json
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +28,7 @@ class LLMConfig:
     - openai: OpenAI-compatible format (DeepSeek, Qwen, Zhipu, vLLM, Ollama, LocalAI)
     - minimax: MiniMax-specific format
     """
+
     enabled: bool = False  # 对话模型启用开关
     embedding_enabled: bool = False  # 嵌入模型启用开关
     api_format: str = "openai"  # API 格式: openai / minimax
@@ -44,6 +46,7 @@ class LLMConfig:
 @dataclass
 class ProxyConfig:
     """Proxy configuration settings."""
+
     enabled: bool = False
     url: str = ""
     username: str = ""
@@ -87,7 +90,7 @@ class ConfigService:
         cls._cache.clear()
 
     @classmethod
-    def _get_cached(cls, key: str) -> Optional[Any]:
+    def _get_cached(cls, key: str) -> Any | None:
         """Get value from cache if not expired."""
         if key in cls._cache:
             value, timestamp = cls._cache[key]
@@ -106,9 +109,7 @@ class ConfigService:
         self.session = session
         self._cache_ttl = cache_ttl
 
-    async def get_value(
-        self, key: str, default: Any = None, use_cache: bool = True
-    ) -> Any:
+    async def get_value(self, key: str, default: Any = None, use_cache: bool = True) -> Any:
         """
         Get configuration value by key.
 
@@ -144,9 +145,7 @@ class ConfigService:
 
         return value
 
-    async def set_value(
-        self, key: str, value: Any, config_type: str = "string"
-    ) -> SystemConfig:
+    async def set_value(self, key: str, value: Any, config_type: str = "string") -> SystemConfig:
         """
         Set configuration value.
 
@@ -183,9 +182,7 @@ class ConfigService:
 
         return config
 
-    async def get_all(
-        self, mask_sensitive: bool = True
-    ) -> list[dict[str, Any]]:
+    async def get_all(self, mask_sensitive: bool = True) -> list[dict[str, Any]]:
         """
         Get all configuration values.
 
@@ -195,9 +192,7 @@ class ConfigService:
         Returns:
             List of configuration dictionaries
         """
-        result = await self.session.execute(
-            select(SystemConfig).order_by(SystemConfig.config_key)
-        )
+        result = await self.session.execute(select(SystemConfig).order_by(SystemConfig.config_key))
         configs = result.scalars().all()
 
         items = []
@@ -297,8 +292,18 @@ class ConfigService:
         }
 
         # Log non-sensitive config updates
-        safe_fields = {"enabled", "embedding_enabled", "api_format", "api_base", "model", "embedding_model",
-                       "embedding_api_base", "embedding_api_format", "embedding_dimension", "timeout"}
+        safe_fields = {
+            "enabled",
+            "embedding_enabled",
+            "api_format",
+            "api_base",
+            "model",
+            "embedding_model",
+            "embedding_api_base",
+            "embedding_api_format",
+            "embedding_dimension",
+            "timeout",
+        }
         logged_updates = {k: v for k, v in config.items() if k in safe_fields}
         logger.debug(f"[LLM Config] Updating: {logged_updates}")
 
@@ -342,21 +347,31 @@ class ConfigService:
         await self.session.execute(text("DROP INDEX IF EXISTS ix_talent_embedding_vector"))
         await self.session.execute(text("DELETE FROM core_talent_embedding"))
         await self.session.execute(
-            text(f"ALTER TABLE core_talent_embedding ALTER COLUMN embedding TYPE vector({new_dimension})")
+            text(
+                f"ALTER TABLE core_talent_embedding ALTER COLUMN embedding TYPE vector({new_dimension})"
+            )
         )
-        await self.session.execute(text(f"""
+        await self.session.execute(
+            text(
+                """
             CREATE INDEX ix_talent_embedding_vector
             ON core_talent_embedding
             USING ivfflat (embedding vector_cosine_ops)
             WITH (lists = 100)
-        """))
+        """
+            )
+        )
         await self.session.commit()
 
-        logger.info(f"[LLM Config] Vector column modified to vector({new_dimension}), existing embeddings cleared")
+        logger.info(
+            f"[LLM Config] Vector column modified to vector({new_dimension}), existing embeddings cleared"
+        )
 
         return {"message": "LLM configuration updated successfully"}
 
-    async def set_and_commit(self, key: str, value: Any, config_type: str = "string") -> SystemConfig:
+    async def set_and_commit(
+        self, key: str, value: Any, config_type: str = "string"
+    ) -> SystemConfig:
         """
         Set configuration value and commit immediately.
 
@@ -425,7 +440,7 @@ class ConfigService:
 
         await self.session.commit()
 
-    def _coerce_value(self, value: Optional[str], config_type: str) -> Any:
+    def _coerce_value(self, value: str | None, config_type: str) -> Any:
         """Coerce string value to appropriate type."""
         if value is None:
             return None

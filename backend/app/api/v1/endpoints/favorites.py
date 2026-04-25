@@ -20,17 +20,20 @@ router = APIRouter(prefix="/favorites", tags=["Favorites"])
 # Request/Response schemas
 class AddFavoriteRequest(BaseModel):
     """Request to add a talent to favorites."""
+
     talent_id: int = Field(..., description="Talent ID to favorite")
     notes: str | None = Field(None, description="Optional notes about the talent")
 
 
 class UpdateFavoriteRequest(BaseModel):
     """Request to update favorite notes."""
+
     notes: str | None = Field(None, description="Updated notes")
 
 
 class FavoriteTalentResponse(BaseModel):
     """Response for a favorite talent."""
+
     favorite_id: int
     talent_id: int
     name: str
@@ -51,6 +54,7 @@ class FavoriteTalentResponse(BaseModel):
 
 class CheckFavoriteResponse(BaseModel):
     """Response for checking if a talent is favorited."""
+
     is_favorited: bool
     favorite_id: int | None = None
     notes: str | None = None

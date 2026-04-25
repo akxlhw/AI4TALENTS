@@ -10,21 +10,19 @@ Coverage:
 - Error handling
 """
 
-import pytest
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import List
 from dataclasses import dataclass
 from enum import Enum
+from unittest.mock import AsyncMock
 
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-
 
 # ============ Test Data Classes (will be replaced by actual imports) ============
 
+
 class SearchMode(str, Enum):
     """搜索模式"""
+
     KEYWORD = "keyword"
     FULLTEXT = "fulltext"
     SEMANTIC = "semantic"
@@ -34,15 +32,17 @@ class SearchMode(str, Enum):
 @dataclass
 class SearchResult:
     """搜索结果"""
+
     total: int
     page: int
     page_size: int
-    items: List[dict]
+    items: list[dict]
     search_mode: str
     took_ms: float
 
 
 # ============ Tests ============
+
 
 class TestSearchServiceMode:
     """搜索模式测试"""
@@ -58,12 +58,7 @@ class TestSearchServiceMode:
         service = SearchService(test_session)
 
         # Act
-        result = await service.search(
-            query="Test",
-            mode=SearchMode.KEYWORD,
-            page=1,
-            page_size=20
-        )
+        result = await service.search(query="Test", mode=SearchMode.KEYWORD, page=1, page_size=20)
 
         # Assert
         assert result is not None
@@ -82,11 +77,7 @@ class TestSearchServiceMode:
 
         # Act
         result = await service.search(
-            query="Test Author",
-            mode=SearchMode.KEYWORD,
-            fields=["name"],
-            page=1,
-            page_size=20
+            query="Test Author", mode=SearchMode.KEYWORD, fields=["name"], page=1, page_size=20
         )
 
         # Assert
@@ -107,11 +98,7 @@ class TestSearchServiceMode:
 
         # Act
         result = await service.search(
-            query="Professor",
-            mode=SearchMode.KEYWORD,
-            fields=["title"],
-            page=1,
-            page_size=20
+            query="Professor", mode=SearchMode.KEYWORD, fields=["title"], page=1, page_size=20
         )
 
         # Assert
@@ -133,7 +120,7 @@ class TestSearchServiceMode:
             mode=SearchMode.KEYWORD,
             fields=["name", "title", "school_name"],
             page=1,
-            page_size=20
+            page_size=20,
         )
 
         # Assert
@@ -151,10 +138,7 @@ class TestSearchServiceMode:
 
         # Act
         result = await service.search(
-            query="机器学习",
-            mode=SearchMode.FULLTEXT,
-            page=1,
-            page_size=20
+            query="机器学习", mode=SearchMode.FULLTEXT, page=1, page_size=20
         )
 
         # Assert
@@ -176,10 +160,7 @@ class TestSearchServiceMode:
 
         # Act
         result = await service.search(
-            query="深度学习研究员",
-            mode=SearchMode.SEMANTIC,
-            page=1,
-            page_size=20
+            query="深度学习研究员", mode=SearchMode.SEMANTIC, page=1, page_size=20
         )
 
         # Assert
@@ -201,10 +182,7 @@ class TestSearchServiceMode:
 
         # Act
         result = await service.search(
-            query="机器学习",
-            mode=SearchMode.HYBRID,
-            page=1,
-            page_size=20
+            query="机器学习", mode=SearchMode.HYBRID, page=1, page_size=20
         )
 
         # Assert
@@ -230,7 +208,7 @@ class TestSearchServiceFuzzy:
             mode=SearchMode.KEYWORD,
             fuzzy=True,
             page=1,
-            page_size=20
+            page_size=20,
         )
 
         # Assert - 应该返回结果而不是空
@@ -248,11 +226,7 @@ class TestSearchServiceFuzzy:
 
         # Act
         result = await service.search(
-            query="NonExistentTerm12345",
-            mode=SearchMode.KEYWORD,
-            fuzzy=False,
-            page=1,
-            page_size=20
+            query="NonExistentTerm12345", mode=SearchMode.KEYWORD, fuzzy=False, page=1, page_size=20
         )
 
         # Assert
@@ -273,21 +247,14 @@ class TestSearchServicePagination:
         service = SearchService(test_session)
 
         # Act
-        result = await service.search(
-            query="Test",
-            mode=SearchMode.KEYWORD,
-            page=2,
-            page_size=5
-        )
+        result = await service.search(query="Test", mode=SearchMode.KEYWORD, page=2, page_size=5)
 
         # Assert
         assert result.page == 2
         assert result.page_size == 5
 
     @pytest.mark.asyncio
-    async def test_pagination_first_page(
-        self, test_session: AsyncSession, sample_talent: dict
-    ):
+    async def test_pagination_first_page(self, test_session: AsyncSession, sample_talent: dict):
         """第一页应正确返回"""
         # Arrange
         from app.services.search.search_service import SearchService
@@ -295,20 +262,13 @@ class TestSearchServicePagination:
         service = SearchService(test_session)
 
         # Act
-        result = await service.search(
-            query="Test",
-            mode=SearchMode.KEYWORD,
-            page=1,
-            page_size=20
-        )
+        result = await service.search(query="Test", mode=SearchMode.KEYWORD, page=1, page_size=20)
 
         # Assert
         assert result.page == 1
 
     @pytest.mark.asyncio
-    async def test_pagination_empty_page(
-        self, test_session: AsyncSession, sample_talent: dict
-    ):
+    async def test_pagination_empty_page(self, test_session: AsyncSession, sample_talent: dict):
         """超出范围的页应返回空结果"""
         # Arrange
         from app.services.search.search_service import SearchService
@@ -320,7 +280,7 @@ class TestSearchServicePagination:
             query="Test",
             mode=SearchMode.KEYWORD,
             page=1000,  # Far beyond available data
-            page_size=20
+            page_size=20,
         )
 
         # Assert
@@ -331,24 +291,17 @@ class TestSearchServiceErrorHandling:
     """错误处理测试"""
 
     @pytest.mark.asyncio
-    async def test_empty_query_raises_validation_error(
-        self, test_session: AsyncSession
-    ):
+    async def test_empty_query_raises_validation_error(self, test_session: AsyncSession):
         """空查询应抛出验证错误"""
         # Arrange
-        from app.services.search.search_service import SearchService
         from app.services.search.errors import EmptyQueryError
+        from app.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
         # Act & Assert
         with pytest.raises((ValueError, EmptyQueryError)):
-            await service.search(
-                query="",
-                mode=SearchMode.KEYWORD,
-                page=1,
-                page_size=20
-            )
+            await service.search(query="", mode=SearchMode.KEYWORD, page=1, page_size=20)
 
     @pytest.mark.asyncio
     async def test_invalid_mode_defaults_to_keyword(
@@ -362,10 +315,7 @@ class TestSearchServiceErrorHandling:
 
         # Act
         result = await service.search(
-            query="Test",
-            mode="invalid_mode",  # type: ignore
-            page=1,
-            page_size=20
+            query="Test", mode="invalid_mode", page=1, page_size=20  # type: ignore
         )
 
         # Assert - 应该正常返回结果而不是报错
@@ -383,10 +333,7 @@ class TestSearchServiceErrorHandling:
 
         # Act
         result = await service.search(
-            query="深度学习",
-            mode=SearchMode.SEMANTIC,
-            page=1,
-            page_size=20
+            query="深度学习", mode=SearchMode.SEMANTIC, page=1, page_size=20
         )
 
         # Assert - 应该降级成功
@@ -402,19 +349,15 @@ class TestSearchServicePerformance:
     ):
         """搜索应在合理时间内返回"""
         # Arrange
-        from app.services.search.search_service import SearchService
         import time
+
+        from app.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
         # Act
         start_time = time.time()
-        result = await service.search(
-            query="Test",
-            mode=SearchMode.KEYWORD,
-            page=1,
-            page_size=20
-        )
+        result = await service.search(query="Test", mode=SearchMode.KEYWORD, page=1, page_size=20)
         elapsed = time.time() - start_time
 
         # Assert
@@ -432,15 +375,10 @@ class TestSearchServicePerformance:
         service = SearchService(test_session)
 
         # Act
-        result = await service.search(
-            query="Test",
-            mode=SearchMode.KEYWORD,
-            page=1,
-            page_size=20
-        )
+        result = await service.search(query="Test", mode=SearchMode.KEYWORD, page=1, page_size=20)
 
         # Assert
-        assert hasattr(result, 'took_ms')
+        assert hasattr(result, "took_ms")
         assert result.took_ms > 0
 
 
@@ -448,9 +386,7 @@ class TestSearchServiceHighlight:
     """高亮测试"""
 
     @pytest.mark.asyncio
-    async def test_search_includes_highlight(
-        self, test_session: AsyncSession, sample_talent: dict
-    ):
+    async def test_search_includes_highlight(self, test_session: AsyncSession, sample_talent: dict):
         """搜索结果应包含高亮信息"""
         # Arrange
         from app.services.search.search_service import SearchService
@@ -458,12 +394,7 @@ class TestSearchServiceHighlight:
         service = SearchService(test_session)
 
         # Act
-        result = await service.search(
-            query="Test",
-            mode=SearchMode.KEYWORD,
-            page=1,
-            page_size=20
-        )
+        result = await service.search(query="Test", mode=SearchMode.KEYWORD, page=1, page_size=20)
 
         # Assert
         if result.total > 0:

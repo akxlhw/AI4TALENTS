@@ -5,7 +5,6 @@ Mock LLM 网关实现，用于单元测试
 v1.4.1: Simplified to only output research_areas
 """
 
-from typing import List
 from dataclasses import dataclass
 
 
@@ -15,13 +14,15 @@ class JDFeatures:
 
     v1.4.1: Simplified to only output research_areas
     """
-    research_areas: List[str]
+
+    research_areas: list[str]
 
 
 @dataclass
 class EmbeddingResult:
     """嵌入生成结果"""
-    embedding: List[float]
+
+    embedding: list[float]
     model: str
     tokens_used: int
 
@@ -35,9 +36,9 @@ class MockLLMGateway:
     def __init__(
         self,
         jd_features: JDFeatures | None = None,
-        embedding: List[float] | None = None,
+        embedding: list[float] | None = None,
         should_fail: bool = False,
-        fail_count: int = 0
+        fail_count: int = 0,
     ):
         """初始化 Mock
 
@@ -72,7 +73,7 @@ class MockLLMGateway:
 
         if self._should_fail and self._current_fail_count < self._fail_count:
             self._current_fail_count += 1
-            raise Exception("Mock LLM API error")
+            raise RuntimeError("Mock LLM API error")
 
         return self._jd_features
 
@@ -105,15 +106,13 @@ class MockLLMGateway:
 
         if self._should_fail and self._current_fail_count < self._fail_count:
             self._current_fail_count += 1
-            raise Exception("Mock embedding API error")
+            raise RuntimeError("Mock embedding API error")
 
         return EmbeddingResult(
-            embedding=self._embedding,
-            model="mock-embedding-model",
-            tokens_used=len(text.split())
+            embedding=self._embedding, model="mock-embedding-model", tokens_used=len(text.split())
         )
 
-    async def generate_embedding_batch(self, texts: List[str]) -> List[EmbeddingResult]:
+    async def generate_embedding_batch(self, texts: list[str]) -> list[EmbeddingResult]:
         """批量生成嵌入向量
 
         Args:
@@ -126,13 +125,13 @@ class MockLLMGateway:
 
         if self._should_fail and self._current_fail_count < self._fail_count:
             self._current_fail_count += 1
-            raise Exception("Mock batch embedding API error")
+            raise RuntimeError("Mock batch embedding API error")
 
         return [
             EmbeddingResult(
                 embedding=self._embedding,
                 model="mock-embedding-model",
-                tokens_used=len(text.split())
+                tokens_used=len(text.split()),
             )
             for text in texts
         ]

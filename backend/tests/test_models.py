@@ -1,6 +1,7 @@
 """
 Tests for database models.
 """
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -8,11 +9,14 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
 from app.models import (
-    School, SchoolAlias, Talent, RoleProfile, SelectedWork,
-    OverviewStatSnapshot, SchoolStatSnapshot, UserAccount, UserSchoolScope,
-    SyncBatch, SearchTalentDocument, AuditOperationLog
+    OverviewStatSnapshot,
+    School,
+    SyncBatch,
+    Talent,
+    UserAccount,
+    UserSchoolScope,
 )
-from app.models.enums import RoleType, VisibilityStatus, UserRoleType, SyncJobStatus
+from app.models.enums import RoleType, SyncJobStatus, UserRoleType
 
 
 @pytest.fixture(scope="function")

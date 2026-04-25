@@ -7,24 +7,25 @@ v1.4 Feature.
 from __future__ import annotations
 
 import time
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.endpoints.auth import get_current_user
+from app.core.config import settings
 from app.core.database import get_async_session
 from app.schemas.v1_4 import (
-    JDParseRequest,
     JDFeaturesResponse,
     JDMatchRequest,
+    JDParseRequest,
+    MatchConfigRequest,
     MatchResponse,
     MatchResultItemResponse,
-    MatchConfigRequest,
 )
+from app.services.config_service import ConfigService
+from app.services.jd_match.jd_match_service import JDMatchService, MatchConfig
 from app.services.llm import LLMGateway
 from app.services.llm.errors import EmptyJDError, LLMError
-from app.services.jd_match.jd_match_service import JDMatchService, MatchConfig
-from app.services.config_service import ConfigService
-from app.core.config import settings
-from app.api.v1.endpoints.auth import get_current_user
 
 router = APIRouter(prefix="/jd-match", tags=["JD Match"])
 
@@ -41,14 +42,12 @@ async def get_llm_gateway(session: AsyncSession) -> LLMGateway:
 
     if not llm_config.enabled:
         raise HTTPException(
-            status_code=503,
-            detail="LLM 功能未启用。请在系统配置中启用 LLM 并配置 API Key。"
+            status_code=503, detail="LLM 功能未启用。请在系统配置中启用 LLM 并配置 API Key。"
         )
 
     if not llm_config.api_key:
         raise HTTPException(
-            status_code=503,
-            detail="LLM API Key 未配置。请在系统配置中设置 API Key。"
+            status_code=503, detail="LLM API Key 未配置。请在系统配置中设置 API Key。"
         )
 
     return LLMGateway(
@@ -100,11 +99,11 @@ async def parse_jd(
     except HTTPException:
         raise
     except EmptyJDError:
-        raise HTTPException(status_code=400, detail="JD 文本不能为空")
+        raise HTTPException(status_code=400, detail="JD 文本不能为空") from None
     except LLMError as e:
-        raise HTTPException(status_code=502, detail=f"LLM 错误: {e.message}")
+        raise HTTPException(status_code=502, detail=f"LLM 错误: {e.message}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post(
@@ -138,7 +137,7 @@ async def match_talents(
 
     **Note:** This endpoint requires LLM to be enabled.
     """
-    start_time = time.time()
+    time.time()
 
     try:
         llm_gateway = await get_llm_gateway(session)
@@ -191,15 +190,16 @@ async def match_talents(
     except HTTPException:
         raise
     except EmptyJDError:
-        raise HTTPException(status_code=400, detail="JD 文本不能为空")
+        raise HTTPException(status_code=400, detail="JD 文本不能为空") from None
     except LLMError as e:
-        raise HTTPException(status_code=502, detail=f"LLM 错误: {e.message}")
+        raise HTTPException(status_code=502, detail=f"LLM 错误: {e.message}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get(
     "/sessions/{session_id}",
+    response_model=dict,
     summary="获取匹配会话",
     description="获取历史匹配会话详情",
 )

@@ -2,6 +2,7 @@
 Search document builder.
 Builds search projection documents for full-text search.
 """
+
 from __future__ import annotations
 
 import logging
@@ -102,8 +103,7 @@ class SearchBuilder(BaseBuilder):
         """
         # Check if document exists
         result = await self.session.execute(
-            select(SearchTalentDocument)
-            .where(SearchTalentDocument.talent_id == talent.talent_id)
+            select(SearchTalentDocument).where(SearchTalentDocument.talent_id == talent.talent_id)
         )
         doc = result.scalar_one_or_none()
 

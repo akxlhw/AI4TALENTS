@@ -2,13 +2,13 @@
 OpenAlex data fetchers for the raw data layer.
 OpenAlex 数据采集器 - 负责从 API 获取数据并存入原始数据层
 """
+
 from __future__ import annotations
 
 import asyncio
-import fnmatch
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
 import aiohttp
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,14 +38,13 @@ MAX_WORKS_PER_VENUE = 0  # 0 means no limit
 
 # API 请求超时配置
 DEFAULT_TIMEOUT = aiohttp.ClientTimeout(
-    total=120,      # 总超时 120 秒
-    connect=30,    # 连接超时 30 秒
-    sock_read=60   # 读取超时 60 秒
+    total=120, connect=30, sock_read=60  # 总超时 120 秒  # 连接超时 30 秒  # 读取超时 60 秒
 )
 
 
 class RetryableError(Exception):
     """可重试的错误（如速率限制、临时网络问题）"""
+
     pass
 
 
@@ -65,7 +64,7 @@ def with_retry(max_attempts: int = 3, min_wait: float = 1.0, max_wait: float = 1
         wait=wait_exponential(multiplier=1, min=min_wait, max=max_wait),
         retry=retry_if_exception_type(RetryableError),
         before_sleep=before_sleep_log(logger, logging.WARNING),
-        reraise=True
+        reraise=True,
     )
 
 
@@ -92,17 +91,14 @@ class OpenAlexClient:
             Proxy URL string or None for direct connection
         """
         from app.services.common.http_client import HttpClientFactory
+
         return HttpClientFactory.get_proxy_for_url(url)
 
 
 class WorkFetcher:
     """Fetcher for works from OpenAlex"""
 
-    def __init__(
-        self,
-        session: AsyncSession,
-        client: OpenAlexClient | None = None
-    ):
+    def __init__(self, session: AsyncSession, client: OpenAlexClient | None = None):
         self.session = session
         self.client = client or OpenAlexClient()
         self.repo = RawWorkRepository(session)
@@ -114,7 +110,7 @@ class WorkFetcher:
         url: str,
         params: dict,
         headers: dict,
-        proxy: str | None = None
+        proxy: str | None = None,
     ) -> dict:
         """带重试的单页获取
 
@@ -140,10 +136,7 @@ class WorkFetcher:
             return await response.json()
 
     async def get_work_count_from_venue(
-        self,
-        venue: Venue,
-        year_from: int | None = None,
-        year_to: int | None = None
+        self, venue: Venue, year_from: int | None = None, year_to: int | None = None
     ) -> int:
         """获取 Venue 的预计论文总数（不获取实际数据）
 
@@ -174,8 +167,8 @@ class WorkFetcher:
 
         params = {
             "filter": ",".join(filters),
-            "per_page": 1,      # 只请求 1 条以减少响应体
-            "cursor": "*"
+            "per_page": 1,  # 只请求 1 条以减少响应体
+            "cursor": "*",
         }
 
         headers = {}
@@ -187,7 +180,9 @@ class WorkFetcher:
         proxy = self.client.get_proxy_for_request(openalex_url)
 
         async with aiohttp.ClientSession(timeout=DEFAULT_TIMEOUT) as http_session:
-            async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
+            async with http_session.get(
+                url, params=params, headers=headers, proxy=proxy
+            ) as response:
                 if response.status != 200:
                     return 0
                 data = await response.json()
@@ -200,7 +195,7 @@ class WorkFetcher:
         year_to: int | None = None,
         task_id: int | None = None,
         sub_task_id: int | None = None,
-        progress_callback: callable | None = None
+        progress_callback: callable | None = None,
     ) -> FetchProgress:
         """Fetch all works from a venue with retry support"""
         progress = FetchProgress()
@@ -237,11 +232,7 @@ class WorkFetcher:
                 if year_to:
                     filters.append(f"to_publication_date:{year_to}-12-31")
 
-                params = {
-                    "filter": ",".join(filters),
-                    "per_page": 200,
-                    "cursor": cursor
-                }
+                params = {"filter": ",".join(filters), "per_page": 200, "cursor": cursor}
 
                 headers = {}
                 if self.client.email:
@@ -249,7 +240,9 @@ class WorkFetcher:
 
                 # 使用带重试的请求方法
                 try:
-                    data = await self._fetch_page_with_retry(http_session, url, params, headers, proxy)
+                    data = await self._fetch_page_with_retry(
+                        http_session, url, params, headers, proxy
+                    )
                 except Exception as e:
                     logger.warning(f"Failed to fetch page after retries: {e}")
                     progress.failed += 1
@@ -280,7 +273,7 @@ class WorkFetcher:
                             author_ids=json.dumps(author_ids),
                             fetch_task_id=task_id,
                             sub_task_id=sub_task_id,
-                            fetched_at=datetime.utcnow()
+                            fetched_at=datetime.utcnow(),
                         )
                         await self.repo.upsert(raw_work)
                         total_fetched += 1
@@ -306,9 +299,7 @@ class WorkFetcher:
         return progress
 
     async def fetch_author_top_works(
-        self,
-        openalex_author_id: str,
-        max_works: int = 10
+        self, openalex_author_id: str, max_works: int = 10
     ) -> list[dict]:
         """获取作者的代表作品（按引用数排序）
 
@@ -323,7 +314,7 @@ class WorkFetcher:
         params = {
             "filter": f"author.id:{openalex_author_id}",
             "sort": "cited_by_count:desc",
-            "per_page": max_works
+            "per_page": max_works,
         }
 
         headers = {}
@@ -333,9 +324,13 @@ class WorkFetcher:
         works = []
         proxy = self.client.get_proxy_for_request(url)
         async with aiohttp.ClientSession() as http_session:
-            async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
+            async with http_session.get(
+                url, params=params, headers=headers, proxy=proxy
+            ) as response:
                 if response.status != 200:
-                    logger.warning(f"Failed to fetch works for author {openalex_author_id}: HTTP {response.status}")
+                    logger.warning(
+                        f"Failed to fetch works for author {openalex_author_id}: HTTP {response.status}"
+                    )
                     return works
 
                 data = await response.json()
@@ -354,7 +349,7 @@ class WorkFetcher:
                             "citation_count": work_data.get("cited_by_count", 0),
                             "venue_name": venue_name,
                             "doi": work_data.get("doi"),
-                            "source_work_id": extract_short_id(work_data.get("id", ""))
+                            "source_work_id": extract_short_id(work_data.get("id", "")),
                         }
                         works.append(work_info)
                     except Exception as e:
@@ -380,43 +375,43 @@ def extract_institutions(author_data: dict) -> dict:
             - primary_company: {'id': str, 'name': str} or None
     """
     result = {
-        'primary_education': None,
-        'primary_company': None,
+        "primary_education": None,
+        "primary_company": None,
     }
 
-    affiliations = author_data.get('affiliations') or []
+    affiliations = author_data.get("affiliations") or []
 
     # Group affiliations by institution type
     education_affs = []
     company_affs = []
 
     for aff in affiliations:
-        inst = aff.get('institution')
+        inst = aff.get("institution")
         if not inst:
             continue
 
-        inst_type = inst.get('type')
-        if inst_type == 'education':
+        inst_type = inst.get("type")
+        if inst_type == "education":
             education_affs.append(aff)
-        elif inst_type == 'company':
+        elif inst_type == "company":
             company_affs.append(aff)
 
     # Select the education institution with most publication years
     if education_affs:
-        education_affs.sort(key=lambda x: len(x.get('years', [])), reverse=True)
-        edu = education_affs[0]['institution']
-        result['primary_education'] = {
-            'id': extract_short_id(edu.get('id', '')),
-            'name': edu.get('display_name'),
+        education_affs.sort(key=lambda x: len(x.get("years", [])), reverse=True)
+        edu = education_affs[0]["institution"]
+        result["primary_education"] = {
+            "id": extract_short_id(edu.get("id", "")),
+            "name": edu.get("display_name"),
         }
 
     # Select the company institution with most publication years
     if company_affs:
-        company_affs.sort(key=lambda x: len(x.get('years', [])), reverse=True)
-        comp = company_affs[0]['institution']
-        result['primary_company'] = {
-            'id': extract_short_id(comp.get('id', '')),
-            'name': comp.get('display_name'),
+        company_affs.sort(key=lambda x: len(x.get("years", [])), reverse=True)
+        comp = company_affs[0]["institution"]
+        result["primary_company"] = {
+            "id": extract_short_id(comp.get("id", "")),
+            "name": comp.get("display_name"),
         }
 
     return result
@@ -425,11 +420,7 @@ def extract_institutions(author_data: dict) -> dict:
 class AuthorFetcher:
     """Fetcher for authors from OpenAlex"""
 
-    def __init__(
-        self,
-        session: AsyncSession,
-        client: OpenAlexClient | None = None
-    ):
+    def __init__(self, session: AsyncSession, client: OpenAlexClient | None = None):
         self.session = session
         self.client = client or OpenAlexClient()
         self.repo = RawAuthorRepository(session)
@@ -438,7 +429,7 @@ class AuthorFetcher:
         self,
         author_ids: list[str],
         task_id: int | None = None,
-        progress_callback: callable | None = None
+        progress_callback: callable | None = None,
     ) -> FetchProgress:
         """Fetch authors by their OpenAlex IDs"""
         progress = FetchProgress()
@@ -451,7 +442,9 @@ class AuthorFetcher:
         missing_ids = await self.repo.get_missing_author_ids(author_ids)
         progress.current_step = f"Fetching {len(missing_ids)} new authors"
 
-        logger.info(f"其中 {len(missing_ids)} 位需要从 API 获取，{len(author_ids) - len(missing_ids)} 位已存在")
+        logger.info(
+            f"其中 {len(missing_ids)} 位需要从 API 获取，{len(author_ids) - len(missing_ids)} 位已存在"
+        )
 
         # Determine proxy for OpenAlex API
         openalex_url = f"{OPENALEX_API_BASE}/authors"
@@ -461,23 +454,24 @@ class AuthorFetcher:
             total_batches = (len(missing_ids) + batch_size - 1) // batch_size
 
             for i in range(0, len(missing_ids), batch_size):
-                batch = missing_ids[i:i + batch_size]
+                batch = missing_ids[i : i + batch_size]
                 batch_num = i // batch_size + 1
 
                 try:
                     url = f"{OPENALEX_API_BASE}/authors"
-                    params = {
-                        "filter": f"openalex:{'|'.join(batch)}",
-                        "per_page": 50
-                    }
+                    params = {"filter": f"openalex:{'|'.join(batch)}", "per_page": 50}
 
                     headers = {}
                     if self.client.email:
                         headers["mailto"] = self.client.email
 
-                    async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
+                    async with http_session.get(
+                        url, params=params, headers=headers, proxy=proxy
+                    ) as response:
                         if response.status != 200:
-                            logger.warning(f"批次 {batch_num}/{total_batches} 请求失败: HTTP {response.status}")
+                            logger.warning(
+                                f"批次 {batch_num}/{total_batches} 请求失败: HTTP {response.status}"
+                            )
                             progress.failed += len(batch)
                             continue
 
@@ -494,8 +488,8 @@ class AuthorFetcher:
 
                             # Extract primary institutions by publication count
                             institutions = extract_institutions(author_data)
-                            primary_edu = institutions.get('primary_education') or {}
-                            primary_comp = institutions.get('primary_company') or {}
+                            primary_edu = institutions.get("primary_education") or {}
+                            primary_comp = institutions.get("primary_company") or {}
 
                             raw_author = RawAuthor(
                                 openalex_author_id=extract_short_id(author_data.get("id", "")),
@@ -510,12 +504,12 @@ class AuthorFetcher:
                                 last_known_institution_id=extract_short_id(inst_info.get("id", "")),
                                 last_known_institution_name=inst_info.get("display_name"),
                                 # Primary institutions (by publication count)
-                                primary_education_id=primary_edu.get('id'),
-                                primary_education_name=primary_edu.get('name'),
-                                primary_company_id=primary_comp.get('id'),
-                                primary_company_name=primary_comp.get('name'),
+                                primary_education_id=primary_edu.get("id"),
+                                primary_education_name=primary_edu.get("name"),
+                                primary_company_id=primary_comp.get("id"),
+                                primary_company_name=primary_comp.get("name"),
                                 fetch_task_id=task_id,
-                                fetched_at=datetime.utcnow()
+                                fetched_at=datetime.utcnow(),
                             )
                             await self.repo.upsert(raw_author)
                             progress.fetched += 1
@@ -527,7 +521,9 @@ class AuthorFetcher:
                     # 每 10 批提交一次（约 500 条），减少锁持有时间
                     if batch_num % 10 == 0:
                         await self.session.commit()
-                        logger.info(f"作者获取进度: {batch_num}/{total_batches} 批次, 已获取 {progress.fetched} 位")
+                        logger.info(
+                            f"作者获取进度: {batch_num}/{total_batches} 批次, 已获取 {progress.fetched} 位"
+                        )
 
                 except Exception as e:
                     logger.error(f"批次 {batch_num} 获取失败: {e}")
@@ -545,11 +541,7 @@ class AuthorFetcher:
 class InstitutionFetcher:
     """Fetcher for institutions from OpenAlex"""
 
-    def __init__(
-        self,
-        session: AsyncSession,
-        client: OpenAlexClient | None = None
-    ):
+    def __init__(self, session: AsyncSession, client: OpenAlexClient | None = None):
         self.session = session
         self.client = client or OpenAlexClient()
         self.repo = RawInstitutionRepository(session)
@@ -558,7 +550,7 @@ class InstitutionFetcher:
         self,
         institution_ids: list[str],
         task_id: int | None = None,
-        progress_callback: callable | None = None
+        progress_callback: callable | None = None,
     ) -> FetchProgress:
         """Fetch institutions by their OpenAlex IDs"""
         progress = FetchProgress()
@@ -571,7 +563,9 @@ class InstitutionFetcher:
         missing_ids = await self.repo.get_missing_ids(institution_ids)
         progress.current_step = f"Fetching {len(missing_ids)} new institutions"
 
-        logger.info(f"其中 {len(missing_ids)} 个需要从 API 获取，{len(institution_ids) - len(missing_ids)} 个已存在")
+        logger.info(
+            f"其中 {len(missing_ids)} 个需要从 API 获取，{len(institution_ids) - len(missing_ids)} 个已存在"
+        )
 
         # Determine proxy for OpenAlex API
         openalex_url = f"{OPENALEX_API_BASE}/institutions"
@@ -581,23 +575,24 @@ class InstitutionFetcher:
             total_batches = (len(missing_ids) + batch_size - 1) // batch_size
 
             for i in range(0, len(missing_ids), batch_size):
-                batch = missing_ids[i:i + batch_size]
+                batch = missing_ids[i : i + batch_size]
                 batch_num = i // batch_size + 1
 
                 try:
                     url = f"{OPENALEX_API_BASE}/institutions"
-                    params = {
-                        "filter": f"openalex:{'|'.join(batch)}",
-                        "per_page": 50
-                    }
+                    params = {"filter": f"openalex:{'|'.join(batch)}", "per_page": 50}
 
                     headers = {}
                     if self.client.email:
                         headers["mailto"] = self.client.email
 
-                    async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
+                    async with http_session.get(
+                        url, params=params, headers=headers, proxy=proxy
+                    ) as response:
                         if response.status != 200:
-                            logger.warning(f"批次 {batch_num}/{total_batches} 请求失败: HTTP {response.status}")
+                            logger.warning(
+                                f"批次 {batch_num}/{total_batches} 请求失败: HTTP {response.status}"
+                            )
                             progress.failed += len(batch)
                             continue
 
@@ -615,7 +610,7 @@ class InstitutionFetcher:
                                 ror=inst_data.get("ror"),
                                 type=inst_data.get("type"),
                                 fetch_task_id=task_id,
-                                fetched_at=datetime.utcnow()
+                                fetched_at=datetime.utcnow(),
                             )
                             await self.repo.upsert(raw_inst)
                             progress.fetched += 1
@@ -626,7 +621,9 @@ class InstitutionFetcher:
                     # 每 5 批提交一次，减少锁持有时间
                     if batch_num % 5 == 0:
                         await self.session.commit()
-                        logger.info(f"机构获取进度: {batch_num}/{total_batches} 批次, 已获取 {progress.fetched} 个")
+                        logger.info(
+                            f"机构获取进度: {batch_num}/{total_batches} 批次, 已获取 {progress.fetched} 个"
+                        )
 
                 except Exception as e:
                     logger.error(f"批次 {batch_num} 获取失败: {e}")

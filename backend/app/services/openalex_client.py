@@ -2,6 +2,7 @@
 OpenAlex API Client.
 Handles communication with the OpenAlex API.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -17,11 +18,13 @@ from app.core.config import settings
 
 class OpenAlexAPIError(Exception):
     """Custom exception for OpenAlex API errors."""
+
     pass
 
 
 class OpenAlexRateLimitError(OpenAlexAPIError):
     """Exception raised when rate limit is exceeded."""
+
     pass
 
 
@@ -66,7 +69,9 @@ class OpenAlexClient:
         # Headers
         self.headers = {
             "Accept": "application/json",
-            "User-Agent": f"TalentPlatform/1.0 (mailto:{self.email})" if self.email else "TalentPlatform/1.0",
+            "User-Agent": (
+                f"TalentPlatform/1.0 (mailto:{self.email})" if self.email else "TalentPlatform/1.0"
+            ),
         }
 
     def _wait_for_rate_limit(self):
@@ -121,7 +126,9 @@ class OpenAlexClient:
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 429:
                 raise OpenAlexRateLimitError("Rate limit exceeded") from e
-            raise OpenAlexAPIError(f"API error: {e.response.status_code} - {e.response.text}") from e
+            raise OpenAlexAPIError(
+                f"API error: {e.response.status_code} - {e.response.text}"
+            ) from e
 
         except httpx.TimeoutException as e:
             raise OpenAlexAPIError(f"Request timeout: {e}") from e

@@ -7,6 +7,7 @@ Provides reusable patterns for:
 - paginate: Apply pagination to a query
 - list_paginated: Combined list with count and pagination
 """
+
 from __future__ import annotations
 
 from typing import Any, Generic, TypeVar
@@ -76,16 +77,10 @@ class BaseRepository(Generic[Model]):
 
             column = getattr(self.model, id_column)
 
-        result = await self.session.execute(
-            select(self.model).where(column == id)
-        )
+        result = await self.session.execute(select(self.model).where(column == id))
         return result.scalar_one_or_none()
 
-    async def get_by_ids(
-        self,
-        ids: list[int],
-        id_column: str | None = None
-    ) -> dict[int, Model]:
+    async def get_by_ids(self, ids: list[int], id_column: str | None = None) -> dict[int, Model]:
         """
         Get multiple records by primary keys in batch.
 
@@ -120,9 +115,7 @@ class BaseRepository(Generic[Model]):
                 id_column = list(self.model.__table__.columns.keys())[0]
             column = getattr(self.model, id_column)
 
-        result = await self.session.execute(
-            select(self.model).where(column.in_(ids))
-        )
+        result = await self.session.execute(select(self.model).where(column.in_(ids)))
         return {getattr(row, id_column): row for row in result.scalars().all()}
 
     async def count(self, query: Select[Any] | None = None) -> int:

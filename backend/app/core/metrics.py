@@ -8,6 +8,7 @@ Provides Prometheus-compatible metrics for monitoring:
 - Cache hit/miss rates
 - Active collection tasks
 """
+
 from __future__ import annotations
 
 import time
@@ -102,14 +103,18 @@ class MetricsRegistry:
         self._gauges: dict[str, GaugeMetric] = {}
         self._histograms: dict[str, HistogramMetric] = {}
 
-    def counter(self, name: str, description: str = "", labels: dict[str, str] | None = None) -> CounterMetric:
+    def counter(
+        self, name: str, description: str = "", labels: dict[str, str] | None = None
+    ) -> CounterMetric:
         """Get or create a counter metric."""
         key = self._make_key(name, labels or {})
         if key not in self._counters:
             self._counters[key] = CounterMetric(name, description, labels or {})
         return self._counters[key]
 
-    def gauge(self, name: str, description: str = "", labels: dict[str, str] | None = None) -> GaugeMetric:
+    def gauge(
+        self, name: str, description: str = "", labels: dict[str, str] | None = None
+    ) -> GaugeMetric:
         """Get or create a gauge metric."""
         key = self._make_key(name, labels or {})
         if key not in self._gauges:
@@ -127,8 +132,14 @@ class MetricsRegistry:
         key = self._make_key(name, labels or {})
         if key not in self._histograms:
             self._histograms[key] = HistogramMetric(
-                name, description, labels or {},
-                buckets if buckets is not None else [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+                name,
+                description,
+                labels or {},
+                (
+                    buckets
+                    if buckets is not None
+                    else [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+                ),
             )
         return self._histograms[key]
 
@@ -269,11 +280,14 @@ COLLECTION_ERRORS_TOTAL = metrics.counter(
 # Helper Functions
 # ============================================
 
+
 def record_request(method: str, path: str, status: int, duration: float) -> None:
     """Record an HTTP request."""
     labels = {"method": method, "path": _normalize_path(path), "status": str(status)}
     metrics.counter("http_requests_total", labels=labels).inc()
-    metrics.histogram("http_request_duration_seconds", labels={"method": method, "path": _normalize_path(path)}).observe(duration)
+    metrics.histogram(
+        "http_request_duration_seconds", labels={"method": method, "path": _normalize_path(path)}
+    ).observe(duration)
 
 
 def record_cache_request(hit: bool, key: str | None = None) -> None:
@@ -293,6 +307,7 @@ def record_db_query(duration: float, query_type: str = "select") -> None:
 def _normalize_path(path: str) -> str:
     """Normalize path for metrics (replace IDs with placeholder)."""
     import re
+
     # Replace numeric IDs with {id}
     path = re.sub(r"/\d+", "/{id}", path)
     # Replace UUIDs with {uuid}
@@ -309,14 +324,24 @@ class MetricsMiddleware:
         app.add_middleware(MetricsMiddleware)
     """
 
-    def __init__(self, app: Callable[[dict[str, Any], Callable[[], Awaitable[dict[str, Any]]], Callable[[dict[str, Any]], Awaitable[None]]], Awaitable[None]]) -> None:
+    def __init__(
+        self,
+        app: Callable[
+            [
+                dict[str, Any],
+                Callable[[], Awaitable[dict[str, Any]]],
+                Callable[[dict[str, Any]], Awaitable[None]],
+            ],
+            Awaitable[None],
+        ],
+    ) -> None:
         self.app = app
 
     async def __call__(
         self,
         scope: dict[str, Any],
         receive: Callable[[], Awaitable[dict[str, Any]]],
-        send: Callable[[dict[str, Any]], Awaitable[None]]
+        send: Callable[[dict[str, Any]], Awaitable[None]],
     ) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)

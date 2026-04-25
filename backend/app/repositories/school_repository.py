@@ -85,9 +85,7 @@ class SchoolRepository:
         Returns:
             School instance or None
         """
-        result = await self.session.execute(
-            select(School).where(School.school_id == school_id)
-        )
+        result = await self.session.execute(select(School).where(School.school_id == school_id))
         return result.scalar_one_or_none()
 
     async def get_by_source_id(self, source_record_id: str) -> School | None:
@@ -162,20 +160,19 @@ class SchoolRepository:
         Returns:
             Dictionary mapping country_code to count
         """
-        query = select(
-            School.country_code,
-            func.count(School.school_id).label("count")
-        ).where(
-            School.is_visible.is_(True),
-            School.country_code.isnot(None),
-        ).group_by(School.country_code)
+        query = (
+            select(School.country_code, func.count(School.school_id).label("count"))
+            .where(
+                School.is_visible.is_(True),
+                School.country_code.isnot(None),
+            )
+            .group_by(School.country_code)
+        )
 
         result = await self.session.execute(query)
         return {row.country_code: row.count for row in result.all()}
 
-    async def get_talent_counts(
-        self, school_id: int
-    ) -> dict[str, int]:
+    async def get_talent_counts(self, school_id: int) -> dict[str, int]:
         """
         Get talent counts by role type for a school.
 
@@ -186,10 +183,7 @@ class SchoolRepository:
             Dictionary with counts by role type
         """
         result = await self.session.execute(
-            select(
-                Talent.role_type,
-                func.count(Talent.talent_id).label("count")
-            )
+            select(Talent.role_type, func.count(Talent.talent_id).label("count"))
             .where(
                 Talent.school_id == school_id,
                 Talent.is_visible.is_(True),
@@ -258,9 +252,7 @@ class SchoolRepository:
             Number of schools updated
         """
         result = await self.session.execute(
-            update(School)
-            .where(School.school_id.in_(school_ids))
-            .values(is_top_school=True)
+            update(School).where(School.school_id.in_(school_ids)).values(is_top_school=True)
         )
         await self.session.commit()
         return result.rowcount
@@ -276,9 +268,7 @@ class SchoolRepository:
             Number of schools updated
         """
         result = await self.session.execute(
-            update(School)
-            .where(School.school_id.in_(school_ids))
-            .values(is_top_school=False)
+            update(School).where(School.school_id.in_(school_ids)).values(is_top_school=False)
         )
         await self.session.commit()
         return result.rowcount

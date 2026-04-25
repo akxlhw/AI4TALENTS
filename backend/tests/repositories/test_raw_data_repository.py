@@ -3,9 +3,10 @@ Tests for RawAuthorRepository batch_upsert functionality.
 
 Tests the PostgreSQL INSERT ON CONFLICT batch upsert for efficient data operations.
 """
+
 import json
+
 import pytest
-from datetime import datetime
 
 from app.models.raw_data import RawAuthor
 from app.repositories.raw_data_repository import RawAuthorRepository

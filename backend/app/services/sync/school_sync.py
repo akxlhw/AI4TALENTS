@@ -1,6 +1,7 @@
 """
 School sync service for synchronizing StdSchool to School.
 """
+
 from __future__ import annotations
 
 import json
@@ -25,9 +26,7 @@ class SchoolSyncService:
         self.session = session
 
     async def sync_school_to_school(
-        self,
-        std_school: StdSchool,
-        update_existing: bool = True
+        self, std_school: StdSchool, update_existing: bool = True
     ) -> tuple[School, bool]:
         """
         Sync standardized school to serving layer School table
@@ -41,9 +40,7 @@ class SchoolSyncService:
         """
         # 1. Find existing School by OpenAlex ID
         result = await self.session.execute(
-            select(School).where(
-                School.source_record_id == std_school.openalex_institution_id
-            )
+            select(School).where(School.source_record_id == std_school.openalex_institution_id)
         )
         existing_school = result.scalar_one_or_none()
 
@@ -84,9 +81,7 @@ class SchoolSyncService:
         if std_school.name_aliases:
             await self._create_school_aliases(new_school.school_id, std_school)
 
-        logger.info(
-            f"Created school: {new_school.school_id} - {new_school.school_name}"
-        )
+        logger.info(f"Created school: {new_school.school_id} - {new_school.school_name}")
 
         return new_school, True
 
@@ -100,8 +95,7 @@ class SchoolSyncService:
                 # Check if already exists
                 existing = await self.session.execute(
                     select(SchoolAlias).where(
-                        SchoolAlias.school_id == school_id,
-                        SchoolAlias.alias_name == alias
+                        SchoolAlias.school_id == school_id, SchoolAlias.alias_name == alias
                     )
                 )
                 if not existing.scalar_one_or_none():
@@ -170,11 +164,12 @@ class SchoolSyncService:
         inst_ids = [s.openalex_institution_id for s in std_schools]
         existing_map = await batch_in_query_map(
             self.session,
-            lambda batch: select(School.source_record_id, School.school_id)
-                .where(School.source_record_id.in_(batch)),
+            lambda batch: select(School.source_record_id, School.school_id).where(
+                School.source_record_id.in_(batch)
+            ),
             inst_ids,
             key_func=lambda row: row.source_record_id,
-            value_func=lambda row: row.school_id
+            value_func=lambda row: row.school_id,
         )
 
         # Prepare bulk data
@@ -206,7 +201,7 @@ class SchoolSyncService:
         UPSERT_BATCH_SIZE = 2000
         if school_data:
             for i in range(0, len(school_data), UPSERT_BATCH_SIZE):
-                batch = school_data[i:i + UPSERT_BATCH_SIZE]
+                batch = school_data[i : i + UPSERT_BATCH_SIZE]
                 stmt = pg_insert(School).values(batch)
                 stmt = stmt.on_conflict_do_update(
                     index_elements=["source_record_id"],
@@ -216,18 +211,19 @@ class SchoolSyncService:
                         "country_name": stmt.excluded.country_name,
                         "homepage_url": stmt.excluded.homepage_url,
                         "updated_at": stmt.excluded.updated_at,
-                    }
+                    },
                 )
                 await self.session.execute(stmt)
 
         # Get all school IDs (both existing and newly created) in batches
         school_id_map = await batch_in_query_map(
             self.session,
-            lambda batch: select(School.source_record_id, School.school_id)
-                .where(School.source_record_id.in_(batch)),
+            lambda batch: select(School.source_record_id, School.school_id).where(
+                School.source_record_id.in_(batch)
+            ),
             inst_ids,
             key_func=lambda row: row.source_record_id,
-            value_func=lambda row: row.school_id
+            value_func=lambda row: row.school_id,
         )
 
         result["school_id_map"] = school_id_map

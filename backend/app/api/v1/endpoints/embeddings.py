@@ -1,20 +1,18 @@
 """
 Embedding generation API endpoints.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Optional, List
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
-from app.models.talent import Talent
-from app.models.embedding import TalentEmbedding
 from app.repositories.embedding_repository import EmbeddingRepository
 from app.schemas.common import SuccessResponse
 from app.services.config_service import ConfigService
@@ -33,15 +31,17 @@ def require_super_admin(current_user: dict = Depends(require_user)) -> dict:
 
 class EmbeddingStatusResponse(BaseModel):
     """Response for embedding status."""
+
     total_talents: int
     embedded_talents: int
     pending_talents: int
-    last_generated: Optional[str]
+    last_generated: str | None
     progress_percent: float
 
 
 class EmbeddingGenerateResponse(BaseModel):
     """Response for embedding generation trigger."""
+
     message: str
     total_talents: int
     status: str
@@ -49,6 +49,7 @@ class EmbeddingGenerateResponse(BaseModel):
 
 class EmbeddingProgressResponse(BaseModel):
     """Response for embedding generation progress."""
+
     status: str
     processed: int
     total: int
@@ -74,7 +75,7 @@ _embedding_progress = {
     "/status",
     response_model=EmbeddingStatusResponse,
     summary="获取向量嵌入状态",
-    description="获取人才向量嵌入的生成状态"
+    description="获取人才向量嵌入的生成状态",
 )
 async def get_embedding_status(
     session: AsyncSession = Depends(get_async_session),
@@ -102,7 +103,7 @@ async def get_embedding_status(
     "/progress",
     response_model=EmbeddingProgressResponse,
     summary="获取生成进度",
-    description="获取当前向量生成的实时进度"
+    description="获取当前向量生成的实时进度",
 )
 async def get_generation_progress(
     current_user: dict = Depends(require_super_admin),
@@ -115,7 +116,7 @@ async def get_generation_progress(
     "/generate",
     response_model=EmbeddingGenerateResponse,
     summary="触发生成任务",
-    description="触发批量向量嵌入生成任务（后台异步执行）"
+    description="触发批量向量嵌入生成任务（后台异步执行）",
 )
 async def trigger_generation(
     force: bool = False,
@@ -129,10 +130,7 @@ async def trigger_generation(
 
     # Check if already running
     if _embedding_progress["status"] == "running":
-        raise HTTPException(
-            status_code=400,
-            detail="Embedding generation is already running"
-        )
+        raise HTTPException(status_code=400, detail="Embedding generation is already running")
 
     # Check LLM configuration from database
     config_service = ConfigService(session)
@@ -140,28 +138,25 @@ async def trigger_generation(
 
     if not llm_config.enabled:
         raise HTTPException(
-            status_code=400,
-            detail="LLM 功能未启用。请在系统配置中启用 LLM 并配置 API Key。"
+            status_code=400, detail="LLM 功能未启用。请在系统配置中启用 LLM 并配置 API Key。"
         )
 
     if not llm_config.api_key:
         raise HTTPException(
-            status_code=400,
-            detail="LLM API Key 未配置。请在系统配置中设置 API Key。"
+            status_code=400, detail="LLM API Key 未配置。请在系统配置中设置 API Key。"
         )
 
     # 检查嵌入模型配置
     if not llm_config.embedding_model:
         raise HTTPException(
             status_code=400,
-            detail="嵌入模型未配置。请在系统配置中设置嵌入模型名称（如 text-embedding-3-small, bge-m3）。"
+            detail="嵌入模型未配置。请在系统配置中设置嵌入模型名称（如 text-embedding-3-small, bge-m3）。",
         )
 
     # 检查嵌入 API 地址（API Key 可以为空，本地部署不需要）
     if not llm_config.embedding_api_base:
         raise HTTPException(
-            status_code=400,
-            detail="嵌入 API 地址未配置。请在系统配置中设置嵌入模型的 API 地址。"
+            status_code=400, detail="嵌入 API 地址未配置。请在系统配置中设置嵌入模型的 API 地址。"
         )
 
     # Parse vector types
@@ -170,8 +165,7 @@ async def trigger_generation(
     for t in types_list:
         if t not in valid_types:
             raise HTTPException(
-                status_code=400,
-                detail=f"Invalid vector type: {t}. Valid types: research, papers"
+                status_code=400, detail=f"Invalid vector type: {t}. Valid types: research, papers"
             )
 
     # Count talents using repository
@@ -180,10 +174,7 @@ async def trigger_generation(
     total_talents = status["total_talents"]
 
     if total_talents == 0:
-        raise HTTPException(
-            status_code=400,
-            detail="No talents to process"
-        )
+        raise HTTPException(status_code=400, detail="No talents to process")
 
     # Start background task
     import asyncio
@@ -199,7 +190,9 @@ async def trigger_generation(
 
     asyncio.create_task(_run_embedding_generation(force, batch_size, types_list))
 
-    logger.info(f"Embedding generation triggered by user {current_user.get('user_id')} for types: {types_list}")
+    logger.info(
+        f"Embedding generation triggered by user {current_user.get('user_id')} for types: {types_list}"
+    )
 
     return EmbeddingGenerateResponse(
         message=f"Embedding generation started for types: {', '.join(types_list)}",
@@ -212,7 +205,7 @@ async def trigger_generation(
     "/cancel",
     response_model=SuccessResponse,
     summary="取消生成任务",
-    description="取消正在运行的向量生成任务"
+    description="取消正在运行的向量生成任务",
 )
 async def cancel_generation(
     current_user: dict = Depends(require_super_admin),
@@ -221,10 +214,7 @@ async def cancel_generation(
     global _embedding_progress
 
     if _embedding_progress["status"] != "running":
-        raise HTTPException(
-            status_code=400,
-            detail="No generation task is running"
-        )
+        raise HTTPException(status_code=400, detail="No generation task is running")
 
     _embedding_progress["status"] = "cancelled"
     _embedding_progress["completed_at"] = datetime.utcnow().isoformat()
@@ -232,14 +222,15 @@ async def cancel_generation(
     return SuccessResponse(message="Generation task cancelled")
 
 
-async def _run_embedding_generation(force: bool, batch_size: int, vector_types: List[str]):
+async def _run_embedding_generation(force: bool, batch_size: int, vector_types: list[str]):
     """Run embedding generation in background."""
     global _embedding_progress
 
     from datetime import datetime
+
     from app.core.database import AsyncSessionLocal
-    from app.services.llm import LLMGateway
     from app.services.embedding.embedding_service import EmbeddingService
+    from app.services.llm import LLMGateway
 
     try:
         async with AsyncSessionLocal() as session:
@@ -261,11 +252,15 @@ async def _run_embedding_generation(force: bool, batch_size: int, vector_types: 
 
             if not llm_config.embedding_api_base:
                 _embedding_progress["status"] = "error"
-                _embedding_progress["error_message"] = "嵌入 API 地址未配置。请配置嵌入模型的 API 地址。"
+                _embedding_progress["error_message"] = (
+                    "嵌入 API 地址未配置。请配置嵌入模型的 API 地址。"
+                )
                 return
 
             # Create LLM gateway with database config
-            logger.info(f"Creating LLMGateway with embedding_api_base={llm_config.embedding_api_base}, embedding_model={llm_config.embedding_model}")
+            logger.info(
+                f"Creating LLMGateway with embedding_api_base={llm_config.embedding_api_base}, embedding_model={llm_config.embedding_model}"
+            )
 
             llm_gateway = LLMGateway(
                 api_key=llm_config.api_key,
@@ -279,7 +274,9 @@ async def _run_embedding_generation(force: bool, batch_size: int, vector_types: 
                 embedding_api_format=llm_config.embedding_api_format,
             )
 
-            logger.info(f"LLMGateway api_format={llm_gateway.api_format}, embedding_api_format={llm_gateway.embedding_api_format}")
+            logger.info(
+                f"LLMGateway api_format={llm_gateway.api_format}, embedding_api_format={llm_gateway.embedding_api_format}"
+            )
 
             # Get talent IDs using repository
             repo = EmbeddingRepository(session)
@@ -314,7 +311,7 @@ async def _run_embedding_generation(force: bool, batch_size: int, vector_types: 
                     logger.info("Embedding generation cancelled")
                     return
 
-                batch = talent_ids[i:i + actual_batch_size]
+                batch = talent_ids[i : i + actual_batch_size]
 
                 try:
                     stats = await embed_service.batch_generate_embeddings(
@@ -329,7 +326,9 @@ async def _run_embedding_generation(force: bool, batch_size: int, vector_types: 
                     # 实时更新进度
                     _embedding_progress["processed"] = processed
                     _embedding_progress["failed"] = failed
-                    logger.info(f"Progress: {processed}/{_embedding_progress['total']} processed, {failed} failed")
+                    logger.info(
+                        f"Progress: {processed}/{_embedding_progress['total']} processed, {failed} failed"
+                    )
 
                 except Exception as e:
                     logger.error(f"Batch {i // actual_batch_size + 1} failed: {e}")

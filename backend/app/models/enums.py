@@ -1,6 +1,7 @@
 """
 Enumeration types for the application.
 """
+
 import enum
 
 
@@ -13,6 +14,7 @@ class RoleType(str, enum.Enum):
     - GRADUATE: 毕业/早期研究者 (8 < works < 30, transitioning)
     - UNKNOWN: 未知 (insufficient data)
     """
+
     PROFESSOR = "professor"
     STUDENT = "student"
     GRADUATE = "graduate"
@@ -21,6 +23,7 @@ class RoleType(str, enum.Enum):
 
 class VisibilityStatus(str, enum.Enum):
     """Visibility status enumeration."""
+
     ACTIVE = "active"
     PENDING = "pending"
     HIDDEN = "hidden"
@@ -28,6 +31,7 @@ class VisibilityStatus(str, enum.Enum):
 
 class UserRoleType(str, enum.Enum):
     """User role type enumeration."""
+
     ADMIN = "admin"
     SUPER_ADMIN = "super_admin"
     USER = "user"
@@ -35,6 +39,7 @@ class UserRoleType(str, enum.Enum):
 
 class SyncJobStatus(str, enum.Enum):
     """Sync job status enumeration."""
+
     PENDING = "pending"
     RUNNING = "running"
     SUCCESS = "success"
@@ -44,6 +49,7 @@ class SyncJobStatus(str, enum.Enum):
 
 class SourceType(str, enum.Enum):
     """Data source type enumeration."""
+
     OPENALEX = "openalex"
     MANUAL = "manual"
     IMPORT = "import"
@@ -51,6 +57,7 @@ class SourceType(str, enum.Enum):
 
 class ScopeType(str, enum.Enum):
     """Permission scope type enumeration."""
+
     SCHOOL = "school"
     COUNTRY = "country"
     ALL = "all"

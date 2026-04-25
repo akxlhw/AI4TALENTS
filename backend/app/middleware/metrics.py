@@ -4,6 +4,7 @@ Monitoring middleware for collecting HTTP metrics.
 This middleware collects request latency, error rates, and other metrics
 for Prometheus scraping via the /metrics endpoint.
 """
+
 from __future__ import annotations
 
 import time
@@ -72,6 +73,8 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         path = re.sub(r"/\d+(?=/|$)", "/{id}", path)
 
         # Replace UUIDs
-        path = re.sub(r"/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}(?=/|$)", "/{uuid}", path)
+        path = re.sub(
+            r"/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}(?=/|$)", "/{uuid}", path
+        )
 
         return path

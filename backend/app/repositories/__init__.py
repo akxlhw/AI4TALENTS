@@ -1,6 +1,7 @@
 """
 Repositories module.
 """
+
 from app.repositories.homepage_repository import HomepageRepository
 from app.repositories.school_repository import SchoolRepository
 from app.repositories.stat_repository import StatisticsRepository

@@ -1,6 +1,7 @@
 """Search service module."""
-from app.services.search.search_service import SearchService, SearchMode
-from app.services.search.errors import SearchError, EmptyQueryError, InvalidSearchModeError
+
+from app.services.search.errors import EmptyQueryError, InvalidSearchModeError, SearchError
+from app.services.search.search_service import SearchMode, SearchService
 
 __all__ = [
     "SearchService",

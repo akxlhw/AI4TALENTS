@@ -5,19 +5,19 @@ LLM 错误类型定义
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class LLMErrorType(Enum):
     """LLM 错误类型"""
-    TIMEOUT = "timeout"                    # API 超时
-    RATE_LIMIT = "rate_limit"              # 触发速率限制
-    API_ERROR = "api_error"                # API 错误
+
+    TIMEOUT = "timeout"  # API 超时
+    RATE_LIMIT = "rate_limit"  # 触发速率限制
+    API_ERROR = "api_error"  # API 错误
     INVALID_RESPONSE = "invalid_response"  # 响应格式错误
-    AUTH_ERROR = "auth_error"              # 认证错误
-    MODEL_NOT_FOUND = "model_not_found"    # 模型不存在
-    CONTENT_FILTER = "content_filter"      # 内容过滤
-    NETWORK_ERROR = "network_error"        # 网络错误
+    AUTH_ERROR = "auth_error"  # 认证错误
+    MODEL_NOT_FOUND = "model_not_found"  # 模型不存在
+    CONTENT_FILTER = "content_filter"  # 内容过滤
+    NETWORK_ERROR = "network_error"  # 网络错误
 
 
 @dataclass
@@ -30,10 +30,11 @@ class LLMError(Exception):
         retry_after: 重试等待时间（秒），仅对 RATE_LIMIT 有效
         original_error: 原始异常
     """
+
     error_type: LLMErrorType
     message: str
-    retry_after: Optional[int] = None
-    original_error: Optional[Exception] = None
+    retry_after: int | None = None
+    original_error: Exception | None = None
 
     def __str__(self) -> str:
         if self.retry_after:
@@ -128,10 +129,11 @@ class EmptyReferenceError(RecommendError):
 # 搜索相关异常 (Search-specific errors)
 # ========================================
 
+
 class SemanticSearchError(SearchError):
     """语义搜索失败错误"""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None) -> None:
+    def __init__(self, message: str, original_error: Exception | None = None) -> None:
         super().__init__(message)
         self.original_error = original_error
 
@@ -139,7 +141,7 @@ class SemanticSearchError(SearchError):
 class FulltextSearchError(SearchError):
     """全文搜索失败错误"""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None) -> None:
+    def __init__(self, message: str, original_error: Exception | None = None) -> None:
         super().__init__(message)
         self.original_error = original_error
 

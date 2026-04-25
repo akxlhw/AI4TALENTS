@@ -1,16 +1,17 @@
 """
 Tests for repository classes.
 """
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.repositories.school_repository import SchoolRepository
-from app.repositories.talent_repository import TalentRepository
-from app.repositories.stat_repository import StatisticsRepository
-from app.models.school import School
-from app.models.talent import Talent, RoleProfile
-from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
 from app.models.enums import RoleType
+from app.models.school import School
+from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
+from app.models.talent import RoleProfile, Talent
+from app.repositories.school_repository import SchoolRepository
+from app.repositories.stat_repository import StatisticsRepository
+from app.repositories.talent_repository import TalentRepository
 
 
 class TestSchoolRepository:
@@ -54,9 +55,7 @@ class TestSchoolRepository:
         assert len(schools) == 3
 
     @pytest.mark.asyncio
-    async def test_get_list_with_country_filter(
-        self, test_session: AsyncSession, setup_data
-    ):
+    async def test_get_list_with_country_filter(self, test_session: AsyncSession, setup_data):
         """Test get school list with country filter."""
         repo = SchoolRepository(test_session)
         schools, total = await repo.get_list(country_code="US")
@@ -145,9 +144,7 @@ class TestTalentRepository:
         assert len(talents) == 2
 
     @pytest.mark.asyncio
-    async def test_get_list_with_role_filter(
-        self, test_session: AsyncSession, setup_data
-    ):
+    async def test_get_list_with_role_filter(self, test_session: AsyncSession, setup_data):
         """Test get talent list with role filter."""
         repo = TalentRepository(test_session)
         talents, total = await repo.get_list(role_type=RoleType.PROFESSOR.value)
@@ -388,9 +385,7 @@ class TestStatisticsRepository:
     """Tests for StatisticsRepository."""
 
     @pytest.mark.asyncio
-    async def test_get_active_overview_stats_empty(
-        self, test_session: AsyncSession
-    ):
+    async def test_get_active_overview_stats_empty(self, test_session: AsyncSession):
         """Test get active stats when none exist."""
         repo = StatisticsRepository(test_session)
         stats = await repo.get_active_overview_stats()
@@ -398,9 +393,7 @@ class TestStatisticsRepository:
         assert stats is None
 
     @pytest.mark.asyncio
-    async def test_get_active_overview_stats(
-        self, test_session: AsyncSession
-    ):
+    async def test_get_active_overview_stats(self, test_session: AsyncSession):
         """Test get active overview stats."""
         # Create test stats
         stats = OverviewStatSnapshot(
@@ -423,9 +416,7 @@ class TestStatisticsRepository:
         assert result.school_count == 100
 
     @pytest.mark.asyncio
-    async def test_get_school_stats(
-        self, test_session: AsyncSession
-    ):
+    async def test_get_school_stats(self, test_session: AsyncSession):
         """Test get school statistics."""
         # Create test data
         school = School(

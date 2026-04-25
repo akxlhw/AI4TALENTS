@@ -8,12 +8,12 @@ Collect configuration API endpoints - MVP v1.2
 - 固定参数：数据类型（学者+论文+机构）
 - 可配置参数：时间范围（起始年份~截止年份/至今）
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
-import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,6 +45,7 @@ from app.services.collect_service import CollectService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/collect", tags=["Collect Configuration"])
+
 
 # Helper to check admin role
 def require_admin_user(current_user: dict = Depends(require_user)) -> dict:
@@ -104,7 +105,7 @@ async def _run_unified_collect(task_id: int):
             session,
             work_fetcher=work_fetcher,
             author_fetcher=author_fetcher,
-            institution_fetcher=institution_fetcher
+            institution_fetcher=institution_fetcher,
         )
         progress = await orchestrator.execute_task(task_id)
 
@@ -123,11 +124,12 @@ async def _run_unified_collect(task_id: int):
 
 # ============ Tech Domain Collect Config Endpoints ============
 
+
 @router.get(
     "/tech-domains",
     response_model=TechDomainCollectListResponse,
     summary="获取技术领域采集配置列表",
-    description="获取所有技术领域及其关联的顶会顶刊配置"
+    description="获取所有技术领域及其关联的顶会顶刊配置",
 )
 async def list_tech_domains_collect(
     session: AsyncSession = Depends(get_async_session),
@@ -139,6 +141,7 @@ async def list_tech_domains_collect(
 
     # Get venue bindings for all tech domains
     from app.repositories.venue_repository import VenueTechBindingRepository
+
     binding_repo = VenueTechBindingRepository(session)
 
     items = []
@@ -150,19 +153,22 @@ async def list_tech_domains_collect(
         # Build collect_sources from bindings (for backward compatibility)
         collect_sources = [
             {"id": b.venue.venue_code, "name": b.venue.venue_name, "type": b.venue.venue_type}
-            for b in bindings if b.venue
+            for b in bindings
+            if b.venue
         ]
 
-        items.append(TechDomainCollectResponse(
-            tech_domain_id=d.tech_domain_id,
-            domain_code=d.domain_code,
-            domain_name=d.domain_name,
-            domain_name_en=d.domain_name_en,
-            collect_sources=collect_sources,
-            last_collect_at=d.last_collect_at,
-            is_enabled=d.is_enabled,
-            venue_count=venue_count,
-        ))
+        items.append(
+            TechDomainCollectResponse(
+                tech_domain_id=d.tech_domain_id,
+                domain_code=d.domain_code,
+                domain_name=d.domain_name,
+                domain_name_en=d.domain_name_en,
+                collect_sources=collect_sources,
+                last_collect_at=d.last_collect_at,
+                is_enabled=d.is_enabled,
+                venue_count=venue_count,
+            )
+        )
 
     return TechDomainCollectListResponse(items=items, total=len(items))
 
@@ -172,7 +178,7 @@ async def list_tech_domains_collect(
     response_model=TechDomainCollectResponse,
     summary="更新技术领域的采集源配置",
     description="[已废弃] 请使用 /venues/bindings API 管理绑定关系",
-    deprecated=True
+    deprecated=True,
 )
 async def update_tech_domain_sources(
     tech_domain_id: int,
@@ -183,17 +189,18 @@ async def update_tech_domain_sources(
     """Update collect sources for a tech domain - DEPRECATED, use venue bindings API instead."""
     raise HTTPException(
         status_code=400,
-        detail="This API is deprecated. Please use /venues/bindings API to manage venue-tech domain bindings."
+        detail="This API is deprecated. Please use /venues/bindings API to manage venue-tech domain bindings.",
     )
 
 
 # ============ Collect Task Endpoints ============
 
+
 @router.get(
     "/tasks",
     response_model=CollectTaskListResponse,
     summary="获取采集任务列表",
-    description="获取采集任务列表（分页）"
+    description="获取采集任务列表（分页）",
 )
 async def list_tasks(
     status: str | None = Query(None, description="按状态筛选"),
@@ -222,34 +229,37 @@ async def list_tasks(
         if end_year == current_year and t.time_window_end:
             # 检查是否是"至今"（接近当前时间）
             from datetime import timedelta
+
             if datetime.utcnow() - t.time_window_end < timedelta(days=1):
                 end_year = None
 
-        items.append(CollectTaskResponse(
-            task_id=t.task_id,
-            task_code=t.task_code,
-            tech_domain_id=t.tech_domain_id,
-            tech_domain_name=t.tech_domain.domain_name if t.tech_domain else None,
-            start_year=start_year,
-            end_year=end_year,
-            triggered_by=t.triggered_by,
-            triggered_at=t.triggered_at,
-            status=t.status,
-            progress_percent=t.progress_percent or 0,
-            current_step=t.current_step,
-            total_records=t.total_records or 0,
-            processed_records=t.processed_records or 0,
-            success_records=t.success_records or 0,
-            failed_records=t.failed_records or 0,
-            skipped_records=t.skipped_records or 0,
-            started_at=t.started_at,
-            completed_at=t.completed_at,
-            error_message=t.error_message,
-            error_details=t.error_details,
-            result_summary=t.result_summary,
-            venue_snapshot=t.venue_snapshot,
-            created_at=t.created_at,
-        ))
+        items.append(
+            CollectTaskResponse(
+                task_id=t.task_id,
+                task_code=t.task_code,
+                tech_domain_id=t.tech_domain_id,
+                tech_domain_name=t.tech_domain.domain_name if t.tech_domain else None,
+                start_year=start_year,
+                end_year=end_year,
+                triggered_by=t.triggered_by,
+                triggered_at=t.triggered_at,
+                status=t.status,
+                progress_percent=t.progress_percent or 0,
+                current_step=t.current_step,
+                total_records=t.total_records or 0,
+                processed_records=t.processed_records or 0,
+                success_records=t.success_records or 0,
+                failed_records=t.failed_records or 0,
+                skipped_records=t.skipped_records or 0,
+                started_at=t.started_at,
+                completed_at=t.completed_at,
+                error_message=t.error_message,
+                error_details=t.error_details,
+                result_summary=t.result_summary,
+                venue_snapshot=t.venue_snapshot,
+                created_at=t.created_at,
+            )
+        )
 
     return CollectTaskListResponse(items=items, total=total, page=page, page_size=page_size)
 
@@ -271,7 +281,7 @@ async def list_tasks(
 
 **说明：**
 采集任务在后台异步执行，可通过任务列表查看进度。
-"""
+""",
 )
 async def trigger_task(
     request: TriggerCollectTaskRequest,
@@ -289,13 +299,14 @@ async def trigger_task(
 
     # Check if has venue bindings configured
     from app.repositories.venue_repository import VenueTechBindingRepository
+
     binding_repo = VenueTechBindingRepository(session)
     bindings = await binding_repo.get_by_tech_domain(request.tech_domain_id, is_enabled=True)
 
     if not bindings:
         raise HTTPException(
             status_code=400,
-            detail="Tech domain has no venue bindings configured. Please bind venues first."
+            detail="Tech domain has no venue bindings configured. Please bind venues first.",
         )
 
     # Check if there's already a running task for this domain
@@ -304,7 +315,7 @@ async def trigger_task(
         if t.tech_domain_id == request.tech_domain_id:
             raise HTTPException(
                 status_code=400,
-                detail=f"There is already a running task (#{t.task_id}) for this tech domain."
+                detail=f"There is already a running task (#{t.task_id}) for this tech domain.",
             )
 
     # Validate year range
@@ -312,27 +323,17 @@ async def trigger_task(
     start_year = request.start_year
 
     if start_year < MIN_START_YEAR:
-        raise HTTPException(
-            status_code=400,
-            detail=f"起始年份不能早于 {MIN_START_YEAR} 年"
-        )
+        raise HTTPException(status_code=400, detail=f"起始年份不能早于 {MIN_START_YEAR} 年")
     if start_year > current_year:
-        raise HTTPException(
-            status_code=400,
-            detail=f"起始年份不能晚于当前年份 ({current_year})"
-        )
+        raise HTTPException(status_code=400, detail=f"起始年份不能晚于当前年份 ({current_year})")
 
     end_year = request.end_year
     if end_year is not None:
         if end_year < start_year:
-            raise HTTPException(
-                status_code=400,
-                detail="截止年份不能早于起始年份"
-            )
+            raise HTTPException(status_code=400, detail="截止年份不能早于起始年份")
         if end_year > current_year:
             raise HTTPException(
-                status_code=400,
-                detail=f"截止年份不能晚于当前年份 ({current_year})"
+                status_code=400, detail=f"截止年份不能晚于当前年份 ({current_year})"
             )
 
     # Calculate time window (naive datetime for WITHOUT TIME ZONE columns)
@@ -351,8 +352,10 @@ async def trigger_task(
         time_window_end=time_end,
     )
 
-    logger.info(f"Created collect task {task.task_id} for {domain.domain_name} "
-                f"with {len(task.venue_snapshot or [])} venues, year range: {start_year}-{end_year or '至今'}")
+    logger.info(
+        f"Created collect task {task.task_id} for {domain.domain_name} "
+        f"with {len(task.venue_snapshot or [])} venues, year range: {start_year}-{end_year or '至今'}"
+    )
 
     # Start background task using asyncio (in-process, works reliably on Windows)
     asyncio.create_task(run_collect_task_background(task.task_id))
@@ -389,7 +392,7 @@ async def trigger_task(
     "/tasks/{task_id}",
     response_model=CollectTaskResponse,
     summary="获取采集任务详情",
-    description="获取指定采集任务的详细信息，包含执行日志"
+    description="获取指定采集任务的详细信息，包含执行日志",
 )
 async def get_task(
     task_id: int,
@@ -410,6 +413,7 @@ async def get_task(
     current_year = get_current_year()
     if end_year == current_year and task.time_window_end:
         from datetime import timedelta
+
         if datetime.utcnow() - task.time_window_end < timedelta(days=1):
             end_year = None
 
@@ -443,8 +447,9 @@ async def get_task(
 
 @router.post(
     "/tasks/{task_id}/execute",
+    response_model=TaskActionResponse,
     summary="执行采集任务",
-    description="执行待执行状态的采集任务"
+    description="执行待执行状态的采集任务",
 )
 async def execute_task(
     task_id: int,
@@ -460,8 +465,7 @@ async def execute_task(
 
     if task.status != "pending":
         raise HTTPException(
-            status_code=400,
-            detail=f"Task is not in pending status (current: {task.status})"
+            status_code=400, detail=f"Task is not in pending status (current: {task.status})"
         )
 
     # Check if there's already a running task
@@ -470,23 +474,21 @@ async def execute_task(
         if t.task_id != task_id and t.status == "running":
             raise HTTPException(
                 status_code=400,
-                detail=f"There is already a running task (#{t.task_id}). Please wait for it to complete."
+                detail=f"There is already a running task (#{t.task_id}). Please wait for it to complete.",
             )
 
     # Start background execution
     asyncio.create_task(run_collect_task_background(task_id))
     logger.info(f"Background task started for task #{task_id}")
 
-    return TaskActionResponse(
-        message="Task execution started",
-        task_id=task_id
-    )
+    return TaskActionResponse(message="Task execution started", task_id=task_id)
 
 
 @router.post(
     "/tasks/{task_id}/cancel",
+    response_model=SuccessResponse,
     summary="取消采集任务",
-    description="取消正在执行的采集任务"
+    description="取消正在执行的采集任务",
 )
 async def cancel_task(
     task_id: int,
@@ -512,8 +514,9 @@ async def cancel_task(
 
 @router.delete(
     "/tasks/{task_id}",
+    response_model=TaskActionResponse,
     summary="删除采集任务",
-    description="删除已完成的采集任务记录"
+    description="删除已完成的采集任务记录",
 )
 async def delete_task(
     task_id: int,
@@ -541,7 +544,7 @@ async def delete_task(
     "/tasks/active",
     response_model=list[CollectTaskResponse],
     summary="获取活动任务",
-    description="获取当前正在执行或待执行的任务"
+    description="获取当前正在执行或待执行的任务",
 )
 async def get_active_tasks(
     session: AsyncSession = Depends(get_async_session),
@@ -551,39 +554,44 @@ async def get_active_tasks(
     repo = CollectTaskRepository(session)
     tasks = await repo.get_active_tasks()
 
-    return [CollectTaskResponse(
-        task_id=t.task_id,
-        task_code=t.task_code,
-        tech_domain_id=t.tech_domain_id,
-        tech_domain_name=t.tech_domain.domain_name if t.tech_domain else None,
-        start_year=t.time_window_start.year if t.time_window_start else DEFAULT_START_YEAR,
-        end_year=t.time_window_end.year if t.time_window_end else None,
-        triggered_by=t.triggered_by,
-        triggered_at=t.triggered_at,
-        status=t.status,
-        progress_percent=t.progress_percent or 0,
-        current_step=t.current_step,
-        total_records=t.total_records or 0,
-        processed_records=t.processed_records or 0,
-        success_records=t.success_records or 0,
-        failed_records=t.failed_records or 0,
-        skipped_records=t.skipped_records or 0,
-        started_at=t.started_at,
-        completed_at=t.completed_at,
-        error_message=t.error_message,
-        error_details=t.error_details,
-        result_summary=t.result_summary,
-        venue_snapshot=t.venue_snapshot,
-        created_at=t.created_at,
-    ) for t in tasks]
+    return [
+        CollectTaskResponse(
+            task_id=t.task_id,
+            task_code=t.task_code,
+            tech_domain_id=t.tech_domain_id,
+            tech_domain_name=t.tech_domain.domain_name if t.tech_domain else None,
+            start_year=t.time_window_start.year if t.time_window_start else DEFAULT_START_YEAR,
+            end_year=t.time_window_end.year if t.time_window_end else None,
+            triggered_by=t.triggered_by,
+            triggered_at=t.triggered_at,
+            status=t.status,
+            progress_percent=t.progress_percent or 0,
+            current_step=t.current_step,
+            total_records=t.total_records or 0,
+            processed_records=t.processed_records or 0,
+            success_records=t.success_records or 0,
+            failed_records=t.failed_records or 0,
+            skipped_records=t.skipped_records or 0,
+            started_at=t.started_at,
+            completed_at=t.completed_at,
+            error_message=t.error_message,
+            error_details=t.error_details,
+            result_summary=t.result_summary,
+            venue_snapshot=t.venue_snapshot,
+            created_at=t.created_at,
+        )
+        for t in tasks
+    ]
 
 
 # ============ Options Endpoints ============
 
+
 @router.get(
     "/options/task-statuses",
+    response_model=list[dict[str, str]],
     summary="获取任务状态选项",
-    description="获取所有可用的任务状态选项"
+    description="获取所有可用的任务状态选项",
 )
 async def get_task_statuses():
     """Get task status options."""
@@ -592,8 +600,9 @@ async def get_task_statuses():
 
 @router.get(
     "/options/years",
+    response_model=YearOptionsResponse,
     summary="获取年份选项",
-    description="获取可用的年份选项列表"
+    description="获取可用的年份选项列表",
 )
 async def get_years():
     """Get year options for time range selection."""
@@ -607,11 +616,12 @@ async def get_years():
 
 # ============ Venue Sub-Task Endpoints ============
 
+
 @router.get(
     "/tasks/{task_id}/sub-tasks",
     response_model=VenueSubTaskListResponse,
     summary="获取任务的Venue子任务列表",
-    description="获取指定任务下所有Venue级别的子任务"
+    description="获取指定任务下所有Venue级别的子任务",
 )
 async def get_task_sub_tasks(
     task_id: int,
@@ -623,15 +633,15 @@ async def get_task_sub_tasks(
     sub_tasks = await sub_task_repo.get_by_task(task_id)
 
     return VenueSubTaskListResponse(
-        total=len(sub_tasks),
-        items=[VenueSubTaskResponse.model_validate(st) for st in sub_tasks]
+        total=len(sub_tasks), items=[VenueSubTaskResponse.model_validate(st) for st in sub_tasks]
     )
 
 
 @router.get(
     "/tasks/{task_id}/progress",
+    response_model=dict,
     summary="获取任务详细进度",
-    description="获取任务的详细进度信息，包括各Venue子任务状态"
+    description="获取任务的详细进度信息，包括各Venue子任务状态",
 )
 async def get_task_detailed_progress(
     task_id: int,
@@ -651,15 +661,16 @@ async def get_task_detailed_progress(
         session,
         work_fetcher=work_fetcher,
         author_fetcher=author_fetcher,
-        institution_fetcher=institution_fetcher
+        institution_fetcher=institution_fetcher,
     )
     return await orchestrator.get_task_progress(task_id)
 
 
 @router.post(
     "/tasks/{task_id}/sub-tasks/{sub_task_id}/retry",
+    response_model=SubTaskActionResponse,
     summary="重试失败的子任务",
-    description="重新执行失败的Venue子任务"
+    description="重新执行失败的Venue子任务",
 )
 async def retry_sub_task(
     task_id: int,

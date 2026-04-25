@@ -1,19 +1,18 @@
 """
 Tests for cursor-based pagination functionality.
 """
+
 import os
 
 os.environ["REDIS_ENABLED"] = "false"
 
 import pytest
-from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import Base, async_engine
 from app.models.enums import RoleType, VisibilityStatus
 from app.models.school import School
 from app.models.talent import Talent
-from app.models.tech_domain import TechDirection, TechDomain, TalentTechTag
+from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
 
 
 @pytest.fixture
@@ -296,9 +295,7 @@ class TestCursorPaginationEdgeCases:
         return {"school": school}
 
     @pytest.mark.asyncio
-    async def test_empty_result_set(
-        self, test_session: AsyncSession, setup_empty_data
-    ):
+    async def test_empty_result_set(self, test_session: AsyncSession, setup_empty_data):
         """Test cursor pagination with no results."""
         from app.repositories.talent_repository import TalentRepository
 
@@ -320,7 +317,6 @@ class TestCursorPaginationEdgeCases:
         from app.repositories.talent_repository import TalentRepository
 
         repo = TalentRepository(test_session)
-        data = setup_pagination_data
 
         # Get first page to find the smallest talent_id
         first_page, _ = await repo.get_list_by_cursor(page_size=100)
@@ -357,9 +353,7 @@ class TestCursorPaginationEdgeCases:
             assert t.school is not None
 
     @pytest.mark.asyncio
-    async def test_pagination_with_keyword(
-        self, test_session: AsyncSession, setup_pagination_data
-    ):
+    async def test_pagination_with_keyword(self, test_session: AsyncSession, setup_pagination_data):
         """Test cursor pagination with keyword search."""
         from app.repositories.talent_repository import TalentRepository
 
@@ -410,9 +404,7 @@ class TestCursorPaginationEdgeCases:
             assert t.cited_by_count >= 1100
 
     @pytest.mark.asyncio
-    async def test_single_item_page(
-        self, test_session: AsyncSession
-    ):
+    async def test_single_item_page(self, test_session: AsyncSession):
         """Test cursor pagination with page_size=1."""
         from app.repositories.talent_repository import TalentRepository
 
@@ -447,9 +439,7 @@ class TestCursorPaginationEdgeCases:
         assert next_cursor is None  # Only one item
 
     @pytest.mark.asyncio
-    async def test_exactly_page_size_results(
-        self, test_session: AsyncSession
-    ):
+    async def test_exactly_page_size_results(self, test_session: AsyncSession):
         """Test cursor pagination when results equal page_size."""
         from app.repositories.talent_repository import TalentRepository
 

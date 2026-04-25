@@ -58,7 +58,7 @@ async def list_schools(
             professor_count=school.professor_count,
             student_count=school.student_count,
             homepage_url=school.homepage_url,
-            is_top_school=getattr(school, 'is_top_school', False),
+            is_top_school=getattr(school, "is_top_school", False),
         )
         for school in schools
     ]
@@ -74,6 +74,7 @@ async def list_schools(
 # ============================================
 # Top School APIs - MUST be before /{school_id}
 # ============================================
+
 
 @router.get(
     "/top-schools",
@@ -131,7 +132,9 @@ async def list_top_schools(
 )
 async def get_school_talents(
     school_id: int,
-    role_type: str | None = Query(None, description="按角色类型筛选 (professor/student/graduated/unknown)"),
+    role_type: str | None = Query(
+        None, description="按角色类型筛选 (professor/student/graduated/unknown)"
+    ),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=5000, description="每页数量"),
     session: AsyncSession = Depends(get_async_session),
@@ -258,13 +261,14 @@ async def get_school(
         talent_count=talent_counts["total"],
         graduate_count=talent_counts["graduated"],
         unknown_count=talent_counts["unknown"],
-        is_top_school=getattr(school, 'is_top_school', False),
+        is_top_school=getattr(school, "is_top_school", False),
     )
 
 
 # ============================================
 # Top School Management APIs
 # ============================================
+
 
 @router.put(
     "/{school_id}/set-top",

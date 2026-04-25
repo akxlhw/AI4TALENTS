@@ -1,6 +1,7 @@
 """
 Collection services for data gathering.
 """
+
 from app.services.collect.orchestrator import CollectionOrchestrator
 from app.services.collect.progress_tracker import ProgressTracker
 from app.services.collect.task_creation import TaskCreationService

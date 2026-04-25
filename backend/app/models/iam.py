@@ -1,6 +1,7 @@
 """
 User and permission models.
 """
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -40,7 +41,9 @@ class UserAccount(Base, TimestampMixin):
     department = Column(String(255), nullable=True)
 
     # User preferences
-    default_view = Column(String(30), default="tech_domain", nullable=False)  # tech_domain / country_school
+    default_view = Column(
+        String(30), default="tech_domain", nullable=False
+    )  # tech_domain / country_school
 
     # Last login
     last_login_at = Column(DateTime, nullable=True)
@@ -84,7 +87,9 @@ class UserSchoolScope(Base, TimestampMixin):
     user = relationship("UserAccount", back_populates="school_scopes")
 
     def __repr__(self) -> str:
-        return f"<UserSchoolScope(user_id={self.user_id}, scope={self.scope_type}:{self.scope_value})>"
+        return (
+            f"<UserSchoolScope(user_id={self.user_id}, scope={self.scope_type}:{self.scope_value})>"
+        )
 
 
 class FavoriteTalent(Base, TimestampMixin):
@@ -103,9 +108,7 @@ class FavoriteTalent(Base, TimestampMixin):
     user = relationship("UserAccount", back_populates="favorites")
     talent = relationship("Talent")
 
-    __table_args__ = (
-        UniqueConstraint('user_id', 'talent_id', name='uq_user_favorite_talent'),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "talent_id", name="uq_user_favorite_talent"),)
 
     def __repr__(self) -> str:
         return f"<FavoriteTalent(user_id={self.user_id}, talent_id={self.talent_id})>"
@@ -118,8 +121,12 @@ class TalentPool(Base, TimestampMixin):
 
     pool_id = Column(Integer, primary_key=True, index=True)
     pool_name = Column(String(100), nullable=False)
-    pool_type = Column(String(30), default="custom", nullable=False)  # tech_domain/country/campaign/custom
-    owner_user_id = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=False, index=True)
+    pool_type = Column(
+        String(30), default="custom", nullable=False
+    )  # tech_domain/country/campaign/custom
+    owner_user_id = Column(
+        Integer, ForeignKey("iam_user_account.user_id"), nullable=False, index=True
+    )
     scope_desc = Column(Text, nullable=True)
     pool_status = Column(String(20), default="active", nullable=False)  # active/archived
 
@@ -146,9 +153,7 @@ class TalentPoolMember(Base, TimestampMixin):
     pool = relationship("TalentPool", back_populates="members")
     talent = relationship("Talent")
 
-    __table_args__ = (
-        UniqueConstraint('pool_id', 'talent_id', name='uq_pool_talent'),
-    )
+    __table_args__ = (UniqueConstraint("pool_id", "talent_id", name="uq_pool_talent"),)
 
     def __repr__(self) -> str:
         return f"<TalentPoolMember(pool_id={self.pool_id}, talent_id={self.talent_id})>"

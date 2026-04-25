@@ -15,7 +15,7 @@ import hashlib
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional, Any, List
+from typing import Any
 
 from app.services.llm.protocols import JDFeatures
 
@@ -26,7 +26,7 @@ class CacheBackend(ABC):
     """缓存后端抽象接口"""
 
     @abstractmethod
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """获取缓存"""
         ...
 
@@ -47,7 +47,7 @@ class MemoryCacheBackend(CacheBackend):
     def __init__(self) -> None:
         self._cache: dict[str, Any] = {}
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         return self._cache.get(key)
 
     async def set(self, key: str, value: Any, ttl: int = 3600) -> None:
@@ -89,7 +89,7 @@ class CacheManager:
 
     # ========== JD Features ==========
 
-    async def get_jd_features(self, jd_text: str) -> Optional[JDFeatures]:
+    async def get_jd_features(self, jd_text: str) -> JDFeatures | None:
         """
         获取缓存的 JD 解析结果
 
@@ -110,10 +110,7 @@ class CacheManager:
         return None
 
     async def set_jd_features(
-        self,
-        jd_text: str,
-        features: JDFeatures,
-        ttl: int = 86400  # 24 小时
+        self, jd_text: str, features: JDFeatures, ttl: int = 86400  # 24 小时
     ) -> None:
         """
         缓存 JD 解析结果
@@ -131,7 +128,7 @@ class CacheManager:
 
     # ========== Embeddings ==========
 
-    async def get_embedding(self, talent_id: int) -> Optional[List[float]]:
+    async def get_embedding(self, talent_id: int) -> list[float] | None:
         """
         获取缓存的人才嵌入向量
 
@@ -148,10 +145,7 @@ class CacheManager:
         return await self.backend.get(key)
 
     async def set_embedding(
-        self,
-        talent_id: int,
-        embedding: List[float],
-        ttl: int = 604800  # 7 天
+        self, talent_id: int, embedding: list[float], ttl: int = 604800  # 7 天
     ) -> None:
         """
         缓存人才嵌入向量
@@ -169,7 +163,7 @@ class CacheManager:
 
     # ========== Generic ==========
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """通用获取"""
         if not self.backend:
             return None

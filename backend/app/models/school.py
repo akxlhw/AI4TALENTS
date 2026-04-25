@@ -1,6 +1,7 @@
 """
 School model.
 """
+
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
@@ -60,7 +61,9 @@ class SchoolAlias(Base, TimestampMixin):
     alias_id = Column(Integer, primary_key=True, index=True)
     school_id = Column(Integer, ForeignKey("core_school.school_id"), nullable=False, index=True)
     alias_name = Column(String(255), nullable=False, index=True)
-    alias_type = Column(String(50), nullable=True)  # e.g., 'abbreviation', 'former_name', 'local_name'
+    alias_type = Column(
+        String(50), nullable=True
+    )  # e.g., 'abbreviation', 'former_name', 'local_name'
 
     # Relationships
     school = relationship("School", back_populates="aliases")

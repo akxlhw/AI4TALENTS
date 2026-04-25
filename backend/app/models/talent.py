@@ -1,6 +1,7 @@
 """
 Talent model.
 """
+
 from sqlalchemy import JSON, Boolean, Column, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
@@ -17,7 +18,9 @@ class Talent(Base, TimestampMixin):
     talent_id = Column(Integer, primary_key=True, index=True)
 
     # Link to standardized layer
-    std_author_id = Column(Integer, ForeignKey("std_author.std_author_id"), nullable=True, index=True)
+    std_author_id = Column(
+        Integer, ForeignKey("std_author.std_author_id"), nullable=True, index=True
+    )
 
     # Source tracking
     source_type = Column(String(50), nullable=True)
@@ -33,8 +36,12 @@ class Talent(Base, TimestampMixin):
     school_id = Column(Integer, ForeignKey("core_school.school_id"), nullable=True, index=True)
 
     # Primary institutions (education and company)
-    education_school_id = Column(Integer, ForeignKey("core_school.school_id"), nullable=True, index=True)
-    company_school_id = Column(Integer, ForeignKey("core_school.school_id"), nullable=True, index=True)
+    education_school_id = Column(
+        Integer, ForeignKey("core_school.school_id"), nullable=True, index=True
+    )
+    company_school_id = Column(
+        Integer, ForeignKey("core_school.school_id"), nullable=True, index=True
+    )
 
     current_title = Column(String(255), nullable=True)
 

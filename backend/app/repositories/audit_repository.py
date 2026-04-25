@@ -1,6 +1,7 @@
 """
 Repository for audit log operations.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -81,9 +82,7 @@ class AuditRepository:
         Returns:
             List of event types
         """
-        result = await self.session.execute(
-            select(AuditOperationLog.event_type).distinct()
-        )
+        result = await self.session.execute(select(AuditOperationLog.event_type).distinct())
         return [row[0] for row in result.fetchall()]
 
     async def get_resource_types(self) -> list[str]:
@@ -93,7 +92,5 @@ class AuditRepository:
         Returns:
             List of resource types (excluding None)
         """
-        result = await self.session.execute(
-            select(AuditOperationLog.resource_type).distinct()
-        )
+        result = await self.session.execute(select(AuditOperationLog.resource_type).distinct())
         return [row[0] for row in result.fetchall() if row[0]]

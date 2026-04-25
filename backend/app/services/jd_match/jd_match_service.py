@@ -12,21 +12,21 @@ Features:
 
 from __future__ import annotations
 
-import time
 import logging
-from datetime import datetime
+import time
 from dataclasses import dataclass, field
-from typing import List, Dict, Any
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.repositories.talent_repository import TalentRepository
-from app.models.jd_match import JDMatchSession, JDMatchResult
-from app.services.llm.protocols import LLMGatewayProtocol, JDFeatures
-from app.services.llm.errors import JDMatchError, EmptyJDError
-from app.services.jd_match.match_scorer import MatchScorer
 from app.core.config import settings
+from app.models.jd_match import JDMatchResult, JDMatchSession
+from app.repositories.talent_repository import TalentRepository
+from app.services.jd_match.match_scorer import MatchScorer
+from app.services.llm.errors import EmptyJDError
+from app.services.llm.protocols import JDFeatures, LLMGatewayProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -39,21 +39,23 @@ class MatchConfig:
 
     权重配置统一在 settings.JD_MATCH_WEIGHTS 中管理
     """
-    weights: Dict[str, float] = field(default_factory=lambda: settings.JD_MATCH_WEIGHTS.copy())
-    filters: Dict[str, Any] = field(default_factory=dict)
+
+    weights: dict[str, float] = field(default_factory=lambda: settings.JD_MATCH_WEIGHTS.copy())
+    filters: dict[str, Any] = field(default_factory=dict)
     limit: int = 50
 
 
 @dataclass
 class MatchResultItem:
     """匹配结果项"""
+
     talent_id: int
     name: str
     title: str
     school_name: str
     overall_score: float
     research_score: float
-    match_reasons: List[str]
+    match_reasons: list[str]
 
     def to_dict(self) -> dict:
         return {
@@ -70,9 +72,10 @@ class MatchResultItem:
 @dataclass
 class MatchResult:
     """匹配结果"""
+
     session_id: int
     total: int
-    items: List[MatchResultItem]
+    items: list[MatchResultItem]
     took_ms: float
 
     def to_dict(self) -> dict:
@@ -187,9 +190,13 @@ class JDMatchService:
             jd_features = await self.parse_jd(jd_text)
 
             # 更新会话特征
-            db_session.jd_features = jd_features.to_dict() if hasattr(jd_features, 'to_dict') else {
-                "research_areas": jd_features.research_areas,
-            }
+            db_session.jd_features = (
+                jd_features.to_dict()
+                if hasattr(jd_features, "to_dict")
+                else {
+                    "research_areas": jd_features.research_areas,
+                }
+            )
 
             # 获取候选人及其论文标题
             candidates = await self._get_candidates_with_papers(jd_features, config)
@@ -199,7 +206,7 @@ class JDMatchService:
 
             # 按分数排序并限制数量
             items.sort(key=lambda x: x.overall_score, reverse=True)
-            items = items[:config.limit]
+            items = items[: config.limit]
 
             # 持久化匹配结果
             for item in items:
@@ -244,7 +251,7 @@ class JDMatchService:
         self,
         jd_features: JDFeatures,
         config: MatchConfig,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """根据 JD 关键词搜索匹配的候选人
 
         搜索范围：
@@ -274,9 +281,9 @@ class JDMatchService:
     async def _calculate_scores(
         self,
         jd_features: JDFeatures,
-        candidates: List[Dict[str, Any]],
+        candidates: list[dict[str, Any]],
         config: MatchConfig,
-    ) -> List[MatchResultItem]:
+    ) -> list[MatchResultItem]:
         """计算匹配分数
 
         v1.4.1: Only calculate research score
@@ -322,7 +329,7 @@ class JDMatchService:
                     "research_topics": openalex_topics,
                     "paper_titles": paper_titles,
                     "h_index": talent.h_index,
-                }
+                },
             )
 
             item = MatchResultItem(

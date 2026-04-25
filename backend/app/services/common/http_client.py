@@ -4,11 +4,11 @@ HTTP Client Factory for enterprise intranet proxy support.
 Provides a unified way to create HTTP clients with proxy configuration.
 Supports no_proxy patterns for bypassing proxy for internal services.
 """
+
 from __future__ import annotations
 
 import fnmatch
 import logging
-from typing import Optional
 from urllib.parse import urlparse, urlunparse
 
 import httpx
@@ -28,19 +28,19 @@ class HttpClientFactory:
     - Wildcard patterns: *.internal.com, 10.*, 192.168.*
     """
 
-    _proxy_url: Optional[str] = None
-    _proxy_username: Optional[str] = None
-    _proxy_password: Optional[str] = None
-    _no_proxy: Optional[str] = None
+    _proxy_url: str | None = None
+    _proxy_username: str | None = None
+    _proxy_password: str | None = None
+    _no_proxy: str | None = None
     _ssl_verify: bool = True
 
     @classmethod
     def configure(
         cls,
-        proxy_url: Optional[str] = None,
-        proxy_username: Optional[str] = None,
-        proxy_password: Optional[str] = None,
-        no_proxy: Optional[str] = None,
+        proxy_url: str | None = None,
+        proxy_username: str | None = None,
+        proxy_password: str | None = None,
+        no_proxy: str | None = None,
         ssl_verify: bool = True,
     ) -> None:
         """Configure the factory with proxy settings."""
@@ -54,7 +54,9 @@ class HttpClientFactory:
             auth_info = f" (user: {proxy_username})" if proxy_username else ""
             no_proxy_info = f", no_proxy: {no_proxy}" if no_proxy else ""
             ssl_info = f", ssl_verify: {ssl_verify}" if not ssl_verify else ""
-            logger.info(f"HTTP client factory configured with proxy: {proxy_url}{auth_info}{no_proxy_info}{ssl_info}")
+            logger.info(
+                f"HTTP client factory configured with proxy: {proxy_url}{auth_info}{no_proxy_info}{ssl_info}"
+            )
         else:
             logger.info("HTTP client factory configured without proxy")
 
@@ -75,14 +77,14 @@ class HttpClientFactory:
         # Parse target URL to extract host
         try:
             parsed = urlparse(target_url)
-            host = parsed.hostname or parsed.netloc.split(':')[0]
+            host = parsed.hostname or parsed.netloc.split(":")[0]
             if not host:
                 return True
         except Exception:
             return True
 
         # Check against no_proxy patterns
-        for pattern in cls._no_proxy.split(','):
+        for pattern in cls._no_proxy.split(","):
             pattern = pattern.strip()
             if pattern and cls._matches_no_proxy(host, pattern):
                 logger.debug(f"URL {target_url} matches no_proxy pattern '{pattern}'")
@@ -101,20 +103,20 @@ class HttpClientFactory:
             return True
 
         # Wildcard patterns
-        if '*' in pattern_lower:
+        if "*" in pattern_lower:
             if fnmatch.fnmatch(host_lower, pattern_lower):
                 return True
 
             # *.domain.com also matches domain.com
-            if pattern_lower.startswith('*.'):
+            if pattern_lower.startswith("*."):
                 domain = pattern_lower[2:]
-                if host_lower == domain or host_lower.endswith('.' + domain):
+                if host_lower == domain or host_lower.endswith("." + domain):
                     return True
 
         return False
 
     @classmethod
-    def _build_authenticated_proxy_url(cls) -> Optional[str]:
+    def _build_authenticated_proxy_url(cls) -> str | None:
         """Build proxy URL with authentication if configured."""
         if not cls._proxy_url:
             return None
@@ -124,7 +126,9 @@ class HttpClientFactory:
             netloc = f"{cls._proxy_username}:{cls._proxy_password}@{parsed.hostname}"
             if parsed.port:
                 netloc += f":{parsed.port}"
-            return urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+            return urlunparse(
+                (parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment)
+            )
 
         return cls._proxy_url
 
@@ -142,10 +146,10 @@ class HttpClientFactory:
         our own proxy/no_proxy configuration takes full control.
         """
         # Disable httpx's automatic proxy detection from environment variables
-        kwargs['trust_env'] = False
+        kwargs["trust_env"] = False
 
-        if 'verify' not in kwargs:
-            kwargs['verify'] = cls._ssl_verify
+        if "verify" not in kwargs:
+            kwargs["verify"] = cls._ssl_verify
 
         if cls.should_use_proxy(target_url):
             proxy = cls._build_authenticated_proxy_url()
@@ -157,14 +161,14 @@ class HttpClientFactory:
         return httpx.AsyncClient(timeout=timeout, **kwargs)
 
     @classmethod
-    def get_proxy_for_url(cls, target_url: str) -> Optional[str]:
+    def get_proxy_for_url(cls, target_url: str) -> str | None:
         """Get proxy URL for aiohttp requests, considering no_proxy."""
         if not cls._proxy_url or not cls.should_use_proxy(target_url):
             return None
         return cls._build_authenticated_proxy_url()
 
     @classmethod
-    def get_no_proxy(cls) -> Optional[str]:
+    def get_no_proxy(cls) -> str | None:
         """Get the current no_proxy configuration."""
         return cls._no_proxy
 

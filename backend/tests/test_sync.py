@@ -1,13 +1,12 @@
 """
 Tests for sync service and repositories.
 """
+
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from datetime import datetime
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from app.repositories.sync_repository import SyncBatchRepository
-from app.models.sync import SyncBatch
-from app.models.enums import SyncJobStatus, SourceType
 
 
 class TestSyncBatchRepository:

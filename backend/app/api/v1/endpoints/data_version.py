@@ -39,11 +39,12 @@ router = APIRouter(prefix="/data-version", tags=["Data Version Management"])
 
 # ============ Version Endpoints ============
 
+
 @router.get(
     "/versions",
     response_model=DataVersionListResponse,
     summary="获取数据版本列表",
-    description="获取所有数据版本（分页）"
+    description="获取所有数据版本（分页）",
 )
 async def list_versions(
     is_published: bool | None = Query(None, description="按发布状态筛选"),
@@ -68,7 +69,7 @@ async def list_versions(
     "/versions/active",
     response_model=DataVersionResponse,
     summary="获取当前生效版本",
-    description="获取当前正在使用的数据版本"
+    description="获取当前正在使用的数据版本",
 )
 async def get_active_version(
     session: AsyncSession = Depends(get_async_session),
@@ -88,7 +89,7 @@ async def get_active_version(
     "/versions",
     response_model=DataVersionResponse,
     summary="创建数据版本",
-    description="创建新的数据版本快照"
+    description="创建新的数据版本快照",
 )
 async def create_version(
     request: CreateVersionRequest,
@@ -119,7 +120,7 @@ async def create_version(
     "/versions/{version_id}",
     response_model=DataVersionResponse,
     summary="获取版本详情",
-    description="获取指定数据版本的详细信息"
+    description="获取指定数据版本的详细信息",
 )
 async def get_version(
     version_id: int,
@@ -140,7 +141,7 @@ async def get_version(
     "/versions/{version_id}/publish",
     response_model=DataVersionResponse,
     summary="发布版本",
-    description="发布指定版本，使其成为当前生效版本"
+    description="发布指定版本，使其成为当前生效版本",
 )
 async def publish_version(
     version_id: int,
@@ -171,11 +172,12 @@ async def publish_version(
 
 # ============ Publish Record Endpoints ============
 
+
 @router.get(
     "/publish-records",
     response_model=PublishRecordListResponse,
     summary="获取发布记录列表",
-    description="获取数据发布操作记录"
+    description="获取数据发布操作记录",
 )
 async def list_publish_records(
     version_id: int | None = Query(None, description="按版本筛选"),
@@ -192,11 +194,12 @@ async def list_publish_records(
 
 # ============ Correction Endpoints ============
 
+
 @router.get(
     "/corrections",
     response_model=CorrectionListResponse,
     summary="获取纠偏记录列表",
-    description="获取数据纠偏记录（分页）"
+    description="获取数据纠偏记录（分页）",
 )
 async def list_corrections(
     target_type: str | None = Query(None, description="按目标类型筛选"),
@@ -223,7 +226,7 @@ async def list_corrections(
     "/corrections",
     response_model=CorrectionResponse,
     summary="创建纠偏记录",
-    description="记录数据纠偏操作"
+    description="记录数据纠偏操作",
 )
 async def create_correction(
     request: CreateCorrectionRequest,
@@ -252,7 +255,7 @@ async def create_correction(
     "/corrections/{correction_id}/revert",
     response_model=CorrectionResponse,
     summary="撤销纠偏",
-    description="撤销之前的数据纠偏操作"
+    description="撤销之前的数据纠偏操作",
 )
 async def revert_correction(
     correction_id: int,
@@ -271,11 +274,12 @@ async def revert_correction(
 
 # ============ Quality Endpoints ============
 
+
 @router.get(
     "/quality/summary",
     response_model=QualitySummaryResponse,
     summary="获取质量摘要",
-    description="获取最新的数据质量摘要"
+    description="获取最新的数据质量摘要",
 )
 async def get_quality_summary(
     version_id: int | None = Query(None, description="指定版本ID"),
@@ -304,7 +308,7 @@ async def get_quality_summary(
     "/quality/metrics",
     response_model=QualityMetricsResponse,
     summary="获取质量指标",
-    description="获取数据质量指标概览"
+    description="获取数据质量指标概览",
 )
 async def get_quality_metrics(
     session: AsyncSession = Depends(get_async_session),
@@ -372,10 +376,12 @@ async def get_quality_metrics(
 
 # ============ Options Endpoints ============
 
+
 @router.get(
     "/options/version-types",
+    response_model=list[dict[str, str]],
     summary="获取版本类型选项",
-    description="获取所有可用的版本类型选项"
+    description="获取所有可用的版本类型选项",
 )
 async def get_version_types():
     """Get version type options."""
@@ -384,8 +390,9 @@ async def get_version_types():
 
 @router.get(
     "/options/action-types",
+    response_model=list[dict[str, str]],
     summary="获取操作类型选项",
-    description="获取所有可用的操作类型选项"
+    description="获取所有可用的操作类型选项",
 )
 async def get_action_types():
     """Get action type options."""
@@ -394,8 +401,9 @@ async def get_action_types():
 
 @router.get(
     "/options/correction-types",
+    response_model=list[dict[str, str]],
     summary="获取纠偏类型选项",
-    description="获取所有可用的纠偏类型选项"
+    description="获取所有可用的纠偏类型选项",
 )
 async def get_correction_types():
     """Get correction type options."""
@@ -404,8 +412,9 @@ async def get_correction_types():
 
 @router.get(
     "/options/target-types",
+    response_model=list[dict[str, str]],
     summary="获取目标类型选项",
-    description="获取所有可用的目标类型选项"
+    description="获取所有可用的目标类型选项",
 )
 async def get_target_types():
     """Get target type options."""

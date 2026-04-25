@@ -9,29 +9,32 @@ Tests for Collect Configuration Management - 采集配置管理测试
 4. 三层数据流（Raw → Std → Serving）
 5. 任务完成后数据联动生效验证
 """
-import pytest
-from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
-import json
 
+import json
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.repositories.collect_repository import CollectTaskRepository, TechDomainCollectRepository
-from app.repositories.venue_repository import VenueRepository, VenueTechBindingRepository, VenueSubTaskRepository
-from app.repositories.raw_data_repository import RawWorkRepository, RawAuthorRepository
-from app.repositories.tech_domain_repository import TechDomainRepository
-from app.models.sync import CollectTask
-from app.models.tech_domain import TechDomain, TechDirection, TalentTechTag
-from app.models.venue import Venue, VenueTechBinding, VenueSubTask
-from app.models.raw_data import RawWork, RawAuthor, RawInstitution, AuthorTechBelong
-from app.models.standardized import StdAuthor, StdSchool
-from app.models.talent import Talent
-from app.models.school import School
 from app.models.enums import RoleType, VisibilityStatus
-
+from app.models.raw_data import AuthorTechBelong
+from app.models.school import School
+from app.models.standardized import StdAuthor, StdSchool
+from app.models.sync import CollectTask
+from app.models.talent import Talent
+from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
+from app.models.venue import Venue, VenueSubTask, VenueTechBinding
+from app.repositories.collect_repository import CollectTaskRepository, TechDomainCollectRepository
+from app.repositories.tech_domain_repository import TechDomainRepository
+from app.repositories.venue_repository import (
+    VenueSubTaskRepository,
+    VenueTechBindingRepository,
+)
 
 # ============ Fixtures ============
+
 
 @pytest.fixture
 def mock_session():
@@ -100,6 +103,7 @@ async def test_data_setup(test_session: AsyncSession):
 
 # ============ Repository Unit Tests ============
 
+
 class TestCollectTaskRepository:
     """采集任务Repository单元测试"""
 
@@ -154,7 +158,7 @@ class TestCollectTaskRepository:
         mock_task = MagicMock(spec=CollectTask)
         mock_task.task_id = 1
 
-        with patch.object(repo, 'get_by_id', return_value=mock_task):
+        with patch.object(repo, "get_by_id", return_value=mock_task):
             result = await repo.update_task_status(
                 task_id=1,
                 status="running",
@@ -172,7 +176,7 @@ class TestCollectTaskRepository:
         mock_task = MagicMock(spec=CollectTask)
         mock_task.task_id = 1
 
-        with patch.object(repo, 'get_by_id', return_value=mock_task):
+        with patch.object(repo, "get_by_id", return_value=mock_task):
             result = await repo.complete_task(
                 task_id=1,
                 success=True,
@@ -189,7 +193,7 @@ class TestCollectTaskRepository:
         mock_task = MagicMock(spec=CollectTask)
         mock_task.task_id = 1
 
-        with patch.object(repo, 'get_by_id', return_value=mock_task):
+        with patch.object(repo, "get_by_id", return_value=mock_task):
             result = await repo.complete_task(
                 task_id=1,
                 success=False,
@@ -242,7 +246,7 @@ class TestTechDomainCollectRepository:
         mock_domain = MagicMock(spec=TechDomain)
         mock_domain.tech_domain_id = 1
 
-        with patch.object(repo, 'get_by_id', return_value=mock_domain):
+        with patch.object(repo, "get_by_id", return_value=mock_domain):
             collect_time = datetime.utcnow()
             result = await repo.update_last_collect_time(
                 tech_domain_id=1,
@@ -269,7 +273,7 @@ class TestVenueSubTaskRepository:
             venue_id=1,
             status="pending",
         )
-        result = await repo.create(sub_task)
+        await repo.create(sub_task)
 
         mock_session.add.assert_called_once()
 
@@ -290,15 +294,12 @@ class TestVenueSubTaskRepository:
 
 # ============ Integration Tests ============
 
+
 class TestCollectTaskIntegration:
     """采集任务集成测试 - 使用真实数据库"""
 
     @pytest.mark.asyncio
-    async def test_full_task_lifecycle(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_full_task_lifecycle(self, test_session: AsyncSession, test_data_setup):
         """
         测试完整的任务生命周期：
         创建任务 → 更新进度 → 完成任务
@@ -348,11 +349,7 @@ class TestCollectTaskIntegration:
         assert final_task.result_summary["works_fetched"] == 100
 
     @pytest.mark.asyncio
-    async def test_task_with_venue_sub_tasks(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_task_with_venue_sub_tasks(self, test_session: AsyncSession, test_data_setup):
         """
         测试任务与Venue子任务的关联
         """
@@ -401,11 +398,7 @@ class TestDataFlowIntegration:
     """三层数据流集成测试 - 简化版"""
 
     @pytest.mark.asyncio
-    async def test_std_to_serving_flow(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_std_to_serving_flow(self, test_session: AsyncSession, test_data_setup):
         """
         测试标准化层到服务层数据流
 
@@ -507,9 +500,7 @@ class TestDataFlowIntegration:
 
         # ========== Phase 3: Verification ==========
         # 验证最终数据联动生效
-        result = await test_session.execute(
-            select(Talent).where(Talent.source_record_id == "A100")
-        )
+        result = await test_session.execute(select(Talent).where(Talent.source_record_id == "A100"))
         saved_talent = result.scalar_one_or_none()
         assert saved_talent is not None
         assert saved_talent.name == "John Smith"
@@ -517,9 +508,7 @@ class TestDataFlowIntegration:
 
         # 验证TalentTechTag
         result = await test_session.execute(
-            select(TalentTechTag).where(
-                TalentTechTag.talent_id == saved_talent.talent_id
-            )
+            select(TalentTechTag).where(TalentTechTag.talent_id == saved_talent.talent_id)
         )
         saved_tag = result.scalar_one_or_none()
         assert saved_tag is not None
@@ -533,37 +522,30 @@ class TestDataFlowIntegration:
 
 # ============ API Endpoint Tests ============
 
+
 class TestCollectEndpoints:
     """采集配置API端点测试"""
 
     @pytest.mark.asyncio
-    async def test_list_tech_domains_collect(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_list_tech_domains_collect(self, test_session: AsyncSession, test_data_setup):
         """测试获取技术领域采集配置列表 - 通过Repository测试"""
         # 直接测试Repository而不是HTTP客户端
         repo = TechDomainCollectRepository(test_session)
         domains = await repo.list_with_collect_config()
 
         assert len(domains) >= 1
-        assert any(d.tech_domain_id == test_data_setup["tech_domain"].tech_domain_id for d in domains)
+        assert any(
+            d.tech_domain_id == test_data_setup["tech_domain"].tech_domain_id for d in domains
+        )
 
     @pytest.mark.asyncio
-    async def test_trigger_task_validation(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_trigger_task_validation(self, test_session: AsyncSession, test_data_setup):
         """测试触发任务的数据验证"""
         repo = CollectTaskRepository(test_session)
         domain_repo = TechDomainCollectRepository(test_session)
 
         # 验证技术领域存在
-        domain = await domain_repo.get_by_id(
-            test_data_setup["tech_domain"].tech_domain_id
-        )
+        domain = await domain_repo.get_by_id(test_data_setup["tech_domain"].tech_domain_id)
         assert domain is not None
 
         # 创建任务
@@ -578,11 +560,7 @@ class TestCollectEndpoints:
         assert task.status == "pending"
 
     @pytest.mark.asyncio
-    async def test_cancel_task(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_cancel_task(self, test_session: AsyncSession, test_data_setup):
         """测试取消任务"""
         repo = CollectTaskRepository(test_session)
 
@@ -607,15 +585,12 @@ class TestCollectEndpoints:
 
 # ============ Edge Case Tests ============
 
+
 class TestEdgeCases:
     """边界情况测试"""
 
     @pytest.mark.asyncio
-    async def test_concurrent_task_prevention(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_concurrent_task_prevention(self, test_session: AsyncSession, test_data_setup):
         """
         测试防止同一技术领域的并发任务
         """
@@ -633,18 +608,13 @@ class TestEdgeCases:
         # 检查是否有活动任务
         active_tasks = await repo.get_active_tasks()
         tech_domain_has_active = any(
-            t.tech_domain_id == test_data_setup["tech_domain"].tech_domain_id
-            for t in active_tasks
+            t.tech_domain_id == test_data_setup["tech_domain"].tech_domain_id for t in active_tasks
         )
 
         assert tech_domain_has_active is True
 
     @pytest.mark.asyncio
-    async def test_task_progress_consistency(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_task_progress_consistency(self, test_session: AsyncSession, test_data_setup):
         """
         测试任务进度一致性
         """
@@ -674,15 +644,11 @@ class TestEdgeCases:
         assert updated.success_records == 45
         assert updated.failed_records == 5
         # 进度应该匹配
-        expected_progress = int(50 / 100 * 100) if updated.total_records > 0 else 0
+        int(50 / 100 * 100) if updated.total_records > 0 else 0
         # 注：实际进度由业务逻辑设置，这里只验证数据存储正确
 
     @pytest.mark.asyncio
-    async def test_empty_collect_sources(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_empty_collect_sources(self, test_session: AsyncSession, test_data_setup):
         """
         测试技术领域没有配置采集源的情况
         """
@@ -704,15 +670,12 @@ class TestEdgeCases:
 
 # ============ Data Validation Tests ============
 
+
 class TestDataValidation:
     """数据验证测试"""
 
     @pytest.mark.asyncio
-    async def test_role_identification_accuracy(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_role_identification_accuracy(self, test_session: AsyncSession, test_data_setup):
         """
         测试角色识别准确性
 
@@ -723,38 +686,22 @@ class TestDataValidation:
         from app.services.role_identifier import RoleIdentifier
 
         # 测试教授识别
-        result = RoleIdentifier.identify(
-            works_count=60,
-            cited_by_count=2000,
-            h_index=25
-        )
+        result = RoleIdentifier.identify(works_count=60, cited_by_count=2000, h_index=25)
         assert result.role_type == RoleType.PROFESSOR.value
         assert result.confidence >= 0.90
 
         # 测试学生识别
-        result = RoleIdentifier.identify(
-            works_count=5,
-            cited_by_count=20,
-            h_index=2
-        )
+        result = RoleIdentifier.identify(works_count=5, cited_by_count=20, h_index=2)
         assert result.role_type == RoleType.STUDENT.value
         assert result.confidence >= 0.75
 
         # 测试边界情况
-        result = RoleIdentifier.identify(
-            works_count=15,
-            cited_by_count=150,
-            h_index=8
-        )
+        result = RoleIdentifier.identify(works_count=15, cited_by_count=150, h_index=8)
         # 应该是教授或已毕业
         assert result.role_type in [RoleType.PROFESSOR.value, RoleType.GRADUATE.value]
 
     @pytest.mark.asyncio
-    async def test_tech_tag_creation(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_tech_tag_creation(self, test_session: AsyncSession, test_data_setup):
         """
         测试技术标签创建逻辑
         """
@@ -786,21 +733,15 @@ class TestDataValidation:
 
         # 验证
         result = await test_session.execute(
-            select(TalentTechTag).where(
-                TalentTechTag.talent_id == talent.talent_id
-            )
+            select(TalentTechTag).where(TalentTechTag.talent_id == talent.talent_id)
         )
         saved_tag = result.scalar_one_or_none()
         assert saved_tag is not None
         assert saved_tag.tag_source == "auto_mapping"
-        assert saved_tag.is_enabled == True
+        assert saved_tag.is_enabled is True
 
     @pytest.mark.asyncio
-    async def test_school_normalization(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_school_normalization(self, test_session: AsyncSession, test_data_setup):
         """
         测试学校名称标准化
         """
@@ -817,9 +758,7 @@ class TestDataValidation:
 
         # 验证别名存储
         result = await test_session.execute(
-            select(StdSchool).where(
-                StdSchool.openalex_institution_id == "NORMALIZE-001"
-            )
+            select(StdSchool).where(StdSchool.openalex_institution_id == "NORMALIZE-001")
         )
         saved = result.scalar_one_or_none()
         assert saved is not None
@@ -830,6 +769,7 @@ class TestDataValidation:
 # ============ Code Review Fix Tests ============
 # 以下测试验证 code-review-fixes.md 中的修复
 
+
 class TestTransactionManagement:
     """CR-01: 事务管理测试
 
@@ -839,6 +779,7 @@ class TestTransactionManagement:
     @pytest.fixture
     def progress_tracker(self, mock_session):
         from app.services.collect.progress_tracker import ProgressTracker
+
         return ProgressTracker(mock_session)
 
     @pytest.mark.asyncio
@@ -888,13 +829,12 @@ class TestTalentQueryOptimization:
     @pytest.fixture
     def orchestrator(self, mock_session):
         from app.services.collect.orchestrator import CollectionOrchestrator
+
         return CollectionOrchestrator(mock_session)
 
     @pytest.mark.asyncio
     async def test_update_topic_tags_filters_by_tech_domain(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
+        self, test_session: AsyncSession, test_data_setup
     ):
         """验证只查询与任务关联 tech_domain 的人才"""
         from app.services.collect.orchestrator import CollectionOrchestrator
@@ -1005,7 +945,6 @@ class TestTalentQueryOptimization:
         """验证任务不存在时的优雅处理"""
         from app.services.collect.orchestrator import CollectionOrchestrator
         from app.services.common.progress import CollectionProgress
-        from app.models.tech_domain import TalentTechTag  # 修复导入路径
 
         orchestrator = CollectionOrchestrator(test_session)
         progress = CollectionProgress(task_id=99999)
@@ -1014,21 +953,20 @@ class TestTalentQueryOptimization:
         await orchestrator._update_talent_topic_tags(99999, progress)
 
         # 验证日志记录了警告
-        assert any("不存在" in log.get("message", "") for log in orchestrator.progress_tracker.get_logs())
+        assert any(
+            "不存在" in log.get("message", "") for log in orchestrator.progress_tracker.get_logs()
+        )
 
 
 class TestOrchestratorTransactionBoundary:
     """集成测试：验证 orchestrator 的事务边界"""
 
     @pytest.mark.asyncio
-    async def test_execute_task_commits_at_end(
-        self,
-        test_session: AsyncSession,
-        test_data_setup
-    ):
+    async def test_execute_task_commits_at_end(self, test_session: AsyncSession, test_data_setup):
         """验证 execute_task 在结束时统一 commit"""
+        from unittest.mock import AsyncMock, patch
+
         from app.services.collect.orchestrator import CollectionOrchestrator
-        from unittest.mock import patch, AsyncMock
 
         # 创建测试任务
         task = CollectTask(
@@ -1046,18 +984,20 @@ class TestOrchestratorTransactionBoundary:
         orchestrator = CollectionOrchestrator(test_session)
 
         # Mock 各阶段方法以简化测试
-        with patch.object(orchestrator, '_estimate_total_works', return_value=0), \
-             patch.object(orchestrator, '_execute_venue_sub_tasks', new_callable=AsyncMock), \
-             patch.object(orchestrator, '_fetch_all_authors', new_callable=AsyncMock), \
-             patch.object(orchestrator, '_fetch_all_institutions', new_callable=AsyncMock), \
-             patch.object(orchestrator, '_normalize_schools', new_callable=AsyncMock), \
-             patch.object(orchestrator, '_normalize_authors', new_callable=AsyncMock), \
-             patch.object(orchestrator, '_calculate_tech_belong', new_callable=AsyncMock), \
-             patch.object(orchestrator, '_sync_to_serving_layer', return_value=[]), \
-             patch.object(orchestrator, '_fetch_selected_works', new_callable=AsyncMock), \
-             patch.object(orchestrator, '_update_talent_topic_tags', new_callable=AsyncMock), \
-             patch.object(orchestrator, '_update_school_statistics', new_callable=AsyncMock), \
-             patch.object(orchestrator, '_build_statistics', new_callable=AsyncMock):
+        with (
+            patch.object(orchestrator, "_estimate_total_works", return_value=0),
+            patch.object(orchestrator, "_execute_venue_sub_tasks", new_callable=AsyncMock),
+            patch.object(orchestrator, "_fetch_all_authors", new_callable=AsyncMock),
+            patch.object(orchestrator, "_fetch_all_institutions", new_callable=AsyncMock),
+            patch.object(orchestrator, "_normalize_schools", new_callable=AsyncMock),
+            patch.object(orchestrator, "_normalize_authors", new_callable=AsyncMock),
+            patch.object(orchestrator, "_calculate_tech_belong", new_callable=AsyncMock),
+            patch.object(orchestrator, "_sync_to_serving_layer", return_value=[]),
+            patch.object(orchestrator, "_fetch_selected_works", new_callable=AsyncMock),
+            patch.object(orchestrator, "_update_talent_topic_tags", new_callable=AsyncMock),
+            patch.object(orchestrator, "_update_school_statistics", new_callable=AsyncMock),
+            patch.object(orchestrator, "_build_statistics", new_callable=AsyncMock),
+        ):
 
             progress = await orchestrator.execute_task(task.task_id)
 

@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 class TechDirectionResponse(BaseModel):
     """技术方向响应"""
+
     tech_direction_id: int = Field(description="技术方向ID")
     direction_code: str = Field(description="方向代码")
     direction_name: str = Field(description="方向名称")
@@ -23,6 +24,7 @@ class TechDirectionResponse(BaseModel):
 
 class TechDomainResponse(BaseModel):
     """技术领域响应"""
+
     tech_domain_id: int = Field(description="技术领域ID")
     domain_code: str = Field(description="领域代码")
     domain_name: str = Field(description="领域名称")
@@ -37,6 +39,7 @@ class TechDomainResponse(BaseModel):
 
 class TechDomainSummary(BaseModel):
     """技术领域概要"""
+
     domain_count: int = Field(description="技术领域数量")
     direction_count: int = Field(description="技术方向数量")
     talent_count: int = Field(description="人才数量")
@@ -44,6 +47,7 @@ class TechDomainSummary(BaseModel):
 
 class TechDomainStatsResponse(BaseModel):
     """技术领域统计响应"""
+
     talent_count: int = Field(description="人才总数")
     professor_count: int = Field(description="教授数量")
     student_count: int = Field(description="学生数量")
@@ -54,6 +58,7 @@ class TechDomainStatsResponse(BaseModel):
 
 class OverallStatsResponse(BaseModel):
     """总体统计响应（用户权限范围内）"""
+
     talent_count: int = Field(description="人才总数")
     professor_count: int = Field(description="教授数量")
     student_count: int = Field(description="学生数量")
@@ -65,6 +70,7 @@ class OverallStatsResponse(BaseModel):
 
 class CountryDistributionItem(BaseModel):
     """国家分布项"""
+
     country_code: str = Field(description="国家代码")
     country_name: str = Field(description="国家名称")
     talent_count: int = Field(description="人才数量")
@@ -72,6 +78,7 @@ class CountryDistributionItem(BaseModel):
 
 class SchoolDistributionItem(BaseModel):
     """院校分布项"""
+
     school_id: int = Field(description="院校ID")
     school_name: str = Field(description="院校名称")
     country_name: str | None = Field(default=None, description="所属国家")
@@ -80,17 +87,20 @@ class SchoolDistributionItem(BaseModel):
 
 class TechDomainListResponse(BaseModel):
     """技术领域列表响应"""
+
     items: list[TechDomainResponse] = Field(description="技术领域列表")
     total: int = Field(description="总数")
 
 
 class CountryDistributionResponse(BaseModel):
     """国家分布响应"""
+
     items: list[CountryDistributionItem] = Field(description="国家分布列表")
 
 
 class SchoolDistributionResponse(BaseModel):
     """院校分布响应"""
+
     items: list[SchoolDistributionItem] = Field(description="院校分布列表")
     total: int = Field(description="总数")
 
@@ -98,6 +108,7 @@ class SchoolDistributionResponse(BaseModel):
 # For talent list in tech domain page
 class TalentInTechDomain(BaseModel):
     """技术领域页的人才项"""
+
     talent_id: int = Field(description="人才ID")
     name: str = Field(description="姓名")
     name_en: str | None = Field(default=None, description="英文名")

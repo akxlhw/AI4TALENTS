@@ -11,13 +11,9 @@ Coverage:
 """
 
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import List
-from dataclasses import dataclass
 
 # Import mock
-from tests.mocks.mock_llm_gateway import MockLLMGateway, JDFeatures, EmbeddingResult
+from tests.mocks.mock_llm_gateway import EmbeddingResult, JDFeatures, MockLLMGateway
 
 
 class TestLLMGatewayJDParsing:
@@ -43,11 +39,7 @@ class TestLLMGatewayJDParsing:
         """解析 JD 应提取研究方向"""
         # Arrange
         expected_areas = ["Computer Vision", "Deep Learning"]
-        gateway = MockLLMGateway(
-            jd_features=JDFeatures(
-                research_areas=expected_areas
-            )
-        )
+        gateway = MockLLMGateway(jd_features=JDFeatures(research_areas=expected_areas))
 
         # Act
         result = await gateway.parse_jd("招聘计算机视觉研究员")
@@ -126,7 +118,7 @@ class TestLLMGatewayErrorHandling:
         gateway = MockLLMGateway(should_fail=True, fail_count=1)
 
         # Act & Assert
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             await gateway.parse_jd("测试JD")
 
     @pytest.mark.asyncio
@@ -136,7 +128,7 @@ class TestLLMGatewayErrorHandling:
         gateway = MockLLMGateway(should_fail=True, fail_count=1)
 
         # Act & Assert
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             await gateway.generate_embedding("测试文本")
 
     @pytest.mark.asyncio
@@ -146,7 +138,7 @@ class TestLLMGatewayErrorHandling:
         gateway = MockLLMGateway(should_fail=True, fail_count=1)
 
         # Act & Assert
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             await gateway.generate_embedding_batch(["文本1", "文本2"])
 
 
@@ -161,7 +153,7 @@ class TestLLMGatewayRetry:
 
         # Act & Assert - 前2次失败，第3次成功
         # (实际实现中会有重试装饰器)
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             await gateway.parse_jd("测试JD")
 
         # 验证调用次数

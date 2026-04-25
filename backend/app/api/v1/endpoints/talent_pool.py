@@ -2,6 +2,7 @@
 Talent Pool API endpoints.
 人才池相关接口
 """
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,10 +25,7 @@ router = APIRouter(prefix="/talent-pools", tags=["Talent Pools"])
 
 
 @router.post(
-    "",
-    response_model=TalentPoolResponse,
-    summary="创建人才池",
-    description="创建新的人才池"
+    "", response_model=TalentPoolResponse, summary="创建人才池", description="创建新的人才池"
 )
 async def create_pool(
     request: CreatePoolRequest,
@@ -59,7 +57,7 @@ async def create_pool(
     "",
     response_model=PoolListResponse,
     summary="获取人才池列表",
-    description="获取当前用户的所有人才池"
+    description="获取当前用户的所有人才池",
 )
 async def list_pools(
     session: AsyncSession = Depends(get_async_session),
@@ -73,16 +71,18 @@ async def list_pools(
     for pool in pools:
         # Get member count
         members, _ = await repo.get_pool_members(pool.pool_id, page=1, page_size=1)
-        items.append(TalentPoolResponse(
-            pool_id=pool.pool_id,
-            pool_name=pool.pool_name,
-            pool_type=pool.pool_type,
-            owner_user_id=pool.owner_user_id,
-            scope_desc=pool.scope_desc,
-            pool_status=pool.pool_status,
-            member_count=len(members) if members else 0,
-            created_at=pool.created_at,
-        ))
+        items.append(
+            TalentPoolResponse(
+                pool_id=pool.pool_id,
+                pool_name=pool.pool_name,
+                pool_type=pool.pool_type,
+                owner_user_id=pool.owner_user_id,
+                scope_desc=pool.scope_desc,
+                pool_status=pool.pool_status,
+                member_count=len(members) if members else 0,
+                created_at=pool.created_at,
+            )
+        )
 
     return PoolListResponse(items=items, total=len(items))
 
@@ -91,7 +91,7 @@ async def list_pools(
     "/{pool_id}",
     response_model=TalentPoolResponse,
     summary="获取人才池详情",
-    description="获取指定人才池的详细信息"
+    description="获取指定人才池的详细信息",
 )
 async def get_pool(
     pool_id: int,
@@ -126,7 +126,7 @@ async def get_pool(
     "/{pool_id}",
     response_model=TalentPoolResponse,
     summary="更新人才池",
-    description="更新人才池信息"
+    description="更新人才池信息",
 )
 async def update_pool(
     pool_id: int,
@@ -167,8 +167,9 @@ async def update_pool(
 
 @router.delete(
     "/{pool_id}",
+    response_model=SuccessResponse,
     summary="删除人才池",
-    description="删除人才池（归档）"
+    description="删除人才池（归档）",
 )
 async def delete_pool(
     pool_id: int,
@@ -192,8 +193,9 @@ async def delete_pool(
 
 @router.post(
     "/{pool_id}/members",
+    response_model=SuccessResponse,
     summary="添加成员",
-    description="将人才添加到人才池"
+    description="将人才添加到人才池",
 )
 async def add_member(
     pool_id: int,
@@ -227,8 +229,9 @@ async def add_member(
 
 @router.delete(
     "/{pool_id}/members/{talent_id}",
+    response_model=SuccessResponse,
     summary="移除成员",
-    description="从人才池中移除人才"
+    description="从人才池中移除人才",
 )
 async def remove_member(
     pool_id: int,
@@ -258,7 +261,7 @@ async def remove_member(
     "/{pool_id}/members",
     response_model=PaginatedResponse[PoolMemberResponse],
     summary="获取成员列表",
-    description="获取人才池成员列表"
+    description="获取人才池成员列表",
 )
 async def list_members(
     pool_id: int,
@@ -289,8 +292,9 @@ async def list_members(
 
 @router.put(
     "/favorites/{talent_id}/followup",
+    response_model=SuccessResponse,
     summary="更新跟进状态",
-    description="更新收藏人才的跟进状态"
+    description="更新收藏人才的跟进状态",
 )
 async def update_followup_status(
     talent_id: int,
@@ -302,7 +306,9 @@ async def update_followup_status(
     # Validate status
     valid_statuses = [opt["value"] for opt in FOLLOWUP_STATUS_OPTIONS]
     if request.followup_status not in valid_statuses:
-        raise HTTPException(status_code=400, detail=f"Invalid status. Valid options: {valid_statuses}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid status. Valid options: {valid_statuses}"
+        )
 
     repo = FavoriteRepository(session)
     favorite = await repo.update_followup_status_and_commit(
@@ -319,8 +325,9 @@ async def update_followup_status(
 
 @router.get(
     "/followup-statuses",
+    response_model=list[dict[str, str]],
     summary="获取跟进状态选项",
-    description="获取所有可用的跟进状态选项"
+    description="获取所有可用的跟进状态选项",
 )
 async def get_followup_statuses():
     """Get all followup status options."""

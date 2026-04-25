@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -84,13 +84,7 @@ const FavoritesPage: React.FC = () => {
   // Active tab
   const [activeTab, setActiveTab] = useState('favorites')
 
-  useEffect(() => {
-    loadFavorites()
-    loadPools()
-    loadFollowupStatuses()
-  }, [page, roleFilter, keyword, followupFilter])
-
-  const loadFavorites = async () => {
+  const loadFavorites = useCallback(async () => {
     setLoading(true)
     try {
       const response = await api.favorites.list({
@@ -106,9 +100,9 @@ const FavoritesPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, roleFilter, keyword])
 
-  const loadPools = async () => {
+  const loadPools = useCallback(async () => {
     setPoolsLoading(true)
     try {
       const response = await api.talentPools.list()
@@ -118,16 +112,22 @@ const FavoritesPage: React.FC = () => {
     } finally {
       setPoolsLoading(false)
     }
-  }
+  }, [])
 
-  const loadFollowupStatuses = async () => {
+  const loadFollowupStatuses = useCallback(async () => {
     try {
       const response = await api.talentPools.getFollowupStatuses()
       setFollowupStatuses(response.data || [])
     } catch {
       console.error("Operation failed")
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadFavorites()
+    loadPools()
+    loadFollowupStatuses()
+  }, [loadFavorites, loadPools, loadFollowupStatuses])
 
   const handleTableChange = (pagination: TablePaginationConfig) => {
     setPage(pagination.current || 1)

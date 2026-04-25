@@ -2,6 +2,7 @@
 Statistics builder.
 Generates statistics snapshots for overview and school-level metrics.
 """
+
 import logging
 from datetime import datetime
 
@@ -87,15 +88,13 @@ class StatBuilder(BaseBuilder):
 
         # Count schools with visible talents
         school_result = await self.session.execute(
-            select(func.count(func.distinct(Talent.school_id)))
-            .where(Talent.is_visible.is_(True))
+            select(func.count(func.distinct(Talent.school_id))).where(Talent.is_visible.is_(True))
         )
         school_count = school_result.scalar() or 0
 
         # Count professors
         professor_result = await self.session.execute(
-            select(func.count(Talent.talent_id))
-            .where(
+            select(func.count(Talent.talent_id)).where(
                 Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.PROFESSOR.value,
             )
@@ -104,29 +103,26 @@ class StatBuilder(BaseBuilder):
 
         # Count students (student + graduated)
         student_result = await self.session.execute(
-            select(func.count(Talent.talent_id))
-            .where(
+            select(func.count(Talent.talent_id)).where(
                 Talent.is_visible.is_(True),
-                Talent.role_type.in_([
-                    RoleType.STUDENT.value,
-                    RoleType.GRADUATE.value,
-                ]),
+                Talent.role_type.in_(
+                    [
+                        RoleType.STUDENT.value,
+                        RoleType.GRADUATE.value,
+                    ]
+                ),
             )
         )
         student_count = student_result.scalar() or 0
 
         # Total talents
         total_result = await self.session.execute(
-            select(func.count(Talent.talent_id))
-            .where(Talent.is_visible.is_(True))
+            select(func.count(Talent.talent_id)).where(Talent.is_visible.is_(True))
         )
         total_count = total_result.scalar() or 0
 
         # Deactivate old snapshots
-        await self.session.execute(
-            OverviewStatSnapshot.__table__.update()
-            .values(is_active=0)
-        )
+        await self.session.execute(OverviewStatSnapshot.__table__.update().values(is_active=0))
 
         # Create new snapshot
         snapshot = OverviewStatSnapshot(
@@ -187,8 +183,7 @@ class StatBuilder(BaseBuilder):
         """Build statistics for a single school."""
         # Count professors
         professor_result = await self.session.execute(
-            select(func.count(Talent.talent_id))
-            .where(
+            select(func.count(Talent.talent_id)).where(
                 Talent.school_id == school_id,
                 Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.PROFESSOR.value,
@@ -198,8 +193,7 @@ class StatBuilder(BaseBuilder):
 
         # Count students
         student_result = await self.session.execute(
-            select(func.count(Talent.talent_id))
-            .where(
+            select(func.count(Talent.talent_id)).where(
                 Talent.school_id == school_id,
                 Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.STUDENT.value,
@@ -209,8 +203,7 @@ class StatBuilder(BaseBuilder):
 
         # Count graduates
         graduate_result = await self.session.execute(
-            select(func.count(Talent.talent_id))
-            .where(
+            select(func.count(Talent.talent_id)).where(
                 Talent.school_id == school_id,
                 Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.GRADUATE.value,
@@ -220,8 +213,7 @@ class StatBuilder(BaseBuilder):
 
         # Count unknown
         unknown_result = await self.session.execute(
-            select(func.count(Talent.talent_id))
-            .where(
+            select(func.count(Talent.talent_id)).where(
                 Talent.school_id == school_id,
                 Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.UNKNOWN.value,

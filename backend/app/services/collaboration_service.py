@@ -3,6 +3,7 @@ Collaboration service for extracting and managing co-author relationships.
 
 优化版本：从本地 RawWork 表提取合作关系，不再重复调用 OpenAlex API
 """
+
 from __future__ import annotations
 
 import json
@@ -67,9 +68,7 @@ class CollaborationService:
             return None
 
     async def sync_all_collaborations(
-        self,
-        batch_size: int = 500,
-        progress_callback: callable | None = None
+        self, batch_size: int = 500, progress_callback: callable | None = None
     ) -> dict:
         """
         从本地 RawWork 表提取所有合作关系。
@@ -96,7 +95,12 @@ class CollaborationService:
 
         if total_works == 0:
             logger.info("RawWork 表为空，请先执行采集任务")
-            return {"total_works": 0, "processed": 0, "collaborations_created": 0, "message": "请先执行采集任务"}
+            return {
+                "total_works": 0,
+                "processed": 0,
+                "collaborations_created": 0,
+                "message": "请先执行采集任务",
+            }
 
         # 立即通知前端总数
         if progress_callback:
@@ -143,7 +147,9 @@ class CollaborationService:
                             talent_ids.append(talent_id_map[aid])
 
                     # 建立合作关系（使用缓存）
-                    count = await self._create_collaborations_with_cache(talent_ids, pub_year, collab_cache)
+                    count = await self._create_collaborations_with_cache(
+                        talent_ids, pub_year, collab_cache
+                    )
                     collaborations_created += count
                     processed += 1
 
@@ -163,7 +169,9 @@ class CollaborationService:
             if progress_callback:
                 progress_callback(processed, total_works, collaborations_created)
 
-            logger.info(f"已处理 {processed}/{total_works} 篇论文，创建 {collaborations_created} 条合作关系")
+            logger.info(
+                f"已处理 {processed}/{total_works} 篇论文，创建 {collaborations_created} 条合作关系"
+            )
 
         # 保存同步时间
         await self.save_sync_time()
@@ -172,7 +180,7 @@ class CollaborationService:
         return {
             "total_works": total_works,
             "processed": processed,
-            "collaborations_created": collaborations_created
+            "collaborations_created": collaborations_created,
         }
 
     async def _build_talent_id_map(self) -> dict[str, int]:
@@ -191,9 +199,7 @@ class CollaborationService:
         return id_map
 
     async def _create_collaborations(
-        self,
-        talent_ids: list[int],
-        publication_year: int | None
+        self, talent_ids: list[int], publication_year: int | None
     ) -> int:
         """为给定的学者列表创建两两合作关系。"""
         if len(talent_ids) < 2:
@@ -210,10 +216,7 @@ class CollaborationService:
 
                 # 检查合作关系是否已存在
                 stmt = select(Collaboration).where(
-                    and_(
-                        Collaboration.talent_id_1 == t1,
-                        Collaboration.talent_id_2 == t2
-                    )
+                    and_(Collaboration.talent_id_1 == t1, Collaboration.talent_id_2 == t2)
                 )
                 result = await self.session.execute(stmt)
                 collab = result.scalar_one_or_none()
@@ -223,8 +226,12 @@ class CollaborationService:
                     collab.collaboration_count += 1
                     if publication_year:
                         if collab.first_collaboration_year:
-                            collab.first_collaboration_year = min(collab.first_collaboration_year, publication_year)
-                            collab.last_collaboration_year = max(collab.last_collaboration_year, publication_year)
+                            collab.first_collaboration_year = min(
+                                collab.first_collaboration_year, publication_year
+                            )
+                            collab.last_collaboration_year = max(
+                                collab.last_collaboration_year, publication_year
+                            )
                         else:
                             collab.first_collaboration_year = publication_year
                             collab.last_collaboration_year = publication_year
@@ -243,10 +250,7 @@ class CollaborationService:
         return collaborations_created
 
     async def _create_collaborations_with_cache(
-        self,
-        talent_ids: list[int],
-        publication_year: int | None,
-        cache: set[tuple[int, int]]
+        self, talent_ids: list[int], publication_year: int | None, cache: set[tuple[int, int]]
     ) -> int:
         """为给定的学者列表创建两两合作关系（使用内存缓存避免重复查询）。"""
         if len(talent_ids) < 2:
@@ -266,10 +270,7 @@ class CollaborationService:
                 if cache_key in cache:
                     # 已在缓存中，更新数据库中的记录
                     stmt = select(Collaboration).where(
-                        and_(
-                            Collaboration.talent_id_1 == t1,
-                            Collaboration.talent_id_2 == t2
-                        )
+                        and_(Collaboration.talent_id_1 == t1, Collaboration.talent_id_2 == t2)
                     )
                     result = await self.session.execute(stmt)
                     collab = result.scalar_one_or_none()
@@ -277,18 +278,19 @@ class CollaborationService:
                         collab.collaboration_count += 1
                         if publication_year:
                             if collab.first_collaboration_year:
-                                collab.first_collaboration_year = min(collab.first_collaboration_year, publication_year)
-                                collab.last_collaboration_year = max(collab.last_collaboration_year, publication_year)
+                                collab.first_collaboration_year = min(
+                                    collab.first_collaboration_year, publication_year
+                                )
+                                collab.last_collaboration_year = max(
+                                    collab.last_collaboration_year, publication_year
+                                )
                             else:
                                 collab.first_collaboration_year = publication_year
                                 collab.last_collaboration_year = publication_year
                 else:
                     # 不在缓存中，检查数据库
                     stmt = select(Collaboration).where(
-                        and_(
-                            Collaboration.talent_id_1 == t1,
-                            Collaboration.talent_id_2 == t2
-                        )
+                        and_(Collaboration.talent_id_1 == t1, Collaboration.talent_id_2 == t2)
                     )
                     result = await self.session.execute(stmt)
                     collab = result.scalar_one_or_none()
@@ -298,8 +300,12 @@ class CollaborationService:
                         collab.collaboration_count += 1
                         if publication_year:
                             if collab.first_collaboration_year:
-                                collab.first_collaboration_year = min(collab.first_collaboration_year, publication_year)
-                                collab.last_collaboration_year = max(collab.last_collaboration_year, publication_year)
+                                collab.first_collaboration_year = min(
+                                    collab.first_collaboration_year, publication_year
+                                )
+                                collab.last_collaboration_year = max(
+                                    collab.last_collaboration_year, publication_year
+                                )
                             else:
                                 collab.first_collaboration_year = publication_year
                                 collab.last_collaboration_year = publication_year
@@ -321,9 +327,7 @@ class CollaborationService:
         return collaborations_created
 
     async def sync_collaborations_for_talent(
-        self,
-        talent: Talent,
-        limit: int = 50  # 保留参数兼容性，但不再使用
+        self, talent: Talent, limit: int = 50  # 保留参数兼容性，但不再使用
     ) -> int:
         """
         为单个学者同步合作数据（从本地数据）。
@@ -339,9 +343,7 @@ class CollaborationService:
 
         # 从 RawWork 表查找包含该作者的论文
         # 使用 author_ids 字段或 raw_json 搜索
-        stmt = select(RawWork).where(
-            RawWork.author_ids.contains(f'"{openalex_id}"')
-        ).limit(200)
+        stmt = select(RawWork).where(RawWork.author_ids.contains(f'"{openalex_id}"')).limit(200)
 
         result = await self.session.execute(stmt)
         works = result.scalars().all()
@@ -380,11 +382,7 @@ class CollaborationService:
         await self.session.commit()
         return collaborations_created
 
-    async def get_collaboration_network(
-        self,
-        talent_id: int,
-        limit: int = 20
-    ) -> dict:
+    async def get_collaboration_network(self, talent_id: int, limit: int = 20) -> dict:
         """
         获取学者的合作网络数据。
 
@@ -396,23 +394,29 @@ class CollaborationService:
         from sqlalchemy.orm import selectinload
 
         # 获取该学者的所有合作关系
-        stmt = select(Collaboration).where(
-            or_(
-                Collaboration.talent_id_1 == talent_id,
-                Collaboration.talent_id_2 == talent_id
+        stmt = (
+            select(Collaboration)
+            .where(
+                or_(Collaboration.talent_id_1 == talent_id, Collaboration.talent_id_2 == talent_id)
             )
-        ).order_by(Collaboration.collaboration_count.desc()).limit(limit)
+            .order_by(Collaboration.collaboration_count.desc())
+            .limit(limit)
+        )
 
         result = await self.session.execute(stmt)
         collaborations = result.scalars().all()
 
         if not collaborations:
-            return {"nodes": [], "links": [], "message": "暂无合作网络数据，请先在采集配置页面执行合作网络同步"}
+            return {
+                "nodes": [],
+                "links": [],
+                "message": "暂无合作网络数据，请先在采集配置页面执行合作网络同步",
+            }
 
         # 获取主学者信息（预加载 school 关系）
-        main_talent_stmt = select(Talent).options(
-            selectinload(Talent.school)
-        ).where(Talent.talent_id == talent_id)
+        main_talent_stmt = (
+            select(Talent).options(selectinload(Talent.school)).where(Talent.talent_id == talent_id)
+        )
         main_talent_result = await self.session.execute(main_talent_stmt)
         main_talent = main_talent_result.scalar_one_or_none()
 
@@ -428,9 +432,11 @@ class CollaborationService:
                 collaborator_ids.add(collab.talent_id_1)
 
         # 批量获取合作者信息（预加载 school 关系）
-        stmt = select(Talent).options(
-            selectinload(Talent.school)
-        ).where(Talent.talent_id.in_(collaborator_ids))
+        stmt = (
+            select(Talent)
+            .options(selectinload(Talent.school))
+            .where(Talent.talent_id.in_(collaborator_ids))
+        )
         result = await self.session.execute(stmt)
         collaborators = {t.talent_id: t for t in result.scalars().all()}
 
@@ -451,28 +457,35 @@ class CollaborationService:
                 # 查找合作次数
                 collab_count = 0
                 for c in collaborations:
-                    if (c.talent_id_1 == talent_id and c.talent_id_2 == collab_id) or \
-                       (c.talent_id_2 == talent_id and c.talent_id_1 == collab_id):
+                    if (c.talent_id_1 == talent_id and c.talent_id_2 == collab_id) or (
+                        c.talent_id_2 == talent_id and c.talent_id_1 == collab_id
+                    ):
                         collab_count = c.collaboration_count
                         break
 
-                nodes.append({
-                    "id": str(collab_id),
-                    "name": collab_talent.name,
-                    "affiliation": collab_talent.school.school_name if collab_talent.school else None,
-                    "isMain": False,
-                    "collaborationCount": collab_count,
-                })
+                nodes.append(
+                    {
+                        "id": str(collab_id),
+                        "name": collab_talent.name,
+                        "affiliation": (
+                            collab_talent.school.school_name if collab_talent.school else None
+                        ),
+                        "isMain": False,
+                        "collaborationCount": collab_count,
+                    }
+                )
 
         # 构建连接列表
         links = []
         for collab in collaborations:
             other_id = collab.talent_id_2 if collab.talent_id_1 == talent_id else collab.talent_id_1
-            links.append({
-                "source": str(talent_id),
-                "target": str(other_id),
-                "value": collab.collaboration_count,
-            })
+            links.append(
+                {
+                    "source": str(talent_id),
+                    "target": str(other_id),
+                    "value": collab.collaboration_count,
+                }
+            )
 
         return {
             "nodes": nodes,
@@ -502,10 +515,7 @@ class CollaborationService:
 
             # 检查是否已存在
             stmt = select(Collaboration).where(
-                and_(
-                    Collaboration.talent_id_1 == t1,
-                    Collaboration.talent_id_2 == t2
-                )
+                and_(Collaboration.talent_id_1 == t1, Collaboration.talent_id_2 == t2)
             )
             result = await self.session.execute(stmt)
             if result.scalar_one_or_none():
@@ -557,18 +567,17 @@ class CollaborationService:
             "total_collaborations": total_collaborations,
             "talents_with_collaborations": len(talents_with_collab),
             "total_works": total_works,
-            "last_sync": last_sync
+            "last_sync": last_sync,
         }
 
     async def save_sync_time(self):
         """保存最后同步时间"""
         from datetime import datetime
+
         from app.services.config_service import ConfigService
 
         config_service = ConfigService(self.session)
         await config_service.set_value(
-            "COLLABORATION_LAST_SYNC",
-            datetime.utcnow().isoformat(),
-            "string"
+            "COLLABORATION_LAST_SYNC", datetime.utcnow().isoformat(), "string"
         )
         await self.session.commit()

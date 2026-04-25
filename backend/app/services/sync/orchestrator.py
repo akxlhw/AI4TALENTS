@@ -1,6 +1,7 @@
 """
 Serving layer orchestrator for coordinating sync operations.
 """
+
 from __future__ import annotations
 
 import logging
@@ -37,16 +38,13 @@ class ServingLayerOrchestrator:
         return await batch_in_query_flat(
             self.session,
             lambda batch: select(StdAuthor)
-                .options(selectinload(StdAuthor.school))
-                .where(StdAuthor.openalex_author_id.in_(batch)),
-            author_ids
+            .options(selectinload(StdAuthor.school))
+            .where(StdAuthor.openalex_author_id.in_(batch)),
+            author_ids,
         )
 
     async def sync_all_for_task(
-        self,
-        task_id: int,
-        tech_domain_id: int,
-        default_tech_direction_id: int | None = None
+        self, task_id: int, tech_domain_id: int, default_tech_direction_id: int | None = None
     ) -> dict:
         """
         Sync all standardized data for a task to serving layer
@@ -68,18 +66,14 @@ class ServingLayerOrchestrator:
             "schools_created": 0,
             "tags_created": 0,
             "new_talents_for_works": [],  # 收集新创建的学者（用于获取代表作品）
-            "errors": []
+            "errors": [],
         }
 
         # Use bulk sync for PostgreSQL
         return await self._bulk_sync_all(task_id, tech_domain_id, default_tech_direction_id, stats)
 
     async def _bulk_sync_all(
-        self,
-        task_id: int,
-        tech_domain_id: int,
-        default_tech_direction_id: int | None,
-        stats: dict
+        self, task_id: int, tech_domain_id: int, default_tech_direction_id: int | None, stats: dict
     ) -> dict:
         """
         PostgreSQL-optimized bulk sync using ON CONFLICT.
@@ -92,7 +86,7 @@ class ServingLayerOrchestrator:
         belong_result = await self.session.execute(
             select(AuthorTechBelong).where(
                 AuthorTechBelong.source_task_id == task_id,
-                AuthorTechBelong.tech_domain_id == tech_domain_id
+                AuthorTechBelong.tech_domain_id == tech_domain_id,
             )
         )
         belongs = belong_result.scalars().all()
@@ -103,7 +97,9 @@ class ServingLayerOrchestrator:
 
         # Get unique openalex_author_ids
         author_ids = list({b.openalex_author_id for b in belongs})
-        logger.info(f"[BULK_SYNC] Found {len(belongs)} tech belong records, {len(author_ids)} unique authors")
+        logger.info(
+            f"[BULK_SYNC] Found {len(belongs)} tech belong records, {len(author_ids)} unique authors"
+        )
 
         # Get StdAuthors with their schools (batched)
         std_authors = await self._batch_get_std_authors(author_ids)
@@ -113,7 +109,9 @@ class ServingLayerOrchestrator:
         cs_scores = [sa.cs_concepts_score for sa in std_authors if sa.cs_concepts_score is not None]
         if cs_scores:
             above_threshold = sum(1 for s in cs_scores if s >= CS_SCORE_THRESHOLD)
-            logger.info(f"[BULK_SYNC] CS score distribution: {len(cs_scores)} authors, {above_threshold} >= {CS_SCORE_THRESHOLD}")
+            logger.info(
+                f"[BULK_SYNC] CS score distribution: {len(cs_scores)} authors, {above_threshold} >= {CS_SCORE_THRESHOLD}"
+            )
 
         # 1. Bulk sync schools first
         schools_to_sync = await self._collect_schools_to_sync(std_authors)
@@ -140,7 +138,8 @@ class ServingLayerOrchestrator:
 
         # 3. Sync tech tags
         synced_author_ids = [
-            a.openalex_author_id for a in std_authors
+            a.openalex_author_id
+            for a in std_authors
             if (a.cs_concepts_score or 0.0) >= CS_SCORE_THRESHOLD
         ]
 
@@ -148,11 +147,12 @@ class ServingLayerOrchestrator:
             # Batch query talent IDs (batched)
             talent_map = await batch_in_query_map(
                 self.session,
-                lambda batch: select(Talent.talent_id, Talent.source_record_id)
-                    .where(Talent.source_record_id.in_(batch)),
+                lambda batch: select(Talent.talent_id, Talent.source_record_id).where(
+                    Talent.source_record_id.in_(batch)
+                ),
                 synced_author_ids,
                 key_func=lambda row: row.source_record_id,
-                value_func=lambda row: row.talent_id
+                value_func=lambda row: row.talent_id,
             )
 
             # Build belongs map by author
@@ -218,7 +218,7 @@ class ServingLayerOrchestrator:
                     lambda batch: select(StdSchool).where(
                         StdSchool.openalex_institution_id.in_(batch)
                     ),
-                    list(openalex_inst_ids_to_lookup)
+                    list(openalex_inst_ids_to_lookup),
                 )
                 for std_school in std_schools:
                     if std_school.openalex_institution_id:

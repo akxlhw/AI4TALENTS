@@ -5,18 +5,18 @@ Repository for talent operations.
 from __future__ import annotations
 
 import logging
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any
 
-from sqlalchemy import func, or_, select, text, and_
+from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload
 
-from app.models.school import School
-from app.models.talent import RoleProfile, SelectedWork, Talent
 from app.models.raw_data import RawWork
+from app.models.school import School
 from app.models.standardized import StdAuthor
-from app.models.tech_domain import TechDirection, TechDomain, TalentTechTag
-from app.schemas.filters import TalentFilterParams, PaginationParams
+from app.models.talent import RoleProfile, SelectedWork, Talent
+from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
+from app.schemas.filters import PaginationParams, TalentFilterParams
 
 logger = logging.getLogger(__name__)
 
@@ -239,9 +239,7 @@ class TalentRepository:
 
         return talents, next_cursor
 
-    async def get_by_id(
-        self, talent_id: int, include_relations: bool = True
-    ) -> Talent | None:
+    async def get_by_id(self, talent_id: int, include_relations: bool = True) -> Talent | None:
         """
         Get talent by ID.
 
@@ -279,7 +277,9 @@ class TalentRepository:
         result = await self.session.execute(
             select(TalentTechTag, TechDomain, TechDirection)
             .join(TechDomain, TalentTechTag.tech_domain_id == TechDomain.tech_domain_id)
-            .outerjoin(TechDirection, TalentTechTag.tech_direction_id == TechDirection.tech_direction_id)
+            .outerjoin(
+                TechDirection, TalentTechTag.tech_direction_id == TechDirection.tech_direction_id
+            )
             .where(TalentTechTag.talent_id == talent_id)
         )
         return result.fetchall()
@@ -309,9 +309,7 @@ class TalentRepository:
         Returns:
             Talent instance or None
         """
-        result = await self.session.execute(
-            select(Talent).where(Talent.orcid == orcid)
-        )
+        result = await self.session.execute(select(Talent).where(Talent.orcid == orcid))
         return result.scalar_one_or_none()
 
     async def get_role_profile(self, talent_id: int) -> RoleProfile | None:
@@ -329,9 +327,7 @@ class TalentRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_selected_works(
-        self, talent_id: int, limit: int = 10
-    ) -> list[SelectedWork]:
+    async def get_selected_works(self, talent_id: int, limit: int = 10) -> list[SelectedWork]:
         """
         Get selected works for a talent.
 
@@ -410,16 +406,13 @@ class TalentRepository:
         """
         keyword_pattern = f"%{keyword}%"
 
-        query = (
-            select(func.count(Talent.talent_id))
-            .where(
-                Talent.is_visible.is_(True),
-                or_(
-                    Talent.name.ilike(keyword_pattern),
-                    Talent.name_en.ilike(keyword_pattern),
-                    Talent.current_title.ilike(keyword_pattern),
-                ),
-            )
+        query = select(func.count(Talent.talent_id)).where(
+            Talent.is_visible.is_(True),
+            or_(
+                Talent.name.ilike(keyword_pattern),
+                Talent.name_en.ilike(keyword_pattern),
+                Talent.current_title.ilike(keyword_pattern),
+            ),
         )
 
         if role_type:
@@ -428,9 +421,7 @@ class TalentRepository:
         result = await self.session.execute(query)
         return result.scalar() or 0
 
-    async def get_count_by_role(
-        self, school_id: int | None = None
-    ) -> dict[str, int]:
+    async def get_count_by_role(self, school_id: int | None = None) -> dict[str, int]:
         """
         Get talent counts grouped by role type.
 
@@ -440,10 +431,9 @@ class TalentRepository:
         Returns:
             Dictionary with counts by role type
         """
-        query = select(
-            Talent.role_type,
-            func.count(Talent.talent_id).label("count")
-        ).where(Talent.is_visible.is_(True))
+        query = select(Talent.role_type, func.count(Talent.talent_id).label("count")).where(
+            Talent.is_visible.is_(True)
+        )
 
         if school_id:
             query = query.where(Talent.school_id == school_id)
@@ -459,9 +449,7 @@ class TalentRepository:
 
         return counts
 
-    async def get_count_by_school(
-        self, country_code: str | None = None
-    ) -> dict[int, int]:
+    async def get_count_by_school(self, country_code: str | None = None) -> dict[int, int]:
         """
         Get talent counts grouped by school.
 
@@ -471,10 +459,7 @@ class TalentRepository:
         Returns:
             Dictionary mapping school_id to count
         """
-        query = select(
-            Talent.school_id,
-            func.count(Talent.talent_id).label("count")
-        ).where(
+        query = select(Talent.school_id, func.count(Talent.talent_id).label("count")).where(
             Talent.is_visible.is_(True),
             Talent.school_id.isnot(None),
         )
@@ -493,10 +478,10 @@ class TalentRepository:
 
     async def get_by_ids(
         self,
-        talent_ids: List[int],
+        talent_ids: list[int],
         include_relations: bool = True,
         batch_size: int = 5000,
-    ) -> List[Talent]:
+    ) -> list[Talent]:
         """
         Get multiple talents by IDs with batch processing.
 
@@ -516,7 +501,7 @@ class TalentRepository:
         all_talents = []
 
         for i in range(0, len(talent_ids), batch_size):
-            batch_ids = talent_ids[i:i + batch_size]
+            batch_ids = talent_ids[i : i + batch_size]
             query = select(Talent).where(Talent.talent_id.in_(batch_ids))
 
             if include_relations:
@@ -530,12 +515,12 @@ class TalentRepository:
     async def search_by_json_field(
         self,
         field_name: str,
-        keywords: List[str],
+        keywords: list[str],
         match_mode: str = "any",
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> Tuple[List[Talent], int]:
+    ) -> tuple[list[Talent], int]:
         """
         Search talents by JSON array field (openalex_topics or topic_tags).
 
@@ -560,9 +545,7 @@ class TalentRepository:
 
         # Build base query
         query = (
-            select(Talent)
-            .options(selectinload(Talent.school))
-            .where(Talent.is_visible.is_(True))
+            select(Talent).options(selectinload(Talent.school)).where(Talent.is_visible.is_(True))
         )
 
         # Build JSON field search conditions
@@ -570,9 +553,9 @@ class TalentRepository:
         for keyword in keywords:
             pattern = f"%{keyword}%"
             conditions.append(
-                text(f"core_talent.{field_name}::text ILIKE :pattern_{hash(keyword) % 10000}").bindparams(
-                    **{f"pattern_{hash(keyword) % 10000}": pattern}
-                )
+                text(
+                    f"core_talent.{field_name}::text ILIKE :pattern_{hash(keyword) % 10000}"
+                ).bindparams(**{f"pattern_{hash(keyword) % 10000}": pattern})
             )
 
         if match_mode == "any":
@@ -598,13 +581,13 @@ class TalentRepository:
 
     async def search_by_vector_similarity(
         self,
-        query_embedding: List[float],
+        query_embedding: list[float],
         similarity_threshold: float = 0.7,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         limit: int = 20,
         offset: int = 0,
         vector_type: str = "research",
-    ) -> Tuple[List[Dict[str, Any]], int]:
+    ) -> tuple[list[dict[str, Any]], int]:
         """
         Search talents by vector similarity using pgvector.
 
@@ -620,19 +603,20 @@ class TalentRepository:
             Tuple of (list of talent dicts with similarity_score, total count)
         """
         # Convert embedding to PostgreSQL vector format with validation
-        vector_str = '[' + ','.join(str(v) for v in query_embedding) + ']'
+        vector_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
 
         # Security: Validate vector string contains only valid characters
         # This prevents potential SQL injection through the vector parameter
         import re
-        if not re.match(r'^[\d\.\-\,\s\[\]eE+]+$', vector_str):
+
+        if not re.match(r"^[\d\.\-\,\s\[\]eE+]+$", vector_str):
             raise ValueError("Invalid vector format: contains disallowed characters")
 
         distance_threshold = 1.0 - similarity_threshold
 
         # Build filter clauses
         filter_clauses = ["e.vector_type = :vector_type"]
-        filter_params: Dict[str, Any] = {"vector_type": vector_type}
+        filter_params: dict[str, Any] = {"vector_type": vector_type}
 
         if filters:
             if "school_id" in filters:
@@ -686,30 +670,32 @@ class TalentRepository:
         items = []
         for row in rows:
             similarity = 1.0 - (row.distance or 0)
-            items.append({
-                "talent_id": row.talent_id,
-                "name": row.name,
-                "name_en": row.name_en,
-                "title": row.current_title,
-                "school_id": row.school_id,
-                "school_name": row.school_name,
-                "role_type": row.role_type,
-                "topic_tags": row.topic_tags or [],
-                "openalex_topics": row.openalex_topics or [],
-                "works_count": row.works_count,
-                "cited_by_count": row.cited_by_count,
-                "h_index": row.h_index,
-                "orcid": row.orcid,
-                "similarity_score": similarity,
-            })
+            items.append(
+                {
+                    "talent_id": row.talent_id,
+                    "name": row.name,
+                    "name_en": row.name_en,
+                    "title": row.current_title,
+                    "school_id": row.school_id,
+                    "school_name": row.school_name,
+                    "role_type": row.role_type,
+                    "topic_tags": row.topic_tags or [],
+                    "openalex_topics": row.openalex_topics or [],
+                    "works_count": row.works_count,
+                    "cited_by_count": row.cited_by_count,
+                    "h_index": row.h_index,
+                    "orcid": row.orcid,
+                    "similarity_score": similarity,
+                }
+            )
 
         return items, total
 
     async def get_paper_titles_for_talents(
         self,
-        talent_ids: List[int],
+        talent_ids: list[int],
         limit_per_talent: int = 20,
-    ) -> Dict[int, List[str]]:
+    ) -> dict[int, list[str]]:
         """
         Batch get paper titles for multiple talents.
 
@@ -730,10 +716,10 @@ class TalentRepository:
 
         # Batch size for PostgreSQL parameter limit
         BATCH_SIZE = 5000
-        result: Dict[int, List[str]] = {tid: [] for tid in talent_ids}
+        result: dict[int, list[str]] = {tid: [] for tid in talent_ids}
 
         for i in range(0, len(talent_ids), BATCH_SIZE):
-            batch_ids = talent_ids[i:i + BATCH_SIZE]
+            batch_ids = talent_ids[i : i + BATCH_SIZE]
 
             # Step 1: Get std_author_id → openalex_author_id mapping
             author_query = (
@@ -744,8 +730,7 @@ class TalentRepository:
             )
             author_result = await self.session.execute(author_query)
             talent_to_openalex = {
-                row.talent_id: row.openalex_author_id
-                for row in author_result.all()
+                row.talent_id: row.openalex_author_id for row in author_result.all()
             }
 
             if not talent_to_openalex:
@@ -782,10 +767,10 @@ class TalentRepository:
 
     async def search_by_paper_titles(
         self,
-        keywords: List[str],
-        filters: Optional[Dict[str, Any]] = None,
+        keywords: list[str],
+        filters: dict[str, Any] | None = None,
         limit: int = 100,
-    ) -> List[Talent]:
+    ) -> list[Talent]:
         """
         Search talents by their paper titles.
 
@@ -804,7 +789,7 @@ class TalentRepository:
 
         # Use raw SQL for the complex join
         conditions_sql = " OR ".join([f"rw.title ILIKE :kw_{i}" for i in range(len(keywords))])
-        params: Dict[str, Any] = {f"kw_{i}": f"%{kw}%" for i, kw in enumerate(keywords)}
+        params: dict[str, Any] = {f"kw_{i}": f"%{kw}%" for i, kw in enumerate(keywords)}
 
         query_str = f"""
             SELECT DISTINCT t.*
@@ -831,7 +816,7 @@ class TalentRepository:
         rows = result.fetchall()
 
         # Get talent IDs from result
-        talent_ids = [row.talent_id for row in rows if hasattr(row, 'talent_id')]
+        talent_ids = [row.talent_id for row in rows if hasattr(row, "talent_id")]
 
         if not talent_ids:
             return []
@@ -843,11 +828,11 @@ class TalentRepository:
 
     async def search_by_research_keywords(
         self,
-        keywords: List[str],
-        search_scope: List[str] = ["openalex_topics", "paper_titles"],
-        filters: Optional[Dict[str, Any]] = None,
+        keywords: list[str],
+        search_scope: list[str] = None,
+        filters: dict[str, Any] | None = None,
         limit: int = 100,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Comprehensive search for JD matching using GIN indexes.
 
@@ -863,10 +848,12 @@ class TalentRepository:
         Returns:
             List of dicts with keys: talent, paper_titles, openalex_topics, matched_keywords
         """
+        if search_scope is None:
+            search_scope = ["openalex_topics", "paper_titles"]
         if not keywords:
             return []
 
-        talents: List[Talent] = []
+        talents: list[Talent] = []
         talent_id_set: set = set()
 
         # 1. Search openalex_topics using pg_trgm GIN index (fuzzy match)
@@ -907,16 +894,18 @@ class TalentRepository:
             openalex_topics = talent.openalex_topics or []
             matched_keywords = self._find_matched_keywords(keywords, talent, paper_titles)
 
-            candidates.append({
-                "talent": talent,
-                "paper_titles": paper_titles,
-                "openalex_topics": openalex_topics,
-                "matched_keywords": matched_keywords,
-            })
+            candidates.append(
+                {
+                    "talent": talent,
+                    "paper_titles": paper_titles,
+                    "openalex_topics": openalex_topics,
+                    "matched_keywords": matched_keywords,
+                }
+            )
 
         return candidates[:limit]
 
-    def _apply_search_filters(self, query, filters: Optional[Dict[str, Any]]):
+    def _apply_search_filters(self, query, filters: dict[str, Any] | None):
         """Apply common filters to a query."""
         if not filters:
             return query
@@ -957,10 +946,10 @@ class TalentRepository:
         # 使用子查询避免 JOIN 重复问题
         if "country_code" in filters:
             from app.models.school import School
+
             # 子查询：获取指定国家的学校 ID 列表
-            school_subquery = (
-                select(School.school_id)
-                .where(School.country_code == filters["country_code"].upper())
+            school_subquery = select(School.school_id).where(
+                School.country_code == filters["country_code"].upper()
             )
             # Filter by country using OR logic (matches education or company institution)
             query = query.where(
@@ -974,6 +963,7 @@ class TalentRepository:
         # 按技术领域筛选（通过 TalentTechTag 关联）
         if "tech_domain_id" in filters:
             from app.models.tech_domain import TalentTechTag
+
             # 子查询：获取属于指定技术领域的人才 ID
             subquery = (
                 select(TalentTechTag.talent_id)
@@ -991,11 +981,11 @@ class TalentRepository:
 
     async def search_by_openalex_topics_gin(
         self,
-        keywords: List[str],
+        keywords: list[str],
         match_mode: str = "exact",
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         limit: int = 100,
-    ) -> List[Talent]:
+    ) -> list[Talent]:
         """
         Search talents by openalex_topics using GIN index.
 
@@ -1020,7 +1010,7 @@ class TalentRepository:
 
         # Build filter clauses for raw SQL
         filter_clauses = ["t.is_visible = TRUE"]
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
 
         if filters:
             if "school_id" in filters:
@@ -1039,7 +1029,7 @@ class TalentRepository:
             # Precise match: uses GIN index with @> operator
             # Build OR conditions with safely escaped JSON values
             conditions = []
-            for i, kw in enumerate(keywords):
+            for _i, kw in enumerate(keywords):
                 # Safely escape the keyword for JSON
                 escaped_kw = json.dumps(kw)
                 conditions.append(f"t.openalex_topics::jsonb @> '[{escaped_kw}]'::jsonb")
@@ -1076,7 +1066,7 @@ class TalentRepository:
         rows = result.fetchall()
 
         # Get talent IDs and fetch full objects
-        talent_ids = [row.talent_id for row in rows if hasattr(row, 'talent_id')]
+        talent_ids = [row.talent_id for row in rows if hasattr(row, "talent_id")]
         if not talent_ids:
             return []
 
@@ -1084,10 +1074,10 @@ class TalentRepository:
 
     async def _search_by_paper_titles_gin(
         self,
-        keywords: List[str],
-        filters: Optional[Dict[str, Any]] = None,
+        keywords: list[str],
+        filters: dict[str, Any] | None = None,
         limit: int = 100,
-    ) -> List[Talent]:
+    ) -> list[Talent]:
         """
         Search talents by paper titles using pg_trgm GIN index.
 
@@ -1106,7 +1096,7 @@ class TalentRepository:
 
         # Build OR conditions for keywords using ILIKE with pg_trgm index support
         keyword_conditions = " OR ".join([f"rw.title ILIKE :kw_{i}" for i in range(len(keywords))])
-        params: Dict[str, Any] = {f"kw_{i}": f"%{kw}%" for i, kw in enumerate(keywords)}
+        params: dict[str, Any] = {f"kw_{i}": f"%{kw}%" for i, kw in enumerate(keywords)}
 
         # Build filter clauses
         filter_clauses = []
@@ -1146,10 +1136,10 @@ class TalentRepository:
 
     def _find_matched_keywords(
         self,
-        keywords: List[str],
+        keywords: list[str],
         talent: Talent,
-        paper_titles: List[str] = None,
-    ) -> List[str]:
+        paper_titles: list[str] = None,
+    ) -> list[str]:
         """
         Find which keywords matched a talent's profile.
 
@@ -1163,8 +1153,8 @@ class TalentRepository:
         """
         matched = set()
         all_text = " ".join(
-            [t.lower() for t in (talent.openalex_topics or [])] +
-            [t.lower() for t in (paper_titles or [])]
+            [t.lower() for t in (talent.openalex_topics or [])]
+            + [t.lower() for t in (paper_titles or [])]
         )
         for keyword in keywords:
             if keyword.lower() in all_text:

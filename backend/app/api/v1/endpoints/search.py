@@ -7,7 +7,8 @@ v1.4 Enhanced with fulltext, semantic, and hybrid search.
 from __future__ import annotations
 
 import time
-from fastapi import APIRouter, Depends, Query, HTTPException
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
@@ -15,13 +16,13 @@ from app.repositories.talent_repository import TalentRepository
 from app.schemas.overview import SearchResponse, SearchTalentResult
 from app.schemas.v1_4 import (
     EnhancedSearchResponse,
-    SemanticSearchResult,
     SearchMode,
+    SemanticSearchResult,
 )
-from app.services.search.search_service import SearchService
-from app.services.search.errors import EmptyQueryError
 from app.services.config_service import ConfigService
 from app.services.llm import LLMGateway
+from app.services.search.errors import EmptyQueryError
+from app.services.search.search_service import SearchService
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
@@ -98,8 +99,7 @@ async def search_talents(
 async def enhanced_search_talents(
     q: str = Query(..., min_length=1, description="搜索关键词"),
     mode: str = Query(
-        SearchMode.KEYWORD,
-        description="搜索模式: keyword, fulltext, semantic, hybrid"
+        SearchMode.KEYWORD, description="搜索模式: keyword, fulltext, semantic, hybrid"
     ),
     fuzzy: bool = Query(False, description="启用模糊匹配"),
     role_type: str | None = Query(None, description="按角色类型筛选"),
@@ -134,10 +134,7 @@ async def enhanced_search_talents(
     # Validate mode
     valid_modes = [SearchMode.KEYWORD, SearchMode.FULLTEXT, SearchMode.SEMANTIC, SearchMode.HYBRID]
     if mode not in valid_modes:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid mode. Must be one of: {valid_modes}"
-        )
+        raise HTTPException(status_code=400, detail=f"Invalid mode. Must be one of: {valid_modes}")
 
     # Build filters
     filters = {}
@@ -176,6 +173,7 @@ async def enhanced_search_talents(
                     embedding_api_format=llm_config.embedding_api_format,
                 )
                 from app.services.embedding.embedding_service import EmbeddingService
+
                 embed_service = EmbeddingService(
                     session=session,
                     llm_gateway=llm_gateway,
@@ -204,22 +202,24 @@ async def enhanced_search_talents(
         items = []
         for item in results.items:
             # item is a dict, not an ORM object
-            items.append(SemanticSearchResult(
-                talent_id=item.get("talent_id"),
-                name=item.get("name"),
-                name_en=item.get("name_en"),
-                role_type=item.get("role_type"),
-                school_name=item.get("school_name"),
-                current_title=item.get("title"),
-                works_count=item.get("works_count", 0),
-                cited_by_count=item.get("cited_by_count", 0),
-                h_index=item.get("h_index", 0),
-                topic_tags=item.get("topic_tags", []),
-                openalex_topics=item.get("openalex_topics", []),
-                similarity_score=item.get("similarity_score"),
-                match_sources=item.get("match_sources", []),
-                highlight=None,
-            ))
+            items.append(
+                SemanticSearchResult(
+                    talent_id=item.get("talent_id"),
+                    name=item.get("name"),
+                    name_en=item.get("name_en"),
+                    role_type=item.get("role_type"),
+                    school_name=item.get("school_name"),
+                    current_title=item.get("title"),
+                    works_count=item.get("works_count", 0),
+                    cited_by_count=item.get("cited_by_count", 0),
+                    h_index=item.get("h_index", 0),
+                    topic_tags=item.get("topic_tags", []),
+                    openalex_topics=item.get("openalex_topics", []),
+                    similarity_score=item.get("similarity_score"),
+                    match_sources=item.get("match_sources", []),
+                    highlight=None,
+                )
+            )
 
         return EnhancedSearchResponse(
             items=items,
@@ -236,6 +236,6 @@ async def enhanced_search_talents(
         )
 
     except EmptyQueryError:
-        raise HTTPException(status_code=400, detail="Query cannot be empty")
+        raise HTTPException(status_code=400, detail="Query cannot be empty") from None
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

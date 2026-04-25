@@ -5,7 +5,7 @@
  * - 采集配置：技术领域配置、采集任务管理
  * - LLM 配置：LLM API 设置
  */
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Card,
   Table,
@@ -181,6 +181,31 @@ const SystemConfigPage: React.FC = () => {
   } | null>(null)
   const [embeddingLoading, setEmbeddingLoading] = useState(false)
 
+  const loadTasks = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await api.collect.listTasks({ page: taskPage, page_size: 10 })
+      const newTasks = response.data.items || []
+      setTasks(newTasks)
+      setTaskTotal(response.data.total || 0)
+      const currentRunningIds = new Set<number>(
+        newTasks.filter((t: CollectTask) => t.status === 'running').map((t: CollectTask) => t.task_id)
+      )
+      const completedTaskIds = [...runningTaskIdsRef.current].filter(
+        (id: number) => !currentRunningIds.has(id) && newTasks.some((t: CollectTask) => t.task_id === id && t.status === 'completed')
+      )
+      if (completedTaskIds.length > 0) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.homepage.overview })
+        queryClient.invalidateQueries({ queryKey: queryKeys.homepage.highlights })
+      }
+      runningTaskIdsRef.current = currentRunningIds
+    } catch {
+      message.error('加载任务列表失败')
+    } finally {
+      setLoading(false)
+    }
+  }, [taskPage])
+
   // Load data based on active tab
   useEffect(() => {
     if (activeTab === 'collect') {
@@ -198,6 +223,7 @@ const SystemConfigPage: React.FC = () => {
     } else if (activeTab === 'proxy') {
       loadProxyConfig()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, collectSubTab])
 
   // Auto-refresh for running tasks
@@ -208,7 +234,7 @@ const SystemConfigPage: React.FC = () => {
       }, 5000)
       return () => clearInterval(interval)
     }
-  }, [collectSubTab, tasks])
+  }, [collectSubTab, tasks, loadTasks])
 
   // ========== Collect Config Functions ==========
   const loadTechDomains = async () => {
@@ -294,31 +320,6 @@ const SystemConfigPage: React.FC = () => {
       loadTasks()
     } catch (error) {
       message.error(getErrorMessage(error, '启动失败'))
-    }
-  }
-
-  const loadTasks = async () => {
-    setLoading(true)
-    try {
-      const response = await api.collect.listTasks({ page: taskPage, page_size: 10 })
-      const newTasks = response.data.items || []
-      setTasks(newTasks)
-      setTaskTotal(response.data.total || 0)
-      const currentRunningIds = new Set<number>(
-        newTasks.filter((t: CollectTask) => t.status === 'running').map((t: CollectTask) => t.task_id)
-      )
-      const completedTaskIds = [...runningTaskIdsRef.current].filter(
-        (id: number) => !currentRunningIds.has(id) && newTasks.some((t: CollectTask) => t.task_id === id && t.status === 'completed')
-      )
-      if (completedTaskIds.length > 0) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.homepage.overview })
-        queryClient.invalidateQueries({ queryKey: queryKeys.homepage.highlights })
-      }
-      runningTaskIdsRef.current = currentRunningIds
-    } catch {
-      message.error('加载任务列表失败')
-    } finally {
-      setLoading(false)
     }
   }
 

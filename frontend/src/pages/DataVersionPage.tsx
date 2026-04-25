@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Card,
   Table,
@@ -107,28 +107,7 @@ const DataVersionPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    loadAll()
-  }, [])
-
-  useEffect(() => {
-    loadVersions()
-  }, [versionPage])
-
-  useEffect(() => {
-    loadCorrections()
-  }, [correctionPage])
-
-  const loadAll = async () => {
-    setLoading(true)
-    try {
-      await Promise.all([loadVersions(), loadActiveVersion(), loadQualityMetrics(), loadCorrections()])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadVersions = async () => {
+  const loadVersions = useCallback(async () => {
     try {
       const response = await api.dataVersion.listVersions({ page: versionPage, page_size: 10 })
       setVersions(response.data.items)
@@ -136,27 +115,27 @@ const DataVersionPage: React.FC = () => {
     } catch {
       message.error('加载版本列表失败')
     }
-  }
+  }, [versionPage])
 
-  const loadActiveVersion = async () => {
+  const loadActiveVersion = useCallback(async () => {
     try {
       const response = await api.dataVersion.getActiveVersion()
       setActiveVersion(response.data)
     } catch {
       // No active version
     }
-  }
+  }, [])
 
-  const loadQualityMetrics = async () => {
+  const loadQualityMetrics = useCallback(async () => {
     try {
       const response = await api.dataVersion.getQualityMetrics()
       setQualityMetrics(response.data)
     } catch {
       // No metrics
     }
-  }
+  }, [])
 
-  const loadCorrections = async () => {
+  const loadCorrections = useCallback(async () => {
     try {
       const response = await api.dataVersion.listCorrections({ page: correctionPage, page_size: 10 })
       setCorrections(response.data.items)
@@ -164,7 +143,27 @@ const DataVersionPage: React.FC = () => {
     } catch {
       message.error('加载纠偏记录失败')
     }
-  }
+  }, [correctionPage])
+
+  useEffect(() => {
+    const loadAll = async () => {
+      setLoading(true)
+      try {
+        await Promise.all([loadVersions(), loadActiveVersion(), loadQualityMetrics(), loadCorrections()])
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadAll()
+  }, [loadVersions, loadActiveVersion, loadQualityMetrics, loadCorrections])
+
+  useEffect(() => {
+    loadVersions()
+  }, [loadVersions])
+
+  useEffect(() => {
+    loadCorrections()
+  }, [loadCorrections])
 
   const handleCreateVersion = () => {
     versionForm.resetFields()

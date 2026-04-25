@@ -2,15 +2,20 @@
 Venue service layer.
 顶会顶刊配置业务逻辑层
 """
+
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tech_domain import TechDomain
 from app.models.venue import Venue, VenueTechBinding
 from app.repositories.tech_domain_repository import TechDomainRepository
 from app.repositories.venue_repository import VenueRepository, VenueTechBindingRepository
-from app.schemas.venue import VenueTechBindingBatchCreate, VenueTechBindingCreate, VenueCreate, VenueUpdate
+from app.schemas.venue import (
+    VenueCreate,
+    VenueTechBindingBatchCreate,
+    VenueTechBindingCreate,
+    VenueUpdate,
+)
 
 
 class VenueService:
@@ -59,7 +64,9 @@ class VenueService:
         # Check if has bindings
         bindings = await self.binding_repo.get_by_venue(venue_id)
         if bindings:
-            raise ValueError(f"Cannot delete venue with {len(bindings)} bindings. Delete bindings first.")
+            raise ValueError(
+                f"Cannot delete venue with {len(bindings)} bindings. Delete bindings first."
+            )
 
         success = await self.venue_repo.delete(venue_id)
         if success:
@@ -135,14 +142,17 @@ class VenueService:
         await self.session.commit()
 
         # Update TechDomain.collect_sources field
-        enabled_bindings = await self.binding_repo.get_list_with_venue(data.tech_domain_id, is_enabled=True)
+        enabled_bindings = await self.binding_repo.get_list_with_venue(
+            data.tech_domain_id, is_enabled=True
+        )
         collect_sources = [
             {
                 "id": b.venue.openalex_source_id or b.venue.venue_code,
                 "name": b.venue.venue_name,
-                "type": b.venue.venue_type
+                "type": b.venue.venue_type,
             }
-            for b in enabled_bindings if b.venue
+            for b in enabled_bindings
+            if b.venue
         ]
         tech_domain.collect_sources = collect_sources
         await self.session.commit()
@@ -152,14 +162,10 @@ class VenueService:
         return {
             "total_bindings": len(all_bindings),
             "enabled_bindings": enabled_count,
-            "updated_count": len(updated_bindings)
+            "updated_count": len(updated_bindings),
         }
 
-    async def migrate_collect_sources(
-        self,
-        tech_domain_id: int,
-        dry_run: bool = False
-    ) -> dict:
+    async def migrate_collect_sources(self, tech_domain_id: int, dry_run: bool = False) -> dict:
         """
         Migrate TechDomain.collect_sources JSON to Venue table.
 
@@ -178,7 +184,7 @@ class VenueService:
                 "venues_created": 0,
                 "bindings_created": 0,
                 "venues": [],
-                "message": "No collect_sources to migrate"
+                "message": "No collect_sources to migrate",
             }
 
         venues_created = 0
@@ -205,19 +211,21 @@ class VenueService:
                     venue_name=source_name,
                     openalex_source_id=source_id,
                     venue_type=source_type,
-                    is_enabled=True
+                    is_enabled=True,
                 )
                 venue = await self.venue_repo.create(venue)
                 venues_created += 1
 
             if venue:
-                venue_infos.append({
-                    "venue_id": venue.venue_id,
-                    "venue_code": venue.venue_code,
-                    "venue_name": venue.venue_name,
-                    "openalex_source_id": venue.openalex_source_id,
-                    "is_new": venues_created > 0
-                })
+                venue_infos.append(
+                    {
+                        "venue_id": venue.venue_id,
+                        "venue_code": venue.venue_code,
+                        "venue_name": venue.venue_name,
+                        "openalex_source_id": venue.openalex_source_id,
+                        "is_new": venues_created > 0,
+                    }
+                )
 
                 # Create binding if not exists
                 if not dry_run:
@@ -229,7 +237,7 @@ class VenueService:
                             venue_id=venue.venue_id,
                             tech_domain_id=tech_domain_id,
                             priority=0,
-                            is_enabled=True
+                            is_enabled=True,
                         )
                         await self.binding_repo.create(binding)
                         bindings_created += 1
@@ -244,5 +252,5 @@ class VenueService:
             "venues_created": venues_created,
             "bindings_created": bindings_created,
             "venues": venue_infos,
-            "message": f"Migration {'simulated' if dry_run else 'completed'}: {venues_created} venues, {bindings_created} bindings"
+            "message": f"Migration {'simulated' if dry_run else 'completed'}: {venues_created} venues, {bindings_created} bindings",
         }

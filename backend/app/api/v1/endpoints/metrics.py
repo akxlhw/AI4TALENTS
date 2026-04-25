@@ -1,6 +1,7 @@
 """
 Metrics endpoint for Prometheus scraping.
 """
+
 from fastapi import APIRouter, Response
 from fastapi.responses import PlainTextResponse
 
@@ -14,6 +15,7 @@ router = APIRouter(tags=["Metrics"])
 @router.get(
     "/metrics",
     response_class=PlainTextResponse,
+    response_model=None,
     summary="Prometheus 指标",
     description="返回 Prometheus 格式的应用指标",
 )
@@ -64,6 +66,7 @@ async def get_metrics():
 
 @router.get(
     "/metrics/json",
+    response_model=dict,
     summary="JSON 格式指标",
     description="返回 JSON 格式的应用指标（便于调试）",
 )

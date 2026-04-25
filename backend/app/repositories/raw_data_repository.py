@@ -2,13 +2,14 @@
 Raw data layer repository.
 原始数据层数据访问
 """
+
 from __future__ import annotations
 
 import json
 import logging
 from datetime import datetime
 
-from sqlalchemy import func, insert, select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -69,7 +70,7 @@ class RawWorkRepository:
         source_id: str,
         year_from: int | None = None,
         year_to: int | None = None,
-        limit: int = 10000
+        limit: int = 10000,
     ) -> list[RawWork]:
         """Get works by source (venue) ID"""
         query = select(RawWork).where(RawWork.source_id == source_id)
@@ -82,10 +83,7 @@ class RawWorkRepository:
         return list(result.scalars().all())
 
     async def get_author_ids_by_source(
-        self,
-        source_id: str,
-        year_from: int | None = None,
-        year_to: int | None = None
+        self, source_id: str, year_from: int | None = None, year_to: int | None = None
     ) -> set[str]:
         """Extract unique author IDs from works of a source"""
         works = await self.get_by_source(source_id, year_from, year_to)
@@ -130,9 +128,7 @@ class RawWorkRepository:
         Returns:
             Set of unique OpenAlex author IDs
         """
-        result = await self.session.execute(
-            select(RawWork.author_ids).limit(limit)
-        )
+        result = await self.session.execute(select(RawWork.author_ids).limit(limit))
         author_ids = set()
         for row in result.fetchall():
             if row[0]:
@@ -146,24 +142,19 @@ class RawWorkRepository:
     async def get_pending(self, limit: int = 100) -> list[RawWork]:
         """Get pending works for processing"""
         result = await self.session.execute(
-            select(RawWork)
-            .where(RawWork.processed_status == "pending")
-            .limit(limit)
+            select(RawWork).where(RawWork.processed_status == "pending").limit(limit)
         )
         return list(result.scalars().all())
 
-    async def mark_processed(self, work_id: int, status: str = "processed", error: str | None = None) -> None:
+    async def mark_processed(
+        self, work_id: int, status: str = "processed", error: str | None = None
+    ) -> None:
         """Mark work as processed"""
-        values = {
-            "processed_status": status,
-            "processed_at": datetime.utcnow()
-        }
+        values = {"processed_status": status, "processed_at": datetime.utcnow()}
         if error:
             values["error_info"] = error
         await self.session.execute(
-            update(RawWork)
-            .where(RawWork.raw_work_id == work_id)
-            .values(**values)
+            update(RawWork).where(RawWork.raw_work_id == work_id).values(**values)
         )
 
 
@@ -228,20 +219,22 @@ class RawAuthorRepository:
         # Prepare data for bulk insert
         values = []
         for author in authors:
-            values.append({
-                "openalex_author_id": author.openalex_author_id,
-                "raw_json": author.raw_json,
-                "display_name": author.display_name,
-                "orcid": author.orcid,
-                "works_count": author.works_count,
-                "cited_by_count": author.cited_by_count,
-                "h_index": author.h_index,
-                "i10_index": author.i10_index,
-                "last_known_institution_id": author.last_known_institution_id,
-                "last_known_institution_name": author.last_known_institution_name,
-                "fetch_task_id": author.fetch_task_id,
-                "fetched_at": datetime.utcnow(),
-            })
+            values.append(
+                {
+                    "openalex_author_id": author.openalex_author_id,
+                    "raw_json": author.raw_json,
+                    "display_name": author.display_name,
+                    "orcid": author.orcid,
+                    "works_count": author.works_count,
+                    "cited_by_count": author.cited_by_count,
+                    "h_index": author.h_index,
+                    "i10_index": author.i10_index,
+                    "last_known_institution_id": author.last_known_institution_id,
+                    "last_known_institution_name": author.last_known_institution_name,
+                    "fetch_task_id": author.fetch_task_id,
+                    "fetched_at": datetime.utcnow(),
+                }
+            )
 
         # Use PostgreSQL INSERT ON CONFLICT for efficient upsert
         stmt = pg_insert(RawAuthor).values(values)
@@ -259,7 +252,7 @@ class RawAuthorRepository:
                 "last_known_institution_name": stmt.excluded.last_known_institution_name,
                 "fetch_task_id": stmt.excluded.fetch_task_id,
                 "fetched_at": stmt.excluded.fetched_at,
-            }
+            },
         )
 
         await self.session.execute(stmt)
@@ -272,7 +265,9 @@ class RawAuthorRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_openalex_ids(self, openalex_ids: list[str], batch_size: int = 500) -> list[RawAuthor]:
+    async def get_by_openalex_ids(
+        self, openalex_ids: list[str], batch_size: int = 500
+    ) -> list[RawAuthor]:
         """Get raw authors by multiple OpenAlex IDs.
 
         Args:
@@ -285,7 +280,7 @@ class RawAuthorRepository:
         # Batch queries to avoid large IN clauses
         results = []
         for i in range(0, len(openalex_ids), batch_size):
-            batch = openalex_ids[i:i + batch_size]
+            batch = openalex_ids[i : i + batch_size]
             result = await self.session.execute(
                 select(RawAuthor).where(RawAuthor.openalex_author_id.in_(batch))
             )
@@ -293,7 +288,9 @@ class RawAuthorRepository:
 
         return results
 
-    async def get_missing_author_ids(self, author_ids: list[str], batch_size: int = 500) -> list[str]:
+    async def get_missing_author_ids(
+        self, author_ids: list[str], batch_size: int = 500
+    ) -> list[str]:
         """Find author IDs that are not yet in the database.
 
         Args:
@@ -306,10 +303,9 @@ class RawAuthorRepository:
         # Batch queries to avoid large IN clauses
         existing_ids = set()
         for i in range(0, len(author_ids), batch_size):
-            batch = author_ids[i:i + batch_size]
+            batch = author_ids[i : i + batch_size]
             existing = await self.session.execute(
-                select(RawAuthor.openalex_author_id)
-                .where(RawAuthor.openalex_author_id.in_(batch))
+                select(RawAuthor.openalex_author_id).where(RawAuthor.openalex_author_id.in_(batch))
             )
             existing_ids.update(row[0] for row in existing.all())
 
@@ -328,25 +324,23 @@ class RawAuthorRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def mark_processed(self, author_id: int, status: str = "processed", std_author_id: int | None = None) -> None:
+    async def mark_processed(
+        self, author_id: int, status: str = "processed", std_author_id: int | None = None
+    ) -> None:
         """Mark author as processed"""
-        values = {
-            "processed_status": status,
-            "processed_at": datetime.utcnow()
-        }
+        values = {"processed_status": status, "processed_at": datetime.utcnow()}
         if std_author_id:
             values["std_author_id"] = std_author_id
         await self.session.execute(
-            update(RawAuthor)
-            .where(RawAuthor.raw_author_id == author_id)
-            .values(**values)
+            update(RawAuthor).where(RawAuthor.raw_author_id == author_id).values(**values)
         )
 
     async def count_by_status(self) -> dict:
         """Count authors by processing status"""
         result = await self.session.execute(
-            select(RawAuthor.processed_status, func.count(RawAuthor.raw_author_id))
-            .group_by(RawAuthor.processed_status)
+            select(RawAuthor.processed_status, func.count(RawAuthor.raw_author_id)).group_by(
+                RawAuthor.processed_status
+            )
         )
         return {row[0]: row[1] for row in result.all()}
 
@@ -395,7 +389,9 @@ class RawInstitutionRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_openalex_ids(self, openalex_ids: list[str], batch_size: int = 500) -> list[RawInstitution]:
+    async def get_by_openalex_ids(
+        self, openalex_ids: list[str], batch_size: int = 500
+    ) -> list[RawInstitution]:
         """Get raw institutions by multiple OpenAlex IDs.
 
         Args:
@@ -408,7 +404,7 @@ class RawInstitutionRepository:
         # Batch queries to avoid large IN clauses
         results = []
         for i in range(0, len(openalex_ids), batch_size):
-            batch = openalex_ids[i:i + batch_size]
+            batch = openalex_ids[i : i + batch_size]
             result = await self.session.execute(
                 select(RawInstitution).where(RawInstitution.openalex_institution_id.in_(batch))
             )
@@ -429,10 +425,11 @@ class RawInstitutionRepository:
         # Batch queries to avoid large IN clauses
         existing_ids = set()
         for i in range(0, len(institution_ids), batch_size):
-            batch = institution_ids[i:i + batch_size]
+            batch = institution_ids[i : i + batch_size]
             existing = await self.session.execute(
-                select(RawInstitution.openalex_institution_id)
-                .where(RawInstitution.openalex_institution_id.in_(batch))
+                select(RawInstitution.openalex_institution_id).where(
+                    RawInstitution.openalex_institution_id.in_(batch)
+                )
             )
             existing_ids.update(row[0] for row in existing.all())
 
@@ -451,12 +448,11 @@ class RawInstitutionRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def mark_processed(self, inst_id: int, status: str = "processed", std_school_id: int | None = None) -> None:
+    async def mark_processed(
+        self, inst_id: int, status: str = "processed", std_school_id: int | None = None
+    ) -> None:
         """Mark institution as processed"""
-        values = {
-            "processed_status": status,
-            "processed_at": datetime.utcnow()
-        }
+        values = {"processed_status": status, "processed_at": datetime.utcnow()}
         if std_school_id:
             values["std_school_id"] = std_school_id
         await self.session.execute(
@@ -481,7 +477,9 @@ class AuthorTechBelongRepository:
 
     async def upsert(self, belong: AuthorTechBelong) -> AuthorTechBelong:
         """Create or update an author-tech belong relationship"""
-        existing = await self.get_by_author_and_tech(belong.openalex_author_id, belong.tech_domain_id)
+        existing = await self.get_by_author_and_tech(
+            belong.openalex_author_id, belong.tech_domain_id
+        )
         if existing:
             existing.work_count_in_venue = belong.work_count_in_venue
             existing.first_work_year = belong.first_work_year
@@ -493,12 +491,14 @@ class AuthorTechBelongRepository:
         else:
             return await self.create(belong)
 
-    async def get_by_author_and_tech(self, openalex_author_id: str, tech_domain_id: int) -> AuthorTechBelong | None:
+    async def get_by_author_and_tech(
+        self, openalex_author_id: str, tech_domain_id: int
+    ) -> AuthorTechBelong | None:
         """Get relationship by author and tech domain"""
         result = await self.session.execute(
             select(AuthorTechBelong).where(
                 AuthorTechBelong.openalex_author_id == openalex_author_id,
-                AuthorTechBelong.tech_domain_id == tech_domain_id
+                AuthorTechBelong.tech_domain_id == tech_domain_id,
             )
         )
         return result.scalar_one_or_none()
@@ -513,15 +513,18 @@ class AuthorTechBelongRepository:
     async def get_by_author(self, openalex_author_id: str) -> list[AuthorTechBelong]:
         """Get all tech domains for an author"""
         result = await self.session.execute(
-            select(AuthorTechBelong).where(AuthorTechBelong.openalex_author_id == openalex_author_id)
+            select(AuthorTechBelong).where(
+                AuthorTechBelong.openalex_author_id == openalex_author_id
+            )
         )
         return list(result.scalars().all())
 
     async def count_by_tech_domain(self, tech_domain_id: int) -> int:
         """Count authors for a tech domain"""
         result = await self.session.execute(
-            select(func.count(AuthorTechBelong.belong_id))
-            .where(AuthorTechBelong.tech_domain_id == tech_domain_id)
+            select(func.count(AuthorTechBelong.belong_id)).where(
+                AuthorTechBelong.tech_domain_id == tech_domain_id
+            )
         )
         return result.scalar() or 0
 

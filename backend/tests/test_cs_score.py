@@ -1,13 +1,15 @@
 """
 Tests for CS concepts score calculation and filtering.
 """
-import pytest
+
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
+from app.models.standardized import StdAuthor
+from app.services.common.cs_concepts import CORE_CS_CONCEPTS, CS_SCORE_THRESHOLD
 from app.services.normalizers.author import AuthorNormalizer
 from app.services.sync.author_sync import AuthorSyncService
-from app.services.common.cs_concepts import CORE_CS_CONCEPTS, CS_SCORE_THRESHOLD
-from app.models.standardized import StdAuthor
 
 
 class TestCSCoreCalculation:
@@ -21,45 +23,45 @@ class TestCSCoreCalculation:
 
     def test_calculate_cs_score_with_ai_background(self, normalizer):
         """AI background author should get high score."""
-        raw_json = '''{
+        raw_json = """{
             "x_concepts": [
                 {"id": "154945302", "display_name": "Artificial intelligence", "score": 0.8},
                 {"id": "119857082", "display_name": "Machine learning", "score": 0.6}
             ]
-        }'''
+        }"""
         score = normalizer._calculate_cs_score(raw_json)
         assert score >= 0.5
         assert score <= 1.0
 
     def test_calculate_cs_score_with_cs_background(self, normalizer):
         """Computer science background author should get high score."""
-        raw_json = '''{
+        raw_json = """{
             "x_concepts": [
                 {"id": "41008148", "display_name": "Computer science", "score": 0.9}
             ]
-        }'''
+        }"""
         score = normalizer._calculate_cs_score(raw_json)
         assert score >= 0.5
 
     def test_calculate_cs_score_without_cs(self, normalizer):
         """Non-CS background author should get low score."""
-        raw_json = '''{
+        raw_json = """{
             "x_concepts": [
                 {"id": "86803240", "display_name": "Biology", "score": 0.9},
                 {"id": "54427621", "display_name": "Chemistry", "score": 0.8}
             ]
-        }'''
+        }"""
         score = normalizer._calculate_cs_score(raw_json)
         assert score < CS_SCORE_THRESHOLD
 
     def test_calculate_cs_score_with_mixed_background(self, normalizer):
         """Mixed background author should get moderate score."""
-        raw_json = '''{
+        raw_json = """{
             "x_concepts": [
                 {"id": "41008148", "display_name": "Computer science", "score": 0.3},
                 {"id": "86803240", "display_name": "Biology", "score": 0.5}
             ]
-        }'''
+        }"""
         score = normalizer._calculate_cs_score(raw_json)
         assert 0 < score < 1.0
 
@@ -77,13 +79,13 @@ class TestCSCoreCalculation:
 
     def test_calculate_cs_score_capped_at_one(self, normalizer):
         """Score should be capped at 1.0."""
-        raw_json = '''{
+        raw_json = """{
             "x_concepts": [
                 {"id": "41008148", "display_name": "Computer science", "score": 0.9},
                 {"id": "154945302", "display_name": "Artificial intelligence", "score": 0.8},
                 {"id": "119857082", "display_name": "Machine learning", "score": 0.7}
             ]
-        }'''
+        }"""
         score = normalizer._calculate_cs_score(raw_json)
         assert score == 1.0
 
