@@ -62,10 +62,27 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+ignore_missing_imports = true
 exclude = [
     "migrations/",
     "tests/",
 ]
+
+[[tool.mypy.overrides]]
+module = "app.models.*"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "app.repositories.*"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "app.services.*"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "app.builders.*"
+disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 minversion = "8.0"

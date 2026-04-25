@@ -66,13 +66,14 @@ jobs:
           pip install -r requirements.txt
           pip install mypy
 
-      - name: Run mypy
+      - name: Run mypy gate
         working-directory: ./backend
         run: |
-          python -m mypy app/ --ignore-missing-imports --no-error-summary || true
-        continue-on-error: true
-        # Note: mypy is currently informational only
-        # Remove continue-on-error when type coverage is sufficient
+          python scripts/mypy_gate.py
+        # The gate uses a baseline file (.mypy_baseline.txt) to track
+        # existing errors. New mypy errors will fail the build.
+        # To regenerate the baseline after intentional fixes:
+        #   python scripts/mypy_gate.py --regenerate
 
   # Frontend linting
   frontend-lint:
