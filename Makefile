@@ -8,7 +8,7 @@ help: ## Show this help message
 
 # Installation
 install-backend: ## Install backend dependencies
-	cd backend && pip install -r requirements.txt
+	cd backend && uv sync --all-groups
 
 install-frontend: ## Install frontend dependencies
 	cd frontend && npm install
@@ -17,7 +17,7 @@ install: install-backend install-frontend ## Install all dependencies
 
 # Development
 dev-backend: ## Start backend development server
-	cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8003
+	cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8003
 
 dev-frontend: ## Start frontend development server
 	cd frontend && npm run dev
@@ -27,7 +27,7 @@ dev: ## Start all services with docker-compose
 
 # Testing
 test-backend: ## Run backend tests
-	cd backend && pytest
+	cd backend && uv run pytest
 
 test-frontend: ## Run frontend tests
 	cd frontend && npm run test
@@ -36,8 +36,8 @@ test: test-backend ## Run all tests
 
 # Linting
 lint-backend: ## Lint backend code
-	cd backend && ruff check app tests
-	cd backend && black --check app tests
+	cd backend && uv run ruff check app tests
+	cd backend && uv run black --check app tests
 
 lint-frontend: ## Run frontend linting
 	cd frontend && npm run lint
@@ -46,26 +46,26 @@ lint: lint-backend lint-frontend ## Run all linting
 
 # Database
 migrate: ## Run database migrations
-	cd backend && alembic upgrade head
+	cd backend && uv run alembic upgrade head
 
 migrate-create: ## Create a new migration
-	cd backend && alembic revision --autogenerate -m "$(msg)"
+	cd backend && uv run alembic revision --autogenerate -m "$(msg)"
 
 migrate-rollback: ## Rollback last migration
-	cd backend && alembic downgrade -1
+	cd backend && uv run alembic downgrade -1
 
 # Data Pipeline
 seed: ## Seed database with initial data
-	cd backend && python scripts/seed.py
+	cd backend && uv run python scripts/seed.py
 
 sync: ## Run OpenAlex sync task
-	cd backend && python scripts/sync.py
+	cd backend && uv run python scripts/sync.py
 
 sync-test: ## Test OpenAlex API connection
-	cd backend && python scripts/sync.py --test-connection
+	cd backend && uv run python scripts/sync.py --test-connection
 
 build-objects: ## Build domain objects from raw data
-	cd backend && python scripts/build_objects.py
+	cd backend && uv run python scripts/build_objects.py
 
 pipeline: migrate seed ## Run full pipeline: migrate + seed
 	@echo "Pipeline complete!"

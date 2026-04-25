@@ -983,21 +983,12 @@ class TestOrchestratorTransactionBoundary:
         # 创建 orchestrator
         orchestrator = CollectionOrchestrator(test_session)
 
-        # Mock 各阶段方法以简化测试
-        with (
-            patch.object(orchestrator, "_estimate_total_works", return_value=0),
-            patch.object(orchestrator, "_execute_venue_sub_tasks", new_callable=AsyncMock),
-            patch.object(orchestrator, "_fetch_all_authors", new_callable=AsyncMock),
-            patch.object(orchestrator, "_fetch_all_institutions", new_callable=AsyncMock),
-            patch.object(orchestrator, "_normalize_schools", new_callable=AsyncMock),
-            patch.object(orchestrator, "_normalize_authors", new_callable=AsyncMock),
-            patch.object(orchestrator, "_calculate_tech_belong", new_callable=AsyncMock),
-            patch.object(orchestrator, "_sync_to_serving_layer", return_value=[]),
-            patch.object(orchestrator, "_fetch_selected_works", new_callable=AsyncMock),
-            patch.object(orchestrator, "_update_talent_topic_tags", new_callable=AsyncMock),
-            patch.object(orchestrator, "_update_school_statistics", new_callable=AsyncMock),
-            patch.object(orchestrator, "_build_statistics", new_callable=AsyncMock),
-        ):
+        # Mock 各阶段 handler 以简化测试（业务逻辑已拆分到 phases/）
+        with patch.object(orchestrator, "_estimate_total_works", return_value=0):
+            for handler in orchestrator._handlers:
+                handler.execute = AsyncMock()
+            # Phase 7 returns new talents for Phase 8
+            orchestrator._handlers[6].execute = AsyncMock(return_value=[])
 
             progress = await orchestrator.execute_task(task.task_id)
 
