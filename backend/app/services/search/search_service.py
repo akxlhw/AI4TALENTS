@@ -1010,7 +1010,7 @@ class SearchService:
             "name_en": talent.name_en,
             "title": talent.current_title,
             "school_id": talent.school_id,
-            "school_name": talent.school.school_name if talent.school else None,
+            "school_name": talent.primary_school_name,
             "role_type": talent.role_type,
             "topic_tags": talent.topic_tags or [],
             "openalex_topics": talent.openalex_topics or [],

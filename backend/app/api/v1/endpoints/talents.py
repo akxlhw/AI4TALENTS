@@ -383,7 +383,7 @@ async def compare_talents(
                 orcid=t.orcid,
                 role_type=t.role_type,
                 school_id=t.school_id,
-                school_name=t.school.school_name if t.school else None,
+                school_name=t.primary_school_name,
                 current_title=t.current_title,
                 department_name=t.department_name,
                 lab_name=t.lab_name,

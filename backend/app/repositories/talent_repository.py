@@ -369,7 +369,11 @@ class TalentRepository:
 
         query = (
             select(Talent)
-            .options(selectinload(Talent.school))
+            .options(
+                selectinload(Talent.school),
+                selectinload(Talent.education_school),
+                selectinload(Talent.company_school),
+            )
             .where(
                 Talent.is_visible.is_(True),
                 or_(
@@ -505,7 +509,11 @@ class TalentRepository:
             query = select(Talent).where(Talent.talent_id.in_(batch_ids))
 
             if include_relations:
-                query = query.options(selectinload(Talent.school))
+                query = query.options(
+                    selectinload(Talent.school),
+                    selectinload(Talent.education_school),
+                    selectinload(Talent.company_school),
+                )
 
             result = await self.session.execute(query)
             all_talents.extend(result.scalars().all())
