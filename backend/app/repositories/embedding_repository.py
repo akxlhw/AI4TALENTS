@@ -382,7 +382,7 @@ class EmbeddingRepository:
 
         # Count total visible talents
         total_result = await self.session.execute(
-            select(func.count()).select_from(Talent).where(Talent.is_visible is True)
+            select(func.count()).select_from(Talent).where(Talent.is_visible.is_(True))
         )
         total_talents = total_result.scalar() or 0
 
@@ -415,7 +415,7 @@ class EmbeddingRepository:
         from app.models.talent import Talent
 
         result = await self.session.execute(
-            select(Talent.talent_id).where(Talent.is_visible is True).order_by(Talent.talent_id)
+            select(Talent.talent_id).where(Talent.is_visible.is_(True)).order_by(Talent.talent_id)
         )
         return [row[0] for row in result.fetchall()]
 
