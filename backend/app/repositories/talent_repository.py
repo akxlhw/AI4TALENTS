@@ -354,6 +354,7 @@ class TalentRepository:
         self,
         keyword: str,
         limit: int = 20,
+        offset: int = 0,
         role_type: str | None = None,
     ) -> list[Talent]:
         """
@@ -362,6 +363,7 @@ class TalentRepository:
         Args:
             keyword: Search keyword
             limit: Maximum number of results
+            offset: Result offset for pagination
             role_type: Optional role type filter
 
         Returns:
@@ -381,6 +383,7 @@ class TalentRepository:
                 ),
             )
             .order_by(Talent.cited_by_count.desc())
+            .offset(offset)
             .limit(limit)
         )
 
@@ -389,6 +392,41 @@ class TalentRepository:
 
         result = await self.session.execute(query)
         return list(result.scalars().all())
+
+    async def search_count(
+        self,
+        keyword: str,
+        role_type: str | None = None,
+    ) -> int:
+        """
+        Get total count of talents matching search criteria.
+
+        Args:
+            keyword: Search keyword
+            role_type: Optional role type filter
+
+        Returns:
+            Total matching count
+        """
+        keyword_pattern = f"%{keyword}%"
+
+        query = (
+            select(func.count(Talent.talent_id))
+            .where(
+                Talent.is_visible.is_(True),
+                or_(
+                    Talent.name.ilike(keyword_pattern),
+                    Talent.name_en.ilike(keyword_pattern),
+                    Talent.current_title.ilike(keyword_pattern),
+                ),
+            )
+        )
+
+        if role_type:
+            query = query.where(Talent.role_type == role_type)
+
+        result = await self.session.execute(query)
+        return result.scalar() or 0
 
     async def get_count_by_role(
         self, school_id: int | None = None
@@ -512,6 +550,11 @@ class TalentRepository:
         Returns:
             Tuple of (list of talents, total count)
         """
+        # Whitelist for JSON field names to prevent SQL injection
+        allowed_fields = {"openalex_topics", "topic_tags"}
+        if field_name not in allowed_fields:
+            raise ValueError(f"Invalid field_name: {field_name}. Allowed: {allowed_fields}")
+
         if not keywords:
             return [], 0
 

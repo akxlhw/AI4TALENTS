@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+#### 架构治理
+- **Endpoint 分层泄漏治理**: 将 Endpoint 层直接 session 操作从 74 处彻底消除至 0 处
+  - 新增 `VenueService`、`CollectService`、`ConfigService`、`TalentService` 等 Service 层
+  - `permissions.py`、`data_version.py`、`schools.py`、`talent_pool.py` 等 13 个模块接入 Service 层
+- **Repository 统一化**: 推广 `BaseRepository` 基类至 `CollectTaskRepository`、`VenueRepository`
+
+#### 文档规范
+- **P0 文档修复**: README 版本号同步、文档路径修正、v1.4 功能清单补全
+- **P1 文档修复**: `.env.example` 重写（补全 28 个缺失字段）、部署指南补充 Redis/LLM/向量嵌入章节
+- **P2 文档修复**: 生产环境高级配置（日志轮转、连接池调优、备份策略）、前端 README 创建
+
+### Fixed
+
+- **代码质量 P0**: Pydantic Schema 字段描述补全（8 个文件、270+ 字段）
+- **代码质量 P1**: Endpoint `response_model` 补全、`venue.py` summary/description 补全
+- **代码质量 P2**: 裸 `dict` 返回统一为 Pydantic Response Model
+- **采集任务**: 修复入库人才为 0 的问题
+- **导入路径**: 修复 `TalentTechTag` 从 `app.models.talent` 迁移至 `app.models.tech_domain` 后的导入问题
+
 ## [1.4.1] - 2026-04-23
 
 ### Added

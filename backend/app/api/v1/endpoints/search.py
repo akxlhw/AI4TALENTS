@@ -52,15 +52,16 @@ async def search_talents(
     """
     repo = TalentRepository(session)
 
-    all_results = await repo.search(
+    offset = (page - 1) * page_size
+
+    # Database-level pagination with real total count
+    paginated_results = await repo.search(
         keyword=q,
-        limit=1000,
+        limit=page_size,
+        offset=offset,
         role_type=role_type,
     )
-
-    total = len(all_results)
-    offset = (page - 1) * page_size
-    paginated_results = all_results[offset : offset + page_size]
+    total = await repo.search_count(keyword=q, role_type=role_type)
 
     items = [
         SearchTalentResult(

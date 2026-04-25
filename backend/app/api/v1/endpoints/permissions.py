@@ -504,7 +504,7 @@ async def get_my_default_view(
 
 @router.put(
     "/me/default-view",
-    response_model=SuccessResponse,
+    response_model=DefaultViewResponse,
     summary="更新当前用户默认视角",
     description="更新用户的默认视角配置",
 )
@@ -523,4 +523,4 @@ async def update_my_default_view(
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return SuccessResponse(message="Default view updated")
+    return DefaultViewResponse(default_view=data.default_view)

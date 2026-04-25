@@ -12,10 +12,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.raw_data import RawWork
 from app.models.sync import CollectTask
 from app.models.tech_domain import TechDomain
 from app.repositories.base import BaseRepository
@@ -278,10 +279,11 @@ class CollectTaskRepository(BaseRepository[CollectTask]):
         sub_task_ids = [row[0] for row in sub_task_result.fetchall()]
 
         if sub_task_ids:
-            # Clear raw_work sub_task references
-            ids_str = ','.join(str(sid) for sid in sub_task_ids)
+            # Clear raw_work sub_task references using parameterized query
             await self.session.execute(
-                text(f"UPDATE raw_work SET sub_task_id = NULL WHERE sub_task_id IN ({ids_str})")
+                update(RawWork)
+                .where(RawWork.sub_task_id.in_(sub_task_ids))
+                .values(sub_task_id=None)
             )
 
         # Delete sub-tasks

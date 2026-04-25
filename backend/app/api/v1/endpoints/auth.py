@@ -21,6 +21,7 @@ from app.core.auth import (
 from app.core.database import get_async_session
 from app.models.enums import UserRoleType
 from app.repositories.user_repository import UserRepository
+from app.schemas.common import SuccessResponse
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer(auto_error=False)
