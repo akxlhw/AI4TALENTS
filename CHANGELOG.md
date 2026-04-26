@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-04-26
+
+### Fixed
+
+#### SQLAlchemy 查询修复
+- 修复 `embedding_repository.py` 中布尔过滤器使用 `== True` 导致的类型错误
+- 修复 `tech_domain_repository.py` 中 `is_enabled` 过滤器问题
+- 修复 `talent_repository.py` 中 `is_visible` 过滤器问题
+
+#### API 规范修复
+- 为 `health.py`、`metrics.py`、`system_config.py` 端点添加 `response_model`
+- 确保所有 API 返回符合 OpenAPI 规范的响应结构
+
+#### 测试修复
+- 修复 E2E 测试手动创建 `AsyncClient` 未使用测试数据库的问题
+- 添加 `e2e_client` fixture 正确覆盖数据库依赖
+- 修复 `test_recommend_service.py` 测试 fixtures
+
+#### 代码质量
+- 为使用原生 SQL 的 repository 添加 S608 安全文档注释
+- 说明参数化查询和字段白名单等安全措施
+
+### Technical Details
+
+- 后端测试: 477 passed
+- 提交: `6bddb40`
+
 ## [Unreleased]
 
 ### Added
@@ -403,6 +430,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frontend: React 18 + TypeScript + Vite + Ant Design v5
 - Database: SQLite (dev) / PostgreSQL (prod)
 
+[1.4.2]: https://github.com/akxlhw/AI4TALENTS/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/akxlhw/AI4TALENTS/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/akxlhw/AI4TALENTS/compare/v1.3.1...v1.3.2
