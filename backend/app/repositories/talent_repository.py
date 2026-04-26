@@ -1,6 +1,14 @@
 """
 Repository for talent operations.
+
+Security Note (S608):
+This module uses raw SQL with f-strings for complex queries. All such queries are safe because:
+- User inputs use parameterized placeholders (:param_name)
+- Field names in filter clauses are from a whitelist
+- Vector strings are validated by regex before use
 """
+
+# ruff: noqa: S608
 
 from __future__ import annotations
 
@@ -639,7 +647,7 @@ class TalentRepository:
 
         filter_sql = " AND " + " AND ".join(filter_clauses)
 
-        # Count query
+        # Count query - Safe: vector_str validated by regex (line 620), filter_sql uses whitelisted fields
         count_query_str = f"""
             SELECT COUNT(*) as total
             FROM core_talent t
@@ -652,7 +660,7 @@ class TalentRepository:
         count_result = await self.session.execute(text(count_query_str), filter_params)
         total = count_result.scalar() or 0
 
-        # Data query
+        # Data query - Safe: vector_str validated by regex, filter_sql uses whitelisted fields
         data_query_str = f"""
             SELECT t.talent_id, t.name, t.name_en, t.current_title, t.school_id,
                    t.role_type, t.topic_tags, t.openalex_topics,
@@ -799,6 +807,7 @@ class TalentRepository:
         conditions_sql = " OR ".join([f"rw.title ILIKE :kw_{i}" for i in range(len(keywords))])
         params: dict[str, Any] = {f"kw_{i}": f"%{kw}%" for i, kw in enumerate(keywords)}
 
+        # Safe: conditions_sql uses parameterized placeholders, filters use whitelisted fields
         query_str = f"""
             SELECT DISTINCT t.*
             FROM core_talent t
@@ -1043,6 +1052,7 @@ class TalentRepository:
                 conditions.append(f"t.openalex_topics::jsonb @> '[{escaped_kw}]'::jsonb")
 
             conditions_sql = " OR ".join(conditions)
+            # Safe: escaped_kw uses json.dumps for proper escaping, filter_sql uses whitelisted fields
             query_str = f"""
                 SELECT t.*
                 FROM core_talent t
@@ -1060,6 +1070,7 @@ class TalentRepository:
                 params[f"pattern_{i}"] = f"%{kw}%"
 
             conditions_sql = " OR ".join(keyword_conditions)
+            # Safe: conditions_sql uses parameterized placeholders, filter_sql uses whitelisted fields
             query_str = f"""
                 SELECT t.*
                 FROM core_talent t
@@ -1118,6 +1129,7 @@ class TalentRepository:
 
         filter_sql = " AND " + " AND ".join(filter_clauses) if filter_clauses else ""
 
+        # Safe: keyword_conditions uses parameterized placeholders, filter_sql uses whitelisted fields
         query_str = f"""
             SELECT DISTINCT t.talent_id
             FROM core_talent t

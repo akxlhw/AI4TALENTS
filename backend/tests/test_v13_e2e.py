@@ -15,6 +15,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import get_async_session
 from app.core.metrics import metrics
 from app.main import app
 from app.models.enums import RoleType, VisibilityStatus
@@ -106,142 +107,148 @@ async def setup_e2e_data(test_session: AsyncSession):
     }
 
 
+@pytest.fixture
+async def e2e_client(test_session: AsyncSession):
+    """Create E2E test client with proper database session override."""
+    async def override_get_session():
+        yield test_session
+
+    app.dependency_overrides[get_async_session] = override_get_session
+
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+
 class TestE2ECacheFlow:
     """E2E tests for cache flow."""
 
     @pytest.mark.asyncio
-    async def test_homepage_highlights_e2e(self, test_session: AsyncSession, setup_e2e_data):
+    async def test_homepage_highlights_e2e(self, e2e_client: AsyncClient, setup_e2e_data):
         """Test homepage highlights API end-to-end."""
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            # First request - should return data
-            response1 = await client.get("/api/v1/homepage/highlights")
-            assert response1.status_code == 200
-            data1 = response1.json()
+        # First request - should return data
+        response1 = await e2e_client.get("/api/v1/homepage/highlights")
+        assert response1.status_code == 200
+        data1 = response1.json()
 
-            assert "hot_tech_domains" in data1
-            assert "top_countries" in data1
-            assert "top_schools" in data1
-            assert "version" in data1
+        assert "hot_tech_domains" in data1
+        assert "top_countries" in data1
+        assert "top_schools" in data1
+        assert "version" in data1
 
-            # Second request - should also work
-            response2 = await client.get("/api/v1/homepage/highlights")
-            assert response2.status_code == 200
-            data2 = response2.json()
+        # Second request - should also work
+        response2 = await e2e_client.get("/api/v1/homepage/highlights")
+        assert response2.status_code == 200
+        data2 = response2.json()
 
-            # Results should be consistent
-            assert data1["version"] == data2["version"]
+        # Results should be consistent
+        assert data1["version"] == data2["version"]
 
     @pytest.mark.asyncio
-    async def test_overall_stats_e2e(self, test_session: AsyncSession, setup_e2e_data):
+    async def test_overall_stats_e2e(self, e2e_client: AsyncClient, setup_e2e_data):
         """Test overall stats API end-to-end."""
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            response = await client.get("/api/v1/tech-domains/overall-stats")
-            assert response.status_code == 200
-            data = response.json()
+        response = await e2e_client.get("/api/v1/tech-domains/overall-stats")
+        assert response.status_code == 200
+        data = response.json()
 
-            assert "talent_count" in data
-            assert "professor_count" in data
-            assert "student_count" in data
-            assert data["talent_count"] >= 0
+        assert "talent_count" in data
+        assert "professor_count" in data
+        assert "student_count" in data
+        assert data["talent_count"] >= 0
 
 
 class TestE2EMetricsFlow:
     """E2E tests for metrics collection."""
 
     @pytest.mark.asyncio
-    async def test_metrics_collected_on_requests(self, test_session: AsyncSession, setup_e2e_data):
+    async def test_metrics_collected_on_requests(self, e2e_client: AsyncClient, setup_e2e_data):
         """Test that metrics are collected when making API requests."""
         # Reset metrics
         metrics.reset_all()
 
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            # Make various requests
-            await client.get("/api/v1/health/live")
-            await client.get("/api/v1/tech-domains")
-            await client.get("/api/v1/tech-domains/overall-stats")
+        # Make various requests
+        await e2e_client.get("/api/v1/health/live")
+        await e2e_client.get("/api/v1/tech-domains")
+        await e2e_client.get("/api/v1/tech-domains/overall-stats")
 
-            # Get metrics
-            metrics_response = await client.get("/api/v1/metrics")
-            assert metrics_response.status_code == 200
+        # Get metrics
+        metrics_response = await e2e_client.get("/api/v1/metrics")
+        assert metrics_response.status_code == 200
 
-            content = metrics_response.text
-            # Should contain HTTP request metrics
-            assert "http_requests_total" in content
+        content = metrics_response.text
+        # Should contain HTTP request metrics
+        assert "http_requests_total" in content
 
     @pytest.mark.asyncio
-    async def test_metrics_json_format(self, test_session: AsyncSession, setup_e2e_data):
+    async def test_metrics_json_format(self, e2e_client: AsyncClient, setup_e2e_data):
         """Test metrics in JSON format."""
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            response = await client.get("/api/v1/metrics/json")
-            assert response.status_code == 200
+        response = await e2e_client.get("/api/v1/metrics/json")
+        assert response.status_code == 200
 
-            data = response.json()
-            assert "cache" in data
-            assert "database" in data
+        data = response.json()
+        assert "cache" in data
+        assert "database" in data
 
 
 class TestE2EHealthCheck:
     """E2E tests for health check endpoints."""
 
     @pytest.mark.asyncio
-    async def test_health_check_e2e(self, test_session: AsyncSession, setup_e2e_data):
+    async def test_health_check_e2e(self, e2e_client: AsyncClient, setup_e2e_data):
         """Test comprehensive health check."""
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            response = await client.get("/api/v1/health")
-            assert response.status_code == 200
+        response = await e2e_client.get("/api/v1/health")
+        assert response.status_code == 200
 
-            data = response.json()
-            assert data["status"] in ["healthy", "degraded"]
-            assert "database" in data
-            assert data["database"]["status"] == "connected"
-            assert "cache" in data
-            # Cache is disabled in tests
-            assert data["cache"]["enabled"] is False
+        data = response.json()
+        assert data["status"] in ["healthy", "degraded"]
+        assert "database" in data
+        assert data["database"]["status"] == "connected"
+        assert "cache" in data
+        # Cache is disabled in tests
+        assert data["cache"]["enabled"] is False
 
     @pytest.mark.asyncio
-    async def test_readiness_check_e2e(self, test_session: AsyncSession, setup_e2e_data):
+    async def test_readiness_check_e2e(self, e2e_client: AsyncClient, setup_e2e_data):
         """Test readiness check."""
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            response = await client.get("/api/v1/health/ready")
-            assert response.status_code == 200
+        response = await e2e_client.get("/api/v1/health/ready")
+        assert response.status_code == 200
 
-            data = response.json()
-            assert data["status"] == "ready"
-            assert data["checks"]["database"] is True
+        data = response.json()
+        assert data["status"] == "ready"
+        assert data["checks"]["database"] is True
 
     @pytest.mark.asyncio
-    async def test_liveness_check_e2e(self, test_session: AsyncSession, setup_e2e_data):
+    async def test_liveness_check_e2e(self, e2e_client: AsyncClient, setup_e2e_data):
         """Test liveness check."""
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            response = await client.get("/api/v1/health/live")
-            assert response.status_code == 200
+        response = await e2e_client.get("/api/v1/health/live")
+        assert response.status_code == 200
 
-            data = response.json()
-            assert data["status"] == "alive"
+        data = response.json()
+        assert data["status"] == "alive"
 
 
 class TestE2ETechDomainFlow:
     """E2E tests for tech domain API flow."""
 
     @pytest.mark.asyncio
-    async def test_tech_domain_list_e2e(self, test_session: AsyncSession, setup_e2e_data):
+    async def test_tech_domain_list_e2e(self, e2e_client: AsyncClient, setup_e2e_data):
         """Test tech domain list API."""
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            response = await client.get("/api/v1/tech-domains")
-            assert response.status_code == 200
+        response = await e2e_client.get("/api/v1/tech-domains")
+        assert response.status_code == 200
 
-            data = response.json()
-            assert "items" in data
-            assert len(data["items"]) >= 2  # Should have AI and ROBOTICS
+        data = response.json()
+        assert "items" in data
+        assert len(data["items"]) >= 2  # Should have AI and ROBOTICS
 
     @pytest.mark.asyncio
-    async def test_tech_domain_talents_pagination_e2e(self, client: AsyncClient, setup_e2e_data):
+    async def test_tech_domain_talents_pagination_e2e(self, e2e_client: AsyncClient, setup_e2e_data):
         """Test tech domain talents pagination."""
         data = setup_e2e_data
         domain_id = data["domains"][0].tech_domain_id
 
         # Get first page
-        response = await client.get(
+        response = await e2e_client.get(
             f"/api/v1/tech-domains/{domain_id}/talents",
             params={"page": 1, "page_size": 5},
         )
@@ -256,44 +263,41 @@ class TestE2ETalentList:
     """E2E tests for talent list with filters."""
 
     @pytest.mark.asyncio
-    async def test_talent_list_with_role_filter(self, test_session: AsyncSession, setup_e2e_data):
+    async def test_talent_list_with_role_filter(self, e2e_client: AsyncClient, setup_e2e_data):
         """Test talent list filtered by role type."""
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            response = await client.get(
-                "/api/v1/talents",
-                params={"role_type": "professor"},
-            )
-            assert response.status_code == 200
+        response = await e2e_client.get(
+            "/api/v1/talents",
+            params={"role_type": "professor"},
+        )
+        assert response.status_code == 200
 
-            data = response.json()
-            for talent in data["items"]:
-                assert talent["role_type"] == "professor"
+        data = response.json()
+        for talent in data["items"]:
+            assert talent["role_type"] == "professor"
 
     @pytest.mark.asyncio
     async def test_talent_list_with_keyword_search(
-        self, test_session: AsyncSession, setup_e2e_data
+        self, e2e_client: AsyncClient, setup_e2e_data
     ):
         """Test talent list with keyword search."""
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            # Use a known keyword from the test data
-            response = await client.get(
-                "/api/v1/talents",
-                params={"keyword": "Talent"},  # Partial match
-            )
-            assert response.status_code == 200
+        # Use a known keyword from the test data
+        response = await e2e_client.get(
+            "/api/v1/talents",
+            params={"keyword": "Talent"},  # Partial match
+        )
+        assert response.status_code == 200
 
-            data = response.json()
-            # Just verify the search endpoint works
-            assert "items" in data
-            assert "total" in data
+        data = response.json()
+        # Just verify the search endpoint works
+        assert "items" in data
+        assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_talent_detail_e2e(self, test_session: AsyncSession, setup_e2e_data):
+    async def test_talent_detail_e2e(self, e2e_client: AsyncClient, setup_e2e_data):
         """Test talent detail endpoint."""
         data = setup_e2e_data
         talent = data["talents"][0]
 
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            response = await client.get(f"/api/v1/talents/{talent.talent_id}")
-            # Just verify the endpoint returns a valid response
-            assert response.status_code in [200, 404]  # May not have detail data
+        response = await e2e_client.get(f"/api/v1/talents/{talent.talent_id}")
+        # Just verify the endpoint returns a valid response
+        assert response.status_code in [200, 404]  # May not have detail data

@@ -2,12 +2,16 @@
 Metrics endpoint for Prometheus scraping.
 """
 
+import logging
+
 from fastapi import APIRouter, Response
 from fastapi.responses import PlainTextResponse
 
 from app.core.cache import get_cache_connection
 from app.core.database import async_engine
 from app.core.metrics import metrics
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Metrics"])
 
@@ -50,8 +54,8 @@ async def get_metrics():
                 if "keyspace_hits" in info_stats and "keyspace_misses" in info_stats:
                     # These are cumulative since Redis start
                     pass
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to get cache metrics: {e}")
     else:
         metrics.gauge("cache_available").set(0)
 

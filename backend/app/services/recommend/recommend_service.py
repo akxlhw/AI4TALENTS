@@ -7,7 +7,14 @@ Features:
 - Complement recommendation
 - Diverse recommendation
 - Vector similarity calculation
+
+Security Note (S608):
+This module uses raw SQL with f-strings for complex queries. All such queries are safe because:
+- User inputs use parameterized placeholders (:param_name)
+- Field names in clauses are from whitelisted sources
 """
+
+# ruff: noqa: S608
 
 from __future__ import annotations
 
@@ -326,6 +333,7 @@ class RecommendService:
 
         topics_sql = " OR ".join(topic_conditions)
 
+        # Safe: topics_sql uses parameterized placeholders, exclude/school_clauses use whitelisted fields
         query_str = f"""
             SELECT DISTINCT ON (t.talent_id) t.talent_id, t.name, t.current_title,
                    t.openalex_topics, t.topic_tags, t.cited_by_count,

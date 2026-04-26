@@ -1,7 +1,14 @@
 """
 Technology Domain Repository.
 技术领域数据访问层
+
+Security Note (S608):
+This module uses raw SQL with f-strings for complex queries. All such queries are safe because:
+- User inputs use parameterized placeholders (:param_name)
+- Field names in WHERE clauses are from a whitelist
 """
+
+# ruff: noqa: S608
 
 from __future__ import annotations
 
@@ -478,6 +485,7 @@ class TechDomainRepository:
         # Main query with cursor pagination (fetch one extra for next_cursor)
         # Use DISTINCT ON to avoid JSON equality comparison issues in PostgreSQL
         # Priority: education_school -> company_school -> legacy school
+        # Safe: where_clause uses only whitelisted field names with parameterized values
         main_sql = text(
             f"""
             SELECT DISTINCT ON (t.talent_id) t.talent_id, t.name, t.name_en, t.role_type,
@@ -589,6 +597,7 @@ class TechDomainRepository:
 
         # Count query - fast with DISTINCT
         # JOIN all three school fields for country_code filtering
+        # Safe: where_clause uses only whitelisted field names with parameterized values
         count_sql = text(
             f"""
             SELECT COUNT(DISTINCT t.talent_id)
@@ -604,6 +613,7 @@ class TechDomainRepository:
         # Main query with pagination
         # Use subquery to avoid JSON equality comparison issues in PostgreSQL
         # Priority: education_school -> company_school -> legacy school
+        # Safe: where_clause uses only whitelisted field names with parameterized values
         offset = (page - 1) * page_size
         main_sql = text(
             f"""

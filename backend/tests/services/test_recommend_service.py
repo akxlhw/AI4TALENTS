@@ -363,26 +363,28 @@ class TestRecommendServiceErrorHandling:
     async def test_handles_invalid_reference_id(self, test_session: AsyncSession):
         """应处理无效参考ID"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendError, RecommendService
+        from app.services.llm.errors import InvalidReferenceError
+        from app.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
         service = RecommendService(session=test_session, embed_service=mock_embed)
 
         # Act & Assert
-        with pytest.raises((ValueError, RecommendError)):
+        with pytest.raises(InvalidReferenceError):
             await service.get_similar(reference_talent_ids=[99999], limit=10)
 
     @pytest.mark.asyncio
     async def test_handles_empty_reference_list(self, test_session: AsyncSession):
         """应处理空参考列表"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendError, RecommendService
+        from app.services.llm.errors import EmptyReferenceError
+        from app.services.recommend.recommend_service import RecommendService
 
         service = RecommendService(session=test_session, embed_service=AsyncMock())
 
         # Act & Assert
-        with pytest.raises((ValueError, RecommendError)):
+        with pytest.raises(EmptyReferenceError):
             await service.get_similar(reference_talent_ids=[], limit=10)
 
     @pytest.mark.asyncio

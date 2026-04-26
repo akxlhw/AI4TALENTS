@@ -2,6 +2,7 @@
 Health check endpoint.
 """
 
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends
@@ -12,6 +13,8 @@ from app.core.cache import get_cache_connection
 from app.core.config import settings
 from app.core.database import async_engine, get_async_session
 from app.repositories.stat_repository import StatisticsRepository
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Health"])
 
@@ -107,8 +110,8 @@ async def health_check(
 
                     db_size = await client.dbsize()
                     health_status["cache"]["key_count"] = db_size
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to get cache stats: {e}")
         else:
             health_status["cache"]["status"] = "disconnected"
             # Cache unavailable is not critical, service still works

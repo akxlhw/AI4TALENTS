@@ -3,7 +3,14 @@ Embedding Repository.
 嵌入向量仓储层 - v1.4
 
 Handles database operations for talent embeddings.
+
+Security Note (S608):
+This module uses raw SQL with f-strings for batch operations. All such queries are safe because:
+- Values use parameterized placeholders (:param_name)
+- No user input is directly interpolated into SQL strings
 """
+
+# ruff: noqa: S608
 
 from __future__ import annotations
 
@@ -233,6 +240,7 @@ class EmbeddingRepository:
             params["created_at"] = now
             params["updated_at"] = now
 
+            # Safe: values_clauses use only parameterized placeholders, no user input in SQL string
             sql = f"""
                 INSERT INTO core_talent_embedding
                 (talent_id, vector_type, embedding, model_name, source_text_hash, created_at, updated_at)

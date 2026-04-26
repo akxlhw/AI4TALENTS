@@ -266,7 +266,8 @@ async def _test_chat_model(
         try:
             error_data = response.json()
         except Exception:
-            pass
+            # Response may not be JSON, continue with empty error_data
+            logger.debug(f"[Chat Test] Non-JSON response: status={response.status_code}")
 
         error_msg = (
             error_data.get("error", {}).get("message", "")
@@ -460,7 +461,8 @@ async def _test_embedding_model(
         try:
             error_data = response.json()
         except Exception:
-            pass
+            # Response may not be JSON, continue with empty error_data
+            logger.debug(f"[Embedding Test] Non-JSON response: status={response.status_code}")
 
         error_msg = (
             error_data.get("error", {}).get("message", "")
