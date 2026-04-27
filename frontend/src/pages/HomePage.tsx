@@ -103,7 +103,7 @@ const HomePage: React.FC = () => {
               backgroundSize: '28px 28px',
             }}
           />
-          <div style={{ position: 'relative', zIndex: 1, maxWidth: 640, margin: '0 auto' }}>
+          <div style={{ position: 'relative', zIndex: 1, maxWidth: 880, margin: '0 auto' }}>
             <Title
               level={1}
               style={{
@@ -138,13 +138,18 @@ const HomePage: React.FC = () => {
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onSearch={handleSearch}
-              style={{ maxWidth: 680, margin: '0 auto' }}
+              style={{ width: '100%', margin: '0 auto' }}
             />
-            {/* Quick tags */}
-            <Space
-              wrap
-              style={{ marginTop: 20, justifyContent: 'center' }}
-              size={8}
+            {/* Quick tags + smart recommend */}
+            <div
+              style={{
+                marginTop: 20,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 8,
+              }}
             >
               {['深度学习', '自然语言处理', '计算机视觉', '强化学习', '量子计算'].map((tag) => (
                 <Tag
@@ -163,7 +168,46 @@ const HomePage: React.FC = () => {
                   {tag}
                 </Tag>
               ))}
-            </Space>
+              <div
+                style={{
+                  width: 1,
+                  height: 14,
+                  background: 'rgba(255,255,255,0.25)',
+                  margin: '0 4px',
+                }}
+              />
+              <button
+                onClick={() => navigate('/jd-match')}
+                style={{
+                  cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.95)',
+                  border: 'none',
+                  borderRadius: 16,
+                  padding: '3px 14px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: dt.primary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#fff'
+                  e.currentTarget.style.transform = 'scale(1.04)'
+                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.12)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.95)'
+                  e.currentTarget.style.transform = 'scale(1)'
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'
+                }}
+              >
+                <span>🔮</span>
+                <span>智能推荐</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -267,7 +311,7 @@ const HomePage: React.FC = () => {
 
               {/* Countries */}
               <div style={{ marginBottom: 10 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>人才分布 — 国家</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>人才来源</Text>
                 <div style={{ marginTop: 6 }}>
                   {topCountries.slice(0, 8).map((item) => (
                     <Tag

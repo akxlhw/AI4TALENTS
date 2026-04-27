@@ -8,11 +8,12 @@ import {
   DatabaseOutlined,
   HomeOutlined,
   BookOutlined,
+  StarOutlined,
   CodeOutlined,
   TrophyOutlined,
   BuildOutlined,
   LockOutlined,
-  ExperimentOutlined,
+
   DownOutlined,
   UpOutlined,
 } from '@ant-design/icons'
@@ -121,19 +122,6 @@ const MainLayout: React.FC = () => {
             style={{ cursor: 'pointer' }}
             onClick={() => navigate('/')}
           >
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
-                background: 'var(--domain-gradient)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ExperimentOutlined style={{ fontSize: 18, color: '#fff' }} />
-            </div>
             <Text
               style={{
                 fontSize: 18,
@@ -143,6 +131,16 @@ const MainLayout: React.FC = () => {
               }}
             >
               AI4TALENT
+            </Text>
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: 500,
+                color: 'var(--text-secondary)',
+                letterSpacing: '1px',
+              }}
+            >
+              智能人才库
             </Text>
           </Space>
 
@@ -159,29 +157,40 @@ const MainLayout: React.FC = () => {
           )}
         </Space>
 
-        {/* User — pushed to right */}
+        {/* Nav actions — pushed to right */}
         {user && (
-          <Dropdown
-            menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
-            placement="bottomRight"
-          >
-            <Space style={{ cursor: 'pointer' }} size={8}>
-              <Avatar
-                style={{ background: 'var(--domain-gradient)', fontSize: 12 }}
-                icon={<UserOutlined />}
-                size="small"
-              />
-              <Text style={{ color: 'var(--text-primary)', fontSize: 13 }}>
-                {user.display_name || user.username}
-              </Text>
-              <Tag
-                color={roleColorMap[user.role] || 'default'}
-                style={{ margin: 0, fontSize: 10, padding: '0 5px', lineHeight: '16px' }}
-              >
-                {roleTextMap[user.role] || user.role}
-              </Tag>
-            </Space>
-          </Dropdown>
+          <Space size={8}>
+            <Button
+              type="text"
+              size="small"
+              icon={<StarOutlined />}
+              onClick={() => navigate('/favorites')}
+              style={{ fontSize: 13 }}
+            >
+              我的收藏
+            </Button>
+            <Dropdown
+              menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
+              placement="bottomRight"
+            >
+              <Space style={{ cursor: 'pointer' }} size={8}>
+                <Avatar
+                  style={{ background: 'var(--domain-gradient)', fontSize: 12 }}
+                  icon={<UserOutlined />}
+                  size="small"
+                />
+                <Text style={{ color: 'var(--text-primary)', fontSize: 13 }}>
+                  {user.display_name || user.username}
+                </Text>
+                <Tag
+                  color={roleColorMap[user.role] || 'default'}
+                  style={{ margin: 0, fontSize: 10, padding: '0 5px', lineHeight: '16px' }}
+                >
+                  {roleTextMap[user.role] || user.role}
+                </Tag>
+              </Space>
+            </Dropdown>
+          </Space>
         )}
       </nav>
 
