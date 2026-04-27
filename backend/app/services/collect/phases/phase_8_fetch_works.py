@@ -1,8 +1,7 @@
-"""Phase 8: Fetch selected works for newly created talents."""
+"""Phase 8: Compute selected works for newly created talents from local RawWork."""
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,12 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 class PhaseFetchWorksHandler(PhaseHandler):
-    """Phase 8: Fetch top-cited works for new talents.
+    """Phase 8: Compute top-cited works for new talents from local RawWork.
 
-    Uses an :class:`asyncio.Semaphore` to limit concurrent API requests.
+    Replaces external API calls with local database computation for better
+    reliability in enterprise intranet environments.
     """
 
-    phase_name = "获取代表作品"
+    phase_name = "计算代表作品"
     phase_progress = 75
 
     def __init__(
@@ -34,83 +34,69 @@ class PhaseFetchWorksHandler(PhaseHandler):
         self.work_fetcher = work_fetcher
 
     async def execute(self, context: PhaseContext) -> None:
-        from app.services.common.openalex_utils import REQUEST_DELAY
-
         new_talents = context.new_talents
         progress = context.progress
 
         if not new_talents:
-            self.progress_tracker.add_log("info", "无需获取代表作品（无新增教授）")
+            self.progress_tracker.add_log("info", "无需计算代表作品（无新增学者）")
             return
 
         if not self.work_fetcher:
             self.progress_tracker.add_log("warning", "Work fetcher not configured")
             return
 
-        progress.current_step = "Fetching selected works"
+        progress.current_step = "Computing selected works from local data"
         self.progress_tracker.add_log(
-            "info", f"开始为 {len(new_talents)} 位新入库教授获取代表作品"
+            "info", f"开始为 {len(new_talents)} 位学者从本地论文计算代表作品"
         )
 
-        semaphore = asyncio.Semaphore(3)
-        total_fetched = 0
+        # 从当前任务已采集的 RawWork 中一次性计算所有学者的代表作
+        task_id = getattr(context.task, "task_id", None) if context.task else None
+        author_works_map = await self.work_fetcher.compute_selected_works_for_all_authors(
+            task_id=task_id, max_works=10
+        )
+
         total_inserted = 0
-        errors: list[str] = []
+        total_authors = 0
 
-        async def fetch_for_talent(talent_info: dict) -> None:
-            nonlocal total_fetched, total_inserted
-            async with semaphore:
-                try:
-                    talent_id = talent_info["talent_id"]
-                    openalex_author_id = talent_info["openalex_author_id"]
-                    works_count = talent_info.get("works_count", 0)
+        for talent_info in new_talents:
+            try:
+                talent_id = talent_info["talent_id"]
+                openalex_author_id = talent_info["openalex_author_id"]
+                works_count = talent_info.get("works_count", 0)
 
-                    # Only fetch for authors with > 5 works
-                    if works_count <= 5:
-                        return
+                # 论文数过少的学者跳过，避免无意义的代表作展示
+                if works_count <= 5:
+                    continue
 
-                    works = await self.work_fetcher.fetch_author_top_works(
-                        openalex_author_id=openalex_author_id, max_works=10
+                works = author_works_map.get(openalex_author_id, [])
+                if not works:
+                    continue
+
+                for order, work in enumerate(works):
+                    selected_work = SelectedWork(
+                        talent_id=talent_id,
+                        title=work["title"][:500],
+                        publication_year=work["publication_year"],
+                        venue_name=work["venue_name"][:255] if work["venue_name"] else None,
+                        citation_count=work["citation_count"],
+                        source_work_id=work["source_work_id"][:100] if work["source_work_id"] else None,
+                        doi=work["doi"][:100] if work["doi"] else None,
+                        display_order=order,
                     )
-                    if not works:
-                        return
+                    self.session.add(selected_work)
+                    total_inserted += 1
 
-                    for order, work in enumerate(works):
-                        if not work.get("title"):
-                            continue
+                total_authors += 1
 
-                        selected_work = SelectedWork(
-                            talent_id=talent_id,
-                            title=work.get("title", "")[:500],
-                            publication_year=work.get("publication_year"),
-                            venue_name=(
-                                work.get("venue_name", "")[:255]
-                                if work.get("venue_name")
-                                else None
-                            ),
-                            citation_count=work.get("citation_count", 0),
-                            source_work_id=(
-                                work.get("source_work_id", "")[:100]
-                                if work.get("source_work_id")
-                                else None
-                            ),
-                            doi=work.get("doi", "")[:100] if work.get("doi") else None,
-                            display_order=order,
-                        )
-                        self.session.add(selected_work)
-                        total_inserted += 1
+            except Exception as e:
+                self.progress_tracker.add_log(
+                    "warning",
+                    f"计算代表作品失败: talent_id={talent_info.get('talent_id')}, error={e}",
+                )
 
-                    total_fetched += 1
-                    await asyncio.sleep(REQUEST_DELAY)
-                except Exception as e:
-                    errors.append(f"talent_id={talent_info.get('talent_id')}: {str(e)}")
-
-        await asyncio.gather(*[fetch_for_talent(t) for t in new_talents])
         await self.session.flush()
 
-        for error in errors:
-            self.progress_tracker.add_log("warning", f"获取代表作品失败: {error}")
-
         self.progress_tracker.add_log(
-            "info", f"代表作品获取完成: {total_fetched} 位教授，{total_inserted} 篇作品"
+            "info", f"代表作品计算完成: {total_authors} 位学者，{total_inserted} 篇作品"
         )

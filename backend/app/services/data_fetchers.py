@@ -8,7 +8,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime
+import os
+from datetime import datetime, timedelta
 
 import aiohttp
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,8 +34,8 @@ from app.services.common.progress import FetchProgress
 logger = logging.getLogger(__name__)
 
 # Maximum records to fetch per venue (0 = no limit)
-# Can be overridden via environment variable or task config
-MAX_WORKS_PER_VENUE = 0  # 0 means no limit
+# Can be overridden via environment variable
+MAX_WORKS_PER_VENUE = int(os.environ.get("MAX_WORKS_PER_VENUE", "0"))  # 0 means no limit
 
 # API 请求超时配置
 DEFAULT_TIMEOUT = aiohttp.ClientTimeout(
@@ -48,7 +49,7 @@ class RetryableError(Exception):
     pass
 
 
-def with_retry(max_attempts: int = 3, min_wait: float = 1.0, max_wait: float = 10.0):
+def with_retry(max_attempts: int = 3, min_wait: float = 1.0, max_wait: float = 60.0):
     """创建重试装饰器
 
     Args:
@@ -103,7 +104,7 @@ class WorkFetcher:
         self.client = client or OpenAlexClient()
         self.repo = RawWorkRepository(session)
 
-    @with_retry(max_attempts=3)
+    @with_retry(max_attempts=5, max_wait=60.0)
     async def _fetch_page_with_retry(
         self,
         http_session: aiohttp.ClientSession,
@@ -125,12 +126,15 @@ class WorkFetcher:
             JSON 响应数据
 
         Raises:
-            RetryableError: 可重试的错误（速率限制、临时网络问题）
+            RetryableError: 可重试的错误（速率限制、服务器错误、临时网络问题）
         """
         async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
             if response.status == 429:
                 # 速率限制，触发重试
                 raise RetryableError("Rate limited (HTTP 429)")
+            if response.status >= 500:
+                # 服务器错误（5xx）也触发重试，提升企业内网稳定性
+                raise RetryableError(f"Server error (HTTP {response.status})")
             if response.status != 200:
                 raise Exception(f"HTTP {response.status}")
             return await response.json()
@@ -244,7 +248,11 @@ class WorkFetcher:
                         http_session, url, params, headers, proxy
                     )
                 except Exception as e:
-                    logger.warning(f"Failed to fetch page after retries: {e}")
+                    logger.warning(
+                        f"Failed to fetch page after retries for venue {venue.venue_name}: {e}. "
+                        f"Cursor={cursor}, already_fetched={total_fetched}. "
+                        f"Remaining pages will be skipped."
+                    )
                     progress.failed += 1
                     break
 
@@ -358,6 +366,91 @@ class WorkFetcher:
 
         return works
 
+    async def compute_selected_works_for_all_authors(
+        self, task_id: int | None = None, max_works: int = 10
+    ) -> dict[str, list[dict]]:
+        """从本地 RawWork 一次性计算所有学者的代表作（按引用数排序）
+
+        直接从已采集的 RawWork 中解析论文数据，避免重复调用外部 API，
+        提升企业内网环境下的稳定性和性能。
+
+        Args:
+            task_id: 采集任务 ID。为 None 时处理所有论文，否则只处理该任务。
+            max_works: 每位学者最多返回的代表作数量。
+
+        Returns:
+            dict: {openalex_author_id: [work_info, ...]}，已按引用数降序排列。
+                  work_info 包含 title, publication_year, citation_count,
+                  venue_name, doi, source_work_id。
+        """
+        from collections import defaultdict
+        from sqlalchemy import select
+
+        query = select(RawWork)
+        if task_id is not None:
+            query = query.where(RawWork.fetch_task_id == task_id)
+
+        result = await self.session.execute(query)
+        works = result.scalars().all()
+
+        author_works_map: dict[str, list[dict]] = defaultdict(list)
+        # 用 (author_id, openalex_work_id) 组合去重，
+        # 避免同一篇论文在不同 venue 中被重复采集导致重复
+        seen_pairs: set[str] = set()
+
+        for work in works:
+            if not work.author_ids or not work.raw_json:
+                continue
+
+            try:
+                author_ids = json.loads(work.author_ids)
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+            if not isinstance(author_ids, list) or not author_ids:
+                continue
+
+            try:
+                data = json.loads(work.raw_json)
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+            # 过滤无标题论文
+            title = (data.get("title") or work.title or "").strip()
+            if not title:
+                continue
+
+            # 提取期刊/会议名称
+            primary_location = data.get("primary_location") or {}
+            source = primary_location.get("source") or {}
+            venue_name = source.get("display_name")
+
+            work_info = {
+                "title": title,
+                "publication_year": data.get("publication_year") or work.publication_year,
+                "citation_count": data.get("cited_by_count", 0) or 0,
+                "venue_name": venue_name,
+                "doi": data.get("doi") or work.doi,
+                "source_work_id": work.openalex_work_id,
+            }
+
+            for author_id in author_ids:
+                if not author_id:
+                    continue
+                pair_key = f"{author_id}:{work.openalex_work_id}"
+                if pair_key in seen_pairs:
+                    continue
+                seen_pairs.add(pair_key)
+                author_works_map[author_id].append(work_info)
+
+        # 按引用数降序排序并截断
+        final_map: dict[str, list[dict]] = {}
+        for author_id, work_list in author_works_map.items():
+            work_list.sort(key=lambda x: x["citation_count"], reverse=True)
+            final_map[author_id] = work_list[:max_works]
+
+        return final_map
+
 
 def extract_institutions(author_data: dict) -> dict:
     """
@@ -430,8 +523,12 @@ class AuthorFetcher:
         author_ids: list[str],
         task_id: int | None = None,
         progress_callback: callable | None = None,
+        refresh_days: int = 30,
     ) -> FetchProgress:
-        """Fetch authors by their OpenAlex IDs"""
+        """Fetch authors by their OpenAlex IDs
+
+        Also refreshes existing authors whose data is older than refresh_days.
+        """
         progress = FetchProgress()
         progress.total = len(author_ids)
         progress.current_step = "Fetching authors from OpenAlex"
@@ -440,10 +537,28 @@ class AuthorFetcher:
 
         # Find which authors are already in database
         missing_ids = await self.repo.get_missing_author_ids(author_ids)
-        progress.current_step = f"Fetching {len(missing_ids)} new authors"
+
+        # Find stale authors (existing but fetched too long ago)
+        stale_ids: list[str] = []
+        if refresh_days > 0:
+            existing_authors = await self.repo.get_by_openalex_ids(author_ids)
+            stale_threshold = datetime.utcnow() - timedelta(days=refresh_days)
+            for author in existing_authors:
+                if author.fetched_at is None or author.fetched_at < stale_threshold:
+                    stale_ids.append(author.openalex_author_id)
+
+        # Merge missing and stale, preserving order (missing first)
+        stale_ids = [aid for aid in stale_ids if aid not in missing_ids]
+        ids_to_fetch = missing_ids + stale_ids
+
+        progress.current_step = (
+            f"Fetching {len(ids_to_fetch)} authors ({len(missing_ids)} new, {len(stale_ids)} stale)"
+        )
 
         logger.info(
-            f"其中 {len(missing_ids)} 位需要从 API 获取，{len(author_ids) - len(missing_ids)} 位已存在"
+            f"其中 {len(missing_ids)} 位新增需要从 API 获取，"
+            f"{len(stale_ids)} 位数据过期需要刷新，"
+            f"{len(author_ids) - len(ids_to_fetch)} 位已存在且最新"
         )
 
         # Determine proxy for OpenAlex API
@@ -451,10 +566,10 @@ class AuthorFetcher:
         proxy = self.client.get_proxy_for_request(openalex_url)
         async with aiohttp.ClientSession() as http_session:
             batch_size = 50
-            total_batches = (len(missing_ids) + batch_size - 1) // batch_size
+            total_batches = (len(ids_to_fetch) + batch_size - 1) // batch_size
 
-            for i in range(0, len(missing_ids), batch_size):
-                batch = missing_ids[i : i + batch_size]
+            for i in range(0, len(ids_to_fetch), batch_size):
+                batch = ids_to_fetch[i : i + batch_size]
                 batch_num = i // batch_size + 1
 
                 try:

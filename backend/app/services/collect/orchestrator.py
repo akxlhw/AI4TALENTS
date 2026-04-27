@@ -98,7 +98,6 @@ class CollectionOrchestrator:
             PhaseTechBelongHandler(session, self.progress_tracker),
             PhaseSyncServingHandler(session, self.progress_tracker),
             PhaseFetchWorksHandler(session, self.progress_tracker, self.work_fetcher),
-            PhaseTopicTagsHandler(session, self.progress_tracker),
             PhaseSchoolStatsHandler(session, self.progress_tracker),
             PhaseBuildStatsHandler(session, self.progress_tracker),
         ]

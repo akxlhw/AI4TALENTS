@@ -174,6 +174,7 @@ class AuthorSyncService:
         talent.cited_by_count = std_author.cited_by_count or 0
         talent.h_index = std_author.h_index or 0
         talent.openalex_topics = std_author.openalex_topics or []
+        talent.topic_tags = std_author.openalex_topics or []
         talent.source_type = "openalex"
         talent.source_record_id = std_author.openalex_author_id
 
@@ -207,6 +208,7 @@ class AuthorSyncService:
             cited_by_count=std_author.cited_by_count or 0,
             h_index=std_author.h_index or 0,
             openalex_topics=std_author.openalex_topics or [],
+            topic_tags=std_author.openalex_topics or [],
             visibility_status=VisibilityStatus.ACTIVE.value,
             is_visible=True,
         )
@@ -372,6 +374,7 @@ class AuthorSyncService:
                 "cited_by_count": std_author.cited_by_count or 0,
                 "h_index": std_author.h_index or 0,
                 "openalex_topics": std_author.openalex_topics or [],
+                "topic_tags": std_author.openalex_topics or [],
                 "visibility_status": VisibilityStatus.ACTIVE.value,
                 "is_visible": True,
             }
@@ -406,6 +409,7 @@ class AuthorSyncService:
                     "cited_by_count": stmt.excluded.cited_by_count,
                     "h_index": stmt.excluded.h_index,
                     "openalex_topics": stmt.excluded.openalex_topics,
+                    "topic_tags": stmt.excluded.topic_tags,
                     "updated_at": stmt.excluded.updated_at,
                 },
             )
@@ -464,15 +468,14 @@ class AuthorSyncService:
                     }
                 )
 
-                # Track new professors for work fetching
-                if row.role_type == "professor":
-                    result["new_talents"].append(
-                        {
-                            "talent_id": row.talent_id,
-                            "openalex_author_id": row.source_record_id,
-                            "works_count": author.works_count or 0,
-                        }
-                    )
+                # Track new talents for work fetching (all roles)
+                result["new_talents"].append(
+                    {
+                        "talent_id": row.talent_id,
+                        "openalex_author_id": row.source_record_id,
+                        "works_count": author.works_count or 0,
+                    }
+                )
 
             if profile_data:
                 # Batch insert profiles as well

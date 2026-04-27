@@ -16,6 +16,10 @@ class PhaseSchoolStatsHandler(PhaseHandler):
 
     Only updates schools affected by this task to avoid unnecessary work.
     Falls back to a full update when no affected schools are tracked.
+
+    Uses coalesce(education_school_id, company_school_id, school_id) as the
+    primary school affiliation to ensure scholars matched via the new primary
+    institution fields are also counted.
     """
 
     phase_name = "更新学校统计"
@@ -37,10 +41,16 @@ class PhaseSchoolStatsHandler(PhaseHandler):
             self.progress_tracker.add_log("info", "执行全量学校统计更新")
             await self._full_update()
 
+    @staticmethod
+    def _primary_school_id_expr():
+        """SQL expression for primary school id (education -> company -> legacy)."""
+        return func.coalesce(Talent.education_school_id, Talent.company_school_id, Talent.school_id)
+
     async def _incremental_update(self, affected_school_ids: set[int]) -> None:
         SCHOOL_BATCH_SIZE = 5000
         school_id_list = list(affected_school_ids)
         updated_schools = 0
+        primary_school = self._primary_school_id_expr()
 
         for batch_start in range(0, len(school_id_list), SCHOOL_BATCH_SIZE):
             batch_ids = school_id_list[batch_start : batch_start + SCHOOL_BATCH_SIZE]
@@ -53,7 +63,7 @@ class PhaseSchoolStatsHandler(PhaseHandler):
 
             result = await self.session.execute(
                 select(
-                    Talent.school_id,
+                    primary_school.label("primary_school_id"),
                     func.count(case((Talent.role_type == "professor", 1))).label(
                         "professor_count"
                     ),
@@ -61,8 +71,8 @@ class PhaseSchoolStatsHandler(PhaseHandler):
                         case((Talent.role_type.in_(["student", "graduate"]), 1))
                     ).label("student_count"),
                 )
-                .where(Talent.school_id.in_(batch_ids), Talent.is_visible.is_(True))
-                .group_by(Talent.school_id)
+                .where(primary_school.in_(batch_ids), Talent.is_visible.is_(True))
+                .group_by(primary_school)
             )
 
             for row in result:
@@ -83,9 +93,11 @@ class PhaseSchoolStatsHandler(PhaseHandler):
             School.__table__.update().values(professor_count=0, student_count=0)
         )
 
+        primary_school = self._primary_school_id_expr()
+
         result = await self.session.execute(
             select(
-                Talent.school_id,
+                primary_school.label("primary_school_id"),
                 func.count(case((Talent.role_type == "professor", 1))).label(
                     "professor_count"
                 ),
@@ -93,8 +105,8 @@ class PhaseSchoolStatsHandler(PhaseHandler):
                     case((Talent.role_type.in_(["student", "graduate"]), 1))
                 ).label("student_count"),
             )
-            .where(Talent.school_id.isnot(None), Talent.is_visible.is_(True))
-            .group_by(Talent.school_id)
+            .where(primary_school.isnot(None), Talent.is_visible.is_(True))
+            .group_by(primary_school)
         )
 
         updated_schools = 0

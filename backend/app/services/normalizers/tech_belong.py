@@ -32,6 +32,18 @@ class TechBelongCalculator:
         if not venue or not venue.openalex_source_id:
             return 0
 
+        # Batch preload existing AuthorTechBelong for this venue + tech_domain
+        # to avoid N+1 queries inside the loop
+        existing_result = await self.session.execute(
+            select(AuthorTechBelong).where(
+                AuthorTechBelong.tech_domain_id == tech_domain_id,
+                AuthorTechBelong.source_venue_id == venue_id,
+            )
+        )
+        existing_belongs: dict[str, AuthorTechBelong] = {
+            b.openalex_author_id: b for b in existing_result.scalars().all()
+        }
+
         # Get all RawWorks from this venue using openalex_source_id
         result = await self.session.execute(
             select(RawWork).where(RawWork.source_id == venue.openalex_source_id)
@@ -65,17 +77,10 @@ class TechBelongCalculator:
                 except (KeyError, TypeError):
                     pass
 
-        # Create or update relationships (upsert to handle duplicates)
+        # Create or update relationships using preloaded map (no N+1)
         count = 0
         for author_id, stats in author_stats.items():
-            # Check if relationship already exists
-            existing = await self.session.execute(
-                select(AuthorTechBelong).where(
-                    AuthorTechBelong.openalex_author_id == author_id,
-                    AuthorTechBelong.tech_domain_id == tech_domain_id,
-                )
-            )
-            belong = existing.scalar_one_or_none()
+            belong = existing_belongs.get(author_id)
 
             if belong:
                 # Update existing record

@@ -86,9 +86,13 @@ class StatBuilder(BaseBuilder):
         """
         logger.info("Building overview statistics")
 
-        # Count schools with visible talents
+        # Count schools with visible talents (using primary school affiliation)
+        primary_school = func.coalesce(Talent.education_school_id, Talent.company_school_id, Talent.school_id)
         school_result = await self.session.execute(
-            select(func.count(func.distinct(Talent.school_id))).where(Talent.is_visible.is_(True))
+            select(func.count(func.distinct(primary_school))).where(
+                Talent.is_visible.is_(True),
+                primary_school.isnot(None),
+            )
         )
         school_count = school_result.scalar() or 0
 
@@ -159,10 +163,11 @@ class StatBuilder(BaseBuilder):
         """
         logger.info("Building school statistics")
 
-        # Get all schools with talents
+        # Get all schools with talents (using primary school affiliation)
+        primary_school = func.coalesce(Talent.education_school_id, Talent.company_school_id, Talent.school_id)
         result = await self.session.execute(
             select(School.school_id, School.school_name)
-            .join(Talent, Talent.school_id == School.school_id)
+            .join(Talent, School.school_id == primary_school)
             .where(Talent.is_visible.is_(True))
             .distinct()
         )
@@ -181,10 +186,12 @@ class StatBuilder(BaseBuilder):
 
     async def _build_single_school_stats(self, school_id: int) -> None:
         """Build statistics for a single school."""
+        primary_school = func.coalesce(Talent.education_school_id, Talent.company_school_id, Talent.school_id)
+
         # Count professors
         professor_result = await self.session.execute(
             select(func.count(Talent.talent_id)).where(
-                Talent.school_id == school_id,
+                primary_school == school_id,
                 Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.PROFESSOR.value,
             )
@@ -194,7 +201,7 @@ class StatBuilder(BaseBuilder):
         # Count students
         student_result = await self.session.execute(
             select(func.count(Talent.talent_id)).where(
-                Talent.school_id == school_id,
+                primary_school == school_id,
                 Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.STUDENT.value,
             )
@@ -204,7 +211,7 @@ class StatBuilder(BaseBuilder):
         # Count graduates
         graduate_result = await self.session.execute(
             select(func.count(Talent.talent_id)).where(
-                Talent.school_id == school_id,
+                primary_school == school_id,
                 Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.GRADUATE.value,
             )
@@ -214,7 +221,7 @@ class StatBuilder(BaseBuilder):
         # Count unknown
         unknown_result = await self.session.execute(
             select(func.count(Talent.talent_id)).where(
-                Talent.school_id == school_id,
+                primary_school == school_id,
                 Talent.is_visible.is_(True),
                 Talent.role_type == RoleType.UNKNOWN.value,
             )

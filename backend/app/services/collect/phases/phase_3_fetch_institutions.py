@@ -52,6 +52,7 @@ class PhaseFetchInstitutionsHandler(PhaseHandler):
                 RawAuthor.primary_education_id,
                 RawAuthor.primary_company_id,
             )
+            .where(RawAuthor.fetch_task_id == context.task.task_id)
         )
 
         institution_ids: set[str] = set()
