@@ -38,6 +38,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### 前端主题系统
+- **领域主题系统**: 基于六大技术领域的动态主题切换
+  - 每个技术领域拥有独立的渐变色和视觉风格
+  - 首页 Hero 区域根据当前领域动态变化
+- **状态管理**: 新增 `domainStore` 跨页面状态管理
+- **Demo 页面**: 新增竞赛、行业、开源三个演示页面
+
+#### 登录页优化
+- **背景图片**: 使用背景图片替代 CSS 渐变
+- **毛玻璃效果**: 登录卡片采用 glassmorphism 设计
+
 #### 架构治理
 - **Endpoint 分层泄漏治理**: 将 Endpoint 层直接 session 操作从 74 处彻底消除至 0 处
   - 新增 `VenueService`、`CollectService`、`ConfigService`、`TalentService` 等 Service 层
@@ -51,6 +62,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **院校机构显示不一致**: 修复 JD 匹配/推荐结果与人才详情页院校机构显示不一致问题
+  - 为 `MatchResultItem`、`RecommendResultItem`、`SemanticSearchResult` 添加 `education_school_name` 和 `company_school_name` 字段
+  - 更新搜索、推荐、JD 匹配服务填充新字段
+  - 前端人才列表优先显示教育机构
 - **代码质量 P0**: Pydantic Schema 字段描述补全（8 个文件、270+ 字段）
 - **代码质量 P1**: Endpoint `response_model` 补全、`venue.py` summary/description 补全
 - **代码质量 P2**: 裸 `dict` 返回统一为 Pydantic Response Model
