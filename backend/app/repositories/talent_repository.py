@@ -666,9 +666,13 @@ class TalentRepository:
                    t.role_type, t.topic_tags, t.openalex_topics,
                    t.works_count, t.cited_by_count, t.h_index, t.orcid,
                    s.school_name,
+                   es.school_name AS education_school_name,
+                   cs.school_name AS company_school_name,
                    e.embedding <=> '{vector_str}'::vector AS distance
             FROM core_talent t
             LEFT JOIN core_school s ON t.school_id = s.school_id
+            LEFT JOIN core_school es ON t.education_school_id = es.school_id
+            LEFT JOIN core_school cs ON t.company_school_id = cs.school_id
             INNER JOIN core_talent_embedding e ON t.talent_id = e.talent_id
             WHERE t.is_visible = TRUE
             AND e.embedding <=> '{vector_str}'::vector <= :distance_threshold
@@ -694,6 +698,8 @@ class TalentRepository:
                     "title": row.current_title,
                     "school_id": row.school_id,
                     "school_name": row.school_name,
+                    "education_school_name": row.education_school_name,
+                    "company_school_name": row.company_school_name,
                     "role_type": row.role_type,
                     "topic_tags": row.topic_tags or [],
                     "openalex_topics": row.openalex_topics or [],

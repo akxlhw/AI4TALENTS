@@ -267,6 +267,10 @@ const SearchRecommendPage: React.FC = () => {
         role_type: item.role_type,
         school_id: item.school_id,
         school_name: item.school_name,
+        education_school_id: item.education_school_id,
+        education_school_name: item.education_school_name,
+        company_school_id: item.company_school_id,
+        company_school_name: item.company_school_name,
         current_title: item.current_title,
         works_count: item.works_count,
         cited_by_count: item.cited_by_count,
@@ -307,6 +311,10 @@ const SearchRecommendPage: React.FC = () => {
         role_type: item.role_type,
         school_id: item.school_id,
         school_name: item.school_name,
+        education_school_id: item.education_school_id,
+        education_school_name: item.education_school_name,
+        company_school_id: item.company_school_id,
+        company_school_name: item.company_school_name,
         current_title: item.current_title,
         works_count: item.works_count,
         cited_by_count: item.cited_by_count,
@@ -629,12 +637,23 @@ const SearchRecommendPage: React.FC = () => {
     },
     {
       title: '院校机构',
-      dataIndex: 'school_name',
-      key: 'school_name',
+      key: 'school',
       width: 150,
       ellipsis: true,
-      render: (name: string, record: SearchTalent) =>
-        name ? <a onClick={() => navigate(`/schools/${record.school_id}`)}>{name}</a> : <Text type="secondary">-</Text>,
+      render: (_: unknown, record: SearchTalent) => {
+        // 优先显示教育机构，其次公司机构
+        if (record.education_school_name) {
+          return <span>{record.education_school_name}</span>
+        }
+        if (record.company_school_name) {
+          return <span>{record.company_school_name}</span>
+        }
+        return record.school_name ? (
+          <a onClick={() => navigate(`/schools/${record.school_id}`)}>{record.school_name}</a>
+        ) : (
+          <Text type="secondary">-</Text>
+        )
+      },
     },
     { title: '论文', dataIndex: 'works_count', key: 'works_count', width: 80, align: 'center' as const },
     { title: '引用', dataIndex: 'cited_by_count', key: 'cited_by_count', width: 100, align: 'right' as const, render: (count: number) => formatNumber(count) },
@@ -679,7 +698,29 @@ const SearchRecommendPage: React.FC = () => {
         <a onClick={() => navigate(`/talents/${record.talent_id}`)} style={{ fontWeight: 500 }}>{name}</a>
       ),
     },
-    { title: '院校机构', dataIndex: 'school_name', key: 'school_name', width: 150, ellipsis: true },
+    {
+      title: '院校机构',
+      key: 'school',
+      width: 150,
+      ellipsis: true,
+      render: (_: unknown, record: MatchResultItem) => {
+        // 优先显示教育机构，其次公司机构
+        if (record.education_school_name) {
+          return (
+            <span>
+              {record.education_school_name}
+              {record.company_school_name && record.company_school_name !== record.education_school_name && (
+                <><br /><Text type="secondary" style={{ fontSize: 12 }}>{record.company_school_name}</Text></>
+              )}
+            </span>
+          )
+        }
+        if (record.company_school_name) {
+          return <span>{record.company_school_name}</span>
+        }
+        return <Text type="secondary">{record.school_name || '-'}</Text>
+      },
+    },
     {
       title: '推荐指数',
       dataIndex: 'overall_score',
@@ -731,7 +772,28 @@ const SearchRecommendPage: React.FC = () => {
       ),
     },
     { title: '职位', dataIndex: 'title', key: 'title', width: 150, ellipsis: true },
-    { title: '院校机构', dataIndex: 'school_name', key: 'school_name', width: 150, ellipsis: true },
+    {
+      title: '院校机构',
+      key: 'school',
+      width: 150,
+      ellipsis: true,
+      render: (_: unknown, record: RecommendResultItem) => {
+        if (record.education_school_name) {
+          return (
+            <span>
+              {record.education_school_name}
+              {record.company_school_name && record.company_school_name !== record.education_school_name && (
+                <><br /><Text type="secondary" style={{ fontSize: 12 }}>{record.company_school_name}</Text></>
+              )}
+            </span>
+          )
+        }
+        if (record.company_school_name) {
+          return <span>{record.company_school_name}</span>
+        }
+        return <Text type="secondary">{record.school_name || '-'}</Text>
+      },
+    },
     {
       title: '相似度',
       dataIndex: 'similarity_score',

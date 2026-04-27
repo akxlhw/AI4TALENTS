@@ -45,6 +45,8 @@ class SemanticSearchResult(BaseModel):
     name_en: str | None = Field(default=None, description="English name")
     role_type: str = Field(description="Role type")
     school_name: str | None = Field(default=None, description="School name")
+    education_school_name: str | None = Field(default=None, description="Education institution name")
+    company_school_name: str | None = Field(default=None, description="Company institution name")
     current_title: str | None = Field(default=None, description="Current title/position")
     works_count: int = Field(default=0, description="Number of works")
     cited_by_count: int = Field(default=0, description="Citation count")
@@ -107,12 +109,15 @@ class MatchResultItemResponse(BaseModel):
     """Match result item.
 
     v1.4.1: Simplified to only return research_score and overall_score.
+    v1.5.0: Added education_school_name and company_school_name for consistency with talent detail.
     """
 
     talent_id: int = Field(description="Talent ID")
     name: str = Field(description="Name")
     title: str = Field(description="Current title/position")
-    school_name: str = Field(description="School name")
+    school_name: str = Field(description="Primary school name (for backward compatibility)")
+    education_school_name: str | None = Field(default=None, description="Education institution name")
+    company_school_name: str | None = Field(default=None, description="Company institution name")
     overall_score: float = Field(description="Overall match score (0-100)")
     research_score: float = Field(description="Research match score")
     match_reasons: list[str] = Field(default_factory=list, description="Match reasons")

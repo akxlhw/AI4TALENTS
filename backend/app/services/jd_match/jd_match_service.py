@@ -53,9 +53,11 @@ class MatchResultItem:
     name: str
     title: str
     school_name: str
-    overall_score: float
-    research_score: float
-    match_reasons: list[str]
+    education_school_name: str | None = None
+    company_school_name: str | None = None
+    overall_score: float = 0.0
+    research_score: float = 0.0
+    match_reasons: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -63,6 +65,8 @@ class MatchResultItem:
             "name": self.name,
             "title": self.title,
             "school_name": self.school_name,
+            "education_school_name": self.education_school_name,
+            "company_school_name": self.company_school_name,
             "overall_score": self.overall_score,
             "research_score": self.research_score,
             "match_reasons": self.match_reasons,
@@ -336,7 +340,9 @@ class JDMatchService:
                 talent_id=talent.talent_id,
                 name=talent.name,
                 title=talent.current_title or "",
-                school_name=talent.school.school_name if talent.school else "",
+                school_name=talent.primary_school_name or "",
+                education_school_name=talent.education_school.school_name if talent.education_school else None,
+                company_school_name=talent.company_school.school_name if talent.company_school else None,
                 overall_score=overall_score,
                 research_score=research_score,
                 match_reasons=match_reasons,

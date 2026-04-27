@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import select, text
@@ -44,8 +44,10 @@ class RecommendResultItem:
     name: str
     title: str
     school_name: str
-    similarity_score: float
-    reasons: list[str]
+    education_school_name: str | None = None
+    company_school_name: str | None = None
+    similarity_score: float = 0.0
+    reasons: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -53,6 +55,8 @@ class RecommendResultItem:
             "name": self.name,
             "title": self.title,
             "school_name": self.school_name,
+            "education_school_name": self.education_school_name,
+            "company_school_name": self.company_school_name,
             "similarity_score": self.similarity_score,
             "reasons": self.reasons,
         }
@@ -261,6 +265,8 @@ class RecommendService:
                         name=item["name"],
                         title=item.get("title") or "",
                         school_name=item.get("school_name") or "",
+                        education_school_name=item.get("education_school_name"),
+                        company_school_name=item.get("company_school_name"),
                         similarity_score=item.get("similarity_score", 0),
                         reasons=self._generate_reasons_for_similarity(
                             item.get("similarity_score", 0)
@@ -337,9 +343,13 @@ class RecommendService:
         query_str = f"""
             SELECT DISTINCT ON (t.talent_id) t.talent_id, t.name, t.current_title,
                    t.openalex_topics, t.topic_tags, t.cited_by_count,
-                   s.school_name
+                   s.school_name,
+                   es.school_name AS education_school_name,
+                   cs.school_name AS company_school_name
             FROM core_talent t
             LEFT JOIN core_school s ON t.school_id = s.school_id
+            LEFT JOIN core_school es ON t.education_school_id = es.school_id
+            LEFT JOIN core_school cs ON t.company_school_id = cs.school_id
             WHERE t.is_visible = TRUE
             {exclude_clause}
             {school_clause}
@@ -400,6 +410,8 @@ class RecommendService:
                         name=row.name,
                         title=row.current_title or "",
                         school_name=row.school_name or "",
+                        education_school_name=row.education_school_name,
+                        company_school_name=row.company_school_name,
                         similarity_score=score,
                         reasons=self._generate_reasons_for_similarity(score),
                     )

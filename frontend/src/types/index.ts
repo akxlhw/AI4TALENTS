@@ -346,12 +346,14 @@ export interface MatchConfig {
   limit?: number
 }
 
-// Match Result Item - 匹配结果项 (v1.4.1: 简化)
+// Match Result Item - 匹配结果项 (v1.4.1: 简化, v1.5.0: 添加院校机构字段)
 export interface MatchResultItem {
   talent_id: number
   name: string
   title: string
   school_name: string
+  education_school_name: string | null
+  company_school_name: string | null
   overall_score: number
   research_score: number
   match_reasons: string[]
@@ -368,12 +370,14 @@ export interface MatchResponse {
 // Recommend Mode - 推荐模式 (仅支持相似推荐)
 export type RecommendMode = 'similar'
 
-// Recommend Result Item - 推荐结果项
+// Recommend Result Item - 推荐结果项 (v1.5.0: 添加院校机构字段)
 export interface RecommendResultItem {
   talent_id: number
   name: string
   title: string
   school_name: string
+  education_school_name: string | null
+  company_school_name: string | null
   similarity_score: number
   reasons: string[]
 }
