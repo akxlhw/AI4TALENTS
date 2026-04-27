@@ -332,3 +332,12 @@ BEGIN
     END LOOP;
 END;
 $$;
+
+-- ============================================
+-- Raw data layer indexes (added in migration 020)
+-- ============================================
+CREATE INDEX IF NOT EXISTS ix_raw_work_fetch_task_id ON raw_work(fetch_task_id);
+CREATE INDEX IF NOT EXISTS ix_raw_work_sub_task_id ON raw_work(sub_task_id);
+CREATE INDEX IF NOT EXISTS ix_raw_author_fetch_task_id ON raw_author(fetch_task_id);
+CREATE INDEX IF NOT EXISTS ix_rel_author_tech_belong_source_venue_id ON rel_author_tech_belong(source_venue_id);
+CREATE INDEX IF NOT EXISTS ix_rel_author_tech_belong_source_task_id ON rel_author_tech_belong(source_task_id);

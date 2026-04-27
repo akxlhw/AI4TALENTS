@@ -217,6 +217,7 @@ class WorkFetcher:
             cursor = "*"
             total_fetched = 0
             batch_size = 100  # Commit every 100 records
+            batch_works: list[RawWork] = []
 
             while cursor:
                 # Check if we've reached the max limit (0 = no limit)
@@ -283,12 +284,15 @@ class WorkFetcher:
                             sub_task_id=sub_task_id,
                             fetched_at=datetime.utcnow(),
                         )
-                        await self.repo.upsert(raw_work)
+                        batch_works.append(raw_work)
                         total_fetched += 1
                         progress.fetched = total_fetched
 
-                        # Commit every batch_size records to avoid losing data on timeout
+                        # Batch upsert and commit every batch_size records
                         if total_fetched % batch_size == 0:
+                            if batch_works:
+                                await self.repo.batch_upsert(batch_works)
+                                batch_works = []
                             await self.session.commit()
                     except Exception as e:
                         # Log the error and continue with next work
@@ -303,6 +307,11 @@ class WorkFetcher:
                 cursor = data.get("meta", {}).get("next_cursor")
                 if cursor:
                     await asyncio.sleep(REQUEST_DELAY)
+
+            # Flush remaining works in the last batch
+            if batch_works:
+                await self.repo.batch_upsert(batch_works)
+                await self.session.commit()
 
         return progress
 
@@ -593,7 +602,7 @@ class AuthorFetcher:
                         data = await response.json()
 
                     authors = data.get("results", [])
-                    batch_fetched = 0
+                    batch_authors: list[RawAuthor] = []
                     for author_data in authors:
                         try:
                             # OpenAlex returns 'last_known_institutions' (plural, list)
@@ -626,12 +635,15 @@ class AuthorFetcher:
                                 fetch_task_id=task_id,
                                 fetched_at=datetime.utcnow(),
                             )
-                            await self.repo.upsert(raw_author)
+                            batch_authors.append(raw_author)
                             progress.fetched += 1
-                            batch_fetched += 1
                         except Exception as e:
                             logger.warning(f"解析作者数据失败: {e}")
                             progress.failed += 1
+
+                    if batch_authors:
+                        await self.repo.batch_upsert(batch_authors)
+                        batch_authors = []
 
                     # 每 10 批提交一次（约 500 条），减少锁持有时间
                     if batch_num % 10 == 0:
@@ -714,6 +726,7 @@ class InstitutionFetcher:
                         data = await response.json()
 
                     institutions = data.get("results", [])
+                    batch_insts: list[RawInstitution] = []
                     for inst_data in institutions:
                         try:
                             raw_inst = RawInstitution(
@@ -727,11 +740,15 @@ class InstitutionFetcher:
                                 fetch_task_id=task_id,
                                 fetched_at=datetime.utcnow(),
                             )
-                            await self.repo.upsert(raw_inst)
+                            batch_insts.append(raw_inst)
                             progress.fetched += 1
                         except Exception as e:
                             logger.warning(f"解析机构数据失败: {e}")
                             progress.failed += 1
+
+                    if batch_insts:
+                        await self.repo.batch_upsert(batch_insts)
+                        batch_insts = []
 
                     # 每 5 批提交一次，减少锁持有时间
                     if batch_num % 5 == 0:

@@ -157,6 +157,55 @@ class RawWorkRepository:
             update(RawWork).where(RawWork.raw_work_id == work_id).values(**values)
         )
 
+    async def batch_upsert(self, works: list[RawWork]) -> int:
+        """Batch create or update works using PostgreSQL INSERT ON CONFLICT.
+
+        This eliminates N+1 queries from individual upserts.
+        """
+        if not works:
+            return 0
+
+        values = []
+        for work in works:
+            values.append(
+                {
+                    "openalex_work_id": work.openalex_work_id,
+                    "raw_json": work.raw_json,
+                    "title": work.title,
+                    "doi": work.doi,
+                    "publication_year": work.publication_year,
+                    "publication_date": work.publication_date,
+                    "source_id": work.source_id,
+                    "source_name": work.source_name,
+                    "author_count": work.author_count,
+                    "author_ids": work.author_ids,
+                    "fetch_task_id": work.fetch_task_id,
+                    "sub_task_id": work.sub_task_id,
+                    "fetched_at": work.fetched_at,
+                }
+            )
+
+        stmt = pg_insert(RawWork).values(values)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["openalex_work_id"],
+            set_={
+                "raw_json": stmt.excluded.raw_json,
+                "title": stmt.excluded.title,
+                "doi": stmt.excluded.doi,
+                "publication_year": stmt.excluded.publication_year,
+                "publication_date": stmt.excluded.publication_date,
+                "source_id": stmt.excluded.source_id,
+                "source_name": stmt.excluded.source_name,
+                "author_count": stmt.excluded.author_count,
+                "author_ids": stmt.excluded.author_ids,
+                "fetched_at": stmt.excluded.fetched_at,
+                "fetch_task_id": stmt.excluded.fetch_task_id,
+                "sub_task_id": stmt.excluded.sub_task_id,
+            },
+        )
+        await self.session.execute(stmt)
+        return len(works)
+
 
 class RawAuthorRepository:
     """Raw author repository"""
@@ -231,6 +280,10 @@ class RawAuthorRepository:
                     "i10_index": author.i10_index,
                     "last_known_institution_id": author.last_known_institution_id,
                     "last_known_institution_name": author.last_known_institution_name,
+                    "primary_education_id": author.primary_education_id,
+                    "primary_education_name": author.primary_education_name,
+                    "primary_company_id": author.primary_company_id,
+                    "primary_company_name": author.primary_company_name,
                     "fetch_task_id": author.fetch_task_id,
                     "fetched_at": datetime.utcnow(),
                 }
@@ -250,6 +303,10 @@ class RawAuthorRepository:
                 "i10_index": stmt.excluded.i10_index,
                 "last_known_institution_id": stmt.excluded.last_known_institution_id,
                 "last_known_institution_name": stmt.excluded.last_known_institution_name,
+                "primary_education_id": stmt.excluded.primary_education_id,
+                "primary_education_name": stmt.excluded.primary_education_name,
+                "primary_company_id": stmt.excluded.primary_company_id,
+                "primary_company_name": stmt.excluded.primary_company_name,
                 "fetch_task_id": stmt.excluded.fetch_task_id,
                 "fetched_at": stmt.excluded.fetched_at,
             },
@@ -460,6 +517,47 @@ class RawInstitutionRepository:
             .where(RawInstitution.raw_institution_id == inst_id)
             .values(**values)
         )
+
+    async def batch_upsert(self, institutions: list[RawInstitution]) -> int:
+        """Batch create or update institutions using PostgreSQL INSERT ON CONFLICT.
+
+        This eliminates N+1 queries from individual upserts.
+        """
+        if not institutions:
+            return 0
+
+        values = []
+        for inst in institutions:
+            values.append(
+                {
+                    "openalex_institution_id": inst.openalex_institution_id,
+                    "raw_json": inst.raw_json,
+                    "display_name": inst.display_name,
+                    "country_code": inst.country_code,
+                    "country_name": inst.country_name,
+                    "ror": inst.ror,
+                    "type": inst.type,
+                    "fetch_task_id": inst.fetch_task_id,
+                    "fetched_at": inst.fetched_at,
+                }
+            )
+
+        stmt = pg_insert(RawInstitution).values(values)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["openalex_institution_id"],
+            set_={
+                "raw_json": stmt.excluded.raw_json,
+                "display_name": stmt.excluded.display_name,
+                "country_code": stmt.excluded.country_code,
+                "country_name": stmt.excluded.country_name,
+                "ror": stmt.excluded.ror,
+                "type": stmt.excluded.type,
+                "fetch_task_id": stmt.excluded.fetch_task_id,
+                "fetched_at": stmt.excluded.fetched_at,
+            },
+        )
+        await self.session.execute(stmt)
+        return len(institutions)
 
 
 class AuthorTechBelongRepository:
