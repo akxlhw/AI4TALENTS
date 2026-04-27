@@ -45,55 +45,24 @@ const LoginPage: React.FC = () => {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        background: 'linear-gradient(160deg, #F7FAFC 0%, #EEF4FA 40%, #DBEAFA 100%)',
+        backgroundImage: 'url(/login_background.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* Decorative background pattern */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(30,58,95,0.06) 1px, transparent 0)`,
-          backgroundSize: '32px 32px',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          top: '-10%',
-          right: '-5%',
-          width: 500,
-          height: 500,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(74,144,164,0.12) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '-15%',
-          left: '-10%',
-          width: 600,
-          height: 600,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(30,58,95,0.08) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
-
       <Card
         style={{
           width: 420,
-          boxShadow: 'var(--shadow-xl)',
-          borderRadius: 16,
-          border: '1px solid var(--border-secondary)',
-          background: '#FFFFFF',
+          borderRadius: 20,
+          border: '1px solid rgba(255,255,255,0.6)',
+          background: 'rgba(255,255,255,0.88)',
+          backdropFilter: 'blur(20px) saturate(130%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(130%)',
+          boxShadow: '0 12px 48px rgba(30,58,95,0.08), 0 2px 8px rgba(30,58,95,0.04), inset 0 1px 0 rgba(255,255,255,0.8)',
         }}
-        bodyStyle={{ padding: '40px 32px' }}
+        bodyStyle={{ padding: '44px 36px' }}
       >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           {/* Logo and Title */}
