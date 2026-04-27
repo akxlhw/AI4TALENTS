@@ -19,7 +19,6 @@ import {
   GlobalOutlined,
   TeamOutlined,
   UserOutlined,
-  ArrowLeftOutlined,
   TrophyOutlined,
 } from '@ant-design/icons'
 import { api } from '../services/api'
@@ -206,12 +205,7 @@ const SchoolDetailPage: React.FC = () => {
   ]
 
   return (
-    <div>
-      {/* 返回按钮 */}
-      <Button type="link" onClick={() => navigate(-1)} style={{ paddingLeft: 0, marginBottom: 16 }}>
-        <ArrowLeftOutlined /> 返回
-      </Button>
-
+    <div style={{ padding: '88px 32px 80px' }}>
       {/* 学校基本信息 */}
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={24}>

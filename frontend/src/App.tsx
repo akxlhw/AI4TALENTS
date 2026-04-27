@@ -13,6 +13,9 @@ import TechDomainPage from './pages/TechDomainPage'
 import CountrySchoolPage from './pages/CountrySchoolPage'
 import SystemConfigPage from './pages/SystemConfigPage'
 import DataVersionPage from './pages/DataVersionPage'
+import OpenSourceDemoPage from './pages/OpenSourceDemoPage'
+import CompetitionDemoPage from './pages/CompetitionDemoPage'
+import IndustryDemoPage from './pages/IndustryDemoPage'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FavoritesProvider } from './contexts/FavoritesContext'
 
@@ -103,6 +106,9 @@ function AppRoutes() {
         <Route path="search" element={<Navigate to="/search-recommend" replace />} />
         <Route path="jd-match" element={<Navigate to="/search-recommend?tab=recommend&mode=jd-match" replace />} />
         <Route path="recommend" element={<Navigate to="/search-recommend?tab=recommend&mode=similar" replace />} />
+        <Route path="demo-opensource" element={<OpenSourceDemoPage />} />
+        <Route path="demo-competition" element={<CompetitionDemoPage />} />
+        <Route path="demo-industry" element={<IndustryDemoPage />} />
         <Route path="talents/:id" element={<TalentDetailPage />} />
         <Route path="schools/:id" element={<SchoolDetailPage />} />
         <Route path="favorites" element={<FavoritesPage />} />

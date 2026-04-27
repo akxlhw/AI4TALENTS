@@ -221,7 +221,7 @@ const TechDomainPage: React.FC = () => {
   ]
 
   return (
-    <div style={{ padding: 0 }}>
+    <div style={{ padding: '88px 32px 80px' }}>
       {/* 页面标题 */}
       <div style={{ marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>技术领域</Title>

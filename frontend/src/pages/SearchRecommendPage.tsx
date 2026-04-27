@@ -718,7 +718,7 @@ const SearchRecommendPage: React.FC = () => {
       key: 'rank',
       width: 60,
       render: (_: unknown, __: RecommendResultItem, index: number) => (
-        <Badge count={index + 1} style={{ backgroundColor: index < 3 ? '#faad14' : '#d9d9d9', color: '#fff' }} />
+        <Badge count={index + 1} style={{ backgroundColor: index < 3 ? 'var(--domain-secondary)' : '#d9d9d9', color: '#fff' }} />
       ),
     },
     {
@@ -792,9 +792,9 @@ const SearchRecommendPage: React.FC = () => {
 
   // ========== Render ==========
   return (
-    <div>
-      <Title level={3}>
-        <SearchOutlined style={{ marginRight: 8 }} />
+    <div style={{ padding: '88px 32px 80px' }}>
+      <Title level={3} style={{ marginBottom: 20, fontWeight: 700 }}>
+        <SearchOutlined style={{ marginRight: 8, color: 'var(--domain-primary)' }} />
         搜索推荐
       </Title>
 
@@ -839,7 +839,7 @@ const SearchRecommendPage: React.FC = () => {
                     message={
                       <Space split={<span style={{ color: '#d9d9d9' }}>|</span>}>
                         <Space>
-                          <ThunderboltOutlined style={{ color: '#1890ff' }} />
+                          <ThunderboltOutlined style={{ color: 'var(--domain-primary)' }} />
                           <span>
                             智能搜索已启用：
                             {searchModeUsed === 'hybrid' && '混合搜索（关键词 + 语义向量）'}
@@ -857,7 +857,7 @@ const SearchRecommendPage: React.FC = () => {
                               </span>
                             )}
                             {semanticMatchCount > 0 && (
-                              <span style={{ color: '#722ed1' }}>
+                              <span style={{ color: 'var(--domain-secondary)' }}>
                                 语义匹配 {semanticMatchCount} 人
                               </span>
                             )}

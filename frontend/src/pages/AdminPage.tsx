@@ -282,7 +282,7 @@ const AdminPage: React.FC = () => {
   ]
 
   return (
-    <div>
+    <div style={{ padding: '88px 32px 80px' }}>
       <Card
         title={
           <Space>

@@ -431,7 +431,7 @@ const FavoritesPage: React.FC = () => {
   ]
 
   return (
-    <div>
+    <div style={{ padding: '88px 32px 80px' }}>
       <Title level={3}>
         <StarFilled style={{ marginRight: 8, color: '#faad14' }} />
         我的收藏

@@ -310,7 +310,7 @@ const CountrySchoolPage: React.FC = () => {
   }, [schools, otherRegionCountryCodes])
 
   return (
-    <div style={{ padding: 0 }}>
+    <div style={{ padding: '88px 32px 80px' }}>
       {/* 页面标题 */}
       <div style={{ marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>院校机构</Title>

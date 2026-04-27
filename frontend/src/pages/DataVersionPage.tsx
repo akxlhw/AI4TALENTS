@@ -340,7 +340,7 @@ const DataVersionPage: React.FC = () => {
   ]
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: '88px 32px 80px' }}>
       <Title level={4}>数据版本管理</Title>
 
       {/* Active Version & Quality Overview */}

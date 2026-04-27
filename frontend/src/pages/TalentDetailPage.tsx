@@ -195,7 +195,7 @@ const TalentDetailPage: React.FC = () => {
   const completeness = talent.data_completeness ?? calculateCompleteness(talent)
 
   return (
-    <div>
+    <div style={{ padding: '88px 32px 80px' }}>
       {/* 返回按钮 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <Button type="link" onClick={() => navigate(-1)} style={{ paddingLeft: 0 }}>

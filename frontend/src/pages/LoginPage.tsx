@@ -45,20 +45,42 @@ const LoginPage: React.FC = () => {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+        background: 'linear-gradient(160deg, #F7FAFC 0%, #EEF4FA 40%, #DBEAFA 100%)',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* Decorative elements */}
+      {/* Decorative background pattern */}
       <div
         style={{
           position: 'absolute',
-          top: '-50%',
-          left: '-50%',
-          width: '200%',
-          height: '200%',
-          background: 'radial-gradient(circle at 30% 70%, rgba(102, 126, 234, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(118, 75, 162, 0.1) 0%, transparent 50%)',
+          inset: 0,
+          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(30,58,95,0.06) 1px, transparent 0)`,
+          backgroundSize: '32px 32px',
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          top: '-10%',
+          right: '-5%',
+          width: 500,
+          height: 500,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(74,144,164,0.12) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '-15%',
+          left: '-10%',
+          width: 600,
+          height: 600,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(30,58,95,0.08) 0%, transparent 70%)',
           pointerEvents: 'none',
         }}
       />
@@ -66,10 +88,10 @@ const LoginPage: React.FC = () => {
       <Card
         style={{
           width: 420,
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+          boxShadow: 'var(--shadow-xl)',
           borderRadius: 16,
-          background: 'rgba(255, 255, 255, 0.98)',
-          backdropFilter: 'blur(20px)',
+          border: '1px solid var(--border-secondary)',
+          background: '#FFFFFF',
         }}
         bodyStyle={{ padding: '40px 32px' }}
       >
@@ -89,7 +111,7 @@ const LoginPage: React.FC = () => {
                 style={{
                   fontSize: 28,
                   fontWeight: 800,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: 'var(--domain-gradient)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
@@ -134,9 +156,9 @@ const LoginPage: React.FC = () => {
               rules={[{ required: true, message: '请输入用户名' }]}
             >
               <Input
-                prefix={<UserOutlined style={{ color: '#999' }} />}
+                prefix={<UserOutlined style={{ color: 'var(--text-tertiary)' }} />}
                 placeholder="用户名或邮箱"
-                style={{ borderRadius: 8 }}
+                style={{ borderRadius: 10, height: 44 }}
                 autoComplete="username"
               />
             </Form.Item>
@@ -146,9 +168,9 @@ const LoginPage: React.FC = () => {
               rules={[{ required: true, message: '请输入密码' }]}
             >
               <Input.Password
-                prefix={<LockOutlined style={{ color: '#999' }} />}
+                prefix={<LockOutlined style={{ color: 'var(--text-tertiary)' }} />}
                 placeholder="密码"
-                style={{ borderRadius: 8 }}
+                style={{ borderRadius: 10, height: 44 }}
                 autoComplete="new-password"
               />
             </Form.Item>
@@ -164,9 +186,9 @@ const LoginPage: React.FC = () => {
                   borderRadius: 8,
                   fontWeight: 600,
                   fontSize: 16,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: 'var(--domain-gradient)',
                   border: 'none',
-                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                  boxShadow: '0 4px 15px rgba(30,58,95,0.25)',
                 }}
               >
                 登 录

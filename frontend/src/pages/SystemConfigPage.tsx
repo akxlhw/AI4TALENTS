@@ -746,7 +746,7 @@ const SystemConfigPage: React.FC = () => {
 
   // ========== Render ==========
   return (
-    <div style={{ padding: 0 }}>
+    <div style={{ padding: '88px 32px 80px' }}>
       <Title level={4}>系统配置</Title>
 
       <Tabs

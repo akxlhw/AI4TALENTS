@@ -82,7 +82,7 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
+    <div style={{ padding: '88px 32px 80px', maxWidth: 800, margin: '0 auto' }}>
       <Title level={3}>
         <UserOutlined style={{ marginRight: 8 }} />
         个人信息

@@ -1,73 +1,54 @@
+import { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Layout, Menu, Dropdown, Avatar, Space, Typography, Tag } from 'antd'
+import { Dropdown, Avatar, Space, Typography, Tag, Tooltip, Button } from 'antd'
 import {
-  HomeOutlined,
-  SearchOutlined,
-  SettingOutlined,
   UserOutlined,
   LogoutOutlined,
-  StarOutlined,
-  AppstoreOutlined,
-  GlobalOutlined,
-  ThunderboltOutlined,
+  SettingOutlined,
   DatabaseOutlined,
+  HomeOutlined,
+  BookOutlined,
+  CodeOutlined,
+  TrophyOutlined,
+  BuildOutlined,
+  LockOutlined,
+  ExperimentOutlined,
+  DownOutlined,
+  UpOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
+import { useDomainStore } from '../stores/domainStore'
+import { domainThemes, type Domain } from '../theme'
 
-const { Header, Content, Sider } = Layout
 const { Text } = Typography
+
+interface DomainNavItem {
+  key: Domain
+  icon: React.ReactNode
+  soon?: boolean
+}
+
+const domainNavItems: DomainNavItem[] = [
+  { key: 'academic', icon: <BookOutlined /> },
+  { key: 'opensource', icon: <CodeOutlined />, soon: true },
+  { key: 'competition', icon: <TrophyOutlined />, soon: true },
+  { key: 'industry', icon: <BuildOutlined />, soon: true },
+]
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout, isAdmin } = useAuth()
+  const isHome = location.pathname === '/'
+  const { currentDomain, setDomain, isDomainAvailable } = useDomainStore()
+  const [scrolled, setScrolled] = useState(false)
+  const [dockOpen, setDockOpen] = useState(false)
 
-  const menuItems = [
-    {
-      key: '/',
-      icon: <HomeOutlined />,
-      label: '首页',
-    },
-    {
-      key: '/tech-domain',
-      icon: <AppstoreOutlined />,
-      label: '技术领域',
-    },
-    {
-      key: '/country-school',
-      icon: <GlobalOutlined />,
-      label: '院校机构',
-    },
-    {
-      key: '/search-recommend',
-      icon: <SearchOutlined />,
-      label: '搜索推荐',
-    },
-    {
-      key: '/favorites',
-      icon: <StarOutlined />,
-      label: '我的收藏',
-    },
-    ...(isAdmin ? [{
-      key: '/admin',
-      icon: <SettingOutlined />,
-      label: '权限管理',
-    }] : []),
-    ...(isAdmin ? [{
-      key: '/system-config',
-      icon: <ThunderboltOutlined />,
-      label: '系统配置',
-    }] : []),
-    ...(isAdmin ? [{
-      key: '/data-version',
-      icon: <DatabaseOutlined />,
-      label: '数据版本',
-    }] : []),
-  ]
-
-  const handleMenuClick = (key: string) => {
-    navigate(key)
-  }
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const handleLogout = async () => {
     await logout()
@@ -75,26 +56,21 @@ const MainLayout: React.FC = () => {
   }
 
   const userMenuItems = [
-    {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: '个人信息',
-    },
+    { key: 'profile', icon: <UserOutlined />, label: '个人信息' },
+    ...(isAdmin ? [
+      { type: 'divider' as const },
+      { key: 'system-config', icon: <SettingOutlined />, label: '系统配置' },
+      { key: 'data-version', icon: <DatabaseOutlined />, label: '数据管理' },
+    ] : []),
     { type: 'divider' as const },
-    {
-      key: 'logout',
-      icon: <LogoutOutlined />,
-      label: '退出登录',
-      danger: true,
-    },
+    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', danger: true },
   ]
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
-    if (key === 'logout') {
-      handleLogout()
-    } else if (key === 'profile') {
-      navigate('/profile')
-    }
+    if (key === 'logout') handleLogout()
+    else if (key === 'profile') navigate('/profile')
+    else if (key === 'system-config') navigate('/system-config')
+    else if (key === 'data-version') navigate('/data-version')
   }
 
   const roleColorMap: Record<string, string> = {
@@ -102,87 +78,219 @@ const MainLayout: React.FC = () => {
     admin: 'orange',
     user: 'blue',
   }
-
   const roleTextMap: Record<string, string> = {
     super_admin: '超级管理员',
     admin: '管理员',
     user: '普通用户',
   }
 
-  // 高亮当前选中的菜单项
-  const selectedKey = location.pathname === '/' ? '/' : '/' + location.pathname.split('/')[1]
+  const handleDomainSwitch = (domain: Domain) => {
+    if (isDomainAvailable(domain)) {
+      setDomain(domain)
+      navigate('/')
+    } else {
+      navigate(`/demo-${domain}`)
+    }
+  }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header
+    <div style={{ minHeight: '100vh', position: 'relative', paddingBottom: 80 }}>
+      {/* ========== Top Nav — Transparent → Frosted on scroll ========== */}
+      <nav
         style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 100,
+          height: 64,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: '#001529',
-          padding: '0 24px',
+          padding: '0 32px',
+          transition: 'all 0.3s ease',
+          background: scrolled ? 'rgba(255,255,255,0.92)' : 'transparent',
+          backdropFilter: scrolled ? 'blur(12px)' : 'none',
+          borderBottom: scrolled ? '1px solid var(--border-secondary)' : '1px solid transparent',
+          boxShadow: scrolled ? 'var(--shadow-sm)' : 'none',
         }}
       >
-        <div
-          style={{
-            color: 'white',
-            fontSize: '18px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-          }}
-          onClick={() => navigate('/')}
-        >
-          智能学术界人才库
-        </div>
+        {/* Logo + Home */}
+        <Space size={16}>
+          <Space
+            style={{ cursor: 'pointer' }}
+            onClick={() => navigate('/')}
+          >
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                background: 'var(--domain-gradient)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <ExperimentOutlined style={{ fontSize: 18, color: '#fff' }} />
+            </div>
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                letterSpacing: '-0.5px',
+              }}
+            >
+              AI4TALENT
+            </Text>
+          </Space>
 
+          {!isHome && (
+            <Button
+              type="text"
+              size="small"
+              icon={<HomeOutlined />}
+              onClick={() => navigate('/')}
+              style={{ fontSize: 13 }}
+            >
+              首页
+            </Button>
+          )}
+        </Space>
+
+        {/* User — pushed to right */}
         {user && (
           <Dropdown
-            menu={{
-              items: userMenuItems,
-              onClick: handleUserMenuClick,
-            }}
+            menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
             placement="bottomRight"
           >
-            <Space style={{ cursor: 'pointer', color: 'white' }}>
+            <Space style={{ cursor: 'pointer' }} size={8}>
               <Avatar
-                style={{ backgroundColor: '#1890ff' }}
+                style={{ background: 'var(--domain-gradient)', fontSize: 12 }}
                 icon={<UserOutlined />}
+                size="small"
               />
-              <Text style={{ color: 'white' }}>
+              <Text style={{ color: 'var(--text-primary)', fontSize: 13 }}>
                 {user.display_name || user.username}
               </Text>
-              <Tag color={roleColorMap[user.role] || 'default'} style={{ margin: 0 }}>
+              <Tag
+                color={roleColorMap[user.role] || 'default'}
+                style={{ margin: 0, fontSize: 10, padding: '0 5px', lineHeight: '16px' }}
+              >
                 {roleTextMap[user.role] || user.role}
               </Tag>
             </Space>
           </Dropdown>
         )}
-      </Header>
-      <Layout>
-        <Sider width={200} style={{ background: '#fff' }}>
-          <Menu
-            mode="inline"
-            selectedKeys={[selectedKey]}
-            items={menuItems}
-            style={{ height: '100%', borderRight: 0 }}
-            onClick={({ key }) => handleMenuClick(key)}
-          />
-        </Sider>
-        <Layout style={{ padding: '0 24px 24px' }}>
-          <Content
+      </nav>
+
+      {/* ========== Content Area — Full Width, No Sidebar ========== */}
+      <main className="discovery-content" style={{ paddingTop: 0 }}>
+        <Outlet />
+      </main>
+
+      {/* ========== Collapsible Bottom Dock ========== */}
+      <div className="dock-container" style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
+        {dockOpen ? (
+          <div
             style={{
-              padding: 24,
-              margin: 0,
-              minHeight: 280,
-              background: '#fff',
-              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 12px',
+              background: 'rgba(255,255,255,0.95)',
+              backdropFilter: 'blur(12px)',
+              borderRadius: 20,
+              border: '1px solid var(--border-secondary)',
+              boxShadow: 'var(--shadow-lg)',
+              animation: 'dock-pop 0.2s ease-out',
             }}
           >
-            <Outlet />
-          </Content>
-        </Layout>
-      </Layout>
-    </Layout>
+            <button
+              onClick={() => setDockOpen(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 32,
+                borderRadius: 12,
+                border: 'none',
+                cursor: 'pointer',
+                background: 'var(--bg-layout)',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <UpOutlined style={{ fontSize: 12 }} />
+            </button>
+            {domainNavItems.map((d) => {
+              const theme = domainThemes[d.key]
+              const isActive = currentDomain === d.key
+              return (
+                <Tooltip
+                  key={d.key}
+                  title={d.soon ? `${theme.label}（即将上线）` : theme.label}
+                  placement="top"
+                >
+                  <button
+                    onClick={() => handleDomainSwitch(d.key)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: isActive ? '8px 16px' : '8px 12px',
+                      borderRadius: 16,
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      fontWeight: isActive ? 600 : 400,
+                      color: isActive ? '#fff' : 'var(--text-secondary)',
+                      background: isActive ? theme.primary : 'transparent',
+                      boxShadow: isActive ? `0 4px 12px ${theme.primary}44` : 'none',
+                      transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    }}
+                  >
+                    <span style={{ fontSize: 16 }}>{d.icon}</span>
+                    {isActive && <span>{theme.shortLabel}</span>}
+                    {d.soon && !isActive && (
+                      <LockOutlined style={{ fontSize: 10, opacity: 0.4 }} />
+                    )}
+                  </button>
+                </Tooltip>
+              )
+            })}
+          </div>
+        ) : (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setDockOpen(true)
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '10px 18px',
+              borderRadius: 20,
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 13,
+              color: '#fff',
+              background: domainThemes[currentDomain].primary,
+              boxShadow: `0 4px 14px ${domainThemes[currentDomain].primary}55`,
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)' }}
+          >
+            <span style={{ fontSize: 16 }}>{domainNavItems.find((d) => d.key === currentDomain)?.icon}</span>
+            <span>{domainThemes[currentDomain].shortLabel}</span>
+            <DownOutlined style={{ fontSize: 11, opacity: 0.7 }} />
+          </button>
+        )}
+      </div>
+    </div>
   )
 }
 
