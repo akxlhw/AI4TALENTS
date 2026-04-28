@@ -275,16 +275,19 @@ class EmbeddingService:
                 logger.info(f"Batch {batch_num}: Received {len(results)} embedding results")
 
                 # 验证结果数量
-                if len(results) != len(texts):
+                result_count = len(results)
+                if result_count != len(texts):
                     logger.error(
                         f"Batch {batch_num}: Result count mismatch! "
-                        f"Expected {len(texts)}, got {len(results)}"
+                        f"Expected {len(texts)}, got {result_count}"
                     )
-                    stats["failed"] += len(texts) - len(results)
+                    failed_count = len(texts) - result_count
+                    stats["failed"] += failed_count
+                    stats["failed_ids"].extend(valid_talent_ids[result_count:])
 
-                # 批量存储结果
+                # 批量存储结果（只存成功返回的部分）
                 items_to_store = []
-                for tid, text, result in zip(valid_talent_ids, texts, results, strict=False):
+                for tid, text, result in zip(valid_talent_ids[:result_count], texts[:result_count], results, strict=False):
                     source_hash = self.calculate_source_hash(text)
                     items_to_store.append(
                         {

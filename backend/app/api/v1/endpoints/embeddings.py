@@ -303,8 +303,11 @@ async def _run_embedding_generation(force: bool, batch_size: int, vector_types: 
             # Process in batches with multiple vector types
             processed = 0
             failed = 0
-            # MiniMax 有速率限制，使用较小的批次
-            actual_batch_size = min(batch_size, 10)
+            # 按 provider 动态调整 batch_size
+            if llm_gateway.embedding_api_format == "minimax":
+                actual_batch_size = min(batch_size, 16)   # MiniMax 内部再分 16
+            else:
+                actual_batch_size = min(batch_size, 200)  # OpenAI 支持 2048，200 是安全值
 
             for i in range(0, len(talent_ids), actual_batch_size):
                 if _embedding_progress["status"] == "cancelled":

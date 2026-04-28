@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import asyncio
 import time
 from typing import Any
 
@@ -345,7 +346,6 @@ class LLMGateway(LLMGatewayProtocol):
             raise LLMError(error_type=LLMErrorType.API_ERROR, message=str(e)) from e
 
     @with_retry(max_retries=3)
-    @with_timeout(timeout_seconds=120.0)
     async def generate_embedding_batch(self, texts: list[str]) -> list[EmbeddingResult]:
         """
         批量生成嵌入向量
@@ -367,21 +367,30 @@ class LLMGateway(LLMGatewayProtocol):
                 LLMErrorType.CONFIG_ERROR, "嵌入模型未配置。请配置嵌入 API Key 和 API 地址。"
             )
 
+        # 动态超时：每条 2 秒，最少 30 秒
+        timeout_seconds = max(30.0, len(texts) * 2.0)
+
         try:
             start_time = time.time()
 
             logger.info(
-                f"Calling embedding API: model={self.embedding_model}, texts_count={len(texts)}, api_format={self.embedding_api_format}"
+                f"Calling embedding API: model={self.embedding_model}, texts_count={len(texts)}, api_format={self.embedding_api_format}, timeout={timeout_seconds}s"
             )
 
             # MiniMax 使用不同的 API 格式
             if self.embedding_api_format == "minimax":
                 logger.info("Using MiniMax-specific embedding API")
-                return await self._generate_embedding_batch_minimax(texts)
+                return await asyncio.wait_for(
+                    self._generate_embedding_batch_minimax(texts),
+                    timeout=timeout_seconds,
+                )
 
-            response = await self.embedding_client.embeddings.create(
-                model=self.embedding_model,
-                input=texts,
+            response = await asyncio.wait_for(
+                self.embedding_client.embeddings.create(
+                    model=self.embedding_model,
+                    input=texts,
+                ),
+                timeout=timeout_seconds,
             )
 
             elapsed = time.time() - start_time
@@ -409,6 +418,12 @@ class LLMGateway(LLMGatewayProtocol):
                 )
 
             return results
+
+        except TimeoutError:
+            raise LLMError(
+                error_type=LLMErrorType.TIMEOUT,
+                message=f"LLM API 超时 ({timeout_seconds}s)",
+            ) from None
 
         except RateLimitError as e:
             logger.warning(f"Rate limit hit during batch embedding: {e}")
