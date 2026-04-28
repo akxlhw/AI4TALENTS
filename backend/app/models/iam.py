@@ -33,8 +33,12 @@ class UserAccount(Base, TimestampMixin):
     role_type = Column(String(20), default=UserRoleType.USER.value, nullable=False)
 
     # Status
+    # Valid statuses: active, inactive, pending_approval, rejected
     is_active = Column(Boolean, default=True, nullable=False)
     status = Column(String(20), default="active", nullable=False)
+
+    # Enterprise identity
+    employee_id = Column(String(20), unique=True, nullable=True, index=True)
 
     # Profile
     display_name = Column(String(100), nullable=True)

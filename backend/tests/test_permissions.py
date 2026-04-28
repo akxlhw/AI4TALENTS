@@ -430,6 +430,112 @@ class TestUserDeactivation:
         assert response.status_code == 400
 
 
+class TestUserApproval:
+    """Tests for user registration approval workflow."""
+
+    @pytest.fixture
+    async def pending_user(self, test_session):
+        """Create a pending approval user."""
+        from app.core.auth import hash_password
+
+        user = UserAccount(
+            username="pendingapproval",
+            email="pendingapproval@example.com",
+            password_hash=hash_password("password123"),
+            role_type=UserRoleType.USER.value,
+            is_active=False,
+            status="pending_approval",
+            employee_id="h00555555",
+        )
+        test_session.add(user)
+        await test_session.commit()
+        return user
+
+    @pytest.mark.asyncio
+    async def test_admin_can_approve_user(
+        self, client: AsyncClient, admin_token, pending_user
+    ):
+        """Test that admin can approve a pending user."""
+        response = await client.post(
+            f"/api/v1/users/{pending_user.user_id}/approve",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "active"
+        assert data["is_active"] is True
+
+    @pytest.mark.asyncio
+    async def test_admin_can_reject_user(
+        self, client: AsyncClient, admin_token, pending_user
+    ):
+        """Test that admin can reject a pending user."""
+        response = await client.post(
+            f"/api/v1/users/{pending_user.user_id}/reject",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "rejected"
+        assert data["is_active"] is False
+
+    @pytest.mark.asyncio
+    async def test_approve_non_pending_user_returns_404(
+        self, client: AsyncClient, admin_token, test_normal_user
+    ):
+        """Test approving a non-pending user returns 404."""
+        response = await client.post(
+            f"/api/v1/users/{test_normal_user.user_id}/approve",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_list_pending_users(self, client: AsyncClient, admin_token, pending_user):
+        """Test listing pending approval users."""
+        response = await client.get(
+            "/api/v1/users/pending",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert any(u["user_id"] == pending_user.user_id for u in data["items"])
+
+    @pytest.mark.asyncio
+    async def test_filter_users_by_status(self, client: AsyncClient, admin_token, pending_user):
+        """Test filtering users by status."""
+        response = await client.get(
+            "/api/v1/users?status=pending_approval",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert all(u["status"] == "pending_approval" for u in data["items"])
+
+    @pytest.mark.asyncio
+    async def test_approved_user_can_login(self, client: AsyncClient, admin_token, pending_user):
+        """Test that approved user can login."""
+        # Approve first
+        await client.post(
+            f"/api/v1/users/{pending_user.user_id}/approve",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+        # Try login
+        response = await client.post(
+            "/api/v1/auth/login",
+            json={"username": "pendingapproval", "password": "password123"},
+        )
+
+        assert response.status_code == 200
+        assert "access_token" in response.json()
+
+
 class TestScopeRepository:
     """Tests for UserScopeRepository methods."""
 

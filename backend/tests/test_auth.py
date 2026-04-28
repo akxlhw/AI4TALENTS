@@ -52,6 +52,41 @@ async def inactive_user(test_session):
         password_hash=hash_password("password123"),
         role_type=UserRoleType.USER.value,
         is_active=False,
+        status="inactive",
+    )
+    test_session.add(user)
+    await test_session.commit()
+    return user
+
+
+@pytest.fixture
+async def pending_user(test_session):
+    """Create a pending approval user for testing."""
+    user = UserAccount(
+        username="pendinguser",
+        email="pending@example.com",
+        password_hash=hash_password("password123"),
+        role_type=UserRoleType.USER.value,
+        is_active=False,
+        status="pending_approval",
+        employee_id="h00123456",
+    )
+    test_session.add(user)
+    await test_session.commit()
+    return user
+
+
+@pytest.fixture
+async def rejected_user(test_session):
+    """Create a rejected user for testing."""
+    user = UserAccount(
+        username="rejecteduser",
+        email="rejected@example.com",
+        password_hash=hash_password("password123"),
+        role_type=UserRoleType.USER.value,
+        is_active=False,
+        status="rejected",
+        employee_id="h00987654",
     )
     test_session.add(user)
     await test_session.commit()
@@ -128,6 +163,126 @@ class TestLogin:
         response = await client.post(
             "/api/v1/auth/login",
             json={"username": "", "password": ""},
+        )
+
+        assert response.status_code == 422  # Validation error
+
+    @pytest.mark.asyncio
+    async def test_login_pending_approval_user(self, client: AsyncClient, pending_user):
+        """Test login with pending approval user."""
+        response = await client.post(
+            "/api/v1/auth/login",
+            json={"username": "pendinguser", "password": "password123"},
+        )
+
+        assert response.status_code == 401
+        assert "待审核" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_login_rejected_user(self, client: AsyncClient, rejected_user):
+        """Test login with rejected user."""
+        response = await client.post(
+            "/api/v1/auth/login",
+            json={"username": "rejecteduser", "password": "password123"},
+        )
+
+        assert response.status_code == 401
+        assert "拒绝" in response.json()["detail"]
+
+
+class TestRegistration:
+    """Tests for /auth/register endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_register_success(self, client: AsyncClient):
+        """Test successful user registration."""
+        response = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "newregister",
+                "email": "newregister@example.com",
+                "password": "password123",
+                "employee_id": "h00111111",
+            },
+        )
+
+        assert response.status_code == 200
+        assert "等待管理员审核" in response.json()["message"]
+
+    @pytest.mark.asyncio
+    async def test_register_duplicate_username(self, client: AsyncClient, test_user):
+        """Test registration with duplicate username."""
+        response = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "testuser",
+                "email": "unique@example.com",
+                "password": "password123",
+                "employee_id": "h00222222",
+            },
+        )
+
+        assert response.status_code == 400
+        assert "用户名已存在" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_register_duplicate_email(self, client: AsyncClient, test_user):
+        """Test registration with duplicate email."""
+        response = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "uniqueuser",
+                "email": "test@example.com",
+                "password": "password123",
+                "employee_id": "h00333333",
+            },
+        )
+
+        assert response.status_code == 400
+        assert "邮箱已存在" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_register_duplicate_employee_id(self, client: AsyncClient, pending_user):
+        """Test registration with duplicate employee_id."""
+        response = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "uniqueuser2",
+                "email": "unique2@example.com",
+                "password": "password123",
+                "employee_id": "h00123456",
+            },
+        )
+
+        assert response.status_code == 400
+        assert "工号已注册" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_register_invalid_employee_id_format(self, client: AsyncClient):
+        """Test registration with invalid employee_id format."""
+        response = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "badiduser",
+                "email": "badid@example.com",
+                "password": "password123",
+                "employee_id": "123456789",  # missing letter prefix
+            },
+        )
+
+        assert response.status_code == 422  # Validation error
+
+    @pytest.mark.asyncio
+    async def test_register_short_employee_id(self, client: AsyncClient):
+        """Test registration with too short employee_id."""
+        response = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "shortiduser",
+                "email": "shortid@example.com",
+                "password": "password123",
+                "employee_id": "h1234567",  # 7 digits instead of 8
+            },
         )
 
         assert response.status_code == 422  # Validation error

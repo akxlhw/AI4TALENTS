@@ -32,7 +32,15 @@ const LoginPage: React.FC = () => {
     } catch (err) {
       const axiosError = err as { response?: { data?: { detail?: string } } }
       const detail = axiosError.response?.data?.detail || '登录失败，请检查用户名和密码'
-      message.error(detail)
+      // Map backend status messages to user-friendly Chinese
+      const friendlyMsg = detail.includes('待审核')
+        ? '账户待审核，请联系管理员'
+        : detail.includes('拒绝')
+        ? '注册申请已被拒绝'
+        : detail.includes('禁用')
+        ? '账户已被禁用'
+        : detail
+      message.error(friendlyMsg)
     } finally {
       setLoading(false)
     }
@@ -62,8 +70,28 @@ const LoginPage: React.FC = () => {
           WebkitBackdropFilter: 'blur(20px) saturate(130%)',
           boxShadow: '0 12px 48px rgba(30,58,95,0.08), 0 2px 8px rgba(30,58,95,0.04), inset 0 1px 0 rgba(255,255,255,0.8)',
         }}
-        bodyStyle={{ padding: '44px 36px' }}
+        bodyStyle={{ padding: '44px 36px', position: 'relative' }}
       >
+        {/* Register link — absolute top-right of card */}
+        <a
+          onClick={() => navigate('/register')}
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 20,
+            fontSize: 13,
+            color: '#888',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            transition: 'color 0.2s',
+            zIndex: 1,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#1a1a2e' }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
+        >
+          注册账号 →
+        </a>
+
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           {/* Logo and Title */}
           <div style={{ textAlign: 'center', marginBottom: 8 }}>
@@ -92,7 +120,7 @@ const LoginPage: React.FC = () => {
               </span>
               <span
                 style={{
-                  fontSize: 20,
+                  fontSize: 24,
                   fontWeight: 600,
                   color: '#1a1a2e',
                   letterSpacing: '2px',
@@ -165,7 +193,6 @@ const LoginPage: React.FC = () => {
             </Form.Item>
           </Form>
 
-          {/* Tagline */}
           <div style={{ textAlign: 'center' }}>
             <Text
               style={{
@@ -177,6 +204,8 @@ const LoginPage: React.FC = () => {
               数聚良才，智选慧才
             </Text>
           </div>
+
+
         </Space>
       </Card>
     </div>

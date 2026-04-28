@@ -6,15 +6,16 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.endpoints.auth import require_admin, require_user
+from app.api.v1.endpoints.auth import require_admin, require_super_admin, require_user
 from app.core.database import get_async_session
 from app.models.enums import UserRoleType
 from app.repositories.user_repository import UserRepository, UserScopeRepository
 from app.schemas.common import SuccessResponse
+from app.services.audit_service import AuditService
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
@@ -30,6 +31,8 @@ class UserResponse(BaseModel):
     display_name: str | None = None
     department: str | None = None
     is_active: bool
+    status: str
+    employee_id: str | None = None
     default_view: str = "tech_domain"
     last_login_at: datetime | None = None
 
@@ -51,6 +54,7 @@ class UserCreateRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=100)
     role: str = Field(default="user")
     display_name: str | None = None
+    employee_id: str | None = Field(default=None, pattern=r"^[a-zA-Z]\d{8}$")
 
 
 class UserUpdateRequest(BaseModel):
@@ -121,6 +125,7 @@ class ScopeListResponse(BaseModel):
 async def list_users(
     role: str | None = Query(None, description="按角色筛选"),
     is_active: bool | None = Query(None, description="按状态筛选"),
+    status: str | None = Query(None, description="按账户状态筛选"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
@@ -131,6 +136,7 @@ async def list_users(
     users, total = await repo.list_users(
         role=role,
         is_active=is_active,
+        status=status,
         page=page,
         page_size=page_size,
     )
@@ -144,6 +150,53 @@ async def list_users(
             display_name=u.display_name,
             department=u.department,
             is_active=u.is_active,
+            status=u.status,
+            employee_id=u.employee_id,
+            default_view=u.default_view,
+            last_login_at=u.last_login_at,
+        )
+        for u in users
+    ]
+
+    return UserListResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get(
+    "/pending",
+    response_model=UserListResponse,
+    summary="获取待审核用户列表",
+    description="获取状态为 pending_approval 的用户列表",
+)
+async def list_pending_users(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_admin),
+):
+    """List pending approval users (admin only)."""
+    repo = UserRepository(session)
+    users, total = await repo.list_users(
+        status="pending_approval",
+        page=page,
+        page_size=page_size,
+    )
+
+    items = [
+        UserResponse(
+            user_id=u.user_id,
+            username=u.username,
+            email=u.email,
+            role=u.role_type,
+            display_name=u.display_name,
+            department=u.department,
+            is_active=u.is_active,
+            status=u.status,
+            employee_id=u.employee_id,
             default_view=u.default_view,
             last_login_at=u.last_login_at,
         )
@@ -165,12 +218,16 @@ async def list_users(
     description="管理员创建新用户",
 )
 async def create_user(
+    request: Request,
     data: UserCreateRequest,
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_admin),
 ):
     """Create a new user (admin only)."""
     from app.core.auth import hash_password
+
+    client_ip = request.client.host if request.client else None
+    request_id = getattr(request.state, "request_id", None)
 
     # Validate role
     valid_roles = [UserRoleType.USER.value, UserRoleType.ADMIN.value]
@@ -195,7 +252,13 @@ async def create_user(
     if existing:
         raise HTTPException(status_code=400, detail="Email already exists")
 
-    # Create user
+    # Check employee_id uniqueness if provided
+    if data.employee_id:
+        existing = await repo.get_by_employee_id(data.employee_id)
+        if existing:
+            raise HTTPException(status_code=400, detail="Employee ID already exists")
+
+    # Create user (admin created users are active by default)
     password_hash = hash_password(data.password)
     user = await repo.create_user_and_commit(
         username=data.username,
@@ -203,6 +266,19 @@ async def create_user(
         password_hash=password_hash,
         role=data.role,
         display_name=data.display_name,
+        employee_id=data.employee_id,
+        is_active=True,
+        status="active",
+    )
+
+    await AuditService.log_user_event(
+        admin_id=current_user["user_id"],
+        operation="create",
+        target_user_id=user.user_id,
+        status="success",
+        user_ip=client_ip,
+        request_id=request_id,
+        detail={"employee_id": data.employee_id, "role": data.role},
     )
 
     return UserResponse(
@@ -213,6 +289,8 @@ async def create_user(
         display_name=user.display_name,
         department=user.department,
         is_active=user.is_active,
+        status=user.status,
+        employee_id=user.employee_id,
         default_view=user.default_view,
         last_login_at=user.last_login_at,
     )
@@ -251,6 +329,8 @@ async def get_user(
         display_name=user.display_name,
         department=user.department,
         is_active=user.is_active,
+        status=user.status,
+        employee_id=user.employee_id,
         default_view=user.default_view,
         last_login_at=user.last_login_at,
     )
@@ -263,6 +343,7 @@ async def get_user(
     description="更新用户信息",
 )
 async def update_user(
+    request: Request,
     user_id: int,
     data: UserUpdateRequest,
     session: AsyncSession = Depends(get_async_session),
@@ -271,6 +352,8 @@ async def update_user(
     """Update user (admin only)."""
     repo = UserRepository(session)
     user = await repo.get_by_id(user_id)
+    client_ip = request.client.host if request.client else None
+    request_id = getattr(request.state, "request_id", None)
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -289,6 +372,16 @@ async def update_user(
         is_active=data.is_active,
     )
 
+    await AuditService.log_user_event(
+        admin_id=current_user["user_id"],
+        operation="update",
+        target_user_id=user_id,
+        status="success",
+        user_ip=client_ip,
+        request_id=request_id,
+        detail={"updated_fields": [k for k, v in data.model_dump().items() if v is not None]},
+    )
+
     return UserResponse(
         user_id=user.user_id,
         username=user.username,
@@ -297,6 +390,8 @@ async def update_user(
         display_name=user.display_name,
         department=user.department,
         is_active=user.is_active,
+        status=user.status,
+        employee_id=user.employee_id,
         default_view=user.default_view,
         last_login_at=user.last_login_at,
     )
@@ -309,6 +404,7 @@ async def update_user(
     description="禁用用户账户",
 )
 async def deactivate_user(
+    request: Request,
     user_id: int,
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_admin),
@@ -318,13 +414,117 @@ async def deactivate_user(
     if current_user["user_id"] == user_id:
         raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
 
+    client_ip = request.client.host if request.client else None
+    request_id = getattr(request.state, "request_id", None)
+
     repo = UserRepository(session)
     success = await repo.deactivate_user_and_commit(user_id)
 
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
 
+    await AuditService.log_user_event(
+        admin_id=current_user["user_id"],
+        operation="deactivate",
+        target_user_id=user_id,
+        status="success",
+        user_ip=client_ip,
+        request_id=request_id,
+    )
+
     return SuccessResponse(message="User deactivated")
+
+
+@router.post(
+    "/{user_id}/approve",
+    response_model=UserResponse,
+    summary="审批通过用户注册",
+    description="将待审核用户状态设为 active",
+)
+async def approve_user(
+    request: Request,
+    user_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_super_admin),
+):
+    """Approve a pending user registration (admin only)."""
+    client_ip = request.client.host if request.client else None
+    request_id = getattr(request.state, "request_id", None)
+
+    repo = UserRepository(session)
+    user = await repo.approve_user_and_commit(user_id)
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found or not pending approval")
+
+    await AuditService.log_user_event(
+        admin_id=current_user["user_id"],
+        operation="approve",
+        target_user_id=user_id,
+        status="success",
+        user_ip=client_ip,
+        request_id=request_id,
+    )
+
+    return UserResponse(
+        user_id=user.user_id,
+        username=user.username,
+        email=user.email,
+        role=user.role_type,
+        display_name=user.display_name,
+        department=user.department,
+        is_active=user.is_active,
+        status=user.status,
+        employee_id=user.employee_id,
+        default_view=user.default_view,
+        last_login_at=user.last_login_at,
+    )
+
+
+@router.post(
+    "/{user_id}/reject",
+    response_model=UserResponse,
+    summary="拒绝用户注册",
+    description="将待审核用户状态设为 rejected",
+)
+async def reject_user(
+    request: Request,
+    user_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_super_admin),
+):
+    """Reject a pending user registration (admin only)."""
+    client_ip = request.client.host if request.client else None
+    request_id = getattr(request.state, "request_id", None)
+
+    repo = UserRepository(session)
+    user = await repo.reject_user_and_commit(user_id)
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found or not pending approval")
+
+    await AuditService.log_user_event(
+        admin_id=current_user["user_id"],
+        operation="reject",
+        target_user_id=user_id,
+        status="success",
+        user_ip=client_ip,
+        request_id=request_id,
+    )
+
+    return UserResponse(
+        user_id=user.user_id,
+        username=user.username,
+        email=user.email,
+        role=user.role_type,
+        display_name=user.display_name,
+        department=user.department,
+        is_active=user.is_active,
+        status=user.status,
+        employee_id=user.employee_id,
+        default_view=user.default_view,
+        last_login_at=user.last_login_at,
+    )
 
 
 # School Scopes
@@ -368,6 +568,7 @@ async def get_user_scopes(
     description="为用户添加学校访问权限",
 )
 async def add_user_scope(
+    request: Request,
     user_id: int,
     data: ScopeCreateRequest,
     session: AsyncSession = Depends(get_async_session),
@@ -380,6 +581,9 @@ async def add_user_scope(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    client_ip = request.client.host if request.client else None
+    request_id = getattr(request.state, "request_id", None)
+
     scope_repo = UserScopeRepository(session)
     scope = await scope_repo.add_scope_and_commit(
         user_id=user_id,
@@ -388,6 +592,17 @@ async def add_user_scope(
         granted_by=current_user["user_id"],
         expires_at=data.expires_at,
         notes=data.notes,
+    )
+
+    await AuditService.log_scope_event(
+        admin_id=current_user["user_id"],
+        operation="grant_scope",
+        target_user_id=user_id,
+        scope_type=data.scope_type,
+        status="success",
+        user_ip=client_ip,
+        request_id=request_id,
+        detail={"scope_value": data.scope_value},
     )
 
     return ScopeResponse(
@@ -410,17 +625,32 @@ async def add_user_scope(
     description="移除用户的学校访问权限",
 )
 async def remove_user_scope(
+    request: Request,
     user_id: int,
     scope_id: int,
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_admin),
 ):
     """Remove school scope from user (admin only)."""
+    client_ip = request.client.host if request.client else None
+    request_id = getattr(request.state, "request_id", None)
+
     scope_repo = UserScopeRepository(session)
     success = await scope_repo.remove_scope_and_commit(scope_id)
 
     if not success:
         raise HTTPException(status_code=404, detail="Scope not found")
+
+    await AuditService.log_scope_event(
+        admin_id=current_user["user_id"],
+        operation="revoke_scope",
+        target_user_id=user_id,
+        scope_type=None,
+        status="success",
+        user_ip=client_ip,
+        request_id=request_id,
+        detail={"scope_id": scope_id},
+    )
 
     return SuccessResponse(message="Scope removed")
 

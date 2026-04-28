@@ -60,8 +60,10 @@ const MainLayout: React.FC = () => {
     { key: 'profile', icon: <UserOutlined />, label: '个人信息' },
     ...(isAdmin ? [
       { type: 'divider' as const },
+      { key: 'admin', icon: <SettingOutlined />, label: '用户管理' },
       { key: 'system-config', icon: <SettingOutlined />, label: '系统配置' },
       { key: 'data-version', icon: <DatabaseOutlined />, label: '数据管理' },
+      { key: 'audit-logs', icon: <DatabaseOutlined />, label: '审计日志' },
     ] : []),
     { type: 'divider' as const },
     { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', danger: true },
@@ -70,8 +72,10 @@ const MainLayout: React.FC = () => {
   const handleUserMenuClick = ({ key }: { key: string }) => {
     if (key === 'logout') handleLogout()
     else if (key === 'profile') navigate('/profile')
+    else if (key === 'admin') navigate('/admin')
     else if (key === 'system-config') navigate('/system-config')
     else if (key === 'data-version') navigate('/data-version')
+    else if (key === 'audit-logs') navigate('/audit-logs')
   }
 
   const roleColorMap: Record<string, string> = {

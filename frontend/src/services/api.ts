@@ -143,6 +143,8 @@ export const api = {
     login: (username: string, password: string) =>
       apiClient.post('/auth/login', { username, password }),
     logout: () => apiClient.post('/auth/logout'),
+    register: (data: { username: string; email: string; password: string; employee_id: string; display_name?: string }) =>
+      apiClient.post('/auth/register', data),
     refresh: (refreshToken: string) =>
       apiClient.post('/auth/refresh', { refresh_token: refreshToken }),
     me: () => apiClient.get('/auth/me'),
@@ -207,7 +209,7 @@ export const api = {
   admin: {
     listUsers: (params?: { role?: string; is_active?: boolean; page?: number; page_size?: number }) =>
       apiClient.get('/users', { params }),
-    createUser: (data: { username: string; email: string; password: string; role?: string; display_name?: string }) =>
+    createUser: (data: { username: string; email: string; password: string; role?: string; display_name?: string; employee_id?: string }) =>
       apiClient.post('/users', data),
     getUser: (userId: number) =>
       apiClient.get(`/users/${userId}`),
@@ -215,12 +217,18 @@ export const api = {
       apiClient.put(`/users/${userId}`, data),
     deactivateUser: (userId: number) =>
       apiClient.delete(`/users/${userId}`),
+    approveUser: (userId: number) =>
+      apiClient.post(`/users/${userId}/approve`),
+    rejectUser: (userId: number) =>
+      apiClient.post(`/users/${userId}/reject`),
     getUserScopes: (userId: number) =>
       apiClient.get(`/users/${userId}/scopes`),
     addUserScope: (userId: number, data: { scope_type: string; scope_value: string; expires_at?: string; notes?: string }) =>
       apiClient.post(`/users/${userId}/scopes`, { user_id: userId, ...data }),
     removeUserScope: (userId: number, scopeId: number) =>
       apiClient.delete(`/users/${userId}/scopes/${scopeId}`),
+    listAuditLogs: (params?: { start_time?: string; end_time?: string; user_id?: number; event_type?: string; resource_type?: string; page?: number; page_size?: number }) =>
+      apiClient.get('/audit/logs', { params }),
     getMyAccessibleSchools: () =>
       apiClient.get('/users/me/scopes/schools'),
     checkSchoolAccess: (schoolId: number) =>

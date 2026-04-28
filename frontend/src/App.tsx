@@ -6,7 +6,9 @@ import SearchRecommendPage from './pages/SearchRecommendPage'
 import TalentDetailPage from './pages/TalentDetailPage'
 import SchoolDetailPage from './pages/SchoolDetailPage'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 import AdminPage from './pages/AdminPage'
+import AuditLogPage from './pages/AuditLogPage'
 import FavoritesPage from './pages/FavoritesPage'
 import ProfilePage from './pages/ProfilePage'
 import TechDomainPage from './pages/TechDomainPage'
@@ -92,6 +94,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/register"
+        element={
+          <PublicRoute>
+            <RegisterPage />
+          </PublicRoute>
+        }
+      />
+      <Route
         path="/"
         element={
           <ProtectedRoute>
@@ -140,6 +150,14 @@ function AppRoutes() {
           element={
             <AdminRoute>
               <DataVersionPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="audit-logs"
+          element={
+            <AdminRoute>
+              <AuditLogPage />
             </AdminRoute>
           }
         />

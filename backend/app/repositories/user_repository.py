@@ -64,6 +64,21 @@ class UserRepository:
         result = await self.session.execute(select(UserAccount).where(UserAccount.email == email))
         return result.scalar_one_or_none()
 
+    async def get_by_employee_id(self, employee_id: str) -> UserAccount | None:
+        """
+        Get user by employee ID.
+
+        Args:
+            employee_id: Employee ID (e.g., h00123456)
+
+        Returns:
+            UserAccount instance or None
+        """
+        result = await self.session.execute(
+            select(UserAccount).where(UserAccount.employee_id == employee_id)
+        )
+        return result.scalar_one_or_none()
+
     async def get_with_scopes(self, user_id: int) -> UserAccount | None:
         """
         Get user with school scopes loaded.
@@ -88,6 +103,9 @@ class UserRepository:
         password_hash: str,
         role: str = UserRoleType.USER.value,
         display_name: str | None = None,
+        employee_id: str | None = None,
+        is_active: bool = True,
+        status: str = "active",
     ) -> UserAccount:
         """
         Create a new user.
@@ -98,6 +116,9 @@ class UserRepository:
             password_hash: Hashed password
             role: User role
             display_name: Display name
+            employee_id: Employee ID (e.g., h00123456)
+            is_active: Whether the account is active
+            status: Account status
 
         Returns:
             Created UserAccount instance
@@ -108,8 +129,9 @@ class UserRepository:
             password_hash=password_hash,
             role_type=role,
             display_name=display_name or username,
-            is_active=True,
-            status="active",
+            employee_id=employee_id,
+            is_active=is_active,
+            status=status,
         )
         self.session.add(user)
         await self.session.flush()
@@ -122,9 +144,14 @@ class UserRepository:
         password_hash: str,
         role: str = UserRoleType.USER.value,
         display_name: str | None = None,
+        employee_id: str | None = None,
+        is_active: bool = True,
+        status: str = "active",
     ) -> UserAccount:
         """Create a new user and commit."""
-        user = await self.create_user(username, email, password_hash, role, display_name)
+        user = await self.create_user(
+            username, email, password_hash, role, display_name, employee_id, is_active, status
+        )
         await self.session.commit()
         return user
 
@@ -190,6 +217,7 @@ class UserRepository:
         self,
         role: str | None = None,
         is_active: bool | None = None,
+        status: str | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[UserAccount], int]:
@@ -199,6 +227,7 @@ class UserRepository:
         Args:
             role: Filter by role
             is_active: Filter by active status
+            status: Filter by status string
             page: Page number
             page_size: Items per page
 
@@ -211,6 +240,8 @@ class UserRepository:
             query = query.where(UserAccount.role_type == role)
         if is_active is not None:
             query = query.where(UserAccount.is_active == is_active)
+        if status is not None:
+            query = query.where(UserAccount.status == status)
 
         # Count
         from sqlalchemy import func
@@ -268,6 +299,49 @@ class UserRepository:
             user.status = "active"
             return True
         return False
+
+    async def activate_user_and_commit(self, user_id: int) -> bool:
+        """Activate a user account and commit."""
+        success = await self.activate_user(user_id)
+        if success:
+            await self.session.commit()
+        return success
+
+    async def approve_user_and_commit(self, user_id: int) -> UserAccount | None:
+        """
+        Approve a pending user registration.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Updated UserAccount or None
+        """
+        user = await self.get_by_id(user_id)
+        if not user or user.status != "pending_approval":
+            return None
+        user.is_active = True
+        user.status = "active"
+        await self.session.commit()
+        return user
+
+    async def reject_user_and_commit(self, user_id: int) -> UserAccount | None:
+        """
+        Reject a pending user registration.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Updated UserAccount or None
+        """
+        user = await self.get_by_id(user_id)
+        if not user or user.status != "pending_approval":
+            return None
+        user.is_active = False
+        user.status = "rejected"
+        await self.session.commit()
+        return user
 
 
 class UserScopeRepository:

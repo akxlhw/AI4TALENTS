@@ -85,6 +85,42 @@ class AuditRepository:
         result = await self.session.execute(select(AuditOperationLog.event_type).distinct())
         return [row[0] for row in result.fetchall()]
 
+    async def create_log(
+        self,
+        event_time: datetime,
+        user_id: int | None,
+        user_ip: str | None,
+        event_type: str,
+        event_subtype: str | None,
+        resource_type: str | None,
+        resource_id: str | None,
+        operation: str,
+        operation_detail: dict | None,
+        status: str,
+        error_message: str | None,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> AuditOperationLog:
+        """Create a new audit log entry."""
+        log = AuditOperationLog(
+            event_time=event_time,
+            user_id=user_id,
+            user_ip=user_ip,
+            event_type=event_type,
+            event_subtype=event_subtype,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            operation=operation,
+            operation_detail=operation_detail,
+            status=status,
+            error_message=error_message,
+            request_id=request_id,
+            user_agent=user_agent,
+        )
+        self.session.add(log)
+        await self.session.commit()
+        return log
+
     async def get_resource_types(self) -> list[str]:
         """
         Get distinct resource types.

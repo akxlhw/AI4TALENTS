@@ -12,9 +12,8 @@ import {
   Select,
   message,
   Popconfirm,
-  Badge,
-  Tabs,
   List,
+  Tabs,
 } from 'antd'
 import {
   UserOutlined,
@@ -37,6 +36,8 @@ interface User {
   display_name: string | null
   department: string | null
   is_active: boolean
+  status: string
+  employee_id: string | null
   default_view: string
   last_login_at: string | null
 }
@@ -65,6 +66,20 @@ const roleTextMap: Record<string, string> = {
   user: '普通用户',
 }
 
+const statusColorMap: Record<string, string> = {
+  pending_approval: 'orange',
+  active: 'green',
+  inactive: 'red',
+  rejected: 'default',
+}
+
+const statusTextMap: Record<string, string> = {
+  pending_approval: '待审核',
+  active: '正常',
+  inactive: '已禁用',
+  rejected: '已拒绝',
+}
+
 const AdminPage: React.FC = () => {
   const { isSuperAdmin } = useAuth()
   const [users, setUsers] = useState<User[]>([])
@@ -73,6 +88,7 @@ const AdminPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
 
   // User modal state
+  const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all')
   const [userModalVisible, setUserModalVisible] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [userForm] = Form.useForm()
@@ -88,7 +104,11 @@ const AdminPage: React.FC = () => {
   const loadUsers = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await api.admin.listUsers({ page, page_size: pageSize })
+      const params: any = { page, page_size: pageSize }
+      if (activeTab === 'pending') {
+        params.status = 'pending_approval'
+      }
+      const response = await api.admin.listUsers(params)
       setUsers(response.data.items)
       setTotal(response.data.total)
     } catch {
@@ -96,11 +116,31 @@ const AdminPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [page])
+  }, [page, activeTab])
 
   useEffect(() => {
     loadUsers()
   }, [loadUsers])
+
+  const handleApproveUser = async (userId: number) => {
+    try {
+      await api.admin.approveUser(userId)
+      message.success('用户已通过')
+      loadUsers()
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '操作失败')
+    }
+  }
+
+  const handleRejectUser = async (userId: number) => {
+    try {
+      await api.admin.rejectUser(userId)
+      message.success('用户已拒绝')
+      loadUsers()
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '操作失败')
+    }
+  }
 
   const handleCreateUser = () => {
     setEditingUser(null)
@@ -209,6 +249,12 @@ const AdminPage: React.FC = () => {
       key: 'email',
     },
     {
+      title: '工号',
+      dataIndex: 'employee_id',
+      key: 'employee_id',
+      render: (id: string | null) => id || '-',
+    },
+    {
       title: '角色',
       dataIndex: 'role',
       key: 'role',
@@ -220,13 +266,12 @@ const AdminPage: React.FC = () => {
     },
     {
       title: '状态',
-      dataIndex: 'is_active',
-      key: 'is_active',
-      render: (active: boolean) => (
-        <Badge
-          status={active ? 'success' : 'error'}
-          text={active ? '正常' : '已禁用'}
-        />
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => (
+        <Tag color={statusColorMap[status] || 'default'}>
+          {statusTextMap[status] || status}
+        </Tag>
       ),
     },
     {
@@ -250,32 +295,55 @@ const AdminPage: React.FC = () => {
       key: 'actions',
       render: (_: any, record: User) => (
         <Space>
-          <Button
-            type="link"
-            size="small"
-            icon={<SafetyOutlined />}
-            onClick={() => handleManageScopes(record.user_id)}
-          >
-            权限
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEditUser(record)}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定要禁用该用户吗？"
-            onConfirm={() => handleDeactivateUser(record.user_id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              禁用
-            </Button>
-          </Popconfirm>
+          {record.status === 'pending_approval' && isSuperAdmin ? (
+            <>
+              <Button
+                type="link"
+                size="small"
+                style={{ color: '#52c41a' }}
+                onClick={() => handleApproveUser(record.user_id)}
+              >
+                通过
+              </Button>
+              <Button
+                type="link"
+                size="small"
+                danger
+                onClick={() => handleRejectUser(record.user_id)}
+              >
+                拒绝
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="link"
+                size="small"
+                icon={<SafetyOutlined />}
+                onClick={() => handleManageScopes(record.user_id)}
+              >
+                权限
+              </Button>
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleEditUser(record)}
+              >
+                编辑
+              </Button>
+              <Popconfirm
+                title="确定要禁用该用户吗？"
+                onConfirm={() => handleDeactivateUser(record.user_id)}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+                  禁用
+                </Button>
+              </Popconfirm>
+            </>
+          )}
         </Space>
       ),
     },
@@ -291,10 +359,21 @@ const AdminPage: React.FC = () => {
           </Space>
         }
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateUser}>
-            新建用户
-          </Button>
+          activeTab === 'all' && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateUser}>
+              新建用户
+            </Button>
+          )
         }
+        tabList={[
+          { key: 'all', tab: '全部用户' },
+          { key: 'pending', tab: '待审核' },
+        ]}
+        activeTabKey={activeTab}
+        onTabChange={(key) => {
+          setActiveTab(key as 'all' | 'pending')
+          setPage(1)
+        }}
       >
         <Table
           dataSource={users}
