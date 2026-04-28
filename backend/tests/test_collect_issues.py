@@ -640,3 +640,170 @@ class TestBatchNormalization:
         assert bad_raw.processed_status == "failed", (
             "Bad JSON author should be marked failed to avoid infinite re-processing"
         )
+
+
+class TestSchoolNormalizerNoEmptyStringMatch:
+    """Regression tests for the 'University School' data pollution bug.
+
+    Root cause chain:
+    1. normalize_school_name("University School") -> ""
+    2. find_matching_school() with "" triggers ilike("%%") matching entire table
+    3. normalize_institution() blindly overwrites the first matched record
+    4. The overwritten record keeps its old openalex_id, so many talents
+       linked to that popular school now display "University School"
+    """
+
+    @pytest.mark.asyncio
+    async def test_normalize_school_name_never_returns_empty(self):
+        """normalize_school_name must never return "" to avoid full-table matches."""
+        from app.services.normalizers.school import SchoolNormalizer
+
+        normalizer = SchoolNormalizer(session=None)  # session not needed for pure method
+
+        # The exact name that caused the bug
+        assert normalizer.normalize_school_name("University School") != ""
+        assert normalizer.normalize_school_name("University School") == "university school"
+
+        # Other edge cases that would also strip to nothing
+        assert normalizer.normalize_school_name("University College") != ""
+        assert normalizer.normalize_school_name("School Institute") != ""
+
+        # Normal cases should still work
+        assert normalizer.normalize_school_name("MIT") == "mit"
+        assert normalizer.normalize_school_name("Stanford University") == "stanford"
+
+    @pytest.mark.asyncio
+    async def test_find_matching_school_skips_empty_normalized(
+        self, test_session: AsyncSession
+    ):
+        """When normalized name is empty/too short, skip fuzzy match entirely."""
+        from app.services.normalizers.school import SchoolNormalizer
+        from app.models.standardized import StdSchool
+
+        normalizer = SchoolNormalizer(test_session)
+
+        # Seed a popular school
+        mit = StdSchool(
+            openalex_institution_id="I-MIT-REGTEST",
+            name_normalized="Massachusetts Institute of Technology",
+            country_code="US",
+        )
+        test_session.add(mit)
+        await test_session.commit()
+
+        # Try to match "University School" — should NOT fall back to fuzzy match
+        matched, match_type = await normalizer.find_matching_school(
+            openalex_id=None, raw_name="University School"
+        )
+
+        # Must return None because openalex_id is None and exact/alias fail,
+        # and normalized match is skipped for empty/short strings.
+        assert matched is None, (
+            "Empty normalized string must not trigger a full-table fuzzy match"
+        )
+        assert match_type == "none"
+
+    @pytest.mark.asyncio
+    async def test_normalize_institution_does_not_overwrite_on_weak_match(
+        self, test_session: AsyncSession
+    ):
+        """If find_matching_school returns a weak match, normalize_institution
+        must create a new record instead of overwriting the existing one."""
+        from app.services.normalizers.school import SchoolNormalizer
+        from app.models.raw_data import RawInstitution
+        from app.models.standardized import StdSchool
+
+        normalizer = SchoolNormalizer(test_session)
+
+        # 1. Seed an existing popular school (MIT)
+        mit = StdSchool(
+            openalex_institution_id="I-MIT-REGTEST",
+            name_normalized="Massachusetts Institute of Technology",
+            country_code="US",
+            confirm_status="auto_identified",
+        )
+        test_session.add(mit)
+        await test_session.flush()
+        mit_id = mit.std_school_id
+
+        # 2. Create a RawInstitution for "University School" with a DIFFERENT openalex_id
+        raw_univ = RawInstitution(
+            openalex_institution_id="I-UNIV-SCHOOL",
+            raw_json="{}",
+            display_name="University School",
+            country_code="US",
+            processed_status="pending",
+        )
+        test_session.add(raw_univ)
+        await test_session.flush()
+
+        # 3. Manually simulate the dangerous path:
+        #    force a fuzzy match to MIT (as would happen with the old bug)
+        matched, match_type = await normalizer.find_matching_school(
+            openalex_id=raw_univ.openalex_institution_id,
+            raw_name=raw_univ.display_name,
+        )
+
+        # Because openalex_id "I-UNIV-SCHOOL" does not exist in DB, exact name fails,
+        # and normalized match is now skipped for empty/short strings,
+        # matched should be None. But even if matched were somehow returned
+        # (e.g. via a future code path), normalize_institution must refuse to
+        # overwrite when openalex_ids differ.
+
+        # 4. Run normalize_institution
+        std_school = await normalizer.normalize_institution(raw_univ, task_id=None)
+
+        # 5. Verify: a NEW record was created
+        assert std_school.std_school_id != mit_id, (
+            "normalize_institution must create a new record, not overwrite MIT"
+        )
+        assert std_school.name_normalized == "University School"
+        assert std_school.openalex_institution_id == "I-UNIV-SCHOOL"
+
+        # 6. Verify MIT is untouched
+        result = await test_session.execute(
+            select(StdSchool).where(StdSchool.std_school_id == mit_id)
+        )
+        mit_refreshed = result.scalar_one()
+        assert mit_refreshed.name_normalized == "Massachusetts Institute of Technology"
+        assert mit_refreshed.openalex_institution_id == "I-MIT-REGTEST"
+
+    @pytest.mark.asyncio
+    async def test_normalize_institution_updates_on_same_openalex_id(
+        self, test_session: AsyncSession
+    ):
+        """When openalex_id matches exactly, updating the existing record is safe."""
+        from app.services.normalizers.school import SchoolNormalizer
+        from app.models.raw_data import RawInstitution
+        from app.models.standardized import StdSchool
+
+        normalizer = SchoolNormalizer(test_session)
+
+        # Seed an existing school
+        existing = StdSchool(
+            openalex_institution_id="I-STANFORD",
+            name_normalized="Stanford University",
+            country_code="US",
+            confirm_status="auto_identified",
+        )
+        test_session.add(existing)
+        await test_session.flush()
+        existing_id = existing.std_school_id
+
+        # Raw institution with the SAME openalex_id but updated name
+        raw_updated = RawInstitution(
+            openalex_institution_id="I-STANFORD",
+            raw_json="{}",
+            display_name="Stanford University",
+            country_code="US",
+            country_name="United States",
+            processed_status="pending",
+        )
+        test_session.add(raw_updated)
+        await test_session.flush()
+
+        std_school = await normalizer.normalize_institution(raw_updated, task_id=None)
+
+        # Should update the existing record, not create a new one
+        assert std_school.std_school_id == existing_id
+        assert std_school.country_name == "United States"

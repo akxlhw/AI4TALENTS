@@ -23,20 +23,35 @@ class SchoolNormalizer:
         self.session = session
 
     def normalize_school_name(self, name: str) -> str:
-        """Normalize school name for matching"""
+        """Normalize school name for matching.
+
+        Returns a lowercase string with common suffixes removed.
+        If removing suffixes leaves nothing, falls back to the cleaned original
+        to avoid returning an empty string that would match the entire table.
+        """
         if not name:
             return ""
 
+        original = name.strip()
+
         # Remove common suffixes
-        name = name.strip()
+        name = original
         for suffix in ["University", "Institute", "College", "School"]:
             name = re.sub(rf"\b{suffix}\b", "", name, flags=re.IGNORECASE)
 
         # Remove punctuation and extra spaces
         name = re.sub(r"[^\w\s]", "", name)
         name = re.sub(r"\s+", " ", name)
+        result = name.strip().lower()
 
-        return name.strip().lower()
+        # Guard: if stripping suffixes leaves nothing (e.g. "University School"),
+        # fall back to the cleaned original so we never return "".
+        if not result:
+            fallback = re.sub(r"[^\w\s]", "", original)
+            fallback = re.sub(r"\s+", " ", fallback)
+            return fallback.strip().lower()
+
+        return result
 
     async def find_matching_school(
         self, openalex_id: str | None, raw_name: str, country_code: str | None = None
@@ -76,14 +91,16 @@ class SchoolNormalizer:
 
             # Try normalized name match
             normalized = self.normalize_school_name(raw_name)
-            result = await self.session.execute(
-                select(StdSchool)
-                .where(StdSchool.name_normalized.ilike(f"%{normalized}%"))
-                .limit(1)  # 只取第一条匹配记录
-            )
-            school = result.scalars().first()
-            if school:
-                return school, "normalized"
+            # Guard: empty or too-short normalized strings would match the whole table
+            if normalized and len(normalized) >= 2:
+                result = await self.session.execute(
+                    select(StdSchool)
+                    .where(StdSchool.name_normalized.ilike(f"%{normalized}%"))
+                    .limit(1)  # 只取第一条匹配记录
+                )
+                school = result.scalars().first()
+                if school:
+                    return school, "normalized"
 
         return None, "none"
 
@@ -133,19 +150,33 @@ class SchoolNormalizer:
         )
 
         if matched:
-            # Update existing
-            matched.name_normalized = raw_inst.display_name
-            matched.country_code = self._normalize_country_code(raw_inst.country_code)
-            matched.country_name = raw_inst.country_name
-            matched.ror = raw_inst.ror
-            matched.inst_type = raw_inst.type
-            matched.source_task_id = task_id
-            matched.normalized_at = datetime.utcnow()
-            await self.session.flush()
-            return matched
-        else:
-            # Create new
+            # Safety: only update in-place when the match is reliable.
+            # openalex_id match is definitive; name/alias/normalized matches are
+            # heuristic and must have the same openalex_id to avoid merging
+            # unrelated institutions (e.g. "University School" overwriting MIT).
+            can_update = (
+                match_type == "openalex_id"
+                or (
+                    raw_inst.openalex_institution_id
+                    and raw_inst.openalex_institution_id == matched.openalex_institution_id
+                )
+            )
+            if can_update:
+                matched.name_normalized = raw_inst.display_name
+                matched.country_code = self._normalize_country_code(raw_inst.country_code)
+                matched.country_name = raw_inst.country_name
+                matched.ror = raw_inst.ror
+                matched.inst_type = raw_inst.type
+                matched.source_task_id = task_id
+                matched.normalized_at = datetime.utcnow()
+                await self.session.flush()
+                return matched
+            # Matched but not safe to update: create a new record to prevent
+            # data pollution of the existing school.
             return await self.create_std_school(raw_inst, task_id)
+
+        # Create new
+        return await self.create_std_school(raw_inst, task_id)
 
     async def normalize_all_institutions(self, task_id: int | None = None) -> NormalizationResult:
         """Normalize all pending institutions for a specific task.
