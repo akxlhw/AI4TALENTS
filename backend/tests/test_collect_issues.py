@@ -335,3 +335,139 @@ class TestCollectionProgressStatistics:
 
         # Should have 6 unique authors (A-0, A-10, A-1, A-11, A-2, A-12)
         assert len(unique_authors) >= 4, "Should have extracted unique author IDs"
+
+
+class TestMultiVenueTechBelong:
+    """Test that AuthorTechBelong handles same author+domain across multiple venues."""
+
+    @pytest.mark.asyncio
+    async def test_author_tech_belong_across_multiple_venues(
+        self, test_session: AsyncSession, full_setup
+    ):
+        """
+        Issue: Unique constraint (author_id, domain_id) caused integrity errors
+        when the same author published in multiple venues within the same domain.
+
+        After fix: Each venue gets its own record, and tech_tag_sync aggregates
+        work counts across venues.
+        """
+        from app.models.raw_data import RawWork
+        from app.models.venue import Venue, VenueTechBinding
+        from app.models.talent import Talent
+        from app.models.tech_domain import TalentTechTag
+        from app.services.normalizers import TechBelongCalculator
+        from app.services.sync.tech_tag_sync import TechTagSyncService
+
+        setup = full_setup
+        domain = setup["tech_domain"]
+        venue_a = setup["venue"]  # NEURIPS, openalex_source_id=S12345
+
+        # Create venue B (ICML) bound to the same domain
+        venue_b = Venue(
+            venue_code="ICML",
+            venue_name="ICML",
+            venue_type="conference",
+            openalex_source_id="S67890",
+            is_enabled=True,
+        )
+        test_session.add(venue_b)
+        await test_session.flush()
+
+        binding_b = VenueTechBinding(
+            venue_id=venue_b.venue_id,
+            tech_domain_id=domain.tech_domain_id,
+            is_enabled=True,
+        )
+        test_session.add(binding_b)
+        await test_session.commit()
+
+        author_id = "A-MULTI-VENUE"
+
+        # Create 2 RawWorks for venue A
+        for i in range(2):
+            work = RawWork(
+                openalex_work_id=f"W-NEURIPS-{i}",
+                raw_json="{}",
+                title=f"NeurIPS Work {i}",
+                publication_year=2024,
+                author_ids=json.dumps([author_id]),
+                source_id=venue_a.openalex_source_id,
+            )
+            test_session.add(work)
+
+        # Create 3 RawWorks for venue B
+        for i in range(3):
+            work = RawWork(
+                openalex_work_id=f"W-ICML-{i}",
+                raw_json="{}",
+                title=f"ICML Work {i}",
+                publication_year=2024,
+                author_ids=json.dumps([author_id]),
+                source_id=venue_b.openalex_source_id,
+            )
+            test_session.add(work)
+
+        await test_session.commit()
+
+        # Phase 6: calculate_for_venue for both venues
+        calculator = TechBelongCalculator(test_session)
+        count_a = await calculator.calculate_for_venue(
+            venue_id=venue_a.venue_id,
+            tech_domain_id=domain.tech_domain_id,
+            task_id=None,
+        )
+        count_b = await calculator.calculate_for_venue(
+            venue_id=venue_b.venue_id,
+            tech_domain_id=domain.tech_domain_id,
+            task_id=None,
+        )
+
+        assert count_a == 1, "Should create 1 belong record for venue A"
+        assert count_b == 1, "Should create 1 belong record for venue B"
+
+        # Verify both records exist in DB
+        result = await test_session.execute(
+            select(AuthorTechBelong).where(
+                AuthorTechBelong.openalex_author_id == author_id,
+                AuthorTechBelong.tech_domain_id == domain.tech_domain_id,
+            )
+        )
+        belongs = result.scalars().all()
+        assert len(belongs) == 2, (
+            f"Should have 2 AuthorTechBelong records (one per venue), got {len(belongs)}"
+        )
+
+        # Verify venue-specific counts
+        venue_counts = {b.source_venue_id: b.work_count_in_venue for b in belongs}
+        assert venue_counts.get(venue_a.venue_id) == 2
+        assert venue_counts.get(venue_b.venue_id) == 3
+
+        # Verify downstream sync aggregates correctly
+        talent = Talent(
+            name="Multi Venue Author",
+            name_en="Multi Venue Author",
+            role_type="professor",
+            works_count=5,
+            cited_by_count=100,
+            h_index=5,
+        )
+        test_session.add(talent)
+        await test_session.flush()
+
+        sync_service = TechTagSyncService(test_session)
+        created = await sync_service.sync_talent_tech_tags(
+            talent=talent,
+            belongs=list(belongs),
+            default_tech_direction_id=setup["tech_direction"].tech_direction_id,
+        )
+
+        assert created == 1, "Should create exactly 1 TalentTechTag"
+
+        # Verify aggregated confidence_score: (2+3)/10 = 0.5
+        result = await test_session.execute(
+            select(TalentTechTag).where(TalentTechTag.talent_id == talent.talent_id)
+        )
+        tag = result.scalar_one()
+        assert tag.confidence_score == 0.5, (
+            f"Expected confidence_score=0.5 (5 works / 10), got {tag.confidence_score}"
+        )

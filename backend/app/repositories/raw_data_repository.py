@@ -575,28 +575,30 @@ class AuthorTechBelongRepository:
 
     async def upsert(self, belong: AuthorTechBelong) -> AuthorTechBelong:
         """Create or update an author-tech belong relationship"""
-        existing = await self.get_by_author_and_tech(
-            belong.openalex_author_id, belong.tech_domain_id
+        existing = await self.get_by_author_tech_venue(
+            belong.openalex_author_id,
+            belong.tech_domain_id,
+            belong.source_venue_id,
         )
         if existing:
             existing.work_count_in_venue = belong.work_count_in_venue
             existing.first_work_year = belong.first_work_year
             existing.last_work_year = belong.last_work_year
-            existing.source_venue_id = belong.source_venue_id
             existing.source_task_id = belong.source_task_id
             await self.session.flush()
             return existing
         else:
             return await self.create(belong)
 
-    async def get_by_author_and_tech(
-        self, openalex_author_id: str, tech_domain_id: int
+    async def get_by_author_tech_venue(
+        self, openalex_author_id: str, tech_domain_id: int, source_venue_id: int | None
     ) -> AuthorTechBelong | None:
-        """Get relationship by author and tech domain"""
+        """Get relationship by author, tech domain and venue"""
         result = await self.session.execute(
             select(AuthorTechBelong).where(
                 AuthorTechBelong.openalex_author_id == openalex_author_id,
                 AuthorTechBelong.tech_domain_id == tech_domain_id,
+                AuthorTechBelong.source_venue_id == source_venue_id,
             )
         )
         return result.scalar_one_or_none()

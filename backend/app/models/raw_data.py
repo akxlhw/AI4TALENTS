@@ -145,7 +145,7 @@ class AuthorTechBelong(Base, TimestampMixin):
 
     __tablename__ = "rel_author_tech_belong"
     __table_args__ = (
-        Index("ix_author_tech_author_domain", "openalex_author_id", "tech_domain_id", unique=True),
+        Index("ix_author_tech_author_domain_venue", "openalex_author_id", "tech_domain_id", "source_venue_id", unique=True),
     )
 
     belong_id = Column(Integer, primary_key=True, index=True)

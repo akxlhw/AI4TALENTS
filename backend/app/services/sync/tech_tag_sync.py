@@ -29,7 +29,10 @@ class TechTagSyncService:
         default_tech_direction_id: int | None = None,
     ) -> int:
         """
-        Create TalentTechTag records based on AuthorTechBelong
+        Create TalentTechTag records based on AuthorTechBelong.
+
+        Aggregates work counts across multiple venues for the same tech domain
+        to compute the overall confidence score.
 
         Args:
             talent: Talent object
@@ -44,8 +47,13 @@ class TechTagSyncService:
 
         created_count = 0
 
-        # Batch check existing tags - get all domain IDs for this talent at once
-        domain_ids = [b.tech_domain_id for b in belongs]
+        # Aggregate work counts across venues for the same tech domain
+        from collections import defaultdict
+        domain_work_counts: dict[int, int] = defaultdict(int)
+        for b in belongs:
+            domain_work_counts[b.tech_domain_id] += b.work_count_in_venue or 0
+
+        domain_ids = list(domain_work_counts.keys())
         existing_result = await self.session.execute(
             select(TalentTechTag.tech_domain_id).where(
                 TalentTechTag.talent_id == talent.talent_id,
@@ -75,20 +83,20 @@ class TechTagSyncService:
         else:
             self._direction_map = {}
 
-        for belong in belongs:
+        for tech_domain_id, work_count in domain_work_counts.items():
             # Check if tag already exists (using batch-fetched data)
-            if belong.tech_domain_id in existing_domain_ids:
+            if tech_domain_id in existing_domain_ids:
                 continue
 
             # Get tech direction from pre-fetched map or use default
             if default_tech_direction_id:
                 tech_direction_id = default_tech_direction_id
             else:
-                tech_direction_id = self._direction_map.get(belong.tech_domain_id)
+                tech_direction_id = self._direction_map.get(tech_domain_id)
 
             if not tech_direction_id:
                 logger.warning(
-                    f"No tech direction found for tech_domain_id={belong.tech_domain_id}, "
+                    f"No tech direction found for tech_domain_id={tech_domain_id}, "
                     f"skipping tag for talent {talent.talent_id}"
                 )
                 continue
@@ -96,14 +104,14 @@ class TechTagSyncService:
             # Create new tech tag
             new_tag = TalentTechTag(
                 talent_id=talent.talent_id,
-                tech_domain_id=belong.tech_domain_id,
+                tech_domain_id=tech_domain_id,
                 tech_direction_id=tech_direction_id,
                 tag_level="primary",
                 tag_source="auto_mapping",
                 confirm_status="auto_identified",
                 confidence_score=(
-                    min(1.0, belong.work_count_in_venue / 10.0)
-                    if belong.work_count_in_venue
+                    min(1.0, work_count / 10.0)
+                    if work_count
                     else 0.5
                 ),
                 is_enabled=True,
