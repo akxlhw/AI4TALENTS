@@ -9,7 +9,7 @@ import json
 import logging
 from datetime import datetime
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -368,16 +368,20 @@ class RawAuthorRepository:
 
         return [aid for aid in author_ids if aid not in existing_ids]
 
-    async def get_pending(self, task_id: int | None = None) -> list[RawAuthor]:
+    async def get_pending(self, task_id: int | None = None, limit: int | None = None) -> list[RawAuthor]:
         """Get pending authors for processing.
 
         Args:
             task_id: Optional task ID to filter by. If provided, only returns
                      authors from the specified task.
+            limit: Optional batch size limit to avoid loading all pending
+                   authors into memory at once.
         """
         query = select(RawAuthor).where(RawAuthor.processed_status == "pending")
         if task_id is not None:
             query = query.where(RawAuthor.fetch_task_id == task_id)
+        if limit is not None:
+            query = query.limit(limit)
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
@@ -391,6 +395,62 @@ class RawAuthorRepository:
         await self.session.execute(
             update(RawAuthor).where(RawAuthor.raw_author_id == author_id).values(**values)
         )
+
+    async def batch_mark_processed(
+        self,
+        author_ids: list[int],
+        status: str = "processed",
+        std_author_id_map: dict[int, int] | None = None,
+    ) -> None:
+        """Mark multiple authors as processed in a single UPDATE.
+
+        Args:
+            author_ids: List of RawAuthor IDs to mark.
+            status: New processed_status value.
+            std_author_id_map: Optional dict mapping raw_author_id -> std_author_id.
+        """
+        if not author_ids:
+            return
+
+        # For authors with the same std_author_id, we can use a simple UPDATE ... WHERE IN
+        # For authors with different std_author_id values, we use CASE WHEN.
+        if std_author_id_map and len(set(std_author_id_map.values())) > 1:
+            # Multiple different std_author_ids: use CASE WHEN
+            case_stmt = "CASE raw_author_id "
+            for raw_id, std_id in std_author_id_map.items():
+                if raw_id in author_ids:
+                    case_stmt += f"WHEN {raw_id} THEN {std_id} "
+            case_stmt += "END"
+            await self.session.execute(
+                update(RawAuthor)
+                .where(RawAuthor.raw_author_id.in_(author_ids))
+                .values(
+                    processed_status=status,
+                    processed_at=datetime.utcnow(),
+                    std_author_id=text(case_stmt),
+                )
+            )
+        elif std_author_id_map and len(set(std_author_id_map.values())) == 1:
+            # All same std_author_id (unlikely but optimize for it)
+            std_author_id = list(std_author_id_map.values())[0]
+            await self.session.execute(
+                update(RawAuthor)
+                .where(RawAuthor.raw_author_id.in_(author_ids))
+                .values(
+                    processed_status=status,
+                    processed_at=datetime.utcnow(),
+                    std_author_id=std_author_id,
+                )
+            )
+        else:
+            await self.session.execute(
+                update(RawAuthor)
+                .where(RawAuthor.raw_author_id.in_(author_ids))
+                .values(
+                    processed_status=status,
+                    processed_at=datetime.utcnow(),
+                )
+            )
 
     async def count_by_status(self) -> dict:
         """Count authors by processing status"""

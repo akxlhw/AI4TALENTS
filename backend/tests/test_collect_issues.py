@@ -471,3 +471,172 @@ class TestMultiVenueTechBelong:
         assert tag.confidence_score == 0.5, (
             f"Expected confidence_score=0.5 (5 works / 10), got {tag.confidence_score}"
         )
+
+
+class TestBatchNormalization:
+    """Test batch-mode normalize_all_authors with mixed existing/new/bad-json authors."""
+
+    @pytest.mark.asyncio
+    async def test_batch_normalize_with_fallback(
+        self, test_session: AsyncSession, full_setup
+    ):
+        """
+        Regression test for batch normalization refactor.
+
+        Scenarios covered:
+        - Existing StdAuthor updated in batch
+        - New StdAuthor created in batch
+        - Bad raw_json isolated and skipped
+        - RawAuthor.processed_status and std_author_id updated correctly
+        """
+        from app.models.standardized import StdAuthor
+        from app.services.normalizers import AuthorNormalizer
+        from app.models.sync import CollectTask
+
+        setup = full_setup
+
+        # Create a dedicated task so get_pending is scoped
+        task = CollectTask(
+            task_code="TEST-BATCH-001",
+            collect_mode="incremental",
+            triggered_by=None,
+            triggered_at=datetime.utcnow(),
+            status="running",
+        )
+        test_session.add(task)
+        await test_session.flush()
+
+        # Pre-create an existing StdAuthor (to test UPDATE path)
+        existing_std = StdAuthor(
+            openalex_author_id="A-EXISTING",
+            name_normalized="Old Name",
+            name_original="Old Name",
+            works_count=5,
+            cited_by_count=50,
+            h_index=3,
+            confirm_status="auto_identified",
+            cs_concepts_score=0.0,
+            openalex_topics=[],
+        )
+        test_session.add(existing_std)
+        await test_session.flush()
+
+        # Create 4 RawAuthors: 1 existing, 2 new, 1 bad JSON
+        raw_authors = [
+            RawAuthor(
+                openalex_author_id="A-EXISTING",
+                raw_json=json.dumps({
+                    "topics": [{"display_name": "Machine Learning", "count": 5}],
+                    "x_concepts": [{"id": "154945302", "score": 0.8}],
+                }),
+                display_name="Updated Name",
+                works_count=20,
+                cited_by_count=200,
+                h_index=10,
+                processed_status="pending",
+                fetch_task_id=task.task_id,
+            ),
+            RawAuthor(
+                openalex_author_id="A-NEW-1",
+                raw_json=json.dumps({
+                    "topics": [{"display_name": "Deep Learning", "count": 4}],
+                    "x_concepts": [{"id": "154945302", "score": 0.5}],
+                }),
+                display_name="New Author One",
+                works_count=15,
+                cited_by_count=150,
+                h_index=8,
+                processed_status="pending",
+                fetch_task_id=task.task_id,
+            ),
+            RawAuthor(
+                openalex_author_id="A-NEW-2",
+                raw_json=json.dumps({
+                    "topics": [{"display_name": "NLP", "count": 6}],
+                    "x_concepts": [{"id": "154945302", "score": 0.9}],
+                }),
+                display_name="New Author Two",
+                works_count=30,
+                cited_by_count=300,
+                h_index=12,
+                processed_status="pending",
+                fetch_task_id=task.task_id,
+            ),
+            RawAuthor(
+                openalex_author_id="A-BAD-JSON",
+                raw_json="not valid json {{",
+                display_name="Bad Json Author",
+                works_count=1,
+                cited_by_count=1,
+                h_index=1,
+                processed_status="pending",
+                fetch_task_id=task.task_id,
+            ),
+        ]
+        for ra in raw_authors:
+            test_session.add(ra)
+        await test_session.commit()
+
+        # Run batch normalization scoped to the task
+        normalizer = AuthorNormalizer(test_session)
+        result = await normalizer.normalize_all_authors(task_id=task.task_id)
+
+        # Assert counts
+        assert result.total == 4, f"Expected total=4, got {result.total}"
+        assert result.processed == 3, f"Expected processed=3, got {result.processed}"
+        assert result.failed == 1, f"Expected failed=1, got {result.failed}"
+
+        # Verify exactly 3 StdAuthor rows (1 updated + 2 new)
+        result = await test_session.execute(
+            select(StdAuthor).where(
+                StdAuthor.openalex_author_id.in_(
+                    ["A-EXISTING", "A-NEW-1", "A-NEW-2", "A-BAD-JSON"]
+                )
+            )
+        )
+        std_authors = result.scalars().all()
+        assert len(std_authors) == 3, (
+            f"Expected 3 StdAuthors (existing+2 new), got {len(std_authors)}"
+        )
+
+        # Verify existing author was updated (refresh from DB to avoid stale cache)
+        existing = next((a for a in std_authors if a.openalex_author_id == "A-EXISTING"), None)
+        assert existing is not None, "Existing StdAuthor should still exist"
+        await test_session.refresh(existing)
+        assert existing.works_count == 20, "Existing author works_count should be updated"
+        assert existing.name_normalized == "Updated Name", "Existing author name should be updated"
+        assert existing.cs_concepts_score > 0, "Existing author CS score should be updated"
+
+        # Verify new authors created
+        new_1 = next((a for a in std_authors if a.openalex_author_id == "A-NEW-1"), None)
+        new_2 = next((a for a in std_authors if a.openalex_author_id == "A-NEW-2"), None)
+        assert new_1 is not None, "New author 1 should be created"
+        assert new_2 is not None, "New author 2 should be created"
+        assert new_1.works_count == 15
+        assert new_2.works_count == 30
+
+        # Verify RawAuthor statuses
+        result = await test_session.execute(
+            select(RawAuthor).where(
+                RawAuthor.openalex_author_id.in_(
+                    ["A-EXISTING", "A-NEW-1", "A-NEW-2"]
+                )
+            )
+        )
+        processed_raws = result.scalars().all()
+        for ra in processed_raws:
+            assert ra.processed_status == "processed", (
+                f"RawAuthor {ra.openalex_author_id} should be marked processed"
+            )
+            assert ra.std_author_id is not None, (
+                f"RawAuthor {ra.openalex_author_id} should have std_author_id"
+            )
+
+        # Verify bad JSON author is marked as failed (not re-processed in next loop)
+        result = await test_session.execute(
+            select(RawAuthor).where(RawAuthor.openalex_author_id == "A-BAD-JSON")
+        )
+        bad_raw = result.scalar_one()
+        assert bad_raw.processed_status == "failed", (
+            "Bad JSON author should be marked failed to avoid infinite re-processing"
+        )

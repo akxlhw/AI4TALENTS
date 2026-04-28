@@ -9,6 +9,7 @@ import logging
 from datetime import datetime
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.raw_data import RawAuthor
@@ -26,12 +27,23 @@ logger.info(
 )
 
 
+# Default batch size for normalize_all_authors
+DEFAULT_BATCH_SIZE = 500
+
+
 class AuthorNormalizer:
     """作者归一化处理器"""
 
     def __init__(self, session: AsyncSession):
         self.session = session
-        self.school_normalizer = SchoolNormalizer(session)
+        self._school_normalizer: SchoolNormalizer | None = None
+
+    @property
+    def school_normalizer(self) -> SchoolNormalizer:
+        """Lazy-init SchoolNormalizer for single-record path only."""
+        if self._school_normalizer is None:
+            self._school_normalizer = SchoolNormalizer(self.session)
+        return self._school_normalizer
 
     def _parse_raw_json(self, raw_json: str) -> tuple[list[str], float]:
         """
@@ -203,8 +215,103 @@ class AuthorNormalizer:
         # Create new StdAuthor
         return await self.create_std_author(raw_author, std_school_id, task_id)
 
+    async def _batch_find_std_authors(
+        self, openalex_author_ids: list[str]
+    ) -> dict[str, StdAuthor]:
+        """Batch preload existing StdAuthors by OpenAlex IDs."""
+        if not openalex_author_ids:
+            return {}
+        result = await self.session.execute(
+            select(StdAuthor).where(StdAuthor.openalex_author_id.in_(openalex_author_ids))
+        )
+        return {a.openalex_author_id: a for a in result.scalars().all()}
+
+    async def _batch_find_std_schools(
+        self, openalex_institution_ids: list[str]
+    ) -> dict[str, int]:
+        """Batch preload StdSchool IDs by OpenAlex institution IDs."""
+        if not openalex_institution_ids:
+            return {}
+        result = await self.session.execute(
+            select(StdSchool).where(StdSchool.openalex_institution_id.in_(openalex_institution_ids))
+        )
+        return {s.openalex_institution_id: s.std_school_id for s in result.scalars().all()}
+
+    def _build_std_author_values(
+        self,
+        raw_author: RawAuthor,
+        topics: list[str],
+        cs_score: float,
+        std_school_id: int | None,
+        task_id: int | None,
+    ) -> dict:
+        """Build a dict suitable for pg_insert(StdAuthor).values()."""
+        return {
+            "openalex_author_id": raw_author.openalex_author_id,
+            "name_normalized": self.normalize_author_name(raw_author.display_name or ""),
+            "name_original": raw_author.display_name,
+            "orcid": raw_author.orcid,
+            "works_count": raw_author.works_count,
+            "cited_by_count": raw_author.cited_by_count,
+            "h_index": raw_author.h_index,
+            "i10_index": raw_author.i10_index,
+            "std_school_id": std_school_id,
+            "raw_institution_name": raw_author.last_known_institution_name,
+            "raw_institution_id": raw_author.last_known_institution_id,
+            "primary_education_id": raw_author.primary_education_id,
+            "primary_education_name": raw_author.primary_education_name,
+            "primary_company_id": raw_author.primary_company_id,
+            "primary_company_name": raw_author.primary_company_name,
+            "confirm_status": "auto_identified",
+            "confidence_score": 0.8 if std_school_id else 0.5,
+            "openalex_topics": topics,
+            "cs_concepts_score": cs_score,
+            "source_task_id": task_id,
+            "normalized_at": datetime.utcnow(),
+        }
+
+    async def _batch_upsert_std_authors(
+        self, values: list[dict], task_id: int | None = None
+    ) -> dict[str, int]:
+        """Bulk upsert StdAuthors and return {openalex_author_id: std_author_id}.
+
+        Uses PostgreSQL INSERT ON CONFLICT DO UPDATE.
+        """
+        if not values:
+            return {}
+
+        stmt = pg_insert(StdAuthor).values(values)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["openalex_author_id"],
+            set_={
+                "name_normalized": stmt.excluded.name_normalized,
+                "name_original": stmt.excluded.name_original,
+                "orcid": stmt.excluded.orcid,
+                "works_count": stmt.excluded.works_count,
+                "cited_by_count": stmt.excluded.cited_by_count,
+                "h_index": stmt.excluded.h_index,
+                "i10_index": stmt.excluded.i10_index,
+                "std_school_id": stmt.excluded.std_school_id,
+                "raw_institution_name": stmt.excluded.raw_institution_name,
+                "raw_institution_id": stmt.excluded.raw_institution_id,
+                "primary_education_id": stmt.excluded.primary_education_id,
+                "primary_education_name": stmt.excluded.primary_education_name,
+                "primary_company_id": stmt.excluded.primary_company_id,
+                "primary_company_name": stmt.excluded.primary_company_name,
+                "confirm_status": stmt.excluded.confirm_status,
+                "confidence_score": stmt.excluded.confidence_score,
+                "openalex_topics": stmt.excluded.openalex_topics,
+                "cs_concepts_score": stmt.excluded.cs_concepts_score,
+                "source_task_id": stmt.excluded.source_task_id,
+                "normalized_at": stmt.excluded.normalized_at,
+            },
+        ).returning(StdAuthor.std_author_id, StdAuthor.openalex_author_id)
+
+        result = await self.session.execute(stmt)
+        return {row.openalex_author_id: row.std_author_id for row in result.all()}
+
     async def normalize_all_authors(self, task_id: int | None = None) -> NormalizationResult:
-        """Normalize all pending authors for a specific task.
+        """Normalize all pending authors for a specific task using batch processing.
 
         Args:
             task_id: The collection task ID. Only authors from this task
@@ -214,32 +321,97 @@ class AuthorNormalizer:
             NormalizationResult with statistics
         """
         result = NormalizationResult()
-
-        # Get pending authors for this task
         raw_repo = RawAuthorRepository(self.session)
-        pending = await raw_repo.get_pending(task_id)
 
-        result.total = len(pending)
+        while True:
+            # 1. Fetch next batch of pending authors
+            pending = await raw_repo.get_pending(task_id, limit=DEFAULT_BATCH_SIZE)
+            if not pending:
+                break
 
-        # Commit every 100 authors to release database lock
-        commit_interval = 100
+            result.total += len(pending)
 
-        for i, raw_author in enumerate(pending):
-            try:
-                std_author = await self.normalize_author(raw_author, task_id)
-                await raw_repo.mark_processed(
-                    raw_author.raw_author_id, "processed", std_author.std_author_id
-                )
-                result.processed += 1
+            # 2. Batch preload existing StdAuthors and StdSchools
+            author_ids = [r.openalex_author_id for r in pending]
+            existing_map = await self._batch_find_std_authors(author_ids)
 
-                # Commit periodically to release database lock
-                if (i + 1) % commit_interval == 0:
-                    await self.session.commit()
-                    logger.debug(
-                        f"Author normalization progress: {result.processed}/{result.total}"
+            inst_ids = list({r.last_known_institution_id for r in pending if r.last_known_institution_id})
+            school_map = await self._batch_find_std_schools(inst_ids)
+
+            # 3. Parse raw_json once per author; isolate failures
+            parsed: dict[int, tuple[list[str], float]] = {}
+            failed_ids: list[int] = []
+            for raw in pending:
+                try:
+                    # Pre-validate JSON before _parse_raw_json to catch malformed data
+                    if raw.raw_json:
+                        json.loads(raw.raw_json)
+                    parsed[raw.raw_author_id] = self._parse_raw_json(raw.raw_json)
+                except Exception as e:
+                    logger.warning(
+                        f"JSON parse failed for author {raw.openalex_author_id}: {e}"
                     )
+                    failed_ids.append(raw.raw_author_id)
 
-            except Exception:
-                result.failed += 1
+            # 4. Build values for batch upsert
+            values = []
+            raw_id_to_alex_id: dict[int, str] = {}
+            for raw in pending:
+                if raw.raw_author_id in failed_ids:
+                    continue
+                topics, cs_score = parsed[raw.raw_author_id]
+                std_school_id = school_map.get(raw.last_known_institution_id)
+                values.append(
+                    self._build_std_author_values(raw, topics, cs_score, std_school_id, task_id)
+                )
+                raw_id_to_alex_id[raw.raw_author_id] = raw.openalex_author_id
+
+            # 5. Bulk upsert StdAuthor
+            author_id_map: dict[str, int] = {}
+            if values:
+                try:
+                    author_id_map = await self._batch_upsert_std_authors(values, task_id)
+                except Exception as e:
+                    logger.error(f"Batch upsert failed: {e}. Falling back to single-record.")
+                    # Fallback: process one by one to isolate the bad record
+                    for raw in pending:
+                        if raw.raw_author_id in failed_ids:
+                            continue
+                        try:
+                            std_author = await self.normalize_author(raw, task_id)
+                            author_id_map[raw.openalex_author_id] = std_author.std_author_id
+                        except Exception as e2:
+                            logger.warning(
+                                f"Single-record fallback failed for {raw.openalex_author_id}: {e2}"
+                            )
+                            failed_ids.append(raw.raw_author_id)
+
+            # 6. Bulk mark successful RawAuthors as processed
+            ok_raw_ids = [
+                raw_id
+                for raw_id in raw_id_to_alex_id.keys()
+                if raw_id not in failed_ids
+            ]
+            if ok_raw_ids and author_id_map:
+                std_id_map = {
+                    raw_id: author_id_map[raw_id_to_alex_id[raw_id]]
+                    for raw_id in ok_raw_ids
+                    if raw_id_to_alex_id[raw_id] in author_id_map
+                }
+                await raw_repo.batch_mark_processed(ok_raw_ids, "processed", std_id_map)
+
+            # Mark failed RawAuthors so they are not re-fetched in the next loop
+            if failed_ids:
+                await raw_repo.batch_mark_processed(failed_ids, "failed")
+
+            result.processed += len(ok_raw_ids)
+            result.failed += len(failed_ids)
+
+            # Commit per batch to release locks
+            await self.session.commit()
+            logger.info(
+                f"Author normalization batch: processed={result.processed}, "
+                f"failed={result.failed}, total_so_far={result.total}"
+            )
 
         return result
