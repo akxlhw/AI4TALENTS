@@ -2,14 +2,15 @@
 一键初始化系统数据脚本
 
 功能：
-1. 清空所有业务数据表
+1. 清空业务数据表（默认保留系统配置 sys_config）
 2. 重新运行数据库迁移
 3. 初始化基础数据（管理员、技术领域）
 
 使用方法：
-    python scripts/init_system.py              # 交互式确认
+    python scripts/init_system.py              # 交互式确认（默认保留配置）
     python scripts/init_system.py --force      # 跳过确认
-    python scripts/init_system.py --keep-users # 保留用户数据
+    python scripts/init_system.py --full       # 全量重置（含用户、技术领域）
+    python scripts/init_system.py --clear-config  # 同时清空系统配置表
 """
 import asyncio
 import sys
@@ -77,7 +78,10 @@ BUSINESS_TABLES = [
     # 岗位匹配 (v1.4)
     "jd_match_result",
     "jd_match_session",
-    # 系统配置 (v1.4)
+]
+
+# 系统配置表（默认保留，仅 --clear-config 时清空）
+CONFIG_SYSTEM_TABLES = [
     "sys_config",
 ]
 
@@ -308,11 +312,12 @@ VENUE_DATA = [
 ]
 
 
-async def truncate_tables(full_reset: bool = False):
+async def truncate_tables(full_reset: bool = False, clear_config: bool = False):
     """清空业务数据表
 
     Args:
         full_reset: 是否同时清空基础配置表（用户、技术领域等）
+        clear_config: 是否清空系统配置表（sys_config 等）
     """
     print("\n" + "="*60)
     print("Step 1: 清空数据表")
@@ -321,6 +326,10 @@ async def truncate_tables(full_reset: bool = False):
     async with AsyncSessionLocal() as session:
         # 默认只清空业务数据表
         tables = BUSINESS_TABLES.copy()
+
+        if clear_config:
+            tables.extend(CONFIG_SYSTEM_TABLES)
+            print("  [模式: 包含系统配置表]")
 
         if full_reset:
             # 全量重置，同时清空配置表
@@ -583,11 +592,12 @@ async def seed_statistics_snapshot():
         print(f"  [OK] 技术领域数: {tech_domain_count}")
 
 
-async def init_system(full_reset: bool = False):
+async def init_system(full_reset: bool = False, clear_config: bool = False):
     """执行完整初始化流程
 
     Args:
         full_reset: 是否执行全量重置（清空用户、技术领域等基础数据）
+        clear_config: 是否清空系统配置表（sys_config 等）
     """
     print("\n" + "="*60)
     print("智能人才库 - 系统数据初始化")
@@ -596,7 +606,7 @@ async def init_system(full_reset: bool = False):
     start_time = datetime.now()
 
     # 1. 清空数据表
-    await truncate_tables(full_reset)
+    await truncate_tables(full_reset, clear_config)
 
     # 2. 清空缓存
     await clear_cache()
@@ -630,6 +640,8 @@ async def init_system(full_reset: bool = False):
         print("\n[!] 生产环境请及时修改默认密码!")
     else:
         print("\n[提示] 已清空业务数据，用户和技术领域配置保留")
+        if not clear_config:
+            print("[提示] 系统配置表(sys_config)已保留，如需清除请使用 --clear-config")
         print("[提示] 国家信息已改为常量定义，存储在 app/constants/countries.py")
 
 
@@ -639,12 +651,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-    python scripts/init_system.py              # 交互式确认（仅清空业务数据）
-    python scripts/init_system.py --force      # 跳过确认（仅清空业务数据）
-    python scripts/init_system.py --full       # 全量重置（包含用户、技术领域）
+    python scripts/init_system.py                 # 交互式确认（保留配置）
+    python scripts/init_system.py --force         # 跳过确认（保留配置）
+    python scripts/init_system.py --full          # 全量重置（含用户、技术领域）
+    python scripts/init_system.py --clear-config  # 同时清空系统配置表
     python scripts/init_system.py --full --force  # 全量重置跳过确认
 
-注意: 国家数据已改为常量定义，存储在 app/constants/countries.py
+注意: 默认保留系统配置表(sys_config)，如需清除请使用 --clear-config
+       国家数据已改为常量定义，存储在 app/constants/countries.py
         """
     )
     parser.add_argument(
@@ -657,6 +671,11 @@ def main():
         action="store_true",
         help="全量重置（清空用户、技术领域等基础数据）"
     )
+    parser.add_argument(
+        "--clear-config",
+        action="store_true",
+        help="同时清空系统配置表(sys_config)"
+    )
 
     args = parser.parse_args()
 
@@ -666,12 +685,14 @@ def main():
             print("\n[!] 警告: 此操作将清空所有数据（包括用户、技术领域）!")
         else:
             print("\n[!] 警告: 此操作将清空所有业务数据!")
+        if args.clear_config:
+            print("[!] 注意: 系统配置表(sys_config)也将被清空!")
         confirm = input("\n确认执行? (y/N): ").strip().lower()
         if confirm != "y":
             print("已取消操作")
             return
 
-    asyncio.run(init_system(full_reset=args.full))
+    asyncio.run(init_system(full_reset=args.full, clear_config=args.clear_config))
 
 
 if __name__ == "__main__":
