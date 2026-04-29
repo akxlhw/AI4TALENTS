@@ -34,6 +34,11 @@ interface TopSchool {
   talent_count: number
 }
 
+interface HotResearchTopic {
+  topic_name: string
+  talent_count: number
+}
+
 /* ── Horizontal scroll row component ── */
 
 
@@ -66,6 +71,10 @@ const HomePage: React.FC = () => {
     navigate(`/country-school?school_id=${schoolId}`)
   }
 
+  const handleResearchTopicClick = (topic: string) => {
+    navigate(`/search-recommend?tab=search&q=${encodeURIComponent(topic)}`)
+  }
+
   const stats = overview?.stats || {
     school_count: 0,
     professor_count: 0,
@@ -78,6 +87,7 @@ const HomePage: React.FC = () => {
   const hotTechDomains: HotTechDomain[] = highlights?.hot_tech_domains || []
   const topCountries: TopCountry[] = highlights?.top_countries || []
   const topSchools: TopSchool[] = highlights?.top_schools || []
+  const hotResearchTopics: HotResearchTopic[] = highlights?.hot_research_topics || []
 
   return (
     <Spin spinning={loading}>
@@ -234,20 +244,20 @@ const HomePage: React.FC = () => {
               {/* Overview stats — 5 dimensions */}
               <div style={{ marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--border-secondary)' }}>
                 <Space size={12} wrap>
-                  <Text style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    技术领域 <strong style={{ color: dt.primary }}>{stats.tech_domain_count || hotTechDomains.length}</strong>
+                  <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                    技术领域 <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.tech_domain_count || hotTechDomains.length}</strong>
                   </Text>
-                  <Text style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    人才总数 <strong style={{ color: dt.primary }}>{stats.talent_count.toLocaleString()}</strong>
+                  <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                    人才总数 <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.talent_count.toLocaleString()}</strong>
                   </Text>
-                  <Text style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    覆盖国家 <strong style={{ color: dt.primary }}>{stats.country_count || topCountries.length}</strong>
+                  <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                    覆盖国家 <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.country_count || topCountries.length}</strong>
                   </Text>
-                  <Text style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    覆盖院校 <strong style={{ color: dt.primary }}>{stats.school_count.toLocaleString()}</strong>
+                  <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                    覆盖院校 <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.school_count.toLocaleString()}</strong>
                   </Text>
-                  <Text style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    教授/研究员 <strong style={{ color: dt.primary }}>{stats.professor_count.toLocaleString()}</strong>
+                  <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                    教授/研究员 <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.professor_count.toLocaleString()}</strong>
                   </Text>
                 </Space>
               </div>
@@ -265,6 +275,32 @@ const HomePage: React.FC = () => {
                     </Tag>
                   ))}
                   {hotTechDomains.length === 0 && (
+                    <Text type="secondary">暂无数据</Text>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 12 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>热门研究方向</Text>
+                <div style={{ marginTop: 6 }}>
+                  {hotResearchTopics.map((item) => (
+                    <Tag
+                      key={item.topic_name}
+                      style={{
+                        marginBottom: 6,
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        background: dt.lightBg,
+                        color: dt.primary,
+                        border: `1px solid ${dt.primary}33`,
+                        opacity: 0.85,
+                      }}
+                      onClick={() => handleResearchTopicClick(item.topic_name)}
+                    >
+                      {item.topic_name} ({item.talent_count})
+                    </Tag>
+                  ))}
+                  {hotResearchTopics.length === 0 && (
                     <Text type="secondary">暂无数据</Text>
                   )}
                 </div>
@@ -291,20 +327,20 @@ const HomePage: React.FC = () => {
               {/* Overview stats — 5 dimensions */}
               <div style={{ marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--border-secondary)' }}>
                 <Space size={12} wrap>
-                  <Text style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    覆盖国家 <strong style={{ color: dt.secondary }}>{stats.country_count || topCountries.length}</strong>
+                  <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                    覆盖国家 <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.country_count || topCountries.length}</strong>
                   </Text>
-                  <Text style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    覆盖院校 <strong style={{ color: dt.secondary }}>{stats.school_count.toLocaleString()}</strong>
+                  <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                    覆盖院校 <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.school_count.toLocaleString()}</strong>
                   </Text>
-                  <Text style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    人才总数 <strong style={{ color: dt.secondary }}>{stats.talent_count.toLocaleString()}</strong>
+                  <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                    人才总数 <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.talent_count.toLocaleString()}</strong>
                   </Text>
-                  <Text style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    教授/研究员 <strong style={{ color: dt.secondary }}>{stats.professor_count.toLocaleString()}</strong>
+                  <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                    教授/研究员 <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.professor_count.toLocaleString()}</strong>
                   </Text>
-                  <Text style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    学生类人才 <strong style={{ color: dt.secondary }}>{stats.student_count.toLocaleString()}</strong>
+                  <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                    学生类人才 <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.student_count.toLocaleString()}</strong>
                   </Text>
                 </Space>
               </div>

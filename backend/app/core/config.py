@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     # Application
     APP_NAME: str = "智能人才库 API"
-    APP_VERSION: str = "1.4.1"
+    APP_VERSION: str = "1.5.0"
     DEBUG: bool = False
     ENVIRONMENT: str = "development"  # development, test, production
 
@@ -94,7 +94,7 @@ class Settings(BaseSettings):
     SEARCH_ENABLE_SEMANTIC: bool = True  # Enable semantic search
 
     # Search Thresholds
-    SEARCH_SEMANTIC_THRESHOLD: float = 0.7  # Minimum similarity for semantic search
+    SEARCH_SEMANTIC_THRESHOLD: float = 0.5  # Minimum similarity for semantic search
     SEARCH_PRECISE_THRESHOLD: float = 0.95  # Threshold for "precise match" classification
     SEARCH_SIMILAR_THRESHOLD_MIN: float = 0.7  # Minimum for "similar match" classification
 

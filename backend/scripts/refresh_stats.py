@@ -112,6 +112,29 @@ async def build_homepage_statistics(session):
         return False
 
 
+async def refresh_research_topic_stats(session):
+    """Refresh research topic statistics from openalex_topics.
+
+    Used for:
+    1. Initializing historical data (already collected but not yet counted)
+    2. Manual full refresh to fix data inconsistency
+    3. Scheduled task fallback
+    """
+    from app.builders.stat_builder import StatBuilder
+
+    logger.info("Refreshing research topic statistics...")
+
+    try:
+        builder = StatBuilder(session, batch_id=0, version="manual-refresh")
+        result = await builder._build_research_topic_stats()
+        await session.flush()
+        logger.info(f"  Research topic stats refreshed: {result['topics_processed']} topics")
+        return result["topics_processed"]
+    except Exception as e:
+        logger.error(f"  Research topic stats refresh error: {e}")
+        return 0
+
+
 async def rebuild_search_index(session):
     """Rebuild search index for all talents."""
     from app.builders.search_builder import SearchBuilder
@@ -156,7 +179,11 @@ async def refresh_all_stats():
         # 4. Rebuild search index
         await rebuild_search_index(session)
 
-        # 5. Print summary
+        # 5. Refresh research topic statistics (handles historical data initialization)
+        await refresh_research_topic_stats(session)
+        await session.commit()
+
+        # 6. Print summary
         logger.info("\n=== Summary ===")
         result = await session.execute(text("SELECT COUNT(*) FROM core_talent"))
         logger.info(f"Total talents: {result.scalar()}")
@@ -169,6 +196,9 @@ async def refresh_all_stats():
 
         result = await session.execute(text("SELECT COUNT(*) FROM search_talent_document"))
         logger.info(f"Search documents: {result.scalar()}")
+
+        result = await session.execute(text("SELECT COUNT(*) FROM stats_research_topic"))
+        logger.info(f"Research topic stats: {result.scalar()}")
 
         logger.info("\nStatistics refresh complete!")
 

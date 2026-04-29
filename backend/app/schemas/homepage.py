@@ -17,6 +17,13 @@ class HotTechDomainItem(BaseModel):
     talent_count: int = Field(description="相关人才数", default=0)
 
 
+class HotResearchTopicItem(BaseModel):
+    """热门研究方向项"""
+
+    topic_name: str = Field(description="研究方向名称")
+    talent_count: int = Field(description="相关人才数", default=0)
+
+
 class TopCountryItem(BaseModel):
     """主要国家项"""
 
@@ -43,5 +50,8 @@ class HomepageHighlightsResponse(BaseModel):
     )
     top_countries: list[TopCountryItem] = Field(default_factory=list, description="主要国家列表")
     top_schools: list[TopSchoolItem] = Field(default_factory=list, description="Top院校列表")
+    hot_research_topics: list[HotResearchTopicItem] = Field(
+        default_factory=list, description="热门研究方向列表"
+    )
     version: str = Field(description="数据版本")
     generated_at: str = Field(description="生成时间")

@@ -138,6 +138,12 @@ export interface TechDirection {
   tech_domain_id: number
 }
 
+// Hot Research Topic - 热门研究方向（首页展示）
+export interface HotResearchTopic {
+  topic_name: string
+  talent_count: number
+}
+
 // Search Talent Result - 搜索结果人才
 export interface SearchTalent {
   talent_id: number

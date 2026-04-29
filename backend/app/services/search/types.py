@@ -26,7 +26,7 @@ class SearchResult:
     search_mode: str
     took_ms: float
     precise_count: int = 0  # 精准匹配数量 (similarity >= 0.95)
-    similar_count: int = 0  # 相似匹配数量 (0.7 <= similarity < 0.95)
+    similar_count: int = 0  # 相似匹配数量 (0.5 <= similarity < 0.95)
     fulltext_count: int = 0  # 关键词匹配数量
     semantic_count: int = 0  # 语义匹配数量
 

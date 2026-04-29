@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.school import School
+from app.models.statistics import ResearchTopicStats
 from app.models.tech_domain import TalentTechTag, TechDomain
 
 
@@ -94,6 +95,34 @@ class HomepageRepository:
                 "country_code": row.country_code,
                 "country_name": row.country_name,
                 "talent_count": int(row.talent_count or 0),
+            }
+            for row in rows
+        ]
+
+    async def get_hot_research_topics(self, limit: int = 5) -> list[dict]:
+        """
+        Get hot research topics from pre-computed table.
+        从预计算表获取热门研究方向
+
+        Args:
+            limit: Maximum number of results
+
+        Returns:
+            List of dictionaries with topic name and talent count
+        """
+        query = (
+            select(ResearchTopicStats.topic_name, ResearchTopicStats.talent_count)
+            .order_by(ResearchTopicStats.talent_count.desc())
+            .limit(limit)
+        )
+
+        result = await self.session.execute(query)
+        rows = result.all()
+
+        return [
+            {
+                "topic_name": row.topic_name,
+                "talent_count": row.talent_count,
             }
             for row in rows
         ]

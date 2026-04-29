@@ -198,6 +198,10 @@ class SearchBuilder(BaseBuilder):
         if talent.topic_tags:
             parts.extend(talent.topic_tags)
 
+        # Add openalex research topics for fulltext search coverage
+        if talent.openalex_topics:
+            parts.extend(talent.openalex_topics)
+
         # Add title if available
         if talent.current_title:
             parts.append(talent.current_title)

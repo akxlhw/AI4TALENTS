@@ -70,6 +70,7 @@ BUSINESS_TABLES = [
     # 统计快照
     "stat_school_snapshot",
     "stat_overview_snapshot",
+    "stats_research_topic",
     # 数据版本
     "data_quality_summary",
     "data_correction_record",

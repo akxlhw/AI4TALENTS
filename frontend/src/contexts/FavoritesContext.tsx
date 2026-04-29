@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { message } from 'antd'
 import { api } from '../services/api'
+import { useAuth } from './AuthContext'
 import type { FavoriteTalent } from '../types'
 
 interface FavoritesContextType {
@@ -21,6 +22,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set())
   const [favorites, setFavorites] = useState<FavoriteTalent[]>([])
   const [loading, setLoading] = useState(true)
+  const { isAuthenticated } = useAuth()
 
   const refreshFavorites = useCallback(async () => {
     try {
@@ -37,15 +39,16 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [])
 
-  // Load favorites on mount
+  // Load favorites only when authenticated
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (token) {
+    if (isAuthenticated) {
       refreshFavorites()
     } else {
+      setFavoriteIds(new Set())
+      setFavorites([])
       setLoading(false)
     }
-  }, [refreshFavorites])
+  }, [isAuthenticated, refreshFavorites])
 
   const isFavorited = useCallback((talentId: number) => {
     return favoriteIds.has(talentId)

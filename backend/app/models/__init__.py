@@ -26,7 +26,7 @@ from app.models.raw_data import AuthorTechBelong, RawAuthor, RawInstitution, Raw
 from app.models.school import School, SchoolAlias
 from app.models.search import SearchTalentDocument
 from app.models.standardized import SchoolNameAlias, StdAuthor, StdSchool
-from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
+from app.models.statistics import OverviewStatSnapshot, ResearchTopicStats, SchoolStatSnapshot
 from app.models.sync import (
     CollectScope,
     CollectStrategy,
@@ -63,6 +63,7 @@ __all__ = [
     "WorkAuthor",
     # Statistics
     "OverviewStatSnapshot",
+    "ResearchTopicStats",
     "SchoolStatSnapshot",
     # IAM
     "UserAccount",

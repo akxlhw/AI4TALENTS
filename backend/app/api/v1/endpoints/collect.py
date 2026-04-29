@@ -110,16 +110,21 @@ async def _run_unified_collect(task_id: int):
         progress = await orchestrator.execute_task(task_id)
 
         if progress.status == "completed":
-            print(f"\n[BACKGROUND] 任务 #{task_id} 完成!")
-            print(f"[BACKGROUND] Works: {progress.total_works:,}")
-            print(f"[BACKGROUND] Authors: {progress.total_authors:,}")
-            print(f"[BACKGROUND] Normalized: {progress.normalized_authors:,}")
-            print(f"[BACKGROUND] Synced to Talent: {progress.synced_authors:,}")
-            print(f"[BACKGROUND]   - Created: {progress.created_talents:,}")
-            print(f"[BACKGROUND]   - Updated: {progress.updated_talents:,}")
-            print(f"[BACKGROUND] Tech Tags: {progress.created_tech_tags:,}")
+            logging.info(
+                "[BACKGROUND] 任务 #%s 完成! Works: %s, Authors: %s, "
+                "Normalized: %s, Synced to Talent: %s (Created: %s, Updated: %s), "
+                "Tech Tags: %s",
+                task_id,
+                progress.total_works,
+                progress.total_authors,
+                progress.normalized_authors,
+                progress.synced_authors,
+                progress.created_talents,
+                progress.updated_talents,
+                progress.created_tech_tags,
+            )
         else:
-            print(f"\n[BACKGROUND] 任务 #{task_id} 失败: {progress.errors}")
+            logging.error("[BACKGROUND] 任务 #%s 失败: %s", task_id, progress.errors)
 
 
 # ============ Tech Domain Collect Config Endpoints ============

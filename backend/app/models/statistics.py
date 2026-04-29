@@ -2,10 +2,23 @@
 Statistics snapshot models.
 """
 
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+
+
+class ResearchTopicStats(Base):
+    """Pre-computed research topic statistics for homepage hot topics."""
+
+    __tablename__ = "stats_research_topic"
+
+    topic_name = Column(String(255), primary_key=True)
+    talent_count = Column(Integer, default=0)
+    updated_at = Column(DateTime, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<ResearchTopicStats(topic={self.topic_name}, count={self.talent_count})>"
 
 
 class OverviewStatSnapshot(Base):

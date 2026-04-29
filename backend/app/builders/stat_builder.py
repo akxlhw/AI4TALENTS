@@ -6,13 +6,13 @@ Generates statistics snapshots for overview and school-level metrics.
 import logging
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.builders.base import BaseBuilder, BuildResult
 from app.models.enums import RoleType
 from app.models.school import School
-from app.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
+from app.models.statistics import OverviewStatSnapshot, ResearchTopicStats, SchoolStatSnapshot
 from app.models.talent import Talent
 
 logger = logging.getLogger(__name__)
@@ -48,9 +48,12 @@ class StatBuilder(BaseBuilder):
             # Build school stats
             school_result = await self._build_school_stats()
 
+            # Build research topic stats
+            topic_result = await self._build_research_topic_stats()
+
             await self.session.commit()
 
-            records_created = 1 + school_result["schools_processed"]
+            records_created = 1 + school_result["schools_processed"] + topic_result["topics_processed"]
             completed_at = datetime.now()
 
             return BuildResult(
@@ -153,6 +156,48 @@ class StatBuilder(BaseBuilder):
             "total_students": student_count,
             "total_talents": total_count,
         }
+
+    async def _build_research_topic_stats(self) -> dict[str, int]:
+        """Build research topic statistics from openalex_topics.
+
+        Pre-computes top research topics by talent count for homepage display.
+        Uses TRUNCATE + INSERT for atomic full refresh.
+        """
+        logger.info("Building research topic statistics")
+
+        # Clear old data (full refresh mode)
+        await self.session.execute(ResearchTopicStats.__table__.delete())
+
+        # Aggregate openalex_topics from all enabled talent-tech-tag associations
+        result = await self.session.execute(text("""
+            SELECT
+                topic,
+                COUNT(DISTINCT t.talent_id) as talent_count
+            FROM core_talent_tech_tag ttt
+            JOIN core_talent t ON ttt.talent_id = t.talent_id
+            CROSS JOIN LATERAL jsonb_array_elements_text(t.openalex_topics::jsonb) AS topic
+            WHERE ttt.is_enabled = true
+              AND t.openalex_topics IS NOT NULL
+              AND jsonb_array_length(t.openalex_topics::jsonb) > 0
+            GROUP BY topic
+            ORDER BY talent_count DESC
+            LIMIT 50
+        """))
+
+        topics_processed = 0
+        for row in result:
+            stat = ResearchTopicStats(
+                topic_name=row.topic,
+                talent_count=row.talent_count,
+                updated_at=datetime.now(),
+            )
+            self.session.add(stat)
+            topics_processed += 1
+            if topics_processed % 100 == 0:
+                await self.session.flush()
+
+        logger.info(f"Research topic stats: {topics_processed} topics processed")
+        return {"topics_processed": topics_processed}
 
     async def _build_school_stats(self) -> dict[str, int]:
         """
