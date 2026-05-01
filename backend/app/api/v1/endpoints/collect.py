@@ -1,5 +1,5 @@
 """
-Collect configuration API endpoints - MVP v1.2
+Collect configuration API endpoints
 采集配置相关接口
 
 功能说明：

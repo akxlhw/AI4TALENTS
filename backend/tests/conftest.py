@@ -1,5 +1,5 @@
 """
-Test configuration and fixtures for Academic Talent System MVP v1.1.
+Test configuration and fixtures for Academic Talent System.
 学术人才子系统测试配置
 
 Features:
@@ -17,6 +17,7 @@ os.environ["ENVIRONMENT"] = "test"
 
 from collections.abc import AsyncGenerator
 
+import httpx
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -28,7 +29,13 @@ from app.core import config
 config.get_settings.cache_clear()
 
 from app.core.database import Base, get_async_session  # noqa: E402
-from app.main import app  # noqa: E402
+from app.main import app as _fastapi_app  # noqa: E402
+
+# Import all models to ensure they are registered with Base.metadata for create_all
+import app.models  # noqa: E402, F401
+
+# Restore app variable after import app.models rebinds it
+app = _fastapi_app
 
 # Test database URL (PostgreSQL for testing - MUST be a separate database)
 # IMPORTANT: Never use production database for tests! Tests will DROP ALL TABLES after each run.
@@ -93,7 +100,8 @@ async def client(test_session: AsyncSession) -> AsyncGenerator[AsyncClient, None
 
     app.dependency_overrides[get_async_session] = override_get_session
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    transport = httpx.ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 
     app.dependency_overrides.clear()

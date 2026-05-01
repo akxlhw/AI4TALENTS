@@ -13,6 +13,8 @@ from app.api.v1.endpoints.auth import require_user
 from app.core.database import get_async_session
 from app.schemas.common import SuccessResponse
 from app.schemas.system_config import (
+    GitHubConfigRequest,
+    GitHubConfigResponse,
     LLMConfigRequest,
     LLMConfigResponse,
     ProxyConfigRequest,
@@ -21,6 +23,7 @@ from app.schemas.system_config import (
     SystemConfigListResponse,
     TestEmbeddingRequest,
     TestEmbeddingResponse,
+    TestGitHubResponse,
     TestLLMRequest,
     TestLLMResponse,
     TestProxyRequest,
@@ -806,6 +809,133 @@ async def test_proxy_connection(
         details={"proxy_url": proxy_url, "no_proxy": no_proxy},
         results=results,
     )
+
+
+# ========== GitHub Configuration Endpoints ==========
+
+
+@router.get(
+    "/github",
+    response_model=GitHubConfigResponse,
+    summary="获取 GitHub API 配置",
+    description="获取 GitHub API 相关配置（Token 已脱敏）",
+)
+async def get_github_config(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_admin_user),
+):
+    """Get GitHub API configuration."""
+    config_service = ConfigService(session)
+    config = await config_service.get_github_config()
+
+    return GitHubConfigResponse(
+        tokens_masked=(
+            config_service.mask_sensitive_value("GITHUB_TOKENS", config.tokens)
+            if config.tokens
+            else ""
+        ),
+        base_url=config.base_url,
+        rate_limit=config.rate_limit,
+    )
+
+
+@router.put("/github", response_model=dict, summary="更新 GitHub 配置", description="更新 GitHub API 相关配置")
+async def update_github_config(
+    request: GitHubConfigRequest,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_admin_user),
+):
+    """Update GitHub API configuration."""
+    config_service = ConfigService(session)
+
+    update_data = {}
+    if request.tokens is not None:
+        update_data["tokens"] = request.tokens
+    if request.base_url is not None:
+        update_data["base_url"] = request.base_url
+    if request.rate_limit is not None:
+        update_data["rate_limit"] = request.rate_limit
+
+    await config_service.update_github_config(update_data)
+    ConfigService.clear_cache()
+
+    logger.info(f"[GitHub Config] Updated by user {current_user.get('user_id')}")
+    return {"message": "GitHub 配置已保存"}
+
+
+@router.post("/github/test", response_model=TestGitHubResponse, summary="测试 GitHub API 连接")
+async def test_github_connection(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_admin_user),
+):
+    """Test GitHub API connection using configured tokens."""
+    import httpx
+
+    config_service = ConfigService(session)
+    config = await config_service.get_github_config()
+
+    if not config.tokens:
+        return TestGitHubResponse(success=False, message="未配置 GitHub Token")
+
+    tokens = [t.strip() for t in config.tokens.split(",") if t.strip()]
+    if not tokens:
+        return TestGitHubResponse(success=False, message="Token 格式无效")
+
+    results = []
+    for token in tokens:
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.get(
+                    f"{config.base_url}/rate_limit",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    rate = data.get("rate", {})
+                    results.append({
+                        "token_prefix": token[:8] + "****",
+                        "success": True,
+                        "limit": rate.get("limit", 0),
+                        "remaining": rate.get("remaining", 0),
+                    })
+                elif response.status_code == 401:
+                    results.append({
+                        "token_prefix": token[:8] + "****",
+                        "success": False,
+                        "error": "Token 无效或已过期",
+                    })
+                else:
+                    results.append({
+                        "token_prefix": token[:8] + "****",
+                        "success": False,
+                        "error": f"HTTP {response.status_code}",
+                    })
+        except Exception as e:
+            results.append({
+                "token_prefix": token[:8] + "****",
+                "success": False,
+                "error": str(e),
+            })
+
+    success_count = sum(1 for r in results if r["success"])
+    if success_count == len(tokens):
+        return TestGitHubResponse(
+            success=True,
+            message=f"全部 {len(tokens)} 个 Token 测试通过",
+            details={"results": results},
+        )
+    elif success_count > 0:
+        return TestGitHubResponse(
+            success=True,
+            message=f"{success_count}/{len(tokens)} 个 Token 可用",
+            details={"results": results},
+        )
+    else:
+        return TestGitHubResponse(
+            success=False,
+            message="所有 Token 均无法连接 GitHub API",
+            details={"results": results},
+        )
 
 
 # ========== Generic Configuration Endpoints ==========

@@ -433,7 +433,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-01-15
 
 ### Added
-- Initial MVP release
+- Initial release
 - Basic talent browsing by country/school
 - Keyword search functionality
 - School detail pages

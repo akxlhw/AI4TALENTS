@@ -396,3 +396,120 @@ export interface RecommendResponse {
   mode: string
   took_ms: number
 }
+
+// ============================================
+// v2.0 新增类型定义 - 开源人才库
+// ============================================
+
+export interface OSDeveloper {
+  developer_id: number
+  github_login: string
+  name?: string
+  bio?: string
+  location?: string
+  company?: string
+  avatar_url?: string
+  total_stars_received: number
+  primary_languages: string[]
+  tech_tags: string[]
+  is_visible: boolean
+}
+
+export interface OSDeveloperDetail extends OSDeveloper {
+  github_id?: number
+  blog_url?: string
+  email?: string
+  followers_count: number
+  following_count: number
+  public_repos_count: number
+  total_forks_received: number
+  repositories: OSRepository[]
+  language_skills: OSLanguageSkill[]
+  contributions: OSContribution[]
+  similar_developers: OSDeveloper[]
+}
+
+export interface OSRepository {
+  repo_id: number
+  github_repo_id?: number
+  full_name: string
+  name: string
+  language?: string
+  stars_count: number
+  forks_count: number
+  topics: string[]
+  is_fork: boolean
+}
+
+export interface OSContribution {
+  contribution_id: number
+  repo_id: number
+  repo_full_name: string
+  commits_count: number
+  prs_count: number
+  issues_count: number
+  code_reviews_count: number
+  is_owner: boolean
+  is_maintainer: boolean
+}
+
+export interface OSLanguageSkill {
+  skill_id: number
+  language: string
+  repo_count: number
+  total_commits: number
+  proficiency_score: number
+}
+
+export interface OSRepoConfig {
+  repo_config_id: number
+  repo_full_name: string
+  display_name?: string
+  description?: string
+  tech_element: string
+  tech_direction_id?: number
+  language?: string
+  stars_count: number
+  is_active: boolean
+  collect_enabled: boolean
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface OSCollectTask {
+  task_id: number
+  task_name: string
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  progress_percent: number
+  current_step?: string
+  total_records: number
+  processed_records: number
+  config_json?: Record<string, unknown>
+  error_message?: string
+  created_at: string
+  started_at?: string
+  completed_at?: string
+}
+
+export interface OSStats {
+  total_developers: number
+  total_repositories: number
+  total_organizations: number
+  active_developers_30d: number
+  language_distribution: Record<string, number>
+  tech_element_distribution: Record<string, number>
+}
+
+export interface OSSearchQuery {
+  q?: string
+  tech_elements?: string[]
+  languages?: string[]
+  location?: string
+  company?: string
+  min_stars?: number
+  sort_by?: string
+  mode?: 'keyword' | 'semantic' | 'hybrid'
+  page?: number
+  page_size?: number
+}

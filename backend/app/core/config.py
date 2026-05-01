@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     # Application
     APP_NAME: str = "智能人才库 API"
-    APP_VERSION: str = "1.5.0"
+    APP_VERSION: str = "2.0.0"
     DEBUG: bool = False
     ENVIRONMENT: str = "development"  # development, test, production
 
@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     OPENALEX_BASE_URL: str = "https://api.openalex.org"
     OPENALEX_EMAIL: str | None = None  # For polite API access
     OPENALEX_RATE_LIMIT: int = 10  # Requests per second
+
+    # GitHub API (v2.0 - Open Source Talent)
+    GITHUB_TOKENS: str = ""  # Comma-separated GitHub personal access tokens
+    GITHUB_BASE_URL: str = "https://api.github.com"
+    GITHUB_RATE_LIMIT: int = 5000  # Requests per hour per token
 
     # JWT Authentication
     SECRET_KEY: str = "your-secret-key-change-in-production"

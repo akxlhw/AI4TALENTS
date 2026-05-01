@@ -1,21 +1,17 @@
 import { useState, useEffect } from 'react'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { Dropdown, Avatar, Space, Typography, Tag, Tooltip, Button } from 'antd'
 import {
   UserOutlined,
   LogoutOutlined,
   SettingOutlined,
   DatabaseOutlined,
-  HomeOutlined,
-  BookOutlined,
   StarOutlined,
+  BookOutlined,
   CodeOutlined,
   TrophyOutlined,
   BuildOutlined,
   LockOutlined,
-
-  DownOutlined,
-  UpOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useDomainStore } from '../stores/domainStore'
@@ -31,19 +27,16 @@ interface DomainNavItem {
 
 const domainNavItems: DomainNavItem[] = [
   { key: 'academic', icon: <BookOutlined /> },
-  { key: 'opensource', icon: <CodeOutlined />, soon: true },
+  { key: 'opensource', icon: <CodeOutlined /> },
   { key: 'competition', icon: <TrophyOutlined />, soon: true },
   { key: 'industry', icon: <BuildOutlined />, soon: true },
 ]
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate()
-  const location = useLocation()
   const { user, logout, isAdmin } = useAuth()
-  const isHome = location.pathname === '/'
   const { currentDomain, setDomain, isDomainAvailable } = useDomainStore()
   const [scrolled, setScrolled] = useState(false)
-  const [dockOpen, setDockOpen] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -99,7 +92,7 @@ const MainLayout: React.FC = () => {
   }
 
   return (
-    <div style={{ minHeight: '100vh', position: 'relative', paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', position: 'relative' }}>
       {/* ========== Top Nav — Transparent → Frosted on scroll ========== */}
       <nav
         style={{
@@ -120,10 +113,11 @@ const MainLayout: React.FC = () => {
           boxShadow: scrolled ? 'var(--shadow-sm)' : 'none',
         }}
       >
-        {/* Logo + Home */}
-        <Space size={16}>
+        {/* Left: Logo + Domain Switcher */}
+        <Space size={16} style={{ flex: 1, overflow: 'hidden' }}>
+          {/* Logo */}
           <Space
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: 'pointer', flexShrink: 0 }}
             onClick={() => navigate('/')}
           >
             <Text
@@ -138,32 +132,88 @@ const MainLayout: React.FC = () => {
             </Text>
             <Text
               style={{
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: 500,
                 color: 'var(--text-secondary)',
-                letterSpacing: '1px',
+                letterSpacing: '0.5px',
               }}
             >
               智能人才库
             </Text>
           </Space>
 
-          {!isHome && (
-            <Button
-              type="text"
-              size="small"
-              icon={<HomeOutlined />}
-              onClick={() => navigate('/')}
-              style={{ fontSize: 13 }}
-            >
-              首页
-            </Button>
-          )}
+          {/* Divider */}
+          <div
+            style={{
+              width: 1.5,
+              height: 20,
+              background: '#CBD5E0',
+              borderRadius: 1,
+              flexShrink: 0,
+            }}
+          />
+
+          {/* Domain Switcher */}
+          <Space size={2} style={{ flexShrink: 0 }}>
+            {domainNavItems.map((d) => {
+              const theme = domainThemes[d.key]
+              const isActive = currentDomain === d.key
+              return (
+                <Tooltip
+                  key={d.key}
+                  title={d.soon ? `${theme.label}（即将上线）` : theme.label}
+                  placement="bottom"
+                >
+                  <button
+                    onClick={() => handleDomainSwitch(d.key)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '5px 12px',
+                      borderRadius: 6,
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      fontWeight: isActive ? 600 : 400,
+                      color: isActive ? '#fff' : 'var(--text-secondary)',
+                      background: isActive
+                        ? theme.primary
+                        : 'transparent',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = 'var(--bg-layout)'
+                        e.currentTarget.style.color = 'var(--text-primary)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = 'transparent'
+                        e.currentTarget.style.color = 'var(--text-secondary)'
+                      }
+                    }}
+                  >
+                    <span style={{ fontSize: 14, display: 'flex', alignItems: 'center' }}>
+                      {d.icon}
+                    </span>
+                    <span>{theme.shortLabel}</span>
+                    {d.soon && (
+                      <LockOutlined style={{ fontSize: 10, opacity: isActive ? 0.7 : 0.35 }} />
+                    )}
+                  </button>
+                </Tooltip>
+              )
+            })}
+          </Space>
+
+
         </Space>
 
-        {/* Nav actions — pushed to right */}
+        {/* Right: User actions */}
         {user && (
-          <Space size={8}>
+          <Space size={8} style={{ flexShrink: 0 }}>
             <Button
               type="text"
               size="small"
@@ -198,111 +248,10 @@ const MainLayout: React.FC = () => {
         )}
       </nav>
 
-      {/* ========== Content Area — Full Width, No Sidebar ========== */}
+      {/* ========== Content Area ========== */}
       <main className="discovery-content" style={{ paddingTop: 0 }}>
         <Outlet />
       </main>
-
-      {/* ========== Collapsible Bottom Dock ========== */}
-      <div className="dock-container" style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
-        {dockOpen ? (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 12px',
-              background: 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(12px)',
-              borderRadius: 20,
-              border: '1px solid var(--border-secondary)',
-              boxShadow: 'var(--shadow-lg)',
-              animation: 'dock-pop 0.2s ease-out',
-            }}
-          >
-            <button
-              onClick={() => setDockOpen(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 32,
-                height: 32,
-                borderRadius: 12,
-                border: 'none',
-                cursor: 'pointer',
-                background: 'var(--bg-layout)',
-                color: 'var(--text-secondary)',
-              }}
-            >
-              <UpOutlined style={{ fontSize: 12 }} />
-            </button>
-            {domainNavItems.map((d) => {
-              const theme = domainThemes[d.key]
-              const isActive = currentDomain === d.key
-              return (
-                <Tooltip
-                  key={d.key}
-                  title={d.soon ? `${theme.label}（即将上线）` : theme.label}
-                  placement="top"
-                >
-                  <button
-                    onClick={() => handleDomainSwitch(d.key)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: isActive ? '8px 16px' : '8px 12px',
-                      borderRadius: 16,
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: isActive ? 600 : 400,
-                      color: isActive ? '#fff' : 'var(--text-secondary)',
-                      background: isActive ? theme.primary : 'transparent',
-                      boxShadow: isActive ? `0 4px 12px ${theme.primary}44` : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                    }}
-                  >
-                    <span style={{ fontSize: 16 }}>{d.icon}</span>
-                    {isActive && <span>{theme.shortLabel}</span>}
-                    {d.soon && !isActive && (
-                      <LockOutlined style={{ fontSize: 10, opacity: 0.4 }} />
-                    )}
-                  </button>
-                </Tooltip>
-              )
-            })}
-          </div>
-        ) : (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setDockOpen(true)
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '10px 18px',
-              borderRadius: 20,
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 13,
-              color: '#fff',
-              background: domainThemes[currentDomain].primary,
-              boxShadow: `0 4px 14px ${domainThemes[currentDomain].primary}55`,
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)' }}
-          >
-            <span style={{ fontSize: 16 }}>{domainNavItems.find((d) => d.key === currentDomain)?.icon}</span>
-            <span>{domainThemes[currentDomain].shortLabel}</span>
-            <DownOutlined style={{ fontSize: 11, opacity: 0.7 }} />
-          </button>
-        )}
-      </div>
     </div>
   )
 }

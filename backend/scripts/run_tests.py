@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Test Runner for Academic Talent System MVP v1.1
+Test Runner for Academic Talent System
 学术人才子系统测试运行脚本
 
 Usage:

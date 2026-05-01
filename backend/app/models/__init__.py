@@ -41,6 +41,20 @@ from app.models.system_config import SystemConfig
 from app.models.talent import RoleProfile, SelectedWork, Talent
 from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
 from app.models.venue import Venue, VenueSubTask, VenueTechBinding
+from app.models.open_source import (
+    OSContribution,
+    OSCollectTask,
+    OSDeveloper,
+    OSEmbedding,
+    OSFavourite,
+    OSLanguageSkill,
+    OSPoolMember,
+    OSRawDeveloper,
+    OSRepoConfig,
+    OSRepoMapping,
+    OSRepository,
+    OSTalentPool,
+)
 
 __all__ = [
     # Enums
@@ -104,4 +118,17 @@ __all__ = [
     "SystemConfig",
     # Audit
     "AuditOperationLog",
+    # Open Source (v2.0)
+    "OSRepoConfig",
+    "OSDeveloper",
+    "OSRepository",
+    "OSContribution",
+    "OSLanguageSkill",
+    "OSEmbedding",
+    "OSFavourite",
+    "OSTalentPool",
+    "OSPoolMember",
+    "OSCollectTask",
+    "OSRawDeveloper",
+    "OSRepoMapping",
 ]

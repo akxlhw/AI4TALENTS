@@ -1,7 +1,7 @@
 [project]
 name = "talent-platform-backend"
-version = "1.5.0"
-description = "智能人才库 - 学术人才子系统 MVP 后端服务"
+version = "2.0.0"
+description = "智能人才库 - 多维度人才发现平台后端服务"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

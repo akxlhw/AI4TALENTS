@@ -309,7 +309,7 @@ export const api = {
       apiClient.get('/talent-pools/followup-statuses'),
   },
 
-  // Collect Configuration - Simplified for MVP v1.1
+  // Collect Configuration
   collect: {
     // Tech Domains with Collect Config
     listTechDomains: () =>
@@ -480,6 +480,18 @@ export const api = {
     // 测试代理连接
     testProxy: (data?: { url?: string; username?: string; password?: string }) =>
       apiClient.post('/system-config/test-proxy', data || {}),
+    // 获取 GitHub 配置
+    getGitHubConfig: () =>
+      apiClient.get('/system-config/github'),
+    // 更新 GitHub 配置
+    updateGitHubConfig: (data: {
+      tokens?: string
+      base_url?: string
+      rate_limit?: number
+    }) => apiClient.put('/system-config/github', data),
+    // 测试 GitHub 连接
+    testGitHub: () =>
+      apiClient.post('/system-config/github/test'),
     // 更新单个配置
     updateConfig: (key: string, value: string | number | boolean) =>
       apiClient.put(`/system-config/${key}`, { value }),
@@ -505,5 +517,89 @@ export const api = {
     // 取消生成
     cancel: () =>
       apiClient.post('/embeddings/cancel'),
+  },
+
+  // v2.0 Open Source Talent - 开源人才库
+  openSource: {
+    // 统计
+    getStats: () => apiClient.get('/open-source/stats'),
+    getTrending: (params?: { period?: string; limit?: number }) =>
+      apiClient.get('/open-source/trending', { params }),
+
+    // 开发者
+    listDevelopers: (params?: Record<string, unknown>) =>
+      apiClient.get('/open-source/developers', { params }),
+    getDeveloper: (id: number) =>
+      apiClient.get(`/open-source/developers/${id}`),
+    getRepositories: (id: number, params?: { page?: number; page_size?: number; sort_by?: string }) =>
+      apiClient.get(`/open-source/developers/${id}/repositories`, { params }),
+    getContributions: (id: number) =>
+      apiClient.get(`/open-source/developers/${id}/contributions`),
+    getLanguages: (id: number) =>
+      apiClient.get(`/open-source/developers/${id}/languages`),
+    compare: (developerIds: number[]) =>
+      apiClient.post('/open-source/developers/compare', { developer_ids: developerIds }),
+    getRecommendations: (id: number, limit?: number) =>
+      apiClient.get(`/open-source/developers/${id}/recommend`, { params: { limit } }),
+
+    // 搜索
+    search: (params: Record<string, unknown>) =>
+      apiClient.post('/open-source/search', params),
+
+    // 收藏
+    addFavorite: (developerId: number, notes?: string) =>
+      apiClient.post('/open-source/favourites', { developer_id: developerId, notes }),
+    listFavorites: (params?: { page?: number; page_size?: number; keyword?: string }) =>
+      apiClient.get('/open-source/favourites', { params }),
+    updateFavorite: (developerId: number, data: { notes?: string; followup_status?: string }) =>
+      apiClient.put(`/open-source/favourites/${developerId}`, data),
+    removeFavorite: (developerId: number) =>
+      apiClient.delete(`/open-source/favourites/${developerId}`),
+    getFavoriteIds: () =>
+      apiClient.get('/open-source/favourites/ids'),
+
+    // 人才池
+    listTalentPools: () =>
+      apiClient.get('/open-source/talent-pools'),
+    createTalentPool: (data: { pool_name: string; pool_type?: string; scope_desc?: string }) =>
+      apiClient.post('/open-source/talent-pools', data),
+    addPoolMember: (poolId: number, developerId: number) =>
+      apiClient.post(`/open-source/talent-pools/${poolId}/members/${developerId}`),
+    removePoolMember: (poolId: number, developerId: number) =>
+      apiClient.delete(`/open-source/talent-pools/${poolId}/members/${developerId}`),
+    getPoolMembers: (poolId: number, params?: { page?: number; page_size?: number }) =>
+      apiClient.get(`/open-source/talent-pools/${poolId}/members`, { params }),
+
+    // 仓库配置（管理员）
+    listRepoConfigs: (params?: Record<string, unknown>) =>
+      apiClient.get('/open-source/repo-configs', { params }),
+    createRepoConfig: (data: Record<string, unknown>) =>
+      apiClient.post('/open-source/repo-configs', data),
+    updateRepoConfig: (id: number, data: Record<string, unknown>) =>
+      apiClient.put(`/open-source/repo-configs/${id}`, data),
+    deleteRepoConfig: (id: number) =>
+      apiClient.delete(`/open-source/repo-configs/${id}`),
+    collectRepo: (id: number, contributorsPerRepo?: number) =>
+      apiClient.post(`/open-source/repo-configs/${id}/collect`, null, { params: { contributors_per_repo: contributorsPerRepo } }),
+
+    // 采集任务（管理员）
+    listCollectTasks: () =>
+      apiClient.get('/open-source/collect/tasks'),
+    getCollectTask: (id: number) =>
+      apiClient.get(`/open-source/collect/tasks/${id}`),
+    createCollectTask: (data: Record<string, unknown>) =>
+      apiClient.post('/open-source/collect/tasks', data),
+    cancelCollectTask: (id: number) =>
+      apiClient.post(`/open-source/collect/tasks/${id}/cancel`),
+
+    // JD 匹配
+    jdMatch: (data: { jd_text: string; filters?: Record<string, unknown>; top_k?: number }) =>
+      apiClient.post('/open-source/jd-match', data),
+
+    // 嵌入管理
+    getEmbeddingStatus: () =>
+      apiClient.get('/open-source/embeddings/status'),
+    generateEmbeddings: (batchSize?: number) =>
+      apiClient.post('/open-source/embeddings/generate', { batch_size: batchSize }),
   },
 }

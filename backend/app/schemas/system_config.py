@@ -153,6 +153,30 @@ class TestEmbeddingRequest(BaseModel):
     embedding_model: str | None = Field(None, description="Embedding model name to test (optional)")
 
 
+class GitHubConfigRequest(BaseModel):
+    """Request for updating GitHub API configuration."""
+
+    tokens: str | None = Field(None, description="GitHub Personal Access Tokens，多个用逗号分隔")
+    base_url: str | None = Field(None, description="GitHub API 基础地址")
+    rate_limit: int | None = Field(None, ge=60, le=50000, description="单 Token 每小时请求上限")
+
+
+class GitHubConfigResponse(BaseModel):
+    """Response for GitHub API configuration."""
+
+    tokens_masked: str = Field(description="脱敏显示的 GitHub Tokens")
+    base_url: str = Field(description="GitHub API 基础地址")
+    rate_limit: int = Field(description="单 Token 每小时请求上限")
+
+
+class TestGitHubResponse(BaseModel):
+    """Response for testing GitHub API connection."""
+
+    success: bool = Field(description="是否成功")
+    message: str = Field(description="结果消息")
+    details: dict | None = Field(default=None, description="详细数据")
+
+
 class TestEmbeddingResponse(BaseModel):
     """Response for testing embedding connection."""
 

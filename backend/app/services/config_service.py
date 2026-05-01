@@ -55,6 +55,15 @@ class ProxyConfig:
     ssl_verify: bool = True  # 是否验证 SSL 证书
 
 
+@dataclass
+class GitHubConfig:
+    """GitHub API configuration settings."""
+
+    tokens: str = ""  # 逗号分隔的多个 GitHub Personal Access Token
+    base_url: str = "https://api.github.com"
+    rate_limit: int = 5000  # 每小时每 Token 请求上限
+
+
 class ConfigService:
     """
     Service for managing system configuration.
@@ -71,7 +80,7 @@ class ConfigService:
     _cache_ttl: int = 300  # 5 minutes default TTL
 
     # Sensitive keys that should be masked
-    SENSITIVE_KEYS = {"LLM_API_KEY", "PROXY_PASSWORD", "LLM_EMBEDDING_API_KEY"}
+    SENSITIVE_KEYS = {"LLM_API_KEY", "PROXY_PASSWORD", "LLM_EMBEDDING_API_KEY", "GITHUB_TOKENS"}
 
     @classmethod
     def mask_sensitive_value(cls, key: str, value: str) -> str:
@@ -458,6 +467,51 @@ class ConfigService:
                 return value
         except (ValueError, json.JSONDecodeError):
             return value
+
+    async def get_github_config(self, use_cache: bool = True) -> GitHubConfig:
+        """
+        Get GitHub API configuration.
+
+        Args:
+            use_cache: Whether to use cache
+
+        Returns:
+            GitHubConfig object
+        """
+        tokens = await self.get_value("GITHUB_TOKENS", "", use_cache)
+        base_url = await self.get_value("GITHUB_BASE_URL", "https://api.github.com", use_cache)
+        rate_limit = await self.get_value("GITHUB_RATE_LIMIT", 5000, use_cache)
+
+        return GitHubConfig(
+            tokens=str(tokens),
+            base_url=str(base_url),
+            rate_limit=int(rate_limit),
+        )
+
+    async def update_github_config(self, config: dict[str, Any]) -> None:
+        """
+        Update GitHub API configuration.
+
+        Args:
+            config: Dictionary of GitHub configuration values
+        """
+        key_mapping = {
+            "tokens": "GITHUB_TOKENS",
+            "base_url": "GITHUB_BASE_URL",
+            "rate_limit": "GITHUB_RATE_LIMIT",
+        }
+
+        for field, key in key_mapping.items():
+            if field in config:
+                value = config[field]
+                config_type = "string"
+                if field == "rate_limit":
+                    config_type = "int"
+
+                await self.set_value(key, value, config_type)
+
+        await self.session.commit()
+        logger.info("[GitHub Config] Configuration saved to database")
 
     def _to_string(self, value: Any, config_type: str) -> str:
         """Convert value to string for storage."""

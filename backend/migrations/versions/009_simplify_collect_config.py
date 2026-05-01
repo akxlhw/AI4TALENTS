@@ -1,4 +1,4 @@
-"""Simplify collect config for MVP v1.1
+"""Simplify collect config
 
 Revision ID: 009
 Revises: 008_add_data_version

@@ -1,5 +1,5 @@
 /**
- * 院校机构页面 - MVP v1.1
+ * 院校机构页面
  * 面向平台部门的主分析页面，以区域为第一分类维度展示院校机构
  */
 import { useState, useEffect, useCallback, useMemo } from 'react'

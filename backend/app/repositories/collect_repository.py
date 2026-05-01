@@ -1,5 +1,5 @@
 """
-Repository for collect configuration operations - Simplified for MVP v1.1
+Repository for collect configuration operations
 采集配置数据访问层 - 简化版
 
 采集逻辑简化：

@@ -1,5 +1,5 @@
 """
-Collect configuration schemas - MVP v1.2
+Collect configuration schemas
 采集配置相关 DTO
 
 采集逻辑：

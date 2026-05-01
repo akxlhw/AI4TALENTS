@@ -10,6 +10,7 @@ import {
 import { useHomepageHighlights, useOverviewStats } from '../hooks/useQueries'
 import { useDomainStore } from '../stores/domainStore'
 import { domainThemes } from '../theme'
+import OpenSourcePage from './openSource/OpenSourcePage'
 
 const { Title, Paragraph, Text } = Typography
 const { Search } = Input
@@ -39,13 +40,10 @@ interface HotResearchTopic {
   talent_count: number
 }
 
-/* ── Horizontal scroll row component ── */
-
-
-const HomePage: React.FC = () => {
+/* ── Academic Home Page ── */
+const AcademicHomePage: React.FC = () => {
   const navigate = useNavigate()
-  const { currentDomain } = useDomainStore()
-  const dt = domainThemes[currentDomain]
+  const dt = domainThemes['academic']
 
   const { data: overview, isLoading: overviewLoading } = useOverviewStats()
   const { data: highlights, isLoading: highlightsLoading } = useHomepageHighlights()
@@ -221,8 +219,6 @@ const HomePage: React.FC = () => {
           </div>
         </div>
 
-
-
         {/* ═══════════ Two-column Cards — v1.4.2 style ═══════════ */}
         <Row gutter={16} style={{ padding: '32px 32px 0' }} align="stretch">
           {/* Left — Tech Domains */}
@@ -387,11 +383,20 @@ const HomePage: React.FC = () => {
             </Card>
           </Col>
         </Row>
-
-
       </div>
     </Spin>
   )
+}
+
+/* ── Home Page Dispatcher ── */
+const HomePage: React.FC = () => {
+  const { currentDomain } = useDomainStore()
+
+  if (currentDomain === 'opensource') {
+    return <OpenSourcePage />
+  }
+
+  return <AcademicHomePage />
 }
 
 export default HomePage

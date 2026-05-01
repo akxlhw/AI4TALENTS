@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
     homepage,
     jd_match,
     metrics,
+    open_source,
     overview,
     permissions,
     recommend,
@@ -93,3 +94,6 @@ api_router.include_router(jd_match.router)
 
 # Recommend endpoints (v1.4)
 api_router.include_router(recommend.router)
+
+# Open Source Talent endpoints (v2.0)
+api_router.include_router(open_source.router)

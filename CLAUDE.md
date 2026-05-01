@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## Project Overview
 
-智能人才库 (AI4TALENTS) - 学术人才子系统 MVP
+智能人才库 (AI4TALENTS) V2.0.0
 一个基于 OpenAlex 学术数据库的人才发现平台，面向招聘团队的内部工具。
 
 ## Tech Stack
