@@ -86,3 +86,14 @@ frontend/test-results/
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Temporary / local environments
+backend/.test_venv/
+backend/.venv311/
+backend/.venv313/
+
+# Temporary debug scripts
+backend/check_*.py
+backend/fix_alembic.py
+backend/test_db.py
+
