@@ -13,9 +13,9 @@ from datetime import datetime
 from typing import Any
 
 from app.core.database import AsyncSessionLocal
-from app.models.open_source import OSCollectTask
-from app.services.open_source.collectors.sync_service import SyncService
-from app.services.open_source.github_client import GitHubClient
+from app.domains.open_source.models.open_source import OSCollectTask
+from app.domains.open_source.services.collectors.sync_service import SyncService
+from app.domains.open_source.services.github_client import GitHubClient
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ class GitHubCollector:
 
         # Update os_repo_config stars_count so Trending list stays current
         async with AsyncSessionLocal() as session:
-            from app.models.open_source import OSRepoConfig
+            from app.domains.open_source.models.open_source import OSRepoConfig
             from sqlalchemy import select
             config = await session.scalar(
                 select(OSRepoConfig).where(OSRepoConfig.repo_full_name == ctx.repo_full_name)

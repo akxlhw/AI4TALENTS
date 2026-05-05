@@ -8,7 +8,7 @@ from httpx import AsyncClient
 from app.core.auth import create_access_token, hash_password
 from app.models.enums import UserRoleType
 from app.models.iam import UserAccount
-from app.models.open_source import (
+from app.domains.open_source.models.open_source import (
     OSDeveloper,
     OSFavourite,
     OSRepoConfig,

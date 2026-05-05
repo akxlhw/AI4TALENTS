@@ -11,7 +11,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.open_source import (
+from app.domains.open_source.models.open_source import (
     OSContribution,
     OSDeveloper,
     OSLanguageSkill,

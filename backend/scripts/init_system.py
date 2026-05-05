@@ -35,7 +35,7 @@ from app.models.iam import UserAccount, UserSchoolScope
 from app.models.tech_domain import TechDomain
 from app.models.statistics import OverviewStatSnapshot
 from app.models.venue import Venue, VenueTechBinding
-from app.models.open_source import OSRepoConfig
+from app.domains.open_source.models.open_source import OSRepoConfig
 
 # 学术人才库业务数据表
 ACADEMIC_TABLES = [

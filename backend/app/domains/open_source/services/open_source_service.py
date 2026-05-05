@@ -14,7 +14,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.open_source import (
+from app.domains.open_source.models.open_source import (
     OSCollectTask,
     OSDeveloper,
     OSFavourite,
@@ -22,8 +22,8 @@ from app.models.open_source import (
     OSRepoConfig,
     OSTalentPool,
 )
-from app.repositories.open_source_repository import OpenSourceRepository
-from app.schemas.open_source import (
+from app.domains.open_source.repositories.open_source_repository import OpenSourceRepository
+from app.domains.open_source.schemas.open_source import (
     OSContributionItem,
     OSDeveloperCompareResponse,
     OSDeveloperDetail,

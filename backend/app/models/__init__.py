@@ -41,7 +41,7 @@ from app.domains.shared.models.system_config import SystemConfig
 from app.domains.academic.models.talent import RoleProfile, SelectedWork, Talent
 from app.domains.academic.models.tech_domain import TalentTechTag, TechDirection, TechDomain
 from app.domains.academic.models.venue import Venue, VenueSubTask, VenueTechBinding
-from app.models.open_source import (
+from app.domains.open_source.models.open_source import (
     OSContribution,
     OSCollectTask,
     OSDeveloper,

@@ -18,7 +18,7 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal, get_async_session
 from app.models.enums import UserRoleType
 from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
-from app.schemas.open_source import (
+from app.domains.open_source.schemas.open_source import (
     OSCollectTaskCreate,
     OSCollectTaskResponse,
     OSContributionItem,
@@ -46,9 +46,9 @@ from app.schemas.open_source import (
     OSTalentPoolResponse,
     OSTalentPoolUpdate,
 )
-from app.services.open_source.collectors.github_collector import CollectContext, GitHubCollector
-from app.services.open_source.github_client import GitHubClient
-from app.services.open_source_service import OpenSourceService
+from app.domains.open_source.services.collectors.github_collector import CollectContext, GitHubCollector
+from app.domains.open_source.services.github_client import GitHubClient
+from app.domains.open_source.services.open_source_service import OpenSourceService
 
 logger = logging.getLogger(__name__)
 

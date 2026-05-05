@@ -12,7 +12,7 @@ from sqlalchemy import and_, cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.open_source import (
+from app.domains.open_source.models.open_source import (
     OSCollectTask,
     OSContribution,
     OSDeveloper,

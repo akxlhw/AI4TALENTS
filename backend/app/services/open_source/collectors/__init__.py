@@ -1,1 +1,0 @@
-"""Open source collection pipeline."""

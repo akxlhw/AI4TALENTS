@@ -7,7 +7,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from app.models.open_source import (
+from app.domains.open_source.models.open_source import (
     OSCollectTask,
     OSDeveloper,
     OSFavourite,
