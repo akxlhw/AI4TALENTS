@@ -16,8 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import verify_access_token
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, get_async_session
-from app.models.enums import UserRoleType
-from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
 from app.domains.open_source.schemas.open_source import (
     OSCollectTaskCreate,
     OSCollectTaskResponse,
@@ -46,9 +44,14 @@ from app.domains.open_source.schemas.open_source import (
     OSTalentPoolResponse,
     OSTalentPoolUpdate,
 )
-from app.domains.open_source.services.collectors.github_collector import CollectContext, GitHubCollector
+from app.domains.open_source.services.collectors.github_collector import (
+    CollectContext,
+    GitHubCollector,
+)
 from app.domains.open_source.services.github_client import GitHubClient
 from app.domains.open_source.services.open_source_service import OpenSourceService
+from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
+from app.domains.shared.models.enums import UserRoleType
 
 logger = logging.getLogger(__name__)
 

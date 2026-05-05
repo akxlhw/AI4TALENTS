@@ -7,9 +7,9 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.auth import hash_password
-from app.models.enums import UserRoleType
-from app.models.iam import UserAccount
-from app.models.tech_domain import TechDirection, TechDomain
+from app.domains.shared.models.enums import UserRoleType
+from app.domains.shared.models.iam import UserAccount
+from app.domains.academic.models.tech_domain import TechDirection, TechDomain
 
 
 @pytest.fixture
@@ -391,7 +391,7 @@ class TestTechDomainRepository:
     @pytest.mark.asyncio
     async def test_get_all_domains(self, test_session, test_tech_domain):
         """Test getting all domains."""
-        from app.repositories.tech_domain_repository import TechDomainRepository
+        from app.domains.academic.repositories.tech_domain_repository import TechDomainRepository
 
         repo = TechDomainRepository(test_session)
         domains = await repo.get_all_domains()
@@ -402,7 +402,7 @@ class TestTechDomainRepository:
     @pytest.mark.asyncio
     async def test_get_domain_by_id(self, test_session, test_tech_domain):
         """Test getting domain by ID."""
-        from app.repositories.tech_domain_repository import TechDomainRepository
+        from app.domains.academic.repositories.tech_domain_repository import TechDomainRepository
 
         repo = TechDomainRepository(test_session)
         domain_id = test_tech_domain["domain"].tech_domain_id
@@ -415,7 +415,7 @@ class TestTechDomainRepository:
     @pytest.mark.asyncio
     async def test_get_domain_by_id_not_found(self, test_session):
         """Test getting non-existent domain."""
-        from app.repositories.tech_domain_repository import TechDomainRepository
+        from app.domains.academic.repositories.tech_domain_repository import TechDomainRepository
 
         repo = TechDomainRepository(test_session)
         domain = await repo.get_domain_by_id(99999)
@@ -425,7 +425,7 @@ class TestTechDomainRepository:
     @pytest.mark.asyncio
     async def test_get_domain_stats(self, test_session, test_tech_domain):
         """Test getting domain statistics."""
-        from app.repositories.tech_domain_repository import TechDomainRepository
+        from app.domains.academic.repositories.tech_domain_repository import TechDomainRepository
 
         repo = TechDomainRepository(test_session)
         domain_id = test_tech_domain["domain"].tech_domain_id

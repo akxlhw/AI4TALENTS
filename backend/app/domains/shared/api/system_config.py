@@ -9,8 +9,8 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.shared.api.auth import require_user
 from app.core.database import get_async_session
+from app.domains.shared.api.auth import require_user
 from app.domains.shared.schemas.common import SuccessResponse
 from app.domains.shared.schemas.system_config import (
     GitHubConfigRequest,

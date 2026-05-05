@@ -15,12 +15,6 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.shared.schemas.common import (
-    CountResponse,
-    PaginatedResponse,
-    SyncStatusResponse,
-    TaskStartResponse,
-)
 from app.domains.academic.schemas.overview import (
     SelectedWorkResponse,
     TalentCompareResponse,
@@ -29,6 +23,12 @@ from app.domains.academic.schemas.overview import (
     TechTagItem,
 )
 from app.domains.academic.services.talent_service import TalentService
+from app.domains.shared.schemas.common import (
+    CountResponse,
+    PaginatedResponse,
+    SyncStatusResponse,
+    TaskStartResponse,
+)
 
 router = APIRouter(prefix="/talents", tags=["Talents"])
 

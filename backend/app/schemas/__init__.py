@@ -3,13 +3,6 @@ Schemas module.
 Pydantic models for API request/response handling.
 """
 
-from app.domains.shared.schemas.common import (
-    ErrorResponse,
-    HealthResponse,
-    PaginatedResponse,
-    PaginationParams,
-    SuccessResponse,
-)
 from app.domains.academic.schemas.overview import (
     CountryListResponse,
     CountrySummary,
@@ -24,6 +17,13 @@ from app.domains.academic.schemas.overview import (
     TalentDetail,
     TalentFilterParams,
     TalentSummary,
+)
+from app.domains.shared.schemas.common import (
+    ErrorResponse,
+    HealthResponse,
+    PaginatedResponse,
+    PaginationParams,
+    SuccessResponse,
 )
 
 __all__ = [

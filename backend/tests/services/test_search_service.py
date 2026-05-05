@@ -53,7 +53,7 @@ class TestSearchServiceMode:
     ):
         """关键词搜索应返回结果"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -71,7 +71,7 @@ class TestSearchServiceMode:
     ):
         """关键词搜索应按姓名过滤"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -92,7 +92,7 @@ class TestSearchServiceMode:
     ):
         """关键词搜索应按职位过滤"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -110,7 +110,7 @@ class TestSearchServiceMode:
     ):
         """关键词搜索应支持多字段"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -132,7 +132,7 @@ class TestSearchServiceMode:
     ):
         """全文搜索应使用 tsvector"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -150,7 +150,7 @@ class TestSearchServiceMode:
     ):
         """语义搜索应使用嵌入向量"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         # Mock embedding service
         mock_embedding_service = AsyncMock()
@@ -173,7 +173,7 @@ class TestSearchServiceMode:
     ):
         """混合搜索应结合关键词和语义搜索"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         mock_embedding_service = AsyncMock()
         mock_embedding_service.get_query_embedding = AsyncMock(return_value=[0.1] * 1536)
@@ -198,7 +198,7 @@ class TestSearchServiceFuzzy:
     ):
         """模糊搜索应处理拼写错误"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -220,7 +220,7 @@ class TestSearchServiceFuzzy:
     ):
         """关闭模糊搜索应精确匹配"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -242,7 +242,7 @@ class TestSearchServicePagination:
     ):
         """分页应返回正确的页码"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -257,7 +257,7 @@ class TestSearchServicePagination:
     async def test_pagination_first_page(self, test_session: AsyncSession, sample_talent: dict):
         """第一页应正确返回"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -271,7 +271,7 @@ class TestSearchServicePagination:
     async def test_pagination_empty_page(self, test_session: AsyncSession, sample_talent: dict):
         """超出范围的页应返回空结果"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -294,8 +294,8 @@ class TestSearchServiceErrorHandling:
     async def test_empty_query_raises_validation_error(self, test_session: AsyncSession):
         """空查询应抛出验证错误"""
         # Arrange
-        from app.services.search.errors import EmptyQueryError
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.errors import EmptyQueryError
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -309,7 +309,7 @@ class TestSearchServiceErrorHandling:
     ):
         """无效模式应默认为关键词搜索"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -327,7 +327,7 @@ class TestSearchServiceErrorHandling:
     ):
         """语义搜索无嵌入服务应降级到关键词搜索"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session, embedding_service=None)
 
@@ -351,7 +351,7 @@ class TestSearchServicePerformance:
         # Arrange
         import time
 
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -370,7 +370,7 @@ class TestSearchServicePerformance:
     ):
         """搜索结果应包含耗时"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 
@@ -389,7 +389,7 @@ class TestSearchServiceHighlight:
     async def test_search_includes_highlight(self, test_session: AsyncSession, sample_talent: dict):
         """搜索结果应包含高亮信息"""
         # Arrange
-        from app.services.search.search_service import SearchService
+        from app.domains.academic.services.search.search_service import SearchService
 
         service = SearchService(test_session)
 

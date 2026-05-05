@@ -52,7 +52,7 @@ class TestRecommendServiceSimilar:
     ):
         """相似推荐应返回候选人"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
         mock_embed.get_embedding = AsyncMock(return_value=[0.1] * 1536)
@@ -74,7 +74,7 @@ class TestRecommendServiceSimilar:
     ):
         """相似推荐应排除参考人才"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
@@ -95,7 +95,7 @@ class TestRecommendServiceSimilar:
     ):
         """相似推荐应遵守数量限制"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
@@ -115,7 +115,7 @@ class TestRecommendServiceSimilar:
     ):
         """相似推荐应使用向量相似度"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
         mock_embed.get_embedding = AsyncMock(return_value=[0.1] * 1536)
@@ -138,7 +138,7 @@ class TestRecommendServiceSimilarity:
     async def test_cosine_similarity_same_vector(self):
         """相同向量相似度应为 1"""
         # Arrange
-        from app.services.recommend.similarity import SimilarityCalculator
+        from app.domains.academic.services.recommend.similarity import SimilarityCalculator
 
         calc = SimilarityCalculator()
         vec1 = [0.5, 0.5, 0.5, 0.5]
@@ -154,7 +154,7 @@ class TestRecommendServiceSimilarity:
     async def test_cosine_similarity_orthogonal_vector(self):
         """正交向量相似度应为 0"""
         # Arrange
-        from app.services.recommend.similarity import SimilarityCalculator
+        from app.domains.academic.services.recommend.similarity import SimilarityCalculator
 
         calc = SimilarityCalculator()
         vec1 = [1.0, 0.0, 0.0, 0.0]
@@ -170,7 +170,7 @@ class TestRecommendServiceSimilarity:
     async def test_cosine_similarity_opposite_vector(self):
         """相反向量相似度应为 -1"""
         # Arrange
-        from app.services.recommend.similarity import SimilarityCalculator
+        from app.domains.academic.services.recommend.similarity import SimilarityCalculator
 
         calc = SimilarityCalculator()
         vec1 = [1.0, 0.0]
@@ -186,7 +186,7 @@ class TestRecommendServiceSimilarity:
     async def test_euclidean_distance(self):
         """欧氏距离应正确计算"""
         # Arrange
-        from app.services.recommend.similarity import SimilarityCalculator
+        from app.domains.academic.services.recommend.similarity import SimilarityCalculator
 
         calc = SimilarityCalculator()
         vec1 = [0.0, 0.0]
@@ -206,7 +206,7 @@ class TestRecommendServiceFilters:
     async def test_filter_by_school(self, test_session: AsyncSession, sample_talent: dict):
         """应按学校过滤"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
@@ -228,7 +228,7 @@ class TestRecommendServiceFilters:
     async def test_filter_by_exclude_ids(self, test_session: AsyncSession, sample_talent: dict):
         """应排除指定ID"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
@@ -252,7 +252,7 @@ class TestRecommendServiceFilters:
     ):
         """应按技术领域过滤"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
@@ -276,7 +276,7 @@ class TestRecommendServiceReasons:
     async def test_generate_reasons_includes_similarity(self, test_session: AsyncSession):
         """推荐原因应包含相似度信息"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
@@ -296,7 +296,7 @@ class TestRecommendServiceReasons:
     async def test_reasons_includes_research_match(self, test_session: AsyncSession):
         """推荐原因应包含研究方向匹配"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         service = RecommendService(session=test_session, embed_service=AsyncMock())
 
@@ -320,7 +320,7 @@ class TestRecommendServiceMultiReference:
     ):
         """多个参考人才应平均嵌入向量"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
         mock_embed.get_average_embedding = AsyncMock(return_value=[0.1] * 1536)
@@ -341,7 +341,7 @@ class TestRecommendServiceMultiReference:
     ):
         """结果应包含参考人才信息"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
@@ -363,8 +363,8 @@ class TestRecommendServiceErrorHandling:
     async def test_handles_invalid_reference_id(self, test_session: AsyncSession):
         """应处理无效参考ID"""
         # Arrange
-        from app.services.llm.errors import InvalidReferenceError
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.shared.services.llm.errors import InvalidReferenceError
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
@@ -378,8 +378,8 @@ class TestRecommendServiceErrorHandling:
     async def test_handles_empty_reference_list(self, test_session: AsyncSession):
         """应处理空参考列表"""
         # Arrange
-        from app.services.llm.errors import EmptyReferenceError
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.shared.services.llm.errors import EmptyReferenceError
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         service = RecommendService(session=test_session, embed_service=AsyncMock())
 
@@ -391,7 +391,7 @@ class TestRecommendServiceErrorHandling:
     async def test_handles_no_candidates(self, test_session: AsyncSession, sample_talent: dict):
         """应处理无候选人的情况"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
@@ -413,7 +413,7 @@ class TestRecommendServiceTiming:
     async def test_returns_timing_info(self, test_session: AsyncSession, sample_talent: dict):
         """应返回耗时信息"""
         # Arrange
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 
@@ -436,7 +436,7 @@ class TestRecommendServiceTiming:
         # Arrange
         import time
 
-        from app.services.recommend.recommend_service import RecommendService
+        from app.domains.academic.services.recommend.recommend_service import RecommendService
 
         mock_embed = AsyncMock()
 

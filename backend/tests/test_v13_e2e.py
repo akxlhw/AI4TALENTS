@@ -18,10 +18,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.core.metrics import metrics
 from app.main import app
-from app.models.enums import RoleType, VisibilityStatus
-from app.models.school import School
-from app.models.talent import Talent
-from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
+from app.domains.shared.models.enums import RoleType, VisibilityStatus
+from app.domains.academic.models.school import School
+from app.domains.academic.models.talent import Talent
+from app.domains.academic.models.tech_domain import TalentTechTag, TechDirection, TechDomain
 
 
 @pytest.fixture

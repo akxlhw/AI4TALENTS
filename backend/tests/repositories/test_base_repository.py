@@ -8,9 +8,9 @@ Uses School model for testing since it's a simple, self-contained model.
 import pytest
 from sqlalchemy import select
 
-from app.models.school import School
-from app.models.venue import Venue
-from app.repositories.base import BaseRepository
+from app.domains.academic.models.school import School
+from app.domains.academic.models.venue import Venue
+from app.domains.shared.repositories.base import BaseRepository
 
 
 class TestBaseRepository:

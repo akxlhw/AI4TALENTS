@@ -7,7 +7,7 @@ from sqlalchemy import Column, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.models.base import TimestampMixin
+from app.domains.shared.models.base import TimestampMixin
 
 
 class TalentEmbedding(Base, TimestampMixin):

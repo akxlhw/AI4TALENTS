@@ -4,11 +4,8 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.domains.academic.builders.stat_builder import StatBuilder
 from app.domains.academic.services.collect.phases.base import PhaseContext, PhaseHandler
-from app.domains.academic.services.collect.progress_tracker import ProgressTracker
 
 logger = logging.getLogger(__name__)
 

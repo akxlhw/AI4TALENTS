@@ -7,7 +7,7 @@ from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Index, Integer
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.models.base import TimestampMixin
+from app.domains.shared.models.base import TimestampMixin
 
 
 class StdAuthor(Base, TimestampMixin):

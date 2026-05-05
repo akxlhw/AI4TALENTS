@@ -20,10 +20,10 @@ from app.core.auth import (
     verify_refresh_token,
 )
 from app.core.database import get_async_session
-from app.models.enums import UserRoleType
 from app.domains.shared.repositories.user_repository import UserRepository
 from app.domains.shared.schemas.common import SuccessResponse
 from app.domains.shared.services.audit_service import AuditService
+from app.domains.shared.models.enums import UserRoleType
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer(auto_error=False)

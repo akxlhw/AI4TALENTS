@@ -11,8 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.domains.academic.repositories.school_repository import SchoolRepository
 from app.domains.academic.repositories.talent_repository import TalentRepository
+from app.domains.academic.schemas.overview import (
+    SchoolDetail,
+    SchoolStats,
+    SchoolSummary,
+    TalentSummary,
+)
 from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
-from app.domains.academic.schemas.overview import SchoolDetail, SchoolStats, SchoolSummary, TalentSummary
 
 router = APIRouter(prefix="/schools", tags=["Schools"])
 

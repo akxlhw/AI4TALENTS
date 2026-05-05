@@ -4,7 +4,7 @@ Tests for filter parameter dataclasses.
 Tests the filter parameter objects used by repository methods.
 """
 
-from app.schemas.filters import (
+from app.domains.academic.schemas.filters import (
     CollectTaskFilterParams,
     PaginationParams,
     TalentFilterParams,

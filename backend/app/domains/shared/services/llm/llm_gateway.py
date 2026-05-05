@@ -13,9 +13,9 @@ Features:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
-import asyncio
 import time
 from typing import Any
 
@@ -23,7 +23,11 @@ from openai import APIConnectionError, APIError, AsyncOpenAI, RateLimitError
 
 from app.core.config import settings
 from app.domains.shared.services.llm.errors import LLMError, LLMErrorType
-from app.domains.shared.services.llm.protocols import EmbeddingResult, JDFeatures, LLMGatewayProtocol
+from app.domains.shared.services.llm.protocols import (
+    EmbeddingResult,
+    JDFeatures,
+    LLMGatewayProtocol,
+)
 from app.domains.shared.services.llm.retry import with_retry, with_timeout
 
 logger = logging.getLogger(__name__)

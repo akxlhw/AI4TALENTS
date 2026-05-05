@@ -11,9 +11,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.shared.api.auth import require_user
 from app.core.database import get_async_session
 from app.domains.academic.repositories.embedding_repository import EmbeddingRepository
+from app.domains.shared.api.auth import require_user
 from app.domains.shared.schemas.common import SuccessResponse
 from app.domains.shared.services.config_service import ConfigService
 

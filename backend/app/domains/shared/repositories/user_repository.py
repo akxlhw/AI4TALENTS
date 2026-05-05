@@ -10,9 +10,9 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.enums import UserRoleType
-from app.domains.shared.models.iam import UserAccount, UserSchoolScope
 from app.domains.academic.models.school import School
+from app.domains.shared.models.iam import UserAccount, UserSchoolScope
+from app.domains.shared.models.enums import UserRoleType
 
 
 class UserRepository:

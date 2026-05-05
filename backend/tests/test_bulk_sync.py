@@ -9,10 +9,10 @@ os.environ["REDIS_ENABLED"] = "false"
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.standardized import StdAuthor, StdSchool
-from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
-from app.services.sync.author_sync import AuthorSyncService
-from app.services.sync.school_sync import SchoolSyncService
+from app.domains.academic.models.standardized import StdAuthor, StdSchool
+from app.domains.academic.services.common.cs_concepts import CS_SCORE_THRESHOLD
+from app.domains.academic.services.sync.author_sync import AuthorSyncService
+from app.domains.academic.services.sync.school_sync import SchoolSyncService
 
 
 @pytest.fixture
@@ -136,7 +136,7 @@ class TestBulkAuthorSync:
         # Sync schools first to get school_id_map
         from sqlalchemy import select
 
-        from app.models.standardized import StdSchool
+        from app.domains.academic.models.standardized import StdSchool
 
         school_service = SchoolSyncService(test_session)
         std_schools_result = await test_session.execute(select(StdSchool))
@@ -163,8 +163,8 @@ class TestBulkAuthorSync:
         """Test bulk sync creates talent records."""
         from sqlalchemy import select
 
-        from app.models.standardized import StdSchool
-        from app.models.talent import Talent
+        from app.domains.academic.models.standardized import StdSchool
+        from app.domains.academic.models.talent import Talent
 
         # Sync schools first
         std_schools_result = await test_session.execute(select(StdSchool))
@@ -204,7 +204,7 @@ class TestBulkAuthorSync:
         """Test bulk sync identifies newly created talents for work fetching."""
         from sqlalchemy import select
 
-        from app.models.standardized import StdSchool
+        from app.domains.academic.models.standardized import StdSchool
 
         # Sync schools first
         std_schools_result = await test_session.execute(select(StdSchool))
@@ -237,7 +237,7 @@ class TestBulkSyncWithExistingData:
         """Test bulk sync handles mix of new and existing records."""
         from sqlalchemy import select
 
-        from app.models.standardized import StdSchool
+        from app.domains.academic.models.standardized import StdSchool
 
         # Create some schools
         schools = []
@@ -288,8 +288,8 @@ class TestServingLayerOrchestrator:
     @pytest.fixture
     async def setup_orchestrator_data(self, test_session: AsyncSession):
         """Create comprehensive test data for orchestrator tests."""
-        from app.models.raw_data import AuthorTechBelong
-        from app.models.tech_domain import TechDomain
+        from app.domains.academic.models.raw_data import AuthorTechBelong
+        from app.domains.academic.models.tech_domain import TechDomain
 
         # Create tech domain
         domain = TechDomain(
@@ -355,7 +355,7 @@ class TestServingLayerOrchestrator:
     @pytest.mark.asyncio
     async def test_orchestrator_sync_all(self, test_session: AsyncSession, setup_orchestrator_data):
         """Test full sync via ServingLayerOrchestrator - with no matching task records."""
-        from app.services.sync.orchestrator import ServingLayerOrchestrator
+        from app.domains.academic.services.sync.orchestrator import ServingLayerOrchestrator
 
         data = setup_orchestrator_data
         orchestrator = ServingLayerOrchestrator(test_session)
@@ -378,7 +378,7 @@ class TestServingLayerOrchestrator:
         self, test_session: AsyncSession, setup_orchestrator_data
     ):
         """Test CS score filtering logic is correctly configured."""
-        from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
+        from app.domains.academic.services.common.cs_concepts import CS_SCORE_THRESHOLD
 
         data = setup_orchestrator_data
 
@@ -397,8 +397,8 @@ class TestServingLayerOrchestrator:
     @pytest.mark.asyncio
     async def test_orchestrator_no_data_for_task(self, test_session: AsyncSession):
         """Test orchestrator handles task with no data."""
-        from app.models.tech_domain import TechDomain
-        from app.services.sync.orchestrator import ServingLayerOrchestrator
+        from app.domains.academic.models.tech_domain import TechDomain
+        from app.domains.academic.services.sync.orchestrator import ServingLayerOrchestrator
 
         # Create tech domain
         domain = TechDomain(

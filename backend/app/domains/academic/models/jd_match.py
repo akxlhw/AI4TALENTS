@@ -7,7 +7,7 @@ from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, Strin
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.models.base import TimestampMixin
+from app.domains.shared.models.base import TimestampMixin
 
 
 class JDMatchSession(Base, TimestampMixin):

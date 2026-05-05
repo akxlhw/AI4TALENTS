@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
-from app.domains.academic.services.search.strategies.base import SearchContext, SearchStrategy
+from app.domains.academic.services.search.strategies.base import SearchStrategy
 from app.domains.academic.services.search.utils import get_english_translation
 
 logger = logging.getLogger(__name__)

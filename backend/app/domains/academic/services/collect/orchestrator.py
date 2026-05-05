@@ -16,7 +16,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.sync import CollectTask
-from app.domains.academic.repositories.venue_repository import VenueRepository, VenueSubTaskRepository
+from app.domains.academic.repositories.venue_repository import (
+    VenueRepository,
+    VenueSubTaskRepository,
+)
 from app.domains.academic.services.collect.phases import (
     PhaseBuildStatsHandler,
     PhaseCollectHandler,
@@ -33,7 +36,11 @@ from app.domains.academic.services.collect.phases import (
 )
 from app.domains.academic.services.collect.progress_tracker import ProgressTracker
 from app.domains.academic.services.collect.venue_executor import VenueSubTaskExecutor
-from app.domains.academic.services.data_fetchers import AuthorFetcher, InstitutionFetcher, WorkFetcher
+from app.domains.academic.services.data_fetchers import (
+    AuthorFetcher,
+    InstitutionFetcher,
+    WorkFetcher,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +128,6 @@ class CollectionOrchestrator:
 
     async def execute_task(self, task_id: int):
         """Execute a collection task through all phases."""
-        from app.domains.academic.services.common.progress import CollectionProgress
 
         progress = self.progress_tracker.create_progress(task_id)
         self.progress_tracker.reset_logs()

@@ -12,8 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.sync import CollectTask
 from app.domains.academic.models.venue import VenueSubTask
-from app.domains.academic.repositories.collect_repository import CollectTaskRepository, TechDomainCollectRepository
-from app.domains.academic.repositories.venue_repository import VenueSubTaskRepository, VenueTechBindingRepository
+from app.domains.academic.repositories.collect_repository import (
+    CollectTaskRepository,
+    TechDomainCollectRepository,
+)
+from app.domains.academic.repositories.venue_repository import (
+    VenueSubTaskRepository,
+    VenueTechBindingRepository,
+)
 
 
 class CollectService:

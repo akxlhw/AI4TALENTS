@@ -10,12 +10,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.shared.api.auth import require_admin, require_super_admin, require_user
 from app.core.database import get_async_session
-from app.models.enums import UserRoleType
+from app.domains.shared.api.auth import require_admin, require_user
 from app.domains.shared.repositories.user_repository import UserRepository, UserScopeRepository
 from app.domains.shared.schemas.common import SuccessResponse
 from app.domains.shared.services.audit_service import AuditService
+from app.domains.shared.models.enums import UserRoleType
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 

@@ -6,10 +6,10 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import RoleType
-from app.models.school import School
-from app.models.statistics import OverviewStatSnapshot
-from app.models.talent import RoleProfile, Talent
+from app.domains.shared.models.enums import RoleType
+from app.domains.academic.models.school import School
+from app.domains.academic.models.statistics import OverviewStatSnapshot
+from app.domains.academic.models.talent import RoleProfile, Talent
 
 
 class TestOverviewEndpoint:

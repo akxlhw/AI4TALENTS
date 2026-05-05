@@ -8,8 +8,8 @@ import json
 
 import pytest
 
-from app.models.raw_data import RawAuthor
-from app.repositories.raw_data_repository import RawAuthorRepository
+from app.domains.academic.models.raw_data import RawAuthor
+from app.domains.academic.repositories.raw_data_repository import RawAuthorRepository
 
 
 class TestRawAuthorRepository:

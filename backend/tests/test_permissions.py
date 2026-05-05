@@ -7,9 +7,9 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.auth import hash_password
-from app.models.enums import UserRoleType
-from app.models.iam import UserAccount
-from app.models.school import School
+from app.domains.shared.models.enums import UserRoleType
+from app.domains.shared.models.iam import UserAccount
+from app.domains.academic.models.school import School
 
 
 @pytest.fixture
@@ -542,7 +542,7 @@ class TestScopeRepository:
     @pytest.mark.asyncio
     async def test_add_scope(self, test_session, test_normal_user, test_school):
         """Test adding a scope via repository."""
-        from app.repositories.user_repository import UserScopeRepository
+        from app.domains.shared.repositories.user_repository import UserScopeRepository
 
         repo = UserScopeRepository(test_session)
         scope = await repo.add_scope(
@@ -558,7 +558,7 @@ class TestScopeRepository:
     @pytest.mark.asyncio
     async def test_get_user_scopes(self, test_session, test_normal_user, test_school):
         """Test getting user scopes."""
-        from app.repositories.user_repository import UserScopeRepository
+        from app.domains.shared.repositories.user_repository import UserScopeRepository
 
         repo = UserScopeRepository(test_session)
 
@@ -578,7 +578,7 @@ class TestScopeRepository:
     @pytest.mark.asyncio
     async def test_remove_scope(self, test_session, test_normal_user, test_school):
         """Test removing a scope."""
-        from app.repositories.user_repository import UserScopeRepository
+        from app.domains.shared.repositories.user_repository import UserScopeRepository
 
         repo = UserScopeRepository(test_session)
 

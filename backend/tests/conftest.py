@@ -123,7 +123,7 @@ async def client(test_session: AsyncSession) -> AsyncGenerator[AsyncClient, None
 @pytest.fixture
 async def sample_tech_domain(test_session: AsyncSession):
     """Create sample tech domain for testing."""
-    from app.models.tech_domain import TechDirection, TechDomain
+    from app.domains.academic.models.tech_domain import TechDirection, TechDomain
 
     domain = TechDomain(
         domain_code="TEST",
@@ -149,7 +149,7 @@ async def sample_tech_domain(test_session: AsyncSession):
 @pytest.fixture
 async def sample_venue(test_session: AsyncSession):
     """Create sample venue for testing."""
-    from app.models.venue import Venue
+    from app.domains.academic.models.venue import Venue
 
     venue = Venue(
         venue_code="TEST-VENUE",
@@ -166,9 +166,9 @@ async def sample_venue(test_session: AsyncSession):
 @pytest.fixture
 async def sample_talent(test_session: AsyncSession):
     """Create sample talent for testing."""
-    from app.models.enums import RoleType, VisibilityStatus
-    from app.models.school import School
-    from app.models.talent import Talent
+    from app.domains.shared.models.enums import RoleType, VisibilityStatus
+    from app.domains.academic.models.school import School
+    from app.domains.academic.models.talent import Talent
 
     school = School(
         school_name="Test University",
@@ -226,7 +226,7 @@ def mock_normal_user():
 async def test_user(test_session: AsyncSession):
     """Create a test user in database for JD match tests."""
     from app.core.auth import hash_password
-    from app.models.iam import UserAccount
+    from app.domains.shared.models.iam import UserAccount
 
     # Check if user already exists
     result = await test_session.execute(
@@ -290,8 +290,8 @@ async def full_setup(test_session: AsyncSession):
     - Venue
     - Venue-Tech binding
     """
-    from app.models.tech_domain import TechDirection, TechDomain
-    from app.models.venue import Venue, VenueTechBinding
+    from app.domains.academic.models.tech_domain import TechDirection, TechDomain
+    from app.domains.academic.models.venue import Venue, VenueTechBinding
 
     # Create tech domain
     tech_domain = TechDomain(

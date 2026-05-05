@@ -16,7 +16,7 @@ from app.models import (
     UserAccount,
     UserSchoolScope,
 )
-from app.models.enums import RoleType, SyncJobStatus, UserRoleType
+from app.domains.shared.models.enums import RoleType, SyncJobStatus, UserRoleType
 
 
 @pytest.fixture(scope="function")

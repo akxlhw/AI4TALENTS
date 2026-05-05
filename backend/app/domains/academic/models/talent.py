@@ -6,8 +6,8 @@ from sqlalchemy import JSON, Boolean, Column, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.models.base import TimestampMixin
-from app.models.enums import RoleType, VisibilityStatus
+from app.domains.shared.models.base import TimestampMixin
+from app.domains.shared.models.enums import RoleType, VisibilityStatus
 
 
 class Talent(Base, TimestampMixin):

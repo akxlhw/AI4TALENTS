@@ -16,13 +16,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.raw_data import AuthorTechBelong, RawAuthor, RawInstitution, RawWork
-from app.models.standardized import StdAuthor, StdSchool
-from app.models.sync import CollectTask
-from app.models.talent import Talent
-from app.models.tech_domain import TalentTechTag
-from app.services.data_fetchers import MAX_WORKS_PER_VENUE
-from app.services.normalizers import AuthorNormalizer, SchoolNormalizer
+from app.domains.academic.models.raw_data import AuthorTechBelong, RawAuthor, RawInstitution, RawWork
+from app.domains.academic.models.standardized import StdAuthor, StdSchool
+from app.domains.academic.models.sync import CollectTask
+from app.domains.academic.models.talent import Talent
+from app.domains.academic.models.tech_domain import TalentTechTag
+from app.domains.academic.services.data_fetchers import MAX_WORKS_PER_VENUE
+from app.domains.academic.services.normalizers import AuthorNormalizer, SchoolNormalizer
 
 
 class TestAuthorTechBelongSourceTask:
@@ -351,12 +351,12 @@ class TestMultiVenueTechBelong:
         After fix: Each venue gets its own record, and tech_tag_sync aggregates
         work counts across venues.
         """
-        from app.models.raw_data import RawWork
-        from app.models.venue import Venue, VenueTechBinding
-        from app.models.talent import Talent
-        from app.models.tech_domain import TalentTechTag
-        from app.services.normalizers import TechBelongCalculator
-        from app.services.sync.tech_tag_sync import TechTagSyncService
+        from app.domains.academic.models.raw_data import RawWork
+        from app.domains.academic.models.venue import Venue, VenueTechBinding
+        from app.domains.academic.models.talent import Talent
+        from app.domains.academic.models.tech_domain import TalentTechTag
+        from app.domains.academic.services.normalizers import TechBelongCalculator
+        from app.domains.academic.services.sync.tech_tag_sync import TechTagSyncService
 
         setup = full_setup
         domain = setup["tech_domain"]
@@ -489,9 +489,9 @@ class TestBatchNormalization:
         - Bad raw_json isolated and skipped
         - RawAuthor.processed_status and std_author_id updated correctly
         """
-        from app.models.standardized import StdAuthor
-        from app.services.normalizers import AuthorNormalizer
-        from app.models.sync import CollectTask
+        from app.domains.academic.models.standardized import StdAuthor
+        from app.domains.academic.services.normalizers import AuthorNormalizer
+        from app.domains.academic.models.sync import CollectTask
 
         setup = full_setup
 
@@ -656,7 +656,7 @@ class TestSchoolNormalizerNoEmptyStringMatch:
     @pytest.mark.asyncio
     async def test_normalize_school_name_never_returns_empty(self):
         """normalize_school_name must never return "" to avoid full-table matches."""
-        from app.services.normalizers.school import SchoolNormalizer
+        from app.domains.academic.services.normalizers.school import SchoolNormalizer
 
         normalizer = SchoolNormalizer(session=None)  # session not needed for pure method
 
@@ -677,8 +677,8 @@ class TestSchoolNormalizerNoEmptyStringMatch:
         self, test_session: AsyncSession
     ):
         """When normalized name is empty/too short, skip fuzzy match entirely."""
-        from app.services.normalizers.school import SchoolNormalizer
-        from app.models.standardized import StdSchool
+        from app.domains.academic.services.normalizers.school import SchoolNormalizer
+        from app.domains.academic.models.standardized import StdSchool
 
         normalizer = SchoolNormalizer(test_session)
 
@@ -709,9 +709,9 @@ class TestSchoolNormalizerNoEmptyStringMatch:
     ):
         """If find_matching_school returns a weak match, normalize_institution
         must create a new record instead of overwriting the existing one."""
-        from app.services.normalizers.school import SchoolNormalizer
-        from app.models.raw_data import RawInstitution
-        from app.models.standardized import StdSchool
+        from app.domains.academic.services.normalizers.school import SchoolNormalizer
+        from app.domains.academic.models.raw_data import RawInstitution
+        from app.domains.academic.models.standardized import StdSchool
 
         normalizer = SchoolNormalizer(test_session)
 
@@ -773,9 +773,9 @@ class TestSchoolNormalizerNoEmptyStringMatch:
         self, test_session: AsyncSession
     ):
         """When openalex_id matches exactly, updating the existing record is safe."""
-        from app.services.normalizers.school import SchoolNormalizer
-        from app.models.raw_data import RawInstitution
-        from app.models.standardized import StdSchool
+        from app.domains.academic.services.normalizers.school import SchoolNormalizer
+        from app.domains.academic.models.raw_data import RawInstitution
+        from app.domains.academic.models.standardized import StdSchool
 
         normalizer = SchoolNormalizer(test_session)
 

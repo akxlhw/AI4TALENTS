@@ -19,10 +19,10 @@ from app.domains.academic.schemas.v1_4 import (
     SearchMode,
     SemanticSearchResult,
 )
-from app.domains.shared.services.config_service import ConfigService
-from app.domains.shared.services.llm import LLMGateway
 from app.domains.academic.services.search.errors import EmptyQueryError
 from app.domains.academic.services.search.search_service import SearchService
+from app.domains.shared.services.config_service import ConfigService
+from app.domains.shared.services.llm import LLMGateway
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
@@ -172,7 +172,9 @@ async def enhanced_search_talents(
                     api_format=llm_config.api_format,
                     embedding_api_format=llm_config.embedding_api_format,
                 )
-                from app.domains.academic.services.embedding.embedding_service import EmbeddingService
+                from app.domains.academic.services.embedding.embedding_service import (
+                    EmbeddingService,
+                )
 
                 embed_service = EmbeddingService(
                     session=session,

@@ -9,10 +9,10 @@ os.environ["REDIS_ENABLED"] = "false"
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import RoleType, VisibilityStatus
-from app.models.school import School
-from app.models.talent import Talent
-from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
+from app.domains.shared.models.enums import RoleType, VisibilityStatus
+from app.domains.academic.models.school import School
+from app.domains.academic.models.talent import Talent
+from app.domains.academic.models.tech_domain import TalentTechTag, TechDirection, TechDomain
 
 
 @pytest.fixture
@@ -61,7 +61,7 @@ class TestCursorPagination:
         self, test_session: AsyncSession, setup_pagination_data
     ):
         """Test getting first page with cursor pagination."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         repo = TalentRepository(test_session)
         talents, next_cursor = await repo.get_list_by_cursor(
@@ -79,7 +79,7 @@ class TestCursorPagination:
         self, test_session: AsyncSession, setup_pagination_data
     ):
         """Test getting second page with cursor pagination."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         repo = TalentRepository(test_session)
 
@@ -104,7 +104,7 @@ class TestCursorPagination:
         self, test_session: AsyncSession, setup_pagination_data
     ):
         """Test getting last page with cursor pagination."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         repo = TalentRepository(test_session)
 
@@ -136,7 +136,7 @@ class TestCursorPagination:
         self, test_session: AsyncSession, setup_pagination_data
     ):
         """Test cursor pagination with role type filter."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         repo = TalentRepository(test_session)
 
@@ -162,7 +162,7 @@ class TestCursorPagination:
         self, test_session: AsyncSession, setup_pagination_data
     ):
         """Test cursor pagination with school filter."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         repo = TalentRepository(test_session)
         data = setup_pagination_data
@@ -253,7 +253,7 @@ class TestTechDomainCursorPagination:
         self, test_session: AsyncSession, setup_tech_domain_data
     ):
         """Test cursor pagination on tech domain talent list."""
-        from app.repositories.tech_domain_repository import TechDomainRepository
+        from app.domains.academic.repositories.tech_domain_repository import TechDomainRepository
 
         repo = TechDomainRepository(test_session)
         data = setup_tech_domain_data
@@ -297,7 +297,7 @@ class TestCursorPaginationEdgeCases:
     @pytest.mark.asyncio
     async def test_empty_result_set(self, test_session: AsyncSession, setup_empty_data):
         """Test cursor pagination with no results."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         repo = TalentRepository(test_session)
 
@@ -314,7 +314,7 @@ class TestCursorPaginationEdgeCases:
         self, test_session: AsyncSession, setup_pagination_data
     ):
         """Test cursor pagination when cursor points to first item (no more before it)."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         repo = TalentRepository(test_session)
 
@@ -338,7 +338,7 @@ class TestCursorPaginationEdgeCases:
         self, test_session: AsyncSession, setup_pagination_data
     ):
         """Test cursor pagination with country code filter."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         repo = TalentRepository(test_session)
 
@@ -355,7 +355,7 @@ class TestCursorPaginationEdgeCases:
     @pytest.mark.asyncio
     async def test_pagination_with_keyword(self, test_session: AsyncSession, setup_pagination_data):
         """Test cursor pagination with keyword search."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         repo = TalentRepository(test_session)
 
@@ -374,7 +374,7 @@ class TestCursorPaginationEdgeCases:
         self, test_session: AsyncSession, setup_pagination_data
     ):
         """Test cursor pagination with minimum works filter."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         repo = TalentRepository(test_session)
 
@@ -391,7 +391,7 @@ class TestCursorPaginationEdgeCases:
         self, test_session: AsyncSession, setup_pagination_data
     ):
         """Test cursor pagination with minimum citations filter."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         repo = TalentRepository(test_session)
 
@@ -406,7 +406,7 @@ class TestCursorPaginationEdgeCases:
     @pytest.mark.asyncio
     async def test_single_item_page(self, test_session: AsyncSession):
         """Test cursor pagination with page_size=1."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         # Create a single talent
         school = School(
@@ -441,7 +441,7 @@ class TestCursorPaginationEdgeCases:
     @pytest.mark.asyncio
     async def test_exactly_page_size_results(self, test_session: AsyncSession):
         """Test cursor pagination when results equal page_size."""
-        from app.repositories.talent_repository import TalentRepository
+        from app.domains.academic.repositories.talent_repository import TalentRepository
 
         # Create exactly 10 talents
         school = School(

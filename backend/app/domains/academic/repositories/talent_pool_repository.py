@@ -9,8 +9,8 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.domains.shared.models.iam import FavoriteTalent, TalentPool, TalentPoolMember
 from app.domains.academic.models.talent import Talent
+from app.domains.shared.models.iam import FavoriteTalent, TalentPool, TalentPoolMember
 
 
 class TalentPoolRepository:

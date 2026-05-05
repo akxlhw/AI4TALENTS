@@ -62,7 +62,7 @@ class TestJDMatchServiceParsing:
     async def test_parse_jd_returns_features(self, test_session: AsyncSession):
         """解析 JD 应返回特征"""
         # Arrange
-        from app.services.jd_match.jd_match_service import JDMatchService
+        from app.domains.academic.services.jd_match.jd_match_service import JDMatchService
 
         mock_llm = MockLLMGateway()
         mock_embed = AsyncMock()
@@ -82,8 +82,8 @@ class TestJDMatchServiceParsing:
     async def test_parse_jd_caches_result(self, test_session: AsyncSession):
         """解析 JD 应缓存结果"""
         # Arrange
-        from app.services.jd_match.jd_match_service import JDMatchService
-        from app.services.llm.protocols import JDFeatures
+        from app.domains.academic.services.jd_match.jd_match_service import JDMatchService
+        from app.domains.shared.services.llm.protocols import JDFeatures
 
         mock_llm = MockLLMGateway()
         mock_embed = AsyncMock()
@@ -117,7 +117,7 @@ class TestJDMatchServiceMatching:
     ):
         """匹配应返回候选人列表"""
         # Arrange
-        from app.services.jd_match.jd_match_service import JDMatchService
+        from app.domains.academic.services.jd_match.jd_match_service import JDMatchService
 
         mock_llm = MockLLMGateway()
         mock_embed = AsyncMock()
@@ -144,7 +144,7 @@ class TestJDMatchServiceMatching:
     ):
         """匹配应遵守数量限制"""
         # Arrange
-        from app.services.jd_match.jd_match_service import JDMatchService
+        from app.domains.academic.services.jd_match.jd_match_service import JDMatchService
 
         mock_llm = MockLLMGateway()
         mock_embed = AsyncMock()
@@ -169,7 +169,7 @@ class TestJDMatchServiceMatching:
     ):
         """匹配应应用过滤条件"""
         # Arrange
-        from app.services.jd_match.jd_match_service import JDMatchService
+        from app.domains.academic.services.jd_match.jd_match_service import JDMatchService
 
         mock_llm = MockLLMGateway()
         mock_embed = AsyncMock()
@@ -200,7 +200,7 @@ class TestJDMatchServiceScoring:
     async def test_calculate_research_score(self, test_session: AsyncSession):
         """应正确计算研究方向分数"""
         # Arrange
-        from app.services.jd_match.match_scorer import MatchScorer
+        from app.domains.academic.services.jd_match.match_scorer import MatchScorer
 
         scorer = MatchScorer()
 
@@ -219,7 +219,7 @@ class TestJDMatchServiceScoring:
     async def test_calculate_overall_score(self, test_session: AsyncSession):
         """应正确计算综合分数"""
         # Arrange
-        from app.services.jd_match.match_scorer import MatchScorer
+        from app.domains.academic.services.jd_match.match_scorer import MatchScorer
 
         scorer = MatchScorer()
 
@@ -233,7 +233,7 @@ class TestJDMatchServiceScoring:
     async def test_score_zero_on_no_match(self, test_session: AsyncSession):
         """无匹配应返回零分"""
         # Arrange
-        from app.services.jd_match.match_scorer import MatchScorer
+        from app.domains.academic.services.jd_match.match_scorer import MatchScorer
 
         scorer = MatchScorer()
 
@@ -249,7 +249,7 @@ class TestJDMatchServiceScoring:
     async def test_score_with_five_requirements(self, test_session: AsyncSession):
         """分母上限为5，应正确计算"""
         # Arrange
-        from app.services.jd_match.match_scorer import MatchScorer
+        from app.domains.academic.services.jd_match.match_scorer import MatchScorer
 
         scorer = MatchScorer()
 
@@ -283,7 +283,7 @@ class TestJDMatchServiceReasons:
     async def test_generate_match_reasons(self, test_session: AsyncSession):
         """应生成匹配原因"""
         # Arrange
-        from app.services.jd_match.match_scorer import MatchScorer
+        from app.domains.academic.services.jd_match.match_scorer import MatchScorer
 
         scorer = MatchScorer()
 
@@ -311,7 +311,7 @@ class TestJDMatchServiceSession:
     async def test_create_session(self, test_session: AsyncSession, test_user):
         """应创建匹配会话"""
         # Arrange
-        from app.services.jd_match.jd_match_service import JDMatchService
+        from app.domains.academic.services.jd_match.jd_match_service import JDMatchService
 
         mock_llm = MockLLMGateway()
         mock_embed = AsyncMock()
@@ -346,7 +346,7 @@ class TestJDMatchServiceErrorHandling:
     async def test_match_handles_llm_failure(self, test_session: AsyncSession, test_user):
         """LLM 失败应抛出错误"""
         # Arrange
-        from app.services.jd_match.jd_match_service import JDMatchService
+        from app.domains.academic.services.jd_match.jd_match_service import JDMatchService
 
         mock_llm = MockLLMGateway(should_fail=True, fail_count=100)
         mock_embed = AsyncMock()
@@ -367,8 +367,8 @@ class TestJDMatchServiceErrorHandling:
     async def test_match_handles_empty_jd(self, test_session: AsyncSession):
         """空 JD 应返回错误"""
         # Arrange
-        from app.services.jd_match.jd_match_service import JDMatchService
-        from app.services.llm.errors import JDMatchError
+        from app.domains.academic.services.jd_match.jd_match_service import JDMatchService
+        from app.domains.shared.services.llm.errors import JDMatchError
 
         mock_llm = MockLLMGateway()
         mock_embed = AsyncMock()
@@ -395,7 +395,7 @@ class TestJDMatchServiceTiming:
     ):
         """匹配结果应包含耗时"""
         # Arrange
-        from app.services.jd_match.jd_match_service import JDMatchService
+        from app.domains.academic.services.jd_match.jd_match_service import JDMatchService
 
         mock_llm = MockLLMGateway()
         mock_embed = AsyncMock()

@@ -5,7 +5,7 @@ System configuration model.
 from sqlalchemy import Boolean, Column, Integer, String, Text
 
 from app.core.database import Base
-from app.models.base import TimestampMixin
+from app.domains.shared.models.base import TimestampMixin
 
 
 class SystemConfig(Base, TimestampMixin):

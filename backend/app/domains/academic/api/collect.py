@@ -18,9 +18,11 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.shared.api.auth import require_user
 from app.core.database import get_async_session
-from app.domains.academic.repositories.collect_repository import CollectTaskRepository, TechDomainCollectRepository
+from app.domains.academic.repositories.collect_repository import (
+    CollectTaskRepository,
+    TechDomainCollectRepository,
+)
 from app.domains.academic.repositories.venue_repository import VenueSubTaskRepository
 from app.domains.academic.schemas.collect import (
     DEFAULT_START_YEAR,
@@ -38,11 +40,16 @@ from app.domains.academic.schemas.collect import (
     get_current_year,
     get_year_options,
 )
-from app.domains.shared.schemas.common import SuccessResponse
 from app.domains.academic.schemas.venue import VenueSubTaskListResponse, VenueSubTaskResponse
 from app.domains.academic.services.collect.orchestrator import CollectionOrchestrator
 from app.domains.academic.services.collect_service import CollectService
-from app.domains.academic.services.data_fetchers import AuthorFetcher, InstitutionFetcher, WorkFetcher
+from app.domains.academic.services.data_fetchers import (
+    AuthorFetcher,
+    InstitutionFetcher,
+    WorkFetcher,
+)
+from app.domains.shared.api.auth import require_user
+from app.domains.shared.schemas.common import SuccessResponse
 
 logger = logging.getLogger(__name__)
 

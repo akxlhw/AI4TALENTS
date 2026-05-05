@@ -7,10 +7,10 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.auth import hash_password
-from app.models.enums import RoleType, UserRoleType, VisibilityStatus
-from app.models.iam import UserAccount
-from app.models.school import School
-from app.models.talent import Talent
+from app.domains.shared.models.enums import RoleType, UserRoleType, VisibilityStatus
+from app.domains.shared.models.iam import UserAccount
+from app.domains.academic.models.school import School
+from app.domains.academic.models.talent import Talent
 
 
 @pytest.fixture
@@ -433,7 +433,7 @@ class TestFavoriteRepository:
     @pytest.mark.asyncio
     async def test_add_favorite(self, test_session, test_user, test_talent):
         """Test adding favorite via repository."""
-        from app.repositories.favorite_repository import FavoriteRepository
+        from app.domains.academic.repositories.favorite_repository import FavoriteRepository
 
         repo = FavoriteRepository(test_session)
         favorite = await repo.add_favorite(
@@ -450,7 +450,7 @@ class TestFavoriteRepository:
     @pytest.mark.asyncio
     async def test_get_by_user_and_talent(self, test_session, test_user, test_talent):
         """Test getting favorite by user and talent."""
-        from app.repositories.favorite_repository import FavoriteRepository
+        from app.domains.academic.repositories.favorite_repository import FavoriteRepository
 
         repo = FavoriteRepository(test_session)
 
@@ -472,7 +472,7 @@ class TestFavoriteRepository:
     @pytest.mark.asyncio
     async def test_get_user_favorite_ids(self, test_session, test_user, test_talent, test_talent2):
         """Test getting all favorite IDs for a user."""
-        from app.repositories.favorite_repository import FavoriteRepository
+        from app.domains.academic.repositories.favorite_repository import FavoriteRepository
 
         repo = FavoriteRepository(test_session)
 
@@ -496,7 +496,7 @@ class TestFavoriteRepository:
     @pytest.mark.asyncio
     async def test_remove_favorite(self, test_session, test_user, test_talent):
         """Test removing favorite via repository."""
-        from app.repositories.favorite_repository import FavoriteRepository
+        from app.domains.academic.repositories.favorite_repository import FavoriteRepository
 
         repo = FavoriteRepository(test_session)
 

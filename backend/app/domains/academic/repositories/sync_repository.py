@@ -9,8 +9,8 @@ from datetime import datetime
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import SourceType, SyncJobStatus
 from app.domains.academic.models.sync import SyncBatch
+from app.domains.shared.models.enums import SourceType, SyncJobStatus
 
 
 class SyncBatchRepository:

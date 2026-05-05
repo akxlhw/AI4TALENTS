@@ -8,7 +8,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.search import SearchTalentDocument
-from app.domains.academic.services.search.strategies.base import SearchContext, SearchStrategy
+from app.domains.academic.services.search.strategies.base import SearchStrategy
 from app.domains.academic.services.search.utils import apply_search_document_filters
 
 logger = logging.getLogger(__name__)

@@ -10,8 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.domains.academic.repositories.venue_repository import VenueRepository, VenueTechBindingRepository
-from app.domains.shared.schemas.common import SuccessResponse
+from app.domains.academic.repositories.venue_repository import (
+    VenueRepository,
+    VenueTechBindingRepository,
+)
 from app.domains.academic.schemas.venue import (
     BatchUpdateBindingsResponse,
     MigrateCollectSourcesRequest,
@@ -27,6 +29,7 @@ from app.domains.academic.schemas.venue import (
     VenueUpdate,
 )
 from app.domains.academic.services.venue_service import VenueService
+from app.domains.shared.schemas.common import SuccessResponse
 
 router = APIRouter(prefix="/venues", tags=["Venue Configuration"])
 

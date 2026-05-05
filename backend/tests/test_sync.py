@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.repositories.sync_repository import SyncBatchRepository
+from app.domains.academic.repositories.sync_repository import SyncBatchRepository
 
 
 class TestSyncBatchRepository:
@@ -98,7 +98,7 @@ class TestSyncService:
     @pytest.mark.asyncio
     async def test_extract_id(self):
         """Test ID extraction from URL using extract_openalex_id."""
-        from app.builders.base import extract_openalex_id
+        from app.domains.academic.builders.base import extract_openalex_id
 
         # Test URL format
         assert extract_openalex_id("https://openalex.org/I123456") == "I123456"

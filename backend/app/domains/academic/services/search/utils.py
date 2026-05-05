@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from sqlalchemy import or_, text
-from sqlalchemy.orm import Query
-
 from app.domains.academic.models.search import SearchTalentDocument
 from app.domains.academic.models.talent import Talent
 from app.domains.academic.models.tech_domain import TalentTechTag

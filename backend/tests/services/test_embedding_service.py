@@ -46,7 +46,7 @@ class TestEmbeddingServiceGeneration:
     ):
         """获取或创建嵌入应返回向量"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway()
 
@@ -67,7 +67,7 @@ class TestEmbeddingServiceGeneration:
     ):
         """获取嵌入应使用缓存"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway()
         mock_cache = AsyncMock()
@@ -89,7 +89,7 @@ class TestEmbeddingServiceGeneration:
     ):
         """生成嵌入应存储到数据库"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway()
 
@@ -113,7 +113,7 @@ class TestEmbeddingServiceBatch:
     ):
         """批量生成应处理所有人才"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway()
 
@@ -131,7 +131,7 @@ class TestEmbeddingServiceBatch:
     async def test_batch_generate_respects_batch_size(self, test_session: AsyncSession):
         """批量生成应遵守批次大小"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway()
 
@@ -149,7 +149,7 @@ class TestEmbeddingServiceBatch:
     async def test_batch_generate_handles_failures(self, test_session: AsyncSession):
         """批量生成应处理失败"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway(should_fail=True, fail_count=5)
 
@@ -225,7 +225,7 @@ class TestEmbeddingServiceRateLimiting:
         # Arrange
         import time
 
-        from app.services.embedding.embedding_service import EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway()
 
@@ -249,7 +249,7 @@ class TestEmbeddingServiceHash:
     async def test_hash_changes_on_source_update(self, test_session: AsyncSession):
         """源文本更新应改变哈希"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 
         service = EmbeddingService(session=test_session, llm_gateway=MockLLMGateway())
 
@@ -264,7 +264,7 @@ class TestEmbeddingServiceHash:
     async def test_hash_same_for_same_text(self, test_session: AsyncSession):
         """相同文本应有相同哈希"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 
         service = EmbeddingService(session=test_session, llm_gateway=MockLLMGateway())
 
@@ -283,7 +283,7 @@ class TestEmbeddingServiceDimension:
     async def test_embedding_dimension_configurable(self, test_session: AsyncSession):
         """向量维度应可配置"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway(embedding=[0.1] * 768)
 
@@ -305,7 +305,7 @@ class TestEmbeddingServiceModelTracking:
     ):
         """嵌入应存储模型名称"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway()
 
@@ -334,7 +334,7 @@ class TestEmbeddingServiceErrorHandling:
     async def test_handles_invalid_talent_id(self, test_session: AsyncSession):
         """应处理无效人才ID"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingError, EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingError, EmbeddingService
 
         service = EmbeddingService(session=test_session, llm_gateway=MockLLMGateway())
 
@@ -346,7 +346,7 @@ class TestEmbeddingServiceErrorHandling:
     async def test_handles_llm_failure_gracefully(self, test_session: AsyncSession):
         """应优雅处理 LLM 失败"""
         # Arrange
-        from app.services.embedding.embedding_service import EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 
         mock_llm = MockLLMGateway(should_fail=True, fail_count=100)
 

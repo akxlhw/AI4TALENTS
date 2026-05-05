@@ -10,10 +10,14 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.builders.base import BaseBuilder, BuildResult
-from app.models.enums import RoleType
 from app.domains.academic.models.school import School
-from app.domains.academic.models.statistics import OverviewStatSnapshot, ResearchTopicStats, SchoolStatSnapshot
+from app.domains.academic.models.statistics import (
+    OverviewStatSnapshot,
+    ResearchTopicStats,
+    SchoolStatSnapshot,
+)
 from app.domains.academic.models.talent import Talent
+from app.domains.shared.models.enums import RoleType
 
 logger = logging.getLogger(__name__)
 

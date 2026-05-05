@@ -17,7 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.models.base import TimestampMixin
+from app.domains.shared.models.base import TimestampMixin
 
 
 class TechDomain(Base, TimestampMixin):

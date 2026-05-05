@@ -10,8 +10,8 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.shared.api.auth import require_admin
 from app.core.database import get_async_session
+from app.domains.shared.api.auth import require_admin
 from app.domains.shared.repositories.audit_repository import AuditRepository
 
 router = APIRouter(prefix="/audit", tags=["Audit Logs"])

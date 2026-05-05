@@ -13,7 +13,12 @@ from sqlalchemy import func, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.academic.models.raw_data import AuthorTechBelong, RawAuthor, RawInstitution, RawWork
+from app.domains.academic.models.raw_data import (
+    AuthorTechBelong,
+    RawAuthor,
+    RawInstitution,
+    RawWork,
+)
 
 logger = logging.getLogger(__name__)
 

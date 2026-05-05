@@ -9,7 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.venue import Venue, VenueTechBinding
 from app.domains.academic.repositories.tech_domain_repository import TechDomainRepository
-from app.domains.academic.repositories.venue_repository import VenueRepository, VenueTechBindingRepository
+from app.domains.academic.repositories.venue_repository import (
+    VenueRepository,
+    VenueTechBindingRepository,
+)
 from app.domains.academic.schemas.venue import (
     VenueCreate,
     VenueTechBindingBatchCreate,

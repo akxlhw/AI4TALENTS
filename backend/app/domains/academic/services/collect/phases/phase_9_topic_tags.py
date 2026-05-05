@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.sync import CollectTask
 from app.domains.academic.models.talent import Talent
 from app.domains.academic.models.tech_domain import TalentTechTag
 from app.domains.academic.services.collect.phases.base import PhaseContext, PhaseHandler
-from app.domains.academic.services.collect.progress_tracker import ProgressTracker
 from app.domains.academic.services.common.batch_utils import batch_in_query_flat
 
 

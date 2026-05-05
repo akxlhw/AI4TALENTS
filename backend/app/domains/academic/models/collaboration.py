@@ -5,7 +5,7 @@ Collaboration model for co-author relationships.
 from sqlalchemy import Column, ForeignKey, Integer, String, UniqueConstraint
 
 from app.core.database import Base
-from app.models.base import TimestampMixin
+from app.domains.shared.models.base import TimestampMixin
 
 
 class Collaboration(Base, TimestampMixin):

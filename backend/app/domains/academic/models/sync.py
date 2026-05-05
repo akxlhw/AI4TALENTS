@@ -6,8 +6,8 @@ from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, Str
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.models.base import TimestampMixin
-from app.models.enums import SourceType, SyncJobStatus
+from app.domains.shared.models.base import TimestampMixin
+from app.domains.shared.models.enums import SourceType, SyncJobStatus
 
 
 class SyncBatch(Base, TimestampMixin):

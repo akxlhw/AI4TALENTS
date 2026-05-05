@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.core.cache import CacheConnection
-from app.services.cache_keys import CacheKeys, CacheTTL
-from app.services.cache_service import CacheService
+from app.domains.shared.services.cache_keys import CacheKeys, CacheTTL
+from app.domains.shared.services.cache_service import CacheService
 
 
 class TestCacheConnection:

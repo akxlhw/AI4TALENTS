@@ -18,17 +18,17 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import RoleType, VisibilityStatus
-from app.models.raw_data import AuthorTechBelong
-from app.models.school import School
-from app.models.standardized import StdAuthor, StdSchool
-from app.models.sync import CollectTask
-from app.models.talent import Talent
-from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
-from app.models.venue import Venue, VenueSubTask, VenueTechBinding
-from app.repositories.collect_repository import CollectTaskRepository, TechDomainCollectRepository
-from app.repositories.tech_domain_repository import TechDomainRepository
-from app.repositories.venue_repository import (
+from app.domains.shared.models.enums import RoleType, VisibilityStatus
+from app.domains.academic.models.raw_data import AuthorTechBelong
+from app.domains.academic.models.school import School
+from app.domains.academic.models.standardized import StdAuthor, StdSchool
+from app.domains.academic.models.sync import CollectTask
+from app.domains.academic.models.talent import Talent
+from app.domains.academic.models.tech_domain import TalentTechTag, TechDirection, TechDomain
+from app.domains.academic.models.venue import Venue, VenueSubTask, VenueTechBinding
+from app.domains.academic.repositories.collect_repository import CollectTaskRepository, TechDomainCollectRepository
+from app.domains.academic.repositories.tech_domain_repository import TechDomainRepository
+from app.domains.academic.repositories.venue_repository import (
     VenueSubTaskRepository,
     VenueTechBindingRepository,
 )
@@ -683,7 +683,7 @@ class TestDataValidation:
         - works_count >= 50 且 h_index >= 20 → 教授 (95%)
         - works_count <= 8 → 学生 (80%)
         """
-        from app.services.role_identifier import RoleIdentifier
+        from app.domains.academic.services.role_identifier import RoleIdentifier
 
         # 测试教授识别
         result = RoleIdentifier.identify(works_count=60, cited_by_count=2000, h_index=25)
@@ -778,7 +778,7 @@ class TestTransactionManagement:
 
     @pytest.fixture
     def progress_tracker(self, mock_session):
-        from app.services.collect.progress_tracker import ProgressTracker
+        from app.domains.academic.services.collect.progress_tracker import ProgressTracker
 
         return ProgressTracker(mock_session)
 
@@ -828,7 +828,7 @@ class TestTalentQueryOptimization:
 
     @pytest.fixture
     def orchestrator(self, mock_session):
-        from app.services.collect.orchestrator import CollectionOrchestrator
+        from app.domains.academic.services.collect.orchestrator import CollectionOrchestrator
 
         return CollectionOrchestrator(mock_session)
 
@@ -837,8 +837,8 @@ class TestTalentQueryOptimization:
         self, test_session: AsyncSession, test_data_setup
     ):
         """验证只查询与任务关联 tech_domain 的人才"""
-        from app.services.collect.orchestrator import CollectionOrchestrator
-        from app.services.common.progress import CollectionProgress
+        from app.domains.academic.services.collect.orchestrator import CollectionOrchestrator
+        from app.domains.academic.services.common.progress import CollectionProgress
 
         # 创建测试数据
         tech_domain_1 = test_data_setup["tech_domain"]
@@ -943,8 +943,8 @@ class TestTalentQueryOptimization:
         test_session: AsyncSession,
     ):
         """验证任务不存在时的优雅处理"""
-        from app.services.collect.orchestrator import CollectionOrchestrator
-        from app.services.common.progress import CollectionProgress
+        from app.domains.academic.services.collect.orchestrator import CollectionOrchestrator
+        from app.domains.academic.services.common.progress import CollectionProgress
 
         orchestrator = CollectionOrchestrator(test_session)
         progress = CollectionProgress(task_id=99999)
@@ -966,7 +966,7 @@ class TestOrchestratorTransactionBoundary:
         """验证 execute_task 在结束时统一 commit"""
         from unittest.mock import AsyncMock, patch
 
-        from app.services.collect.orchestrator import CollectionOrchestrator
+        from app.domains.academic.services.collect.orchestrator import CollectionOrchestrator
 
         # 创建测试任务
         task = CollectTask(

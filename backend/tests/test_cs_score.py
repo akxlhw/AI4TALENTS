@@ -6,10 +6,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.models.standardized import StdAuthor
-from app.services.common.cs_concepts import CORE_CS_CONCEPTS, CS_SCORE_THRESHOLD
-from app.services.normalizers.author import AuthorNormalizer
-from app.services.sync.author_sync import AuthorSyncService
+from app.domains.academic.models.standardized import StdAuthor
+from app.domains.academic.services.common.cs_concepts import CORE_CS_CONCEPTS, CS_SCORE_THRESHOLD
+from app.domains.academic.services.normalizers.author import AuthorNormalizer
+from app.domains.academic.services.sync.author_sync import AuthorSyncService
 
 
 class TestCSCoreCalculation:

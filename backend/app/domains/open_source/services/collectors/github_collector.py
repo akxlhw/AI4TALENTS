@@ -88,8 +88,9 @@ class GitHubCollector:
 
         # Update os_repo_config stars_count so Trending list stays current
         async with AsyncSessionLocal() as session:
-            from app.domains.open_source.models.open_source import OSRepoConfig
             from sqlalchemy import select
+
+            from app.domains.open_source.models.open_source import OSRepoConfig
             config = await session.scalar(
                 select(OSRepoConfig).where(OSRepoConfig.repo_full_name == ctx.repo_full_name)
             )

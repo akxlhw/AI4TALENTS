@@ -28,7 +28,11 @@ from app.domains.academic.repositories.raw_data_repository import (
     RawInstitutionRepository,
     RawWorkRepository,
 )
-from app.domains.academic.services.common.openalex_utils import OPENALEX_API_BASE, REQUEST_DELAY, extract_short_id
+from app.domains.academic.services.common.openalex_utils import (
+    OPENALEX_API_BASE,
+    REQUEST_DELAY,
+    extract_short_id,
+)
 from app.domains.academic.services.common.progress import FetchProgress
 
 logger = logging.getLogger(__name__)
@@ -393,6 +397,7 @@ class WorkFetcher:
                   venue_name, doi, source_work_id。
         """
         from collections import defaultdict
+
         from sqlalchemy import select
 
         query = select(RawWork)

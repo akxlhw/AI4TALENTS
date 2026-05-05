@@ -11,13 +11,13 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import VisibilityStatus
 from app.domains.academic.models.school import School
 from app.domains.academic.models.standardized import StdAuthor
 from app.domains.academic.models.talent import RoleProfile, Talent
 from app.domains.academic.services.common.batch_utils import batch_in_query, batch_in_query_map
 from app.domains.academic.services.common.cs_concepts import CS_SCORE_THRESHOLD
 from app.domains.academic.services.role_identifier import RoleIdentifier
+from app.domains.shared.models.enums import VisibilityStatus
 
 logger = logging.getLogger(__name__)
 

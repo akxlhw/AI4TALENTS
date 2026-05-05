@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from app.services.openalex_client import (
+from app.domains.academic.services.openalex_client import (
     OpenAlexClient,
     OpenAlexRateLimitError,
 )

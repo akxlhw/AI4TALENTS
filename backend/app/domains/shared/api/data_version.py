@@ -8,15 +8,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.shared.api.auth import require_admin, require_user
 from app.core.database import get_async_session
-from app.repositories.data_version_repository import (
-    DataCorrectionRepository,
-    DataPublishRecordRepository,
-    DataQualityRepository,
-    DataVersionRepository,
-)
-from app.schemas.data_version import (
+from app.domains.academic.schemas.data_version import (
     ACTION_TYPE_OPTIONS,
     CORRECTION_TYPE_OPTIONS,
     TARGET_TYPE_OPTIONS,
@@ -32,6 +25,13 @@ from app.schemas.data_version import (
     PublishVersionRequest,
     QualityMetricsResponse,
     QualitySummaryResponse,
+)
+from app.domains.shared.api.auth import require_admin, require_user
+from app.domains.academic.repositories.data_version_repository import (
+    DataCorrectionRepository,
+    DataPublishRecordRepository,
+    DataQualityRepository,
+    DataVersionRepository,
 )
 
 router = APIRouter(prefix="/data-version", tags=["Data Version Management"])

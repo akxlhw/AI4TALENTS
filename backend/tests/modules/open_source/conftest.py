@@ -6,8 +6,8 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.auth import create_access_token, hash_password
-from app.models.enums import UserRoleType
-from app.models.iam import UserAccount
+from app.domains.shared.models.enums import UserRoleType
+from app.domains.shared.models.iam import UserAccount
 from app.domains.open_source.models.open_source import (
     OSDeveloper,
     OSFavourite,

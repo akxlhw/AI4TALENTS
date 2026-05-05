@@ -9,9 +9,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.domains.shared.schemas.common import PaginatedResponse
-
-
 # ============= Repo Config =============
 
 class OSRepoConfigCreate(BaseModel):

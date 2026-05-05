@@ -17,7 +17,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from app.models.enums import RoleType
+from app.domains.shared.models.enums import RoleType
 
 logger = logging.getLogger(__name__)
 

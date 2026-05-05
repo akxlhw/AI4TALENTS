@@ -6,7 +6,10 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.academic.repositories.raw_data_repository import RawAuthorRepository, RawWorkRepository
+from app.domains.academic.repositories.raw_data_repository import (
+    RawAuthorRepository,
+    RawWorkRepository,
+)
 from app.domains.academic.services.collect.phases.base import PhaseContext, PhaseHandler
 from app.domains.academic.services.collect.progress_tracker import ProgressTracker
 from app.domains.academic.services.data_fetchers import AuthorFetcher

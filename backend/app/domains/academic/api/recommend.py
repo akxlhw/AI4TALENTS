@@ -18,8 +18,8 @@ from app.domains.academic.schemas.v1_4 import (
     RecommendResultItem,
 )
 from app.domains.academic.services.embedding.embedding_service import EmbeddingService
-from app.domains.shared.services.llm.errors import RecommendError
 from app.domains.academic.services.recommend.recommend_service import RecommendService
+from app.domains.shared.services.llm.errors import RecommendError
 
 router = APIRouter(prefix="/recommend", tags=["Recommend"])
 

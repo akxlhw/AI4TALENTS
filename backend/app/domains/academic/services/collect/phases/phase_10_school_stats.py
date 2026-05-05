@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 from sqlalchemy import case, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.school import School
 from app.domains.academic.models.talent import Talent
 from app.domains.academic.services.collect.phases.base import PhaseContext, PhaseHandler
-from app.domains.academic.services.collect.progress_tracker import ProgressTracker
 
 
 class PhaseSchoolStatsHandler(PhaseHandler):

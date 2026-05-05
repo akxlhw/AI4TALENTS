@@ -28,12 +28,11 @@ from app.domains.open_source.schemas.open_source import (
     OSDeveloperCompareResponse,
     OSDeveloperDetail,
     OSDeveloperSummary,
-    OSEmbeddingStatusResponse,
     OSJDMatchResponse,
     OSLanguageSkillItem,
     OSRepositoryItem,
-    OSStatsResponse,
     OSSearchRequest,
+    OSStatsResponse,
 )
 
 logger = logging.getLogger(__name__)

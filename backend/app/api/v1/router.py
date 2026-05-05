@@ -5,7 +5,6 @@ Aggregates all endpoint routers.
 
 from fastapi import APIRouter
 
-from app.domains.open_source.api import open_source
 from app.domains.academic.api import (
     collect,
     countries,
@@ -22,6 +21,7 @@ from app.domains.academic.api import (
     tech_domain,
     venue,
 )
+from app.domains.open_source.api import open_source
 from app.domains.shared.api import (
     audit,
     auth,
