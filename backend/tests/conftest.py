@@ -21,7 +21,9 @@ import httpx
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 # Clear settings cache and import fresh
 from app.core import config
@@ -58,9 +60,15 @@ async def test_engine():
     """Create test database engine with all tables."""
     engine = create_async_engine(
         TEST_DATABASE_URL,
-        echo=False,  # Set to True for SQL debugging
-        pool_pre_ping=True,  # Verify connections before use
+        echo=False,
+        poolclass=NullPool,
     )
+
+    # Wipe everything (tables, types, constraints) and recreate public schema.
+    async with engine.begin() as conn:
+        await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
+        await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
 
     # Create all tables
     async with engine.begin() as conn:
@@ -68,9 +76,11 @@ async def test_engine():
 
     yield engine
 
-    # Drop all tables after test
+    # Wipe again after test
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
+        await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
 
     await engine.dispose()
 

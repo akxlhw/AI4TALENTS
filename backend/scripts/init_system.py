@@ -4,13 +4,15 @@
 功能：
 1. 清空业务数据表（默认保留系统配置 sys_config）
 2. 重新运行数据库迁移
-3. 初始化基础数据（管理员、技术领域）
+3. 初始化基础数据（管理员、技术领域、开源仓库配置）
 
 使用方法：
-    python scripts/init_system.py              # 交互式确认（默认保留配置）
-    python scripts/init_system.py --force      # 跳过确认
-    python scripts/init_system.py --full       # 全量重置（含用户、技术领域）
-    python scripts/init_system.py --clear-config  # 同时清空系统配置表
+    python scripts/init_system.py                   # 交互式确认，默认全部清空
+    python scripts/init_system.py --force           # 跳过确认
+    python scripts/init_system.py --domain academic # 仅清空学术人才库
+    python scripts/init_system.py --domain open_source  # 仅清空开源人才库
+    python scripts/init_system.py --full            # 全量重置（含用户、技术领域）
+    python scripts/init_system.py --clear-config    # 同时清空系统配置表
 """
 import asyncio
 import sys
@@ -33,9 +35,10 @@ from app.models.iam import UserAccount, UserSchoolScope
 from app.models.tech_domain import TechDomain
 from app.models.statistics import OverviewStatSnapshot
 from app.models.venue import Venue, VenueTechBinding
+from app.models.open_source import OSRepoConfig
 
-# 业务数据表（清空这些表）
-BUSINESS_TABLES = [
+# 学术人才库业务数据表
+ACADEMIC_TABLES = [
     # 搜索和审计
     "search_talent_document",
     "audit_operation_log",
@@ -44,7 +47,7 @@ BUSINESS_TABLES = [
     "core_selected_work",
     "core_role_profile",
     "core_talent",
-    "core_talent_embedding",  # v1.4 向量嵌入
+    "core_talent_embedding",
     # 学校相关
     "core_school_alias",
     "core_school",
@@ -76,9 +79,25 @@ BUSINESS_TABLES = [
     "data_correction_record",
     "data_publish_record",
     "data_version",
-    # 岗位匹配 (v1.4)
+    # 岗位匹配
     "jd_match_result",
     "jd_match_session",
+]
+
+# 开源人才库业务数据表
+OPEN_SOURCE_TABLES = [
+    "os_embedding",
+    "os_contribution",
+    "os_language_skill",
+    "os_repository",
+    "os_favourite",
+    "os_pool_member",
+    "os_talent_pool",
+    "os_raw_developer",
+    "os_repo_mapping",
+    "os_developer",
+    "os_collect_task",
+    "os_repo_config",
 ]
 
 # 系统配置表（默认保留，仅 --clear-config 时清空）
@@ -225,6 +244,54 @@ KNOWN_OPENALEX_SOURCES = {
     "tkde": "S2766213291",
 }
 
+
+# 默认开源仓库配置（种子数据）
+# 覆盖六大技术领域，共35个仓库，便于快速体验开源人才库功能
+DEFAULT_REPO_CONFIGS = [
+    # AI
+    {"repo_full_name": "pytorch/pytorch", "display_name": "PyTorch", "tech_element": "ai", "language": "Python", "description": "Tensors and Dynamic neural networks in Python with strong GPU acceleration"},
+    {"repo_full_name": "tensorflow/tensorflow", "display_name": "TensorFlow", "tech_element": "ai", "language": "Python", "description": "An Open Source Machine Learning Framework for Everyone"},
+    {"repo_full_name": "huggingface/transformers", "display_name": "Hugging Face Transformers", "tech_element": "ai", "language": "Python", "description": "State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow"},
+    {"repo_full_name": "scikit-learn/scikit-learn", "display_name": "scikit-learn", "tech_element": "ai", "language": "Python", "description": "scikit-learn: machine learning in Python"},
+    {"repo_full_name": "microsoft/DeepSpeed", "display_name": "DeepSpeed", "tech_element": "ai", "language": "Python", "description": "Deep learning optimization library"},
+    {"repo_full_name": "apache/spark", "display_name": "Apache Spark", "tech_element": "ai", "language": "Scala", "description": "Apache Spark - A unified analytics engine for large-scale data processing"},
+    # Robotics
+    {"repo_full_name": "ros/ros", "display_name": "ROS", "tech_element": "robotics", "language": "Python", "description": "Robot Operating System"},
+    {"repo_full_name": "ros2/ros2", "display_name": "ROS2", "tech_element": "robotics", "language": "Python", "description": "ROS 2 - Robot Operating System 2"},
+    {"repo_full_name": "ArduPilot/ardupilot", "display_name": "ArduPilot", "tech_element": "robotics", "language": "C++", "description": "ArduPilot is the most advanced, full-featured open source autopilot software"},
+    {"repo_full_name": "NVIDIA-Omniverse/IsaacSim", "display_name": "NVIDIA Isaac Sim", "tech_element": "robotics", "language": "Python", "description": "NVIDIA Isaac Sim - Robotics simulation platform"},
+    {"repo_full_name": "google-research/google-research", "display_name": "Google Research", "tech_element": "robotics", "language": "Python", "description": "Google Research repository"},
+    # Data Science
+    {"repo_full_name": "pandas-dev/pandas", "display_name": "pandas", "tech_element": "data_science", "language": "Python", "description": "Powerful data structures for data analysis"},
+    {"repo_full_name": "numpy/numpy", "display_name": "NumPy", "tech_element": "data_science", "language": "Python", "description": "The fundamental package for scientific computing with Python"},
+    {"repo_full_name": "jupyter/jupyter", "display_name": "Jupyter", "tech_element": "data_science", "language": "Python", "description": "Jupyter metapackage for installation and docs"},
+    {"repo_full_name": "matplotlib/matplotlib", "display_name": "Matplotlib", "tech_element": "data_science", "language": "Python", "description": "matplotlib: plotting with Python"},
+    {"repo_full_name": "apache/arrow", "display_name": "Apache Arrow", "tech_element": "data_science", "language": "C++", "description": "Apache Arrow is a multi-language toolbox for accelerated data interchange"},
+    {"repo_full_name": "dask/dask", "display_name": "Dask", "tech_element": "data_science", "language": "Python", "description": "Parallel computing with task scheduling"},
+    # Networks
+    {"repo_full_name": "torvalds/linux", "display_name": "Linux Kernel", "tech_element": "networks", "language": "C", "description": "Linux kernel source tree"},
+    {"repo_full_name": "envoyproxy/envoy", "display_name": "Envoy", "tech_element": "networks", "language": "C++", "description": "Cloud-native high-performance edge/middle/service proxy"},
+    {"repo_full_name": "grpc/grpc", "display_name": "gRPC", "tech_element": "networks", "language": "C++", "description": "The C based gRPC (C++, Python, Ruby, Objective-C, PHP, C#)"},
+    {"repo_full_name": "openvswitch/ovs", "display_name": "Open vSwitch", "tech_element": "networks", "language": "C", "description": "Open vSwitch is a production quality, multilayer virtual switch"},
+    {"repo_full_name": "cloudflare/cloudflared", "display_name": "Cloudflared", "tech_element": "networks", "language": "Go", "description": "Cloudflare Tunnel client"},
+    {"repo_full_name": "FRRouting/frr", "display_name": "FRRouting", "tech_element": "networks", "language": "C", "description": "FRRouting is free software that manages TCP/IP based routing protocols"},
+    # Systems
+    {"repo_full_name": "golang/go", "display_name": "Go", "tech_element": "systems", "language": "Go", "description": "The Go programming language"},
+    {"repo_full_name": "rust-lang/rust", "display_name": "Rust", "tech_element": "systems", "language": "Rust", "description": "Empowering everyone to build reliable and efficient software"},
+    {"repo_full_name": "kubernetes/kubernetes", "display_name": "Kubernetes", "tech_element": "systems", "language": "Go", "description": "Production-Grade Container Scheduling and Management"},
+    {"repo_full_name": "moby/moby", "display_name": "Docker", "tech_element": "systems", "language": "Go", "description": "Moby Project - a collaborative project for the container ecosystem"},
+    {"repo_full_name": "redis/redis", "display_name": "Redis", "tech_element": "systems", "language": "C", "description": "Redis is an in-memory database that persists on disk"},
+    {"repo_full_name": "apache/kafka", "display_name": "Apache Kafka", "tech_element": "systems", "language": "Java", "description": "Mirror of Apache Kafka"},
+    # Security
+    {"repo_full_name": "zaproxy/zaproxy", "display_name": "OWASP ZAP", "tech_element": "security", "language": "Java", "description": "The OWASP ZAP core project"},
+    {"repo_full_name": "rapid7/metasploit-framework", "display_name": "Metasploit", "tech_element": "security", "language": "Ruby", "description": "Metasploit Framework"},
+    {"repo_full_name": "sqlmapproject/sqlmap", "display_name": "sqlmap", "tech_element": "security", "language": "Python", "description": "Automatic SQL injection and database takeover tool"},
+    {"repo_full_name": "nmap/nmap", "display_name": "Nmap", "tech_element": "security", "language": "C", "description": "Nmap - the Network Mapper"},
+    {"repo_full_name": "mitmproxy/mitmproxy", "display_name": "mitmproxy", "tech_element": "security", "language": "Python", "description": "An interactive TLS-capable intercepting HTTP proxy"},
+    {"repo_full_name": "wireshark/wireshark", "display_name": "Wireshark", "tech_element": "security", "language": "C", "description": "Wireshark - Network traffic analyzer"},
+]
+
+
 # 技术领域与顶会顶刊映射数据
 VENUE_DATA = [
     {
@@ -313,27 +380,37 @@ VENUE_DATA = [
 ]
 
 
-async def truncate_tables(full_reset: bool = False, clear_config: bool = False):
+async def truncate_tables(
+    full_reset: bool = False,
+    clear_config: bool = False,
+    domain: str = "all",
+):
     """清空业务数据表
 
     Args:
         full_reset: 是否同时清空基础配置表（用户、技术领域等）
         clear_config: 是否清空系统配置表（sys_config 等）
+        domain: 清空范围，可选 academic / open_source / all（默认 all）
     """
     print("\n" + "="*60)
     print("Step 1: 清空数据表")
     print("="*60)
 
     async with AsyncSessionLocal() as session:
-        # 默认只清空业务数据表
-        tables = BUSINESS_TABLES.copy()
+        # 根据 domain 选择要清空的表
+        tables: list[str] = []
+        if domain in ("all", "academic"):
+            tables.extend(ACADEMIC_TABLES)
+            print("  [范围: 学术人才库]")
+        if domain in ("all", "open_source"):
+            tables.extend(OPEN_SOURCE_TABLES)
+            print("  [范围: 开源人才库]")
 
         if clear_config:
             tables.extend(CONFIG_SYSTEM_TABLES)
             print("  [模式: 包含系统配置表]")
 
         if full_reset:
-            # 全量重置，同时清空配置表
             tables.extend(CONFIG_TABLES)
             print("  [模式: 全量重置]")
 
@@ -552,6 +629,40 @@ async def seed_venues():
         print(f"\n  Venue 创建: {stats['venues_created']}, 绑定创建: {stats['bindings_created']}")
 
 
+async def seed_open_source_repo_configs():
+    """初始化默认开源仓库配置"""
+    print("\n" + "="*60)
+    print("Step 5.5: 初始化默认开源仓库配置")
+    print("="*60)
+
+    async with AsyncSessionLocal() as session:
+        from sqlalchemy import select
+
+        for config_data in DEFAULT_REPO_CONFIGS:
+            existing = await session.scalar(
+                select(OSRepoConfig).where(
+                    OSRepoConfig.repo_full_name == config_data["repo_full_name"]
+                )
+            )
+            if existing:
+                print(f"  [SKIP] {config_data['repo_full_name']} 已存在")
+                continue
+
+            config = OSRepoConfig(
+                repo_full_name=config_data["repo_full_name"],
+                display_name=config_data["display_name"],
+                tech_element=config_data["tech_element"],
+                language=config_data.get("language"),
+                description=config_data.get("description"),
+                is_active=True,
+                collect_enabled=True,
+            )
+            session.add(config)
+            print(f"  [OK] {config_data['display_name']} ({config_data['tech_element']})")
+
+        await session.commit()
+
+
 async def seed_statistics_snapshot():
     """初始化统计快照"""
     print("\n" + "="*60)
@@ -593,12 +704,17 @@ async def seed_statistics_snapshot():
         print(f"  [OK] 技术领域数: {tech_domain_count}")
 
 
-async def init_system(full_reset: bool = False, clear_config: bool = False):
+async def init_system(
+    full_reset: bool = False,
+    clear_config: bool = False,
+    domain: str = "all",
+):
     """执行完整初始化流程
 
     Args:
         full_reset: 是否执行全量重置（清空用户、技术领域等基础数据）
         clear_config: 是否清空系统配置表（sys_config 等）
+        domain: 初始化范围，可选 academic / open_source / all（默认 all）
     """
     print("\n" + "="*60)
     print("智能人才库 - 系统数据初始化")
@@ -607,7 +723,7 @@ async def init_system(full_reset: bool = False, clear_config: bool = False):
     start_time = datetime.now()
 
     # 1. 清空数据表
-    await truncate_tables(full_reset, clear_config)
+    await truncate_tables(full_reset, clear_config, domain)
 
     # 2. 清空缓存
     await clear_cache()
@@ -622,6 +738,10 @@ async def init_system(full_reset: bool = False, clear_config: bool = False):
 
         # 5. 初始化顶刊顶会
         await seed_venues()
+
+    # 5.5 初始化开源仓库配置（幂等：已存在则跳过）
+    if domain in ("all", "open_source"):
+        await seed_open_source_repo_configs()
 
     # 6. 初始化统计快照
     await seed_statistics_snapshot()
@@ -652,13 +772,16 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-    python scripts/init_system.py                 # 交互式确认（保留配置）
-    python scripts/init_system.py --force         # 跳过确认（保留配置）
-    python scripts/init_system.py --full          # 全量重置（含用户、技术领域）
-    python scripts/init_system.py --clear-config  # 同时清空系统配置表
-    python scripts/init_system.py --full --force  # 全量重置跳过确认
+    python scripts/init_system.py                       # 交互式确认，默认清空全部
+    python scripts/init_system.py --force               # 跳过确认，默认清空全部
+    python scripts/init_system.py --domain academic     # 仅清空学术人才库
+    python scripts/init_system.py --domain open_source  # 仅清空开源人才库
+    python scripts/init_system.py --full                # 全量重置（含用户、技术领域）
+    python scripts/init_system.py --clear-config        # 同时清空系统配置表
+    python scripts/init_system.py --full --force        # 全量重置跳过确认
 
-注意: 默认保留系统配置表(sys_config)，如需清除请使用 --clear-config
+注意: 默认清空全部业务数据（学术+开源），如需指定领域请使用 --domain
+       默认保留系统配置表(sys_config)，如需清除请使用 --clear-config
        国家数据已改为常量定义，存储在 app/constants/countries.py
         """
     )
@@ -677,15 +800,21 @@ def main():
         action="store_true",
         help="同时清空系统配置表(sys_config)"
     )
+    parser.add_argument(
+        "--domain",
+        choices=["academic", "open_source", "all"],
+        default="all",
+        help="指定要清空的人才库领域（默认 all）"
+    )
 
     args = parser.parse_args()
 
     # 确认提示
     if not args.force:
+        domain_label = {"academic": "学术人才库", "open_source": "开源人才库", "all": "全部业务数据"}
+        print(f"\n[!] 警告: 此操作将清空 {domain_label[args.domain]}!")
         if args.full:
-            print("\n[!] 警告: 此操作将清空所有数据（包括用户、技术领域）!")
-        else:
-            print("\n[!] 警告: 此操作将清空所有业务数据!")
+            print("[!] 注意: 全量重置模式，用户和技术领域等基础数据也将被清空!")
         if args.clear_config:
             print("[!] 注意: 系统配置表(sys_config)也将被清空!")
         confirm = input("\n确认执行? (y/N): ").strip().lower()
@@ -693,7 +822,7 @@ def main():
             print("已取消操作")
             return
 
-    asyncio.run(init_system(full_reset=args.full, clear_config=args.clear_config))
+    asyncio.run(init_system(full_reset=args.full, clear_config=args.clear_config, domain=args.domain))
 
 
 if __name__ == "__main__":

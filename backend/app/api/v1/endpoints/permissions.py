@@ -445,7 +445,7 @@ async def approve_user(
     request: Request,
     user_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_super_admin),
+    current_user: dict = Depends(require_admin),
 ):
     """Approve a pending user registration (admin only)."""
     client_ip = request.client.host if request.client else None
@@ -491,7 +491,7 @@ async def reject_user(
     request: Request,
     user_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_super_admin),
+    current_user: dict = Depends(require_admin),
 ):
     """Reject a pending user registration (admin only)."""
     client_ip = request.client.host if request.client else None

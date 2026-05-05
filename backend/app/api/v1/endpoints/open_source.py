@@ -109,6 +109,7 @@ async def list_repo_configs(
     sort_by: str = Query("id_desc", description="id_desc | stars"),
     collected_only: bool = Query(False, description="Only repos with completed collect tasks"),
     session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_admin),
 ):
     conditions = []
     if tech_element:
@@ -189,7 +190,7 @@ async def create_repo_config(
         language=data.language,
         stars_count=stars_count,
         notes=data.notes,
-        created_by=user.get("sub"),
+        created_by=int(user.get("sub")) if user.get("sub") else None,
     )
     session.add(config)
     await session.commit()
@@ -372,6 +373,7 @@ async def list_developers(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(get_current_user),
 ):
     conditions = [OSDeveloper.is_visible == True]
     if q:
