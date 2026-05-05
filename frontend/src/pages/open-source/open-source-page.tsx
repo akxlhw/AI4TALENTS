@@ -75,12 +75,11 @@ const OpenSourcePage: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '88px 32px 80px' }}>
+    <div style={{ padding: '64px 0 80px' }}>
       {/* ═══════════ Hero Section ═══════════ */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #2D3748 0%, #38A169 100%)',
-          margin: '0 -32px',
+          background: 'var(--domain-gradient)',
           padding: '72px 32px 56px',
           color: '#fff',
           position: 'relative',
@@ -168,7 +167,7 @@ const OpenSourcePage: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
+      <Row gutter={16} style={{ marginTop: 32, marginBottom: 24, padding: '0 32px' }}>
         {[
           { title: '收录开发者', value: stats?.total_developers || 0, icon: <CodeOutlined />, color: primary, link: '/opensource/search' },
           { title: '覆盖仓库', value: stats?.total_repositories || 0, icon: <GithubOutlined />, color: secondary },
@@ -196,14 +195,14 @@ const OpenSourcePage: React.FC = () => {
       </Row>
 
       {/* Top Developers */}
-      <Title level={4} style={{ marginBottom: 16 }}>
+      <Title level={4} style={{ marginBottom: 16, padding: '0 32px' }}>
         <StarOutlined style={{ marginRight: 8, color: secondary }} />
         顶尖开发者
       </Title>
       {topDevelopers.length === 0 ? (
         <Empty description="暂无开发者数据，请先执行采集任务" />
       ) : (
-        <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Row gutter={16} style={{ marginBottom: 24, padding: '0 32px' }}>
           {topDevelopers.map((dev) => (
             <Col span={8} key={dev.developer_id} style={{ marginBottom: 16 }}>
               <Card
@@ -274,11 +273,11 @@ const OpenSourcePage: React.FC = () => {
       )}
 
       {/* Trending Repos */}
-      <Title level={4} style={{ marginBottom: 16 }}>
+      <Title level={4} style={{ marginBottom: 16, padding: '0 32px' }}>
         <FireOutlined style={{ marginRight: 8, color: secondary }} />
         Trending 仓库
       </Title>
-      <Row gutter={16}>
+      <Row gutter={16} style={{ padding: '0 32px' }}>
         {trendingRepos.length === 0 ? (
           <Col span={24}>
             <Empty description="暂无仓库数据" />

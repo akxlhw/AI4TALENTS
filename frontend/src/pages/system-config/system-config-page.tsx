@@ -6,10 +6,10 @@ import {
   GlobalOutlined,
   GithubOutlined,
 } from '@ant-design/icons'
-import CollectConfigTab from './CollectConfigTab'
-import LLMConfigTab from './LLMConfigTab'
-import ProxyConfigTab from './ProxyConfigTab'
-import GitHubConfigTab from './GitHubConfigTab'
+import CollectConfigTab from './components/collect-config-tab'
+import LLMConfigTab from './components/llm-config-tab'
+import ProxyConfigTab from './components/proxy-config-tab'
+import GitHubConfigTab from './components/github-config-tab'
 
 const { Title } = Typography
 

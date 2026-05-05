@@ -18,7 +18,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from '@ant-design/icons'
-import { api } from '../../services/api'
+import { api } from '../../../services/api'
 import { getErrorMessage } from './utils'
 
 interface ProxyConfig {

@@ -27,9 +27,9 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons'
-import { api } from '../../services/api'
-import type { OSCollectTask } from '../../types'
-import { formatUTCToLocal } from '../../utils/datetime'
+import { api } from '../../../services/api'
+import type { OSCollectTask } from '../../../types'
+import { formatUTCToLocal } from '../../../utils/datetime'
 import { getErrorMessage } from './utils'
 
 const { Text } = Typography

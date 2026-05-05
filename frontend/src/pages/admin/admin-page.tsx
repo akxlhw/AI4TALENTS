@@ -22,9 +22,9 @@ import {
   SafetyOutlined,
   PlusOutlined,
 } from '@ant-design/icons'
-import { api } from '../services/api'
-import { useAuth } from '../contexts/AuthContext'
-import { formatUTCToLocal } from '../utils/datetime'
+import { api } from '../../services/api'
+import { useAuth } from '../../contexts/AuthContext'
+import { formatUTCToLocal } from '../../utils/datetime'
 
 const { Text } = Typography
 

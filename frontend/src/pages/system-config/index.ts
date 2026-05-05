@@ -1,0 +1,6 @@
+export { default } from './system-config-page'
+export { default as SystemConfigPage } from './system-config-page'
+export { default as CollectConfigTab } from './components/collect-config-tab'
+export { default as LLMConfigTab } from './components/llm-config-tab'
+export { default as ProxyConfigTab } from './components/proxy-config-tab'
+export { default as GitHubConfigTab } from './components/github-config-tab'

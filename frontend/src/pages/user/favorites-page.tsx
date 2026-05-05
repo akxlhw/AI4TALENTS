@@ -32,10 +32,10 @@ import {
   FolderOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
-import { api } from '../services/api'
-import TalentCompareModal from '../components/TalentCompareModal'
-import { getRoleTypeConfig, getFollowupStatusConfig } from '../constants'
-import type { FavoriteTalent, TalentPool, FollowupStatus } from '../types'
+import { api } from '../../services/api'
+import TalentCompareModal from '../../components/TalentCompareModal'
+import { getRoleTypeConfig, getFollowupStatusConfig } from '../../constants'
+import type { FavoriteTalent, TalentPool, FollowupStatus } from '../../types'
 
 const { Title, Text } = Typography
 

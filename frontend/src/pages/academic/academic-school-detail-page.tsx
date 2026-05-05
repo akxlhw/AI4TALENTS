@@ -21,10 +21,10 @@ import {
   UserOutlined,
   TrophyOutlined,
 } from '@ant-design/icons'
-import { api } from '../services/api'
-import { getRoleTypeConfig, ROLE_TYPE_MAP } from '../constants/roleType'
-import TopicTags from '../components/TopicTags'
-import { formatNumber } from '../utils/format'
+import { api } from '../../services/api'
+import { getRoleTypeConfig, ROLE_TYPE_MAP } from '../../constants/roleType'
+import TopicTags from '../../components/TopicTags'
+import { formatNumber } from '../../utils/format'
 
 const { Title, Text, Paragraph } = Typography
 

@@ -29,11 +29,11 @@ import {
   ExclamationCircleOutlined,
   BulbOutlined,
 } from '@ant-design/icons'
-import { api } from '../services/api'
-import FavoriteButton from '../components/FavoriteButton'
-import CollaborationGraph, { CollaborationNode, CollaborationLink } from '../components/CollaborationGraph'
-import { getRoleTypeConfig } from '../constants/roleType'
-import { formatNumber } from '../utils/format'
+import { api } from '../../services/api'
+import FavoriteButton from '../../components/FavoriteButton'
+import CollaborationGraph, { CollaborationNode, CollaborationLink } from '../../components/CollaborationGraph'
+import { getRoleTypeConfig } from '../../constants/roleType'
+import { formatNumber } from '../../utils/format'
 
 const { Title, Text, Paragraph } = Typography
 

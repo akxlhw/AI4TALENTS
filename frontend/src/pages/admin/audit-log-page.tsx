@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Table, Tag, Space, DatePicker, Select, Button } from 'antd'
 import { FileTextOutlined, ReloadOutlined } from '@ant-design/icons'
-import { api } from '../services/api'
-import { formatUTCToLocal } from '../utils/datetime'
+import { api } from '../../services/api'
+import { formatUTCToLocal } from '../../utils/datetime'
 import dayjs from 'dayjs'
 
 const { RangePicker } = DatePicker

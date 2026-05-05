@@ -1,6 +1,0 @@
-export { default } from './SystemConfigPage'
-export { default as SystemConfigPage } from './SystemConfigPage'
-export { default as CollectConfigTab } from './CollectConfigTab'
-export { default as LLMConfigTab } from './LLMConfigTab'
-export { default as ProxyConfigTab } from './ProxyConfigTab'
-export { default as GitHubConfigTab } from './GitHubConfigTab'

@@ -28,7 +28,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { api } from '../services/api'
+import { api } from '../../services/api'
 
 const { Title, Text } = Typography
 

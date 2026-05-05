@@ -26,9 +26,9 @@ import {
   PlusOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
-import { api } from '../services/api'
-import { formatUTCToLocal } from '../utils/datetime'
-import { formatNumber } from '../utils/format'
+import { api } from '../../services/api'
+import { formatUTCToLocal } from '../../utils/datetime'
+import { formatNumber } from '../../utils/format'
 
 const { Text, Title } = Typography
 

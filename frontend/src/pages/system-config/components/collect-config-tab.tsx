@@ -37,21 +37,21 @@ import {
   CheckCircleOutlined,
   GithubOutlined,
 } from '@ant-design/icons'
-import { api } from '../../services/api'
-import { queryClient, queryKeys } from '../../hooks/queryClient'
+import { api } from '../../../services/api'
+import { queryClient, queryKeys } from '../../../hooks/queryClient'
 import {
   getTaskStatusConfig,
   getVenueTypeConfig,
   getStartYearOptions,
   getEndYearOptions,
   TIME_RANGE_CONFIG,
-} from '../../constants'
-import type { VenueItem, VenueBinding, TechDomainCollect, CollectTask } from '../../types'
-import { formatUTCToLocal } from '../../utils/datetime'
-import { formatNumber } from '../../utils/format'
+} from '../../../constants'
+import type { VenueItem, VenueBinding, TechDomainCollect, CollectTask } from '../../../types'
+import { formatUTCToLocal } from '../../../utils/datetime'
+import { formatNumber } from '../../../utils/format'
 import { getErrorMessage } from './utils'
-import OSRepoConfigSubTab from './OSRepoConfigSubTab'
-import OSCollectTaskSubTab from './OSCollectTaskSubTab'
+import OSRepoConfigSubTab from './os-repo-config-sub-tab'
+import OSCollectTaskSubTab from './os-collect-task-sub-tab'
 
 const { Text } = Typography
 

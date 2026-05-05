@@ -7,10 +7,8 @@ import {
   ArrowRightOutlined,
   AppstoreOutlined,
 } from '@ant-design/icons'
-import { useHomepageHighlights, useOverviewStats } from '../hooks/useQueries'
-import { useDomainStore } from '../stores/domainStore'
-import { domainThemes } from '../theme'
-import OpenSourcePage from './openSource/OpenSourcePage'
+import { useHomepageHighlights, useOverviewStats } from '../../hooks/useQueries'
+import { domainThemes } from '../../theme'
 
 const { Title, Paragraph, Text } = Typography
 const { Search } = Input
@@ -388,15 +386,4 @@ const AcademicHomePage: React.FC = () => {
   )
 }
 
-/* ── Home Page Dispatcher ── */
-const HomePage: React.FC = () => {
-  const { currentDomain } = useDomainStore()
-
-  if (currentDomain === 'opensource') {
-    return <OpenSourcePage />
-  }
-
-  return <AcademicHomePage />
-}
-
-export default HomePage
+export default AcademicHomePage

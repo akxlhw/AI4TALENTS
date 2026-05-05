@@ -27,8 +27,8 @@ import {
   GithubOutlined,
   PlayCircleOutlined,
 } from '@ant-design/icons'
-import { api } from '../../services/api'
-import type { OSRepoConfig } from '../../types'
+import { api } from '../../../services/api'
+import type { OSRepoConfig } from '../../../types'
 import { getErrorMessage } from './utils'
 
 const { Text } = Typography
@@ -189,38 +189,7 @@ const OSRepoConfigSubTab: React.FC = () => {
         <Tag color={getTechElementColor(code)}>{getTechElementLabel(code)}</Tag>
       ),
     },
-    {
-      title: '语言',
-      dataIndex: 'language',
-      key: 'language',
-      width: 100,
-      render: (lang: string) => lang || '-',
-    },
-    {
-      title: 'Stars',
-      dataIndex: 'stars_count',
-      key: 'stars_count',
-      width: 100,
-      render: (count: number) => count?.toLocaleString() || 0,
-    },
-    {
-      title: '展示',
-      dataIndex: 'is_active',
-      key: 'is_active',
-      width: 80,
-      render: (active: boolean) => (
-        <Tag color={active ? 'success' : 'default'}>{active ? '启用' : '停用'}</Tag>
-      ),
-    },
-    {
-      title: '采集',
-      dataIndex: 'collect_enabled',
-      key: 'collect_enabled',
-      width: 80,
-      render: (enabled: boolean) => (
-        <Tag color={enabled ? 'processing' : 'default'}>{enabled ? '参与' : '跳过'}</Tag>
-      ),
-    },
+
     {
       title: '操作',
       key: 'actions',

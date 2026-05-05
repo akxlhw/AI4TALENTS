@@ -48,18 +48,18 @@ import {
   PlusOutlined,
   UserAddOutlined,
 } from '@ant-design/icons'
-import { api } from '../services/api'
-import FavoriteButton from '../components/FavoriteButton'
-import TalentCompareModal from '../components/TalentCompareModal'
-import TopicTags from '../components/TopicTags'
-import ColumnSettings from '../components/ColumnSettings'
-import AILoadingOverlay from '../components/AILoadingOverlay'
-import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
-import { useSearchTemplates } from '../hooks/useSearchTemplates'
-import { useColumnConfig } from '../hooks/useColumnConfig'
-import { getRoleTypeConfig } from '../constants/roleType'
-import { formatNumber } from '../utils/format'
-import type { SearchTalent, TechDomain, EnhancedSearchResult, JDFeatures, MatchResultItem, RecommendResultItem } from '../types'
+import { api } from '../../services/api'
+import FavoriteButton from '../../components/FavoriteButton'
+import TalentCompareModal from '../../components/TalentCompareModal'
+import TopicTags from '../../components/TopicTags'
+import ColumnSettings from '../../components/ColumnSettings'
+import AILoadingOverlay from '../../components/AILoadingOverlay'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useSearchTemplates } from '../../hooks/useSearchTemplates'
+import { useColumnConfig } from '../../hooks/useColumnConfig'
+import { getRoleTypeConfig } from '../../constants/roleType'
+import { formatNumber } from '../../utils/format'
+import type { SearchTalent, TechDomain, EnhancedSearchResult, JDFeatures, MatchResultItem, RecommendResultItem } from '../../types'
 
 const { Title, Text } = Typography
 const { Search } = Input

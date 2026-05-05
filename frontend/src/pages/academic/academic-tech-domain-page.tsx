@@ -39,8 +39,8 @@ import {
   useTechDomainStats,
   useTechDomainTalents,
   useOverallTalents,
-} from '../hooks/useQueries'
-import TopicTags from '../components/TopicTags'
+} from '../../hooks/useQueries'
+import TopicTags from '../../components/TopicTags'
 
 const { Title, Text } = Typography
 
