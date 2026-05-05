@@ -203,7 +203,7 @@ class OSFavoriteResponse(BaseModel):
     favourite_id: int
     user_id: int
     developer_id: int
-    developer: OSDeveloperSummary | None
+    developer: OSDeveloperSummary | None = None
     notes: str | None
     followup_status: str | None
     is_active: bool
@@ -260,7 +260,7 @@ class OSPoolMemberResponse(BaseModel):
     pool_member_id: int
     pool_id: int
     developer_id: int
-    developer: OSDeveloperSummary | None
+    developer: OSDeveloperSummary | None = None
     notes: str | None
     created_at: datetime
 
