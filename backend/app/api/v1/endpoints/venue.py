@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.repositories.venue_repository import VenueRepository, VenueTechBindingRepository
-from app.schemas.common import SuccessResponse
+from app.domains.shared.schemas.common import SuccessResponse
 from app.schemas.venue import (
     BatchUpdateBindingsResponse,
     MigrateCollectSourcesRequest,

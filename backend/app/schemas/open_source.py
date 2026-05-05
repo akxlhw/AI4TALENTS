@@ -9,7 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.schemas.common import PaginatedResponse
+from app.domains.shared.schemas.common import PaginatedResponse
 
 
 # ============= Repo Config =============

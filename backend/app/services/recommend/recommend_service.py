@@ -31,7 +31,7 @@ from app.core.config import settings
 from app.models.embedding import TalentEmbedding
 from app.models.talent import Talent
 from app.repositories.talent_repository import TalentRepository
-from app.services.llm.errors import EmptyReferenceError, InvalidReferenceError
+from app.domains.shared.services.llm.errors import EmptyReferenceError, InvalidReferenceError
 
 logger = logging.getLogger(__name__)
 

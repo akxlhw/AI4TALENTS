@@ -8,7 +8,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.iam import FavoriteTalent
+from app.domains.shared.models.iam import FavoriteTalent
 from app.models.talent import Talent
 
 

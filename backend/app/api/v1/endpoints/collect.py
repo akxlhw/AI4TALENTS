@@ -18,7 +18,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.endpoints.auth import require_user
+from app.domains.shared.api.auth import require_user
 from app.core.database import get_async_session
 from app.repositories.collect_repository import CollectTaskRepository, TechDomainCollectRepository
 from app.repositories.venue_repository import VenueSubTaskRepository
@@ -38,7 +38,7 @@ from app.schemas.collect import (
     get_current_year,
     get_year_options,
 )
-from app.schemas.common import SuccessResponse
+from app.domains.shared.schemas.common import SuccessResponse
 from app.schemas.venue import VenueSubTaskListResponse, VenueSubTaskResponse
 from app.services.collect.orchestrator import CollectionOrchestrator
 from app.services.collect_service import CollectService

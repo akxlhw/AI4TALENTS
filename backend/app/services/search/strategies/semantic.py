@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.repositories.talent_repository import TalentRepository
-from app.services.llm.errors import LLMError
+from app.domains.shared.services.llm.errors import LLMError
 from app.services.search.strategies.base import SearchContext, SearchStrategy
 
 logger = logging.getLogger(__name__)

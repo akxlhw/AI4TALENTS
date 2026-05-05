@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.venue import Venue, VenueSubTask, VenueTechBinding
-from app.repositories.base import BaseRepository
+from app.domains.shared.repositories.base import BaseRepository
 
 
 class VenueRepository(BaseRepository[Venue]):

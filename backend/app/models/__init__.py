@@ -3,7 +3,7 @@ Database models package.
 All models are imported here for Alembic to detect them.
 """
 
-from app.models.audit import AuditOperationLog
+from app.domains.shared.models.audit import AuditOperationLog
 from app.models.collaboration import Collaboration, WorkAuthor
 from app.models.embedding import TalentEmbedding
 from app.models.enums import (
@@ -14,7 +14,7 @@ from app.models.enums import (
     UserRoleType,
     VisibilityStatus,
 )
-from app.models.iam import (
+from app.domains.shared.models.iam import (
     FavoriteTalent,
     TalentPool,
     TalentPoolMember,
@@ -37,7 +37,7 @@ from app.models.sync import (
     DataVersion,
     SyncBatch,
 )
-from app.models.system_config import SystemConfig
+from app.domains.shared.models.system_config import SystemConfig
 from app.models.talent import RoleProfile, SelectedWork, Talent
 from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
 from app.models.venue import Venue, VenueSubTask, VenueTechBinding

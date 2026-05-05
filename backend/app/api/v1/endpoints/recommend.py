@@ -18,7 +18,7 @@ from app.schemas.v1_4 import (
     RecommendResultItem,
 )
 from app.services.embedding.embedding_service import EmbeddingService
-from app.services.llm.errors import RecommendError
+from app.domains.shared.services.llm.errors import RecommendError
 from app.services.recommend.recommend_service import RecommendService
 
 router = APIRouter(prefix="/recommend", tags=["Recommend"])

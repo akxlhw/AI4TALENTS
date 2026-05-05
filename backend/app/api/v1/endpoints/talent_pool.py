@@ -6,10 +6,10 @@ Talent Pool API endpoints.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.endpoints.auth import require_user
+from app.domains.shared.api.auth import require_user
 from app.core.database import get_async_session
 from app.repositories.talent_pool_repository import FavoriteRepository, TalentPoolRepository
-from app.schemas.common import PaginatedResponse, SuccessResponse
+from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
 from app.schemas.talent_pool import (
     FOLLOWUP_STATUS_OPTIONS,
     AddMemberRequest,

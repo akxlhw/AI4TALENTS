@@ -11,11 +11,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.endpoints.auth import require_user
+from app.domains.shared.api.auth import require_user
 from app.core.database import get_async_session
 from app.repositories.embedding_repository import EmbeddingRepository
-from app.schemas.common import SuccessResponse
-from app.services.config_service import ConfigService
+from app.domains.shared.schemas.common import SuccessResponse
+from app.domains.shared.services.config_service import ConfigService
 
 logger = logging.getLogger(__name__)
 
@@ -230,7 +230,7 @@ async def _run_embedding_generation(force: bool, batch_size: int, vector_types: 
 
     from app.core.database import AsyncSessionLocal
     from app.services.embedding.embedding_service import EmbeddingService
-    from app.services.llm import LLMGateway
+    from app.domains.shared.services.llm import LLMGateway
 
     try:
         async with AsyncSessionLocal() as session:

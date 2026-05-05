@@ -20,7 +20,7 @@ from sqlalchemy.orm import selectinload
 from app.models.raw_data import RawWork
 from app.models.sync import CollectTask
 from app.models.tech_domain import TechDomain
-from app.repositories.base import BaseRepository
+from app.domains.shared.repositories.base import BaseRepository
 
 
 class CollectTaskRepository(BaseRepository[CollectTask]):

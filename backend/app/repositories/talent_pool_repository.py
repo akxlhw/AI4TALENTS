@@ -9,7 +9,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.iam import FavoriteTalent, TalentPool, TalentPoolMember
+from app.domains.shared.models.iam import FavoriteTalent, TalentPool, TalentPoolMember
 from app.models.talent import Talent
 
 

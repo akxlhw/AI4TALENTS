@@ -6,28 +6,30 @@ Aggregates all endpoint routers.
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
-    audit,
-    auth,
     collect,
     countries,
-    data_version,
     embeddings,
     favorites,
-    health,
     homepage,
     jd_match,
-    metrics,
     open_source,
     overview,
-    permissions,
     recommend,
     schools,
     search,
-    system_config,
     talent_pool,
     talents,
     tech_domain,
     venue,
+)
+from app.domains.shared.api import (
+    audit,
+    auth,
+    data_version,
+    health,
+    metrics,
+    permissions,
+    system_config,
 )
 
 api_router = APIRouter()

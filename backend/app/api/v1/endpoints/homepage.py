@@ -18,8 +18,8 @@ from app.schemas.homepage import (
     TopCountryItem,
     TopSchoolItem,
 )
-from app.services.cache_keys import CacheKeys, CacheTTL
-from app.services.cache_service import CacheService
+from app.domains.shared.services.cache_keys import CacheKeys, CacheTTL
+from app.domains.shared.services.cache_service import CacheService
 
 router = APIRouter(prefix="/homepage", tags=["Homepage"])
 

@@ -3,7 +3,7 @@ Schemas module.
 Pydantic models for API request/response handling.
 """
 
-from app.schemas.common import (
+from app.domains.shared.schemas.common import (
     ErrorResponse,
     HealthResponse,
     PaginatedResponse,

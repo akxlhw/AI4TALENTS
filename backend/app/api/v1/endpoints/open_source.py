@@ -17,7 +17,7 @@ from app.core.auth import verify_access_token
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, get_async_session
 from app.models.enums import UserRoleType
-from app.schemas.common import PaginatedResponse, SuccessResponse
+from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
 from app.schemas.open_source import (
     OSCollectTaskCreate,
     OSCollectTaskResponse,
@@ -121,7 +121,7 @@ async def create_repo_config(
     session: AsyncSession = Depends(get_async_session),
     user: dict = Depends(require_admin),
 ):
-    from app.services.config_service import ConfigService
+    from app.domains.shared.services.config_service import ConfigService
     config_service = ConfigService(session)
     github_config = await config_service.get_github_config()
     token = github_config.tokens if github_config.tokens else None
@@ -251,7 +251,7 @@ async def run_os_repo_collect_background(
             await session.commit()
 
             # Load GitHub token from database config (frontend-configured)
-            from app.services.config_service import ConfigService
+            from app.domains.shared.services.config_service import ConfigService
 
             config_service = ConfigService(session)
             github_config = await config_service.get_github_config()

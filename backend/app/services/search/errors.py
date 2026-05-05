@@ -1,6 +1,6 @@
 """Search error types (re-exported from llm.errors for convenience)."""
 
-from app.services.llm.errors import (
+from app.domains.shared.services.llm.errors import (
     EmbeddingServiceError,
     EmptyQueryError,
     FulltextSearchError,

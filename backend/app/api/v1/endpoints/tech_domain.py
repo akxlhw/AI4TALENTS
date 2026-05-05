@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import get_cache_connection
 from app.core.database import get_async_session
 from app.repositories.tech_domain_repository import TechDomainRepository
-from app.schemas.common import PaginatedResponse
+from app.domains.shared.schemas.common import PaginatedResponse
 from app.schemas.tech_domain import (
     CountryDistributionItem,
     CountryDistributionResponse,
@@ -24,8 +24,8 @@ from app.schemas.tech_domain import (
     TechDomainStatsResponse,
     TechDomainSummary,
 )
-from app.services.cache_keys import CacheKeys, CacheTTL
-from app.services.cache_service import CacheService
+from app.domains.shared.services.cache_keys import CacheKeys, CacheTTL
+from app.domains.shared.services.cache_service import CacheService
 
 router = APIRouter(prefix="/tech-domains", tags=["Tech Domains"])
 

@@ -19,8 +19,8 @@ from app.schemas.v1_4 import (
     SearchMode,
     SemanticSearchResult,
 )
-from app.services.config_service import ConfigService
-from app.services.llm import LLMGateway
+from app.domains.shared.services.config_service import ConfigService
+from app.domains.shared.services.llm import LLMGateway
 from app.services.search.errors import EmptyQueryError
 from app.services.search.search_service import SearchService
 

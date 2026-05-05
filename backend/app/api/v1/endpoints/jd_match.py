@@ -11,7 +11,7 @@ import time
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.endpoints.auth import get_current_user
+from app.domains.shared.api.auth import get_current_user
 from app.core.config import settings
 from app.core.database import get_async_session
 from app.schemas.v1_4 import (
@@ -22,10 +22,10 @@ from app.schemas.v1_4 import (
     MatchResponse,
     MatchResultItemResponse,
 )
-from app.services.config_service import ConfigService
+from app.domains.shared.services.config_service import ConfigService
 from app.services.jd_match.jd_match_service import JDMatchService, MatchConfig
-from app.services.llm import LLMGateway
-from app.services.llm.errors import EmptyJDError, LLMError
+from app.domains.shared.services.llm import LLMGateway
+from app.domains.shared.services.llm.errors import EmptyJDError, LLMError
 
 router = APIRouter(prefix="/jd-match", tags=["JD Match"])
 

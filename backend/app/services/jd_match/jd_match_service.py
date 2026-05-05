@@ -25,8 +25,8 @@ from app.core.config import settings
 from app.models.jd_match import JDMatchResult, JDMatchSession
 from app.repositories.talent_repository import TalentRepository
 from app.services.jd_match.match_scorer import MatchScorer
-from app.services.llm.errors import EmptyJDError
-from app.services.llm.protocols import JDFeatures, LLMGatewayProtocol
+from app.domains.shared.services.llm.errors import EmptyJDError
+from app.domains.shared.services.llm.protocols import JDFeatures, LLMGatewayProtocol
 
 logger = logging.getLogger(__name__)
 

@@ -539,7 +539,7 @@ class CollaborationService:
         """
         获取当前合作网络同步状态。
         """
-        from app.services.config_service import ConfigService
+        from app.domains.shared.services.config_service import ConfigService
 
         # 统计合作关系数
         collab_count_stmt = select(func.count(Collaboration.collaboration_id))
@@ -574,7 +574,7 @@ class CollaborationService:
         """保存最后同步时间"""
         from datetime import datetime
 
-        from app.services.config_service import ConfigService
+        from app.domains.shared.services.config_service import ConfigService
 
         config_service = ConfigService(self.session)
         await config_service.set_value(

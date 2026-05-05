@@ -22,8 +22,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.talent import Talent
 from app.repositories.embedding_repository import EmbeddingRepository
-from app.services.llm.errors import EmbeddingError, TalentNotFoundError
-from app.services.llm.protocols import LLMGatewayProtocol
+from app.domains.shared.services.llm.errors import EmbeddingError, TalentNotFoundError
+from app.domains.shared.services.llm.protocols import LLMGatewayProtocol
 
 logger = logging.getLogger(__name__)
 

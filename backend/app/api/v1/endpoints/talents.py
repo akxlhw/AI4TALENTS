@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.schemas.common import (
+from app.domains.shared.schemas.common import (
     CountResponse,
     PaginatedResponse,
     SyncStatusResponse,

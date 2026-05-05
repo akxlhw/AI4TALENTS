@@ -9,10 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.endpoints.auth import require_user
+from app.domains.shared.api.auth import require_user
 from app.core.database import get_async_session
 from app.repositories.favorite_repository import FavoriteRepository
-from app.schemas.common import PaginatedResponse, SuccessResponse
+from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
 
 router = APIRouter(prefix="/favorites", tags=["Favorites"])
 
