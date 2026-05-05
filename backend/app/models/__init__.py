@@ -4,8 +4,8 @@ All models are imported here for Alembic to detect them.
 """
 
 from app.domains.shared.models.audit import AuditOperationLog
-from app.models.collaboration import Collaboration, WorkAuthor
-from app.models.embedding import TalentEmbedding
+from app.domains.academic.models.collaboration import Collaboration, WorkAuthor
+from app.domains.academic.models.embedding import TalentEmbedding
 from app.models.enums import (
     RoleType,
     ScopeType,
@@ -21,13 +21,13 @@ from app.domains.shared.models.iam import (
     UserAccount,
     UserSchoolScope,
 )
-from app.models.jd_match import JDMatchResult, JDMatchSession
-from app.models.raw_data import AuthorTechBelong, RawAuthor, RawInstitution, RawWork
-from app.models.school import School, SchoolAlias
-from app.models.search import SearchTalentDocument
-from app.models.standardized import SchoolNameAlias, StdAuthor, StdSchool
-from app.models.statistics import OverviewStatSnapshot, ResearchTopicStats, SchoolStatSnapshot
-from app.models.sync import (
+from app.domains.academic.models.jd_match import JDMatchResult, JDMatchSession
+from app.domains.academic.models.raw_data import AuthorTechBelong, RawAuthor, RawInstitution, RawWork
+from app.domains.academic.models.school import School, SchoolAlias
+from app.domains.academic.models.search import SearchTalentDocument
+from app.domains.academic.models.standardized import SchoolNameAlias, StdAuthor, StdSchool
+from app.domains.academic.models.statistics import OverviewStatSnapshot, ResearchTopicStats, SchoolStatSnapshot
+from app.domains.academic.models.sync import (
     CollectScope,
     CollectStrategy,
     CollectTask,
@@ -38,9 +38,9 @@ from app.models.sync import (
     SyncBatch,
 )
 from app.domains.shared.models.system_config import SystemConfig
-from app.models.talent import RoleProfile, SelectedWork, Talent
-from app.models.tech_domain import TalentTechTag, TechDirection, TechDomain
-from app.models.venue import Venue, VenueSubTask, VenueTechBinding
+from app.domains.academic.models.talent import RoleProfile, SelectedWork, Talent
+from app.domains.academic.models.tech_domain import TalentTechTag, TechDirection, TechDomain
+from app.domains.academic.models.venue import Venue, VenueSubTask, VenueTechBinding
 from app.models.open_source import (
     OSContribution,
     OSCollectTask,

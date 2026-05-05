@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import get_cache_connection
 from app.core.config import settings
 from app.core.database import async_engine, get_async_session
-from app.repositories.stat_repository import StatisticsRepository
+from app.domains.academic.repositories.stat_repository import StatisticsRepository
 
 logger = logging.getLogger(__name__)
 

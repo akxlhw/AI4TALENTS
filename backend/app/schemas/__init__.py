@@ -10,7 +10,7 @@ from app.domains.shared.schemas.common import (
     PaginationParams,
     SuccessResponse,
 )
-from app.schemas.overview import (
+from app.domains.academic.schemas.overview import (
     CountryListResponse,
     CountrySummary,
     OverviewResponse,

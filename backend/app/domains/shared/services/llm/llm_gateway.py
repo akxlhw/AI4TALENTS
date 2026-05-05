@@ -89,7 +89,7 @@ class LLMGateway(LLMGatewayProtocol):
             api_format: API 格式 (openai / minimax)
             embedding_api_format: 嵌入 API 格式，留空则使用 api_format
         """
-        from app.services.common.http_client import HttpClientFactory
+        from app.domains.shared.services.common.http_client import HttpClientFactory
 
         self.api_key = api_key or settings.LLM_API_KEY
         # Normalize base URLs (remove trailing slash to avoid double slashes in URL concatenation)
@@ -453,7 +453,7 @@ class LLMGateway(LLMGatewayProtocol):
         embedding_api_key = self.embedding_api_key or self.api_key
 
         # Create HTTP client using factory (handles proxy/no_proxy automatically)
-        from app.services.common.http_client import HttpClientFactory
+        from app.domains.shared.services.common.http_client import HttpClientFactory
 
         embedding_api_url = self.api_base
         client = HttpClientFactory.create_client_for_url(embedding_api_url, timeout=self.timeout)

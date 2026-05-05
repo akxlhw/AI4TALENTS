@@ -85,12 +85,12 @@ def get_logging_config() -> dict[str, Any]:
                 "propagate": False,
             },
             # 采集模块单独配置，输出到专用日志文件
-            "app.services.collect": {
+            "app.domains.academic.services.collect": {
                 "level": "INFO",
                 "handlers": ["console", "collect_file"],
                 "propagate": False,
             },
-            "app.services.data_fetchers": {
+            "app.domains.academic.services.data_fetchers": {
                 "level": "INFO",
                 "handlers": ["console", "collect_file"],
                 "propagate": False,

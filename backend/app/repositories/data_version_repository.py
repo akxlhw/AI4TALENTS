@@ -10,7 +10,7 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.sync import DataCorrectionRecord, DataPublishRecord, DataQualitySummary, DataVersion
+from app.domains.academic.models.sync import DataCorrectionRecord, DataPublishRecord, DataQualitySummary, DataVersion
 
 
 class DataVersionRepository:

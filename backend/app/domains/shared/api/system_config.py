@@ -209,7 +209,7 @@ async def _test_chat_model(
     api_format: str,
 ) -> TestLLMResponse:
     """Test chat model connection."""
-    from app.services.common.http_client import HttpClientFactory
+    from app.domains.shared.services.common.http_client import HttpClientFactory
 
     # Normalize API base URL (remove trailing slash to avoid double slashes)
     api_base = api_base.rstrip("/")
@@ -372,7 +372,7 @@ async def _test_embedding_model(
     api_format: str,
 ) -> TestEmbeddingResponse:
     """Test embedding model connection."""
-    from app.services.common.http_client import HttpClientFactory
+    from app.domains.shared.services.common.http_client import HttpClientFactory
 
     if not api_base:
         return TestEmbeddingResponse(
@@ -542,7 +542,7 @@ async def update_proxy_config(
     current_user: dict = Depends(require_admin_user),
 ):
     """Update proxy configuration."""
-    from app.services.common.http_client import HttpClientFactory
+    from app.domains.shared.services.common.http_client import HttpClientFactory
 
     config_service = ConfigService(session)
 
@@ -599,7 +599,7 @@ async def test_proxy_connection(
 
     import httpx
 
-    from app.services.common.http_client import HttpClientFactory
+    from app.domains.shared.services.common.http_client import HttpClientFactory
 
     config_service = ConfigService(session)
 

@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 
 async def init_proxy_config() -> None:
     """Initialize proxy configuration from database."""
-    from app.services.common.http_client import HttpClientFactory
+    from app.domains.shared.services.common.http_client import HttpClientFactory
     from app.domains.shared.services.config_service import ConfigService
 
     try:

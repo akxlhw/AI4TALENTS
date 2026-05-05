@@ -5,14 +5,14 @@ Aggregates all endpoint routers.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import (
+from app.api.v1.endpoints import open_source
+from app.domains.academic.api import (
     collect,
     countries,
     embeddings,
     favorites,
     homepage,
     jd_match,
-    open_source,
     overview,
     recommend,
     schools,

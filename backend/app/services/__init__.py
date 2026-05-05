@@ -19,7 +19,7 @@ For new code, prefer using the specialized services directly:
 
 # Legacy exports (backward compatible)
 # Collection services
-from app.services.collect import (
+from app.domains.academic.services.collect import (
     CollectionOrchestrator,
     ProgressTracker,
     TaskCreationService,
@@ -27,7 +27,7 @@ from app.services.collect import (
 )
 
 # Common utilities
-from app.services.common import (
+from app.domains.academic.services.common import (
     OPENALEX_API_BASE,
     BaseProgress,
     CollectionProgress,
@@ -36,7 +36,7 @@ from app.services.common import (
 )
 
 # Data fetchers (kept for backward compatibility)
-from app.services.data_fetchers import (
+from app.domains.academic.services.data_fetchers import (
     AuthorFetcher,
     InstitutionFetcher,
     OpenAlexClient,
@@ -44,16 +44,16 @@ from app.services.data_fetchers import (
 )
 
 # Normalizers
-from app.services.normalizers import (
+from app.domains.academic.services.normalizers import (
     AuthorNormalizer,
     NormalizationResult,
     SchoolNormalizer,
     TechBelongCalculator,
 )
-from app.services.role_identifier import RoleIdentificationResult, RoleIdentifier
+from app.domains.academic.services.role_identifier import RoleIdentificationResult, RoleIdentifier
 
 # Sync services
-from app.services.sync import (
+from app.domains.academic.services.sync import (
     AuthorSyncService,
     SchoolSyncService,
     ServingLayerOrchestrator,
@@ -61,7 +61,7 @@ from app.services.sync import (
 )
 
 # Talent service
-from app.services.talent_service import TalentService
+from app.domains.academic.services.talent_service import TalentService
 
 __all__ = [
     # Utilities

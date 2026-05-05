@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.enums import UserRoleType
 from app.domains.shared.models.iam import UserAccount, UserSchoolScope
-from app.models.school import School
+from app.domains.academic.models.school import School
 
 
 class UserRepository:
@@ -479,7 +479,7 @@ class UserScopeRepository:
             True if user has access, False otherwise
         """
         # Get user to check role
-        from app.models.school import School
+        from app.domains.academic.models.school import School
 
         user_result = await self.session.execute(
             select(UserAccount).where(UserAccount.user_id == user_id)
@@ -543,7 +543,7 @@ class UserScopeRepository:
         Returns:
             List of accessible school IDs
         """
-        from app.models.school import School
+        from app.domains.academic.models.school import School
 
         # Get user to check role
         user_result = await self.session.execute(
@@ -660,7 +660,7 @@ class UserScopeRepository:
         Returns:
             List of accessible tech domain IDs
         """
-        from app.models.tech_domain import TechDomain
+        from app.domains.academic.models.tech_domain import TechDomain
 
         # Get user to check role
         user_result = await self.session.execute(

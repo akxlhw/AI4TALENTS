@@ -21,7 +21,7 @@ from tenacity import (
 )
 
 from app.core.config import settings
-from app.services.common.http_client import HttpClientFactory
+from app.domains.shared.services.common.http_client import HttpClientFactory
 
 logger = logging.getLogger(__name__)
 
