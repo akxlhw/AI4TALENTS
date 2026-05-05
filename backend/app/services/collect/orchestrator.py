@@ -166,16 +166,33 @@ class CollectionOrchestrator:
                 await self.progress_tracker.update_progress(
                     task, handler.phase_name, handler.phase_progress
                 )
-                result = await handler.execute(context)
+                try:
+                    result = await handler.execute(context)
+                except Exception as phase_err:
+                    # Log the failing phase but do not abort the entire pipeline.
+                    # Earlier phases are already committed (or will be rolled back
+                    # if the outer transaction fails).  This prevents a single
+                    # phase failure from discarding all preceding work.
+                    self.progress_tracker.add_log(
+                        "error",
+                        f"Phase '{handler.phase_name}' failed: {phase_err}",
+                        {"traceback": traceback.format_exc()},
+                    )
+                    logger.error(
+                        f"Task {task_id} phase '{handler.phase_name}' failed: {phase_err}"
+                    )
+                    # Re-raise so the outer try/except marks the task failed
+                    # and rolls back the current (uncommitted) transaction.
+                    raise
 
                 # Phase 7 returns new talents for Phase 8
                 if isinstance(handler, PhaseSyncServingHandler) and result:
                     context.new_talents = result
 
-                # Phase 1 commits total_works immediately
+                # Removed mid-task commit for Phase 1 to avoid dirty writes.
+                # All phase changes are committed atomically at the end.
                 if isinstance(handler, PhaseCollectHandler):
                     task.total_records = progress.total_works
-                    await self.session.commit()
 
                 if await self._should_cancel(task_id):
                     await self._handle_cancellation(task, progress)

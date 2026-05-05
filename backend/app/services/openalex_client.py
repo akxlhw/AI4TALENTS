@@ -74,6 +74,12 @@ class OpenAlexClient:
             ),
         }
 
+        # Reusable HTTP client (connection pooling)
+        self._client = httpx.AsyncClient(
+            headers=self.headers,
+            timeout=httpx.Timeout(self.timeout),
+        )
+
     def _wait_for_rate_limit(self):
         """Wait if necessary to respect rate limits."""
         elapsed = time.time() - self._last_request_time
@@ -91,11 +97,10 @@ class OpenAlexClient:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError, OpenAlexRateLimitError)),
     )
     async def _make_request(
         self,
-        client: httpx.AsyncClient,
         endpoint: str,
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -119,7 +124,7 @@ class OpenAlexClient:
         url = f"{self.base_url}{endpoint}"
 
         try:
-            response = await client.get(url, params=params, timeout=self.timeout)
+            response = await self._client.get(url, params=params)
             response.raise_for_status()
             return response.json()
 
@@ -177,8 +182,7 @@ class OpenAlexClient:
         if mailto or self.email:
             params["mailto"] = mailto or self.email
 
-        async with httpx.AsyncClient(headers=self.headers) as client:
-            return await self._make_request(client, self.INSTITUTIONS, params)
+        return await self._make_request(self.INSTITUTIONS, params)
 
     async def get_authors(
         self,
@@ -220,8 +224,7 @@ class OpenAlexClient:
         if mailto or self.email:
             params["mailto"] = mailto or self.email
 
-        async with httpx.AsyncClient(headers=self.headers) as client:
-            return await self._make_request(client, self.AUTHORS, params)
+        return await self._make_request(self.AUTHORS, params)
 
     async def get_works(
         self,
@@ -259,8 +262,7 @@ class OpenAlexClient:
         if mailto or self.email:
             params["mailto"] = mailto or self.email
 
-        async with httpx.AsyncClient(headers=self.headers) as client:
-            return await self._make_request(client, self.WORKS, params)
+        return await self._make_request(self.WORKS, params)
 
     async def get_author_by_id(self, author_id: str) -> dict[str, Any]:
         """
@@ -272,8 +274,7 @@ class OpenAlexClient:
         Returns:
             Author data
         """
-        async with httpx.AsyncClient(headers=self.headers) as client:
-            return await self._make_request(client, f"{self.AUTHORS}/{author_id}")
+        return await self._make_request(f"{self.AUTHORS}/{author_id}")
 
     async def get_institution_by_id(self, institution_id: str) -> dict[str, Any]:
         """
@@ -285,8 +286,7 @@ class OpenAlexClient:
         Returns:
             Institution data
         """
-        async with httpx.AsyncClient(headers=self.headers) as client:
-            return await self._make_request(client, f"{self.INSTITUTIONS}/{institution_id}")
+        return await self._make_request(f"{self.INSTITUTIONS}/{institution_id}")
 
     async def iterate_institutions(
         self,
@@ -369,6 +369,16 @@ class OpenAlexClient:
             cursor = meta.get("next_cursor")
             if not cursor:
                 break
+
+    async def aclose(self) -> None:
+        """Close the underlying HTTP client."""
+        await self._client.aclose()
+
+    async def __aenter__(self) -> "OpenAlexClient":
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        await self.aclose()
 
 
 # Convenience function

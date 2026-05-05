@@ -128,27 +128,31 @@ class GitHubCollector:
         await self._update_task(ctx.task_id, total_records=total, current_step="fetch_profiles", progress_percent=20)
 
         # Step 3-5: Process each contributor serially
-        async with AsyncSessionLocal() as session:
-            sync = SyncService(session)
-            for idx, contributor in enumerate(contributors, 1):
-                if await self._is_cancelled(ctx):
-                    return
+        # Each contributor uses an independent transaction to ensure failure isolation.
+        for idx, contributor in enumerate(contributors, 1):
+            if await self._is_cancelled(ctx):
+                return
 
-                login = contributor.get("login")
-                if not login:
-                    continue
+            login = contributor.get("login")
+            if not login:
+                continue
 
-                await self._process_contributor(ctx, login, sync, repo_info)
+            try:
+                async with AsyncSessionLocal() as session:
+                    sync = SyncService(session)
+                    await self._process_contributor(ctx, login, sync, repo_info)
+                    await session.commit()
+            except Exception as e:
+                logger.exception(f"Failed to process contributor {login}: {e}")
+                # Continue with next contributor; partial failures are logged but not fatal.
 
-                # Small delay between contributors to avoid rate limiting
-                if idx < total:
-                    await asyncio.sleep(0.5)
+            # Small delay between contributors to avoid rate limiting
+            if idx < total:
+                await asyncio.sleep(0.5)
 
-                # Update progress every contributor
-                progress = 20 + int((idx / total) * 70)
-                await self._update_task(ctx.task_id, processed_records=idx, progress_percent=min(progress, 90))
-
-            await session.commit()
+            # Update progress every contributor
+            progress = 20 + int((idx / total) * 70)
+            await self._update_task(ctx.task_id, processed_records=idx, progress_percent=min(progress, 90))
 
         # Step 6: Done
         await self._update_task(

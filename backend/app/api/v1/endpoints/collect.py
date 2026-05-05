@@ -40,7 +40,9 @@ from app.schemas.collect import (
 )
 from app.schemas.common import SuccessResponse
 from app.schemas.venue import VenueSubTaskListResponse, VenueSubTaskResponse
+from app.services.collect.orchestrator import CollectionOrchestrator
 from app.services.collect_service import CollectService
+from app.services.data_fetchers import AuthorFetcher, InstitutionFetcher, WorkFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +93,6 @@ async def run_collect_task_background(task_id: int):
 async def _run_unified_collect(task_id: int):
     """异步执行统一采集任务"""
     from app.core.database import AsyncSessionLocal
-    from app.services.collect.orchestrator import CollectionOrchestrator
-    from app.services.data_fetchers import AuthorFetcher, InstitutionFetcher, WorkFetcher
 
     async with AsyncSessionLocal() as session:
         # Initialize fetchers
@@ -654,9 +654,6 @@ async def get_task_detailed_progress(
     current_user: dict = Depends(require_admin_user),
 ):
     """Get detailed progress for a task."""
-    from app.services.collect.orchestrator import CollectionOrchestrator
-    from app.services.data_fetchers import AuthorFetcher, InstitutionFetcher, WorkFetcher
-
     # Initialize fetchers
     work_fetcher = WorkFetcher(session)
     author_fetcher = AuthorFetcher(session)

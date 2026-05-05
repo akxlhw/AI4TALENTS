@@ -118,7 +118,7 @@ class GitHubClient:
         return response
 
     @retry(
-        retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.NetworkError)),
+        retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.NetworkError, httpx.TimeoutException)),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=30),
         reraise=True,

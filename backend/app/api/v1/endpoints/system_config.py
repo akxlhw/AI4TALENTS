@@ -651,7 +651,9 @@ async def test_proxy_connection(
     results = []
 
     # Test 1: External API through proxy
-    external_url = "https://api.openalex.org/works?per_page=1"
+    from app.core.config import settings
+    openalex_base = settings.OPENALEX_BASE_URL or "https://api.openalex.org"
+    external_url = f"{openalex_base}/works?per_page=1"
     try:
         async with httpx.AsyncClient(
             proxy=full_proxy_url, timeout=30.0, verify=ssl_verify, trust_env=False
