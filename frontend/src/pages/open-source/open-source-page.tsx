@@ -11,6 +11,7 @@ import {
   Input,
   Spin,
   Empty,
+  Button,
 } from 'antd'
 import {
   CodeOutlined,
@@ -195,10 +196,15 @@ const OpenSourcePage: React.FC = () => {
       </Row>
 
       {/* Top Developers */}
-      <Title level={4} style={{ marginBottom: 16, padding: '0 32px' }}>
-        <StarOutlined style={{ marginRight: 8, color: secondary }} />
-        顶尖开发者
-      </Title>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, padding: '0 32px' }}>
+        <Title level={4} style={{ margin: 0 }}>
+          <StarOutlined style={{ marginRight: 8, color: secondary }} />
+          顶尖开发者
+        </Title>
+        <Button type="link" onClick={() => navigate('/opensource/search')} style={{ fontSize: 16 }}>
+          查看全部 →
+        </Button>
+      </div>
       {topDevelopers.length === 0 ? (
         <Empty description="暂无开发者数据，请先执行采集任务" />
       ) : (
