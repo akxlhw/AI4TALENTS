@@ -8,6 +8,7 @@ from fastapi import APIRouter
 from app.domains.academic.api import (
     collect,
     countries,
+    data_version,
     embeddings,
     favorites,
     homepage,
@@ -25,7 +26,6 @@ from app.domains.open_source.api import open_source
 from app.domains.shared.api import (
     audit,
     auth,
-    data_version,
     health,
     metrics,
     permissions,

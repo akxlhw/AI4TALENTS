@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import get_cache_connection
 from app.core.config import settings
 from app.core.database import async_engine, get_async_session
-from app.domains.academic.repositories.stat_repository import StatisticsRepository
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +76,10 @@ async def health_check(
     }
 
     # Check database connection
-    repo = StatisticsRepository(session)
+    from sqlalchemy import text
     try:
-        if await repo.check_database_connection():
+        result = await session.execute(text("SELECT 1"))
+        if result.scalar() == 1:
             health_status["database"]["status"] = "connected"
         else:
             health_status["database"]["status"] = "error"
@@ -142,8 +142,12 @@ async def readiness_check(
     }
 
     # Check database
-    repo = StatisticsRepository(session)
-    checks["database"] = await repo.check_database_connection()
+    from sqlalchemy import text
+    try:
+        result = await session.execute(text("SELECT 1"))
+        checks["database"] = result.scalar() == 1
+    except Exception:
+        checks["database"] = False
 
     # Check cache (optional)
     if settings.REDIS_ENABLED:

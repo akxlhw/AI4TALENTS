@@ -10,9 +10,8 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.domains.academic.models.school import School
-from app.domains.shared.models.iam import UserAccount, UserSchoolScope
 from app.domains.shared.models.enums import UserRoleType
+from app.domains.shared.models.iam import UserAccount, UserSchoolScope
 
 
 class UserRepository:
@@ -479,7 +478,7 @@ class UserScopeRepository:
             True if user has access, False otherwise
         """
         # Get user to check role
-        from app.domains.academic.models.school import School
+        from sqlalchemy import text
 
         user_result = await self.session.execute(
             select(UserAccount).where(UserAccount.user_id == user_id)
@@ -493,14 +492,16 @@ class UserScopeRepository:
         if user.role_type == UserRoleType.SUPER_ADMIN.value:
             return True
 
-        # Get school to check country
+        # Get school country_code directly
         school_result = await self.session.execute(
-            select(School).where(School.school_id == school_id)
+            text("SELECT country_code FROM core_school WHERE school_id = :school_id").bindparams(
+                school_id=school_id
+            )
         )
-        school = school_result.scalar_one_or_none()
-
-        if not school:
+        row = school_result.fetchone()
+        if not row:
             return False
+        country_code = row[0]
 
         # Check scopes
         scopes_result = await self.session.execute(
@@ -522,8 +523,6 @@ class UserScopeRepository:
                 return True
 
             if scope.scope_type == "country":
-                # Check if school is in the country
-                country_code = school.country_code
                 if country_code and scope.scope_value == country_code:
                     return True
 
@@ -543,7 +542,7 @@ class UserScopeRepository:
         Returns:
             List of accessible school IDs
         """
-        from app.domains.academic.models.school import School
+        from sqlalchemy import text
 
         # Get user to check role
         user_result = await self.session.execute(
@@ -556,7 +555,7 @@ class UserScopeRepository:
 
         # Super admin has access to all
         if user.role_type == UserRoleType.SUPER_ADMIN.value:
-            result = await self.session.execute(select(School.school_id))
+            result = await self.session.execute(text("SELECT school_id FROM core_school"))
             return [row[0] for row in result.fetchall()]
 
         # Get scopes
@@ -578,12 +577,14 @@ class UserScopeRepository:
                 continue
 
             if scope.scope_type == "all":
-                result = await self.session.execute(select(School.school_id))
+                result = await self.session.execute(text("SELECT school_id FROM core_school"))
                 return [row[0] for row in result.fetchall()]
 
             if scope.scope_type == "country":
                 result = await self.session.execute(
-                    select(School.school_id).where(School.country_code == scope.scope_value)
+                    text("SELECT school_id FROM core_school WHERE country_code = :code").bindparams(
+                        code=scope.scope_value
+                    )
                 )
                 for row in result.fetchall():
                     accessible_ids.add(row[0])
@@ -660,7 +661,7 @@ class UserScopeRepository:
         Returns:
             List of accessible tech domain IDs
         """
-        from app.domains.academic.models.tech_domain import TechDomain
+        from sqlalchemy import text
 
         # Get user to check role
         user_result = await self.session.execute(
@@ -673,7 +674,7 @@ class UserScopeRepository:
 
         # Super admin has access to all
         if user.role_type == UserRoleType.SUPER_ADMIN.value:
-            result = await self.session.execute(select(TechDomain.tech_domain_id))
+            result = await self.session.execute(text("SELECT tech_domain_id FROM config_tech_domain"))
             return [row[0] for row in result.fetchall()]
 
         # Get scopes
@@ -695,7 +696,7 @@ class UserScopeRepository:
                 continue
 
             if scope.scope_type == "all":
-                result = await self.session.execute(select(TechDomain.tech_domain_id))
+                result = await self.session.execute(text("SELECT tech_domain_id FROM config_tech_domain"))
                 return [row[0] for row in result.fetchall()]
 
             if scope.scope_type == "tech_domain":
@@ -716,6 +717,8 @@ class UserScopeRepository:
         Returns:
             List of accessible country codes
         """
+        from sqlalchemy import text
+
         # Get user to check role
         user_result = await self.session.execute(
             select(UserAccount).where(UserAccount.user_id == user_id)
@@ -725,10 +728,10 @@ class UserScopeRepository:
         if not user:
             return []
 
-        # Super admin has access to all - get distinct country_codes from School
+        # Super admin has access to all - get distinct country_codes
         if user.role_type == UserRoleType.SUPER_ADMIN.value:
             result = await self.session.execute(
-                select(School.country_code).where(School.country_code.isnot(None)).distinct()
+                text("SELECT DISTINCT country_code FROM core_school WHERE country_code IS NOT NULL")
             )
             return [row[0] for row in result.fetchall() if row[0]]
 
@@ -752,7 +755,7 @@ class UserScopeRepository:
 
             if scope.scope_type == "all":
                 result = await self.session.execute(
-                    select(School.country_code).where(School.country_code.isnot(None)).distinct()
+                    text("SELECT DISTINCT country_code FROM core_school WHERE country_code IS NOT NULL")
                 )
                 return [row[0] for row in result.fetchall() if row[0]]
 

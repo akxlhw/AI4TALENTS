@@ -1,212 +1,201 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-智能人才库 (AI4TALENTS) V2.0.0
-一个基于 OpenAlex 学术数据库的人才发现平台，面向招聘团队的内部工具。
+智能人才库 (AI4TALENTS) V2.0.0 — 面向招聘团队的多维度人才发现平台。
+
+当前实现的人才数据源：
+- **学术人才** (`academic` domain): 基于 OpenAlex 学术数据库，完整功能
+- **开源人才** (`opensource` domain): 基于 GitHub API，v2.0 新增
+- **竞赛人才** (`competition`): 规划中
+- **行业人才** (`industry`): 规划中
 
 ## Tech Stack
 
 ### Backend
 - Python 3.11
-- FastAPI
+- FastAPI + Pydantic v2 + pydantic-settings
 - SQLAlchemy 2.x + Alembic (async)
-- PostgreSQL
-- Pydantic v2
+- PostgreSQL 14+ with pgvector 扩展
+- Redis (可选缓存层，支持降级)
+- uv (依赖管理与运行)
 
 ### Frontend
 - React 18 + TypeScript
 - Vite
 - Ant Design v5
 - React Router v6
-- Zustand (state management)
+- TanStack React Query (服务器状态管理)
+- Zustand (仅领域切换等极小范围客户端状态)
+- Vitest (单元测试) + Playwright (E2E)
 
 ## Common Commands
 
+项目使用 Makefile 和 `uv` 管理后端依赖与命令。
+
 ```bash
-# Backend
-cd backend
-python -m venv .venv && .venv/Scripts/activate  # Windows
-pip install -r requirements.txt
-alembic upgrade head          # Run migrations
-uvicorn app.main:app --reload --port 8003
+# 安装依赖
+make install                  # 安装前后端所有依赖
+make install-backend          # uv sync --all-groups
+make install-frontend         # npm install
 
-# Backend Testing
-pytest                        # Run all tests
-pytest tests/test_models.py   # Run specific test file
-pytest -v --cov=app           # Run with coverage
-pytest -m "not slow"          # Skip slow tests
+# 开发服务器
+make dev-backend              # uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8003
+make dev-frontend             # npm run dev (port 2012)
 
-# Backend Linting
-ruff check app/               # Lint
-black app/                    # Format
-mypy app/                     # Type check
+# 测试
+make test-backend             # uv run pytest
+cd backend && uv run pytest tests/test_models.py   # 单个测试文件
+cd backend && uv run pytest -v --cov=app           # 带覆盖率
+cd backend && uv run pytest -m "not slow"          # 跳过慢测试
+cd frontend && npm run test                       # Vitest 单元测试
+npx playwright test                               # Playwright E2E
 
-# Frontend
-cd frontend
-npm install
-npm run dev     # Start dev server on port 2012
-npm run build   # Production build
-npm run lint    # ESLint
+# 代码检查
+make lint-backend             # uv run ruff check + black --check
+make lint-frontend            # npm run lint
+cd frontend && npm run type-check               # TypeScript 类型检查
+cd frontend && npm run format                   # Prettier 格式化
 
-# Frontend E2E Testing
-npx playwright test           # Run all Playwright tests
-npx playwright test --ui      # Run with UI
+# 数据库
+make migrate                  # uv run alembic upgrade head
+make migrate-create msg="xxx" # 创建新迁移
+make migrate-rollback         # downgrade -1
 
-# Utility Scripts (backend/scripts/)
-# System initialization
-python scripts/init_system.py              # Reset system with interactive confirmation
-python scripts/init_system.py --force      # Reset without confirmation
-python scripts/seed_tech_domains.py        # Seed six tech domains
-
-# Data maintenance
-python scripts/fix_pending_normalization.py --task-id <ID> [--sync]  # Fix pending normalization
-python scripts/refresh_stats.py                                       # Refresh all statistics
-python scripts/recalculate_cs_scores.py    # Recalculate CS background scores
-python scripts/resync_talents_v2.py        # Re-sync talents with CS filtering
+# 数据初始化与维护 (backend/scripts/)
+cd backend && uv run python scripts/data/init_system.py --force    # 重置系统
+uv run python scripts/data/seed_tech_domains.py                    # 初始化六大技术领域
+uv run python scripts/data/generate_embeddings.py                  # 生成向量嵌入
+uv run python scripts/fix/refresh_stats.py                         # 刷新统计
+uv run python scripts/ops/verify_indexes.py                        # 验证索引
 ```
 
 ## Architecture
 
-### Three-Layer Data Architecture
+### Domain-Driven Backend Structure
 
-The system uses a three-layer data model for data quality and traceability:
+后端按业务域组织，而非按技术层扁平划分：
+
+```
+backend/app/domains/
+├── academic/          # 学术人才域 (核心)
+│   ├── api/           # FastAPI routers
+│   ├── models/        # SQLAlchemy ORM models
+│   ├── schemas/       # Pydantic DTOs
+│   ├── repositories/  # 数据库操作层
+│   └── services/      # 业务逻辑
+│       ├── collect/       # 采集流水线
+│       ├── common/        # CS背景分、HTTP客户端
+│       ├── embedding/     # 向量嵌入服务
+│       ├── jd_match/      # JD岗位匹配
+│       ├── normalizers/   # 数据标准化
+│       ├── recommend/     # 相似人才推荐
+│       ├── search/        # 搜索服务
+│       └── sync/          # 同步服务
+├── open_source/       # 开源人才域 (v2.0)
+│   └── api, models, repositories, services, schemas
+└── shared/            # 共享基础设施
+    ├── api/           # auth, audit, health, metrics, permissions, system_config
+    ├── models/        # base, enums, iam, audit, system_config
+    ├── repositories/
+    └── services/
+        ├── cache/         # Redis缓存抽象
+        ├── common/        # HTTP客户端工厂、代理配置
+        └── llm/           # LLM网关 (多提供商统一接口)
+```
+
+**重要**: 旧版文档中提到的 `app/services/collect/orchestrator.py`、`app/models/raw_data.py` 等路径已不存在。所有代码现位于 `domains/` 下对应子目录中。
+
+### Three-Layer Data Architecture (Academic Domain)
+
+学术人才域仍保持三层数据模型：
 
 | Layer | Tables | Purpose |
 |-------|--------|---------|
-| **Raw** | `raw_work`, `raw_author`, `raw_institution` | Original data from OpenAlex API |
-| **Standardized** | `std_author`, `std_school` | Cleaned and normalized data with CS score |
-| **Serving** | `core_talent`, `core_school` | User-facing data with business logic |
+| **Raw** | `raw_work`, `raw_author`, `raw_institution` | OpenAlex API 原始数据 |
+| **Standardized** | `std_author`, `std_school` | 清洗标准化数据，含 CS score |
+| **Serving** | `core_talent`, `core_school` | 面向用户的服务层数据 |
 
 Data flows: Raw → Standardized (via Normalizers) → Serving (via Sync services)
 
-**CS Background Filtering**: Authors are filtered at the Standardized → Serving transition. Only authors with `cs_concepts_score >= 0.5` are synced to Talent. See `services/common/cs_concepts.py` for threshold configuration.
+**CS Background Filtering**: `services/common/cs_concepts.py` 计算作者的 CS 概念得分，仅 `cs_concepts_score >= 0.5` 的作者会被同步到 `core_talent`。
 
-### Six Tech Elements (Domain Model)
+### 12-Phase Collection Pipeline
 
-The system organizes talent by six technical domains:
+`domains/academic/services/collect/collect_orchestrator.py` 执行：
 
-| Code | Name (EN) | Name (CN) |
-|------|-----------|-----------|
-| `ai` | Artificial Intelligence | 人工智能 |
-| `robotics` | Robotics | 机器人 |
-| `data_science` | Data Science | 数据科学 |
-| `networks` | Networks & Communications | 网络与通信 |
-| `systems` | Systems & Software | 系统与软件 |
-| `security` | Information Security | 信息安全 |
+1. **Phase 0**: 估算任务规模
+2. **Phase 1**: 执行 venue 子任务 (获取 works)
+3. **Phase 2**: 获取作者数据
+4. **Phase 3**: 获取机构数据
+5. **Phase 4**: 标准化学校 (RawInstitution → StdSchool)
+6. **Phase 5**: 标准化作者 (RawAuthor → StdAuthor)
+7. **Phase 6**: 计算技术归属 (AuthorTechBelong)
+8. **Phase 7**: 同步到服务层 (StdAuthor → Talent)
+9. **Phase 8**: 获取代表作品
+10. **Phase 9**: 更新技术标签
+11. **Phase 10**: 更新学校统计
+12. **Phase 11**: 构建首页统计
 
-Each element has multiple `TechDirection` subcategories. Venues (conferences/journals) are bound to tech elements via `VenueTechBinding`.
+### LLM Gateway (`domains/shared/services/llm/`)
 
-### 11-Phase Collection Pipeline
+统一多模型提供商接口：
+- 支持 DeepSeek / OpenAI / 智谱 / 通义千问
+- 对话模型与嵌入模型可分别配置
+- 用于 JD 解析、岗位匹配、相似推荐
 
-`CollectionOrchestrator` in `services/collect/orchestrator.py` executes:
+### Frontend Architecture
 
-1. **Phase 0**: Estimate task scale (count works per venue)
-2. **Phase 1**: Execute venue sub-tasks (fetch works from OpenAlex)
-3. **Phase 2**: Fetch author data
-4. **Phase 3**: Fetch institution data
-5. **Phase 4**: Normalize schools (RawInstitution → StdSchool)
-6. **Phase 5**: Normalize authors (RawAuthor → StdAuthor)
-7. **Phase 6**: Calculate tech belonging (AuthorTechBelong)
-8. **Phase 7**: Sync to serving layer (StdAuthor → Talent)
-9. **Phase 8**: Fetch selected works (top papers per author)
-10. **Phase 9**: Update tech tags
-11. **Phase 10**: Update school statistics
-12. **Phase 11**: Build homepage statistics
+**状态管理分层**:
+- **TanStack React Query**: 所有服务器状态（人才列表、搜索、收藏等）
+- **Zustand**: 仅 `domainStore` 存储当前激活的人才领域 (academic/opensource) 及主题切换
+- **localStorage**: 持久化用户偏好（列配置、搜索模板等）
 
-### Backend Layered Architecture
+**主题系统** (`frontend/src/theme/`):
+- 平台中性底色 + 领域感知 token 的架构
+- 每个领域有独立配色方案（学术: 深蓝 `#1E3A5F`，开源: 深灰绿 `#2D3748`）
+- 切换领域时通过 CSS Variables 全局生效
 
-1. **Endpoints**: Request handling, validation via Pydantic schemas
-2. **Services**: Business logic, orchestration
-3. **Repositories**: Database operations, query building
-4. **Builders**: Transform raw data into domain objects (ETL pattern)
-5. **Models**: SQLAlchemy ORM models
+### Database Conventions
 
-### Key Service Modules
+- 表命名: `{module}_{entity}` (如 `core_talent`, `iam_user_account`)
+- 主键: `{entity}_id` (如 `talent_id`, `school_id`)
+- 时间戳: `created_at`, `updated_at` via `TimestampMixin`
+- pgvector 扩展用于向量存储 (`core_talent_embedding`)
 
-| Module | Purpose |
-|--------|---------|
-| `services/collect/` | Task creation, venue execution, progress tracking |
-| `services/sync/` | AuthorSync, SchoolSync, TechTagSync, ServingLayerOrchestrator |
-| `services/normalizers/` | AuthorNormalizer, SchoolNormalizer, TechBelongCalculator |
-| `services/common/cs_concepts.py` | CS background score calculation, filtering threshold |
-| `services/data_fetchers.py` | WorkFetcher, AuthorFetcher, InstitutionFetcher |
-| `services/collaboration_service.py` | Extract co-author relationships from RawWork |
-
-### Frontend State Management
-
-- **authStore** (`store/authStore.ts`): User authentication state
-- **favoritesStore** (`store/favoritesStore.ts`): Favorites and talent pool state
-- **settingsStore** (`store/settingsStore.ts`): Column configs, search templates
-- **localStorage**: Persisted user preferences
-
-### Database Naming Conventions
-
-- Table naming: `{module}_{entity}` (e.g., `core_talent`, `iam_user_account`)
-- Primary keys: `{entity}_id` (e.g., `talent_id`, `school_id`)
-- Timestamps: `created_at`, `updated_at` via TimestampMixin
-
-### Database Index Strategy (v1.3)
-
-Performance indexes are created via migration `023_add_performance_indexes.py`.
-
-**P0 Indexes (User-visible pages)**:
-| Table | Index | Query Pattern |
-|-------|-------|---------------|
-| `core_talent` | `ix_core_talent_visible_school_role` | Filter by school + role |
-| `core_talent` | `ix_core_talent_visible_cited_desc` | Sort by citations (PostgreSQL DESC) |
-| `core_talent_tech_tag` | `ix_talent_tech_enabled_element` | Tech element page query |
-| `core_talent_tech_tag` | `ix_talent_tech_enabled_direction` | Tech direction page query |
-| `iam_favorite_talent` | `ix_favorite_user_active_created` | User favorites list |
-
-**P1 Indexes (Collection tasks)**:
-| Table | Index | Query Pattern |
-|-------|-------|---------------|
-| `raw_work` | `ix_raw_work_source_year` | Get works by venue + year |
-| `raw_author` | `ix_raw_author_status_task` | Get pending authors by task |
-| `raw_institution` | `ix_raw_inst_status_task` | Get pending institutions by task |
-
-**PostgreSQL-specific features**:
-- Descending indexes: `CREATE INDEX ... (column DESC)`
-- Partial indexes: `CREATE INDEX ... WHERE condition`
-
-**Verify indexes**: `python scripts/verify_indexes.py`
-
-## API Conventions
+### API Conventions
 
 - Base path: `/api/v1`
-- Authentication: Bearer token in Authorization header
+- Authentication: Bearer token in `Authorization` header
 - Pagination: `page`, `page_size` query params
-- Response format: JSON with consistent structure
+- 健康检查: `/api/v1/health`, `/ready`, `/live`
+- 指标: `/api/v1/metrics` (Prometheus)
 
 ## Key Files
 
 | Purpose | Path |
 |---------|------|
-| Collection orchestrator | `backend/app/services/collect/orchestrator.py` |
-| Serving layer sync | `backend/app/services/sync/orchestrator.py` |
-| CS background filtering | `backend/app/services/common/cs_concepts.py` |
-| Raw data models | `backend/app/models/raw_data.py` |
-| Standardized models | `backend/app/models/standardized.py` |
-| Serving models | `backend/app/models/talent.py`, `school.py` |
-| Tech domain model | `backend/app/models/tech_domain.py` |
-| API endpoints | `backend/app/api/v1/endpoints/` |
-| Frontend pages | `frontend/src/pages/` |
-| Frontend stores (Zustand) | `frontend/src/store/` |
-| API client | `frontend/src/services/api.ts` |
+| API 路由聚合 | `backend/app/api_router.py` |
+| 采集流水线 | `backend/app/domains/academic/services/collect/collect_orchestrator.py` |
+| 同步服务 | `backend/app/domains/academic/services/sync/` |
+| CS 背景过滤 | `backend/app/domains/academic/services/common/cs_concepts.py` |
+| LLM 网关 | `backend/app/domains/shared/services/llm/llm_gateway.py` |
+| 缓存服务 | `backend/app/domains/shared/services/cache/cache_service.py` |
+| 前端 API 客户端 | `frontend/src/services/api/client.ts` |
+| 前端主题系统 | `frontend/src/theme/index.ts` |
+| 前端领域状态 | `frontend/src/stores/domainStore.ts` |
 
 ## Git Workflow
 
-- `main` - Production-ready code
-- `feature/*` - Feature branches
-- Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`
+- `main` — 生产就绪代码
+- `feature/*` — 功能分支
+- Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`
 
-## Notes
+## Environment Notes
 
-- Both development and production use PostgreSQL
-- Default admin: `admin` / `admin123`
-- Frontend port: 2012, Backend port: 8003
-- OpenAlex API: https://api.openalex.org
-- Always use `--reload` flag when starting backend for development
+- 开发与生产均使用 PostgreSQL（非 SQLite）
+- 测试使用独立的 `talent_db_test` 数据库，运行后会清空表
+- 默认管理员: `admin` / `admin123`
+- 前端端口: 2012，后端端口: 8003
