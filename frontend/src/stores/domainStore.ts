@@ -38,5 +38,17 @@ export const useDomainStore = create<DomainState>()(
   )
 )
 
-// Apply CSS vars on app init
-applyDomainCssVars('academic')
+// Apply CSS vars on app init — respect persisted domain if available
+const stored = localStorage.getItem('talent-platform-domain')
+let initDomain: Domain = 'academic'
+if (stored) {
+  try {
+    const parsed = JSON.parse(stored)
+    if (parsed.state?.currentDomain) {
+      initDomain = parsed.state.currentDomain
+    }
+  } catch {
+    /* fallback to default */
+  }
+}
+applyDomainCssVars(initDomain)

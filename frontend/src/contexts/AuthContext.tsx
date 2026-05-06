@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { message } from 'antd'
 import { api } from '../services/api'
+import { applyDomainCssVars } from '../theme'
 import type { User } from '../types'
 
 interface AuthContextType {
@@ -65,6 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('refresh_token')
       localStorage.removeItem('user')
       setUser(null)
+      applyDomainCssVars('academic')
       message.info('已退出登录')
     }
   }, [])
