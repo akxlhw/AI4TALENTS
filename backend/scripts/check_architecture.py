@@ -1,15 +1,22 @@
 """
 Architecture compliance checker for backend API endpoints.
 
-Ensures strict layering: Endpoint -> Service -> Repository.
-Endpoints (files under domains/*/api/) must NOT directly import:
-  - Any *Repository class
-  - Any *Collector class
-  - Any *EmbeddingService class
-  - LLMGateway
-  - Low-level HTTP clients (GitHubClient, OpenAlexClient, etc.)
-  - AsyncSessionLocal (session must be injected via Depends)
-  - Domain models (except shared enums/schemas)
+Checks two independent rules:
+
+1. Endpoint Layering: files under domains/*/api/ must NOT directly import:
+   - Any *Repository class
+   - Any *Collector class
+   - Any *EmbeddingService class
+   - LLMGateway
+   - Low-level HTTP clients (GitHubClient, OpenAlexClient, etc.)
+   - AsyncSessionLocal
+   - Domain models (except shared enums/schemas)
+
+2. Cross-Domain Dependencies (ZERO tolerance — no baseline):
+   The shared infrastructure layer must NOT import from business domains.
+
+   Allowed:  academic → shared     open_source → shared     shared → shared
+   Banned:   shared → academic     shared → open_source
 
 Usage:
     python scripts/check_architecture.py
@@ -20,6 +27,7 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import re
 import sys
 from pathlib import Path
 
@@ -27,13 +35,13 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 API_GLOB = "app/domains/*/api/*.py"
+DOMAIN_GLOB = "app/domains/*/**/*.py"
 
-# --- Rule definitions ---
+# --- Rule definitions: Endpoint Layering ---
 
-# Modules that are ALWAYS allowed (schemas, core, shared enums, third-party)
 ALLOWED_MODULE_PATTERNS = [
     r"app\.core\.",
-    r"\.schemas\.",  # any domain's schemas are DTOs — Endpoints must import them
+    r"\.schemas\.",
     r"\.models\.enums",
     r"fastapi",
     r"sqlalchemy",
@@ -41,7 +49,6 @@ ALLOWED_MODULE_PATTERNS = [
     r"typing",
 ]
 
-# Banned: specific module substrings + the reason shown to developer
 BANNED_MODULE_RULES: list[tuple[str, str]] = [
     ("repositories.", "Repository layer must be accessed via Service only"),
     ("collectors.", "Collector must be accessed via Service only"),
@@ -55,7 +62,6 @@ BANNED_MODULE_RULES: list[tuple[str, str]] = [
     ("services.collect.", "Collect orchestrator must be accessed via Service only"),
 ]
 
-# Banned class / object names (substring match)
 BANNED_NAME_PATTERNS: list[tuple[str, str]] = [
     ("Collector", "Collector must be accessed via Service only"),
     ("EmbeddingService", "EmbeddingService must be accessed via Service only"),
@@ -65,21 +71,42 @@ BANNED_NAME_PATTERNS: list[tuple[str, str]] = [
     ("AsyncSessionLocal", "Session must be injected via Depends(get_async_session)"),
 ]
 
-# Explicitly allowed names (override bans above)
 ALLOWED_NAMES = {
-    "SearchService",      # academic search service lives in services/search/
-    "ConfigService",      # shared service is allowed
-    "UserService",        # shared service is allowed
-    "AuditService",       # shared service is allowed
-    "PermissionService",  # shared service is allowed
-    "SystemConfigService",# shared service is allowed
-    "OSRepositoryItem",   # schema DTO, name happens to contain 'Repository'
+    "SearchService",
+    "ConfigService",
+    "UserService",
+    "AuditService",
+    "PermissionService",
+    "SystemConfigService",
+    "OSRepositoryItem",
 }
+
+# --- Rule definitions: Cross-Domain Dependencies ---
+
+# shared/ 中的文件禁止 import 这些业务域模块
+CROSS_DOMAIN_BANNED: list[tuple[re.Pattern[str], str]] = [
+    (
+        re.compile(r"app\.domains\.academic\.(?!models\.enums)"),
+        "shared infrastructure must NOT import academic business domain — "
+        "move code to academic/ or use dependency inversion",
+    ),
+    (
+        re.compile(r"app\.domains\.open_source\."),
+        "shared infrastructure must NOT import open_source business domain — "
+        "move code to open_source/ or use dependency inversion",
+    ),
+]
+
+# shared 内部允许 import 的模式（白名单）
+CROSS_DOMAIN_ALLOWED_PATTERNS = [
+    r"app\.domains\.shared\.",
+    r"app\.core\.",
+    r"app\.domains\.academic\.models\.enums",
+]
 
 
 def _is_allowed_module(module: str) -> bool:
     """Check if module matches a global allow-list pattern."""
-    import re
     for pat in ALLOWED_MODULE_PATTERNS:
         if re.search(pat, module):
             return True
@@ -91,13 +118,11 @@ def _is_banned(module: str, name: str) -> bool | str:
     if name in ALLOWED_NAMES:
         return False
 
-    # 1. Module-level bans (but skip services.llm.errors — exception classes are OK)
     if "services.llm.errors" not in module:
         for pattern, reason in BANNED_MODULE_RULES:
             if pattern in module:
                 return reason
 
-    # 2. Name-level bans
     for pattern, reason in BANNED_NAME_PATTERNS:
         if pattern in name:
             return reason
@@ -112,7 +137,7 @@ def _file_hash(path: str, module: str, name: str) -> str:
 
 
 def check_file(filepath: Path) -> list[dict]:
-    """Check a single Python file for architecture violations."""
+    """Check a single Python file for Endpoint-layer architecture violations."""
     violations = []
     try:
         source = filepath.read_text(encoding="utf-8")
@@ -145,16 +170,12 @@ def check_file(filepath: Path) -> list[dict]:
                         "reason": reason,
                     })
         elif isinstance(node, ast.Import):
-            # import x.y.z style — rarely used in our codebase, but handle it
             for alias in node.names:
-                # alias.name is the full module path for "import" statements
-                # We only care about app-level imports
                 if not alias.name.startswith("app."):
                     continue
                 module = alias.name
                 if _is_allowed_module(module):
                     continue
-                # For "import a.b.c", the "name" we check is the last segment
                 name = alias.asname or alias.name.split(".")[-1]
                 reason = _is_banned(module, name)
                 if reason:
@@ -165,6 +186,77 @@ def check_file(filepath: Path) -> list[dict]:
                         "name": name,
                         "reason": reason,
                     })
+    return violations
+
+
+def _is_cross_domain_allowed(module: str) -> bool:
+    """Check if a module import is allowed from shared/ (whitelisted)."""
+    for pat in CROSS_DOMAIN_ALLOWED_PATTERNS:
+        if re.search(pat, module):
+            return True
+    return False
+
+
+def check_cross_domain(filepath: Path) -> list[dict]:
+    """
+    Check that shared/ domain does NOT import from business domains.
+    Zero tolerance — no baseline for this check.
+    """
+    violations = []
+
+    # Only check files under domains/shared/
+    relative = filepath.relative_to(PROJECT_ROOT)
+    if not str(relative).startswith("app/domains/shared/"):
+        return violations
+
+    try:
+        source = filepath.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+    except SyntaxError as exc:
+        violations.append({
+            "file": str(relative),
+            "line": exc.lineno or 1,
+            "module": "<syntax-error>",
+            "name": "<syntax-error>",
+            "reason": f"SyntaxError: {exc}",
+        })
+        return violations
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            if _is_cross_domain_allowed(module):
+                continue
+            for pattern, reason in CROSS_DOMAIN_BANNED:
+                if pattern.search(module):
+                    for alias in node.names:
+                        violations.append({
+                            "file": str(relative),
+                            "line": node.lineno,
+                            "module": module,
+                            "name": alias.name,
+                            "reason": reason,
+                        })
+                    break  # only report once per import line
+
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if not alias.name.startswith("app."):
+                    continue
+                if _is_cross_domain_allowed(alias.name):
+                    continue
+                for pattern, reason in CROSS_DOMAIN_BANNED:
+                    if pattern.search(alias.name):
+                        name = alias.asname or alias.name.split(".")[-1]
+                        violations.append({
+                            "file": str(relative),
+                            "line": node.lineno,
+                            "module": alias.name,
+                            "name": name,
+                            "reason": reason,
+                        })
+                        break
+
     return violations
 
 
@@ -191,15 +283,58 @@ def main() -> int:
         "--baseline",
         type=Path,
         default=PROJECT_ROOT / ".architecture_baseline.txt",
-        help="Path to baseline file (default: .architecture_baseline.txt)",
+        help="Path to baseline file for Endpoint-layer checks (default: .architecture_baseline.txt)",
     )
     parser.add_argument(
         "--update-baseline",
         action="store_true",
-        help="Update baseline with current violations",
+        help="Update baseline with current Endpoint-layer violations",
     )
     args = parser.parse_args()
 
+    exit_code = 0
+
+    # ================================================================
+    # CHECK 1: Cross-Domain Dependencies (ZERO tolerance)
+    # ================================================================
+    domain_files = list(PROJECT_ROOT.glob(DOMAIN_GLOB))
+    cross_domain_violations: list[dict] = []
+    for filepath in domain_files:
+        if filepath.name == "__init__.py":
+            continue
+        cross_domain_violations.extend(check_cross_domain(filepath))
+
+    if cross_domain_violations:
+        print("=" * 70)
+        print("CROSS-DOMAIN DEPENDENCY CHECK")
+        print("=" * 70)
+        print(f"Scanned files: {len(domain_files)}")
+        print(f"Violations: {len(cross_domain_violations)}")
+        print()
+        print("CRITICAL — shared infrastructure must NOT depend on business domains:")
+        print("-" * 70)
+        for v in cross_domain_violations:
+            print(
+                f"  {v['file']}:{v['line']}\n"
+                f"    from {v['module']} import {v['name']}\n"
+                f"    reason: {v['reason']}"
+            )
+        print()
+        print("RESULT: FAILED — cross-domain dependency violations detected.")
+        print("Fix the violations before committing.")
+        print()
+        exit_code = 1
+    else:
+        print("=" * 70)
+        print("CROSS-DOMAIN DEPENDENCY CHECK")
+        print("=" * 70)
+        print(f"Scanned files: {len(domain_files)}")
+        print("RESULT: PASSED — no cross-domain dependency violations.")
+        print()
+
+    # ================================================================
+    # CHECK 2: Endpoint Layering (baseline-tolerant)
+    # ================================================================
     api_files = list(PROJECT_ROOT.glob(API_GLOB))
     if not api_files:
         print(f"ERROR: No API files found matching {API_GLOB}")
@@ -228,11 +363,11 @@ def main() -> int:
         print(f"Baseline updated: {len(all_hashes)} violations recorded")
         print(f"  - New: {len(new_violations)}")
         print(f"  - Known: {len(known_violations)}")
-        return 0
+        # Return cross-domain exit code even when updating baseline
+        return exit_code
 
-    # Print summary
     print("=" * 70)
-    print("ARCHITECTURE COMPLIANCE CHECK")
+    print("ENDPOINT LAYERING CHECK")
     print("=" * 70)
     print(f"Scanned files: {len(api_files)}")
     print(f"Total violations: {len(all_violations)}")
@@ -250,6 +385,7 @@ def main() -> int:
                 f"    reason: {v['reason']}"
             )
         print()
+        exit_code = 1
 
     if known_violations:
         print("Known violations (existing technical debt):")
@@ -262,12 +398,12 @@ def main() -> int:
         print()
 
     if new_violations:
-        print("RESULT: FAILED — new architecture violations detected.")
+        print("RESULT: FAILED — new Endpoint-layer violations detected.")
         print("Fix the violations or run: python scripts/check_architecture.py --update-baseline")
-        return 1
+    else:
+        print("RESULT: PASSED — no new Endpoint-layer violations.")
 
-    print("RESULT: PASSED — no new architecture violations.")
-    return 0
+    return exit_code
 
 
 if __name__ == "__main__":
