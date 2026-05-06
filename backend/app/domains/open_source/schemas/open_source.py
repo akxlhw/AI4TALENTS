@@ -365,6 +365,7 @@ class OSEmbeddingStatusResponse(BaseModel):
     total_developers: int
     embedded_count: int
     pending_count: int
+    progress_percent: float
     dimension: int
     model_name: str
 
@@ -373,3 +374,4 @@ class OSEmbeddingGenerateRequest(BaseModel):
     """Embedding generate request."""
 
     batch_size: int = Field(default=50, ge=1, le=200)
+    force: bool = Field(default=False, description="强制重新生成，忽略已有向量")

@@ -44,7 +44,7 @@ class EmbeddingService:
         session: AsyncSession,
         llm_gateway: LLMGatewayProtocol | None = None,
         cache: Any = None,
-        dimension: int = 1536,
+        dimension: int | None = None,
         model_name: str | None = None,
         rate_limit_delay: float = 0.0,
     ):
@@ -345,7 +345,8 @@ class EmbeddingService:
         import numpy as np
 
         if not talent_ids:
-            return [0.0] * self.dimension
+            dim = self.dimension or 1024
+            return [0.0] * dim
 
         # 批量获取 embeddings（避免 N+1 查询）
         records = await self.repository.get_by_talent_ids(talent_ids, vector_type)
@@ -368,7 +369,8 @@ class EmbeddingService:
             logger.info(f"Missing embeddings for {len(missing_ids)} talents, using zero vectors")
 
         if not embeddings:
-            return [0.0] * self.dimension
+            dim = self.dimension or 1024
+            return [0.0] * dim
 
         # 计算平均
         avg = np.mean(embeddings, axis=0)

@@ -194,7 +194,7 @@ const LLMConfigTab: React.FC = () => {
               <Form.Item name="embedding_model" label="模型名称">
                 <Input placeholder="如 text-embedding-3-small, bge-m3" />
               </Form.Item>
-              <Form.Item name="embedding_dimension" label="向量维度" tooltip="嵌入模型输出的向量维度。常见值：OpenAI 1536，千问/BGE 1024。注意：修改维度会清空现有向量数据">
+              <Form.Item name="embedding_dimension" label="向量维度" tooltip="嵌入模型输出的向量维度。常见值：OpenAI 1536，千问/BGE 1024。注意：修改维度会清空学术人才库与开源人才库的现有向量数据">
                 <InputNumber min={128} max={4096} style={{ width: '100%' }} placeholder="1024" />
               </Form.Item>
               <Form.Item>

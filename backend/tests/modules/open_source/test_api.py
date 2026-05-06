@@ -497,13 +497,45 @@ class TestEmbeddings:
         assert "dimension" in data
 
     @pytest.mark.asyncio
-    async def test_generate_embeddings_as_admin(self, admin_client: AsyncClient):
+    async def test_generate_embeddings_as_admin(self, admin_client: AsyncClient, test_session):
         """Admin can trigger embedding generation."""
+        from app.domains.shared.models.system_config import SystemConfig
+        from app.domains.open_source.models.open_source import OSDeveloper
+
+        # Create a visible developer to process
+        dev = OSDeveloper(github_login="test-dev", is_visible=True)
+        test_session.add(dev)
+        await test_session.flush()
+
+        # Seed required LLM config for embedding generation
+        test_session.add_all([
+            SystemConfig(config_key="LLM_EMBEDDING_ENABLED", config_value="true", config_type="bool"),
+            SystemConfig(config_key="LLM_EMBEDDING_MODEL", config_value="text-embedding-3-small", config_type="string"),
+            SystemConfig(config_key="LLM_EMBEDDING_API_BASE", config_value="https://api.openai.com/v1", config_type="string"),
+        ])
+        await test_session.commit()
+
         response = await admin_client.post(
             "/api/v1/open-source/embeddings/generate",
             json={"batch_size": 50},
         )
         assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_get_embedding_progress(self, admin_client: AsyncClient):
+        """Admin can get embedding progress."""
+        response = await admin_client.get("/api/v1/open-source/embeddings/progress")
+        assert response.status_code == 200
+        data = response.json()
+        assert "status" in data
+        assert "processed" in data
+        assert "total" in data
+
+    @pytest.mark.asyncio
+    async def test_cancel_embedding_no_task(self, admin_client: AsyncClient):
+        """Cancel returns error when no task is running."""
+        response = await admin_client.post("/api/v1/open-source/embeddings/cancel")
+        assert response.status_code == 400
 
     @pytest.mark.asyncio
     async def test_generate_embeddings_as_user_forbidden(self, auth_client: AsyncClient):

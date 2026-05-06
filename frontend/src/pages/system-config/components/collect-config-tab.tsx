@@ -102,6 +102,22 @@ const CollectConfigTab: React.FC = () => {
   } | null>(null)
   const [embeddingLoading, setEmbeddingLoading] = useState(false)
 
+  const [osEmbeddingStatus, setOsEmbeddingStatus] = useState<{
+    total_developers: number
+    embedded_count: number
+    pending_count: number
+    progress_percent: number
+    dimension: number
+    model_name: string
+  } | null>(null)
+  const [osEmbeddingProgress, setOsEmbeddingProgress] = useState<{
+    status: string
+    processed: number
+    total: number
+    failed: number
+  } | null>(null)
+  const [osEmbeddingLoading, setOsEmbeddingLoading] = useState(false)
+
   // ========== Functions ==========
   const loadTasks = useCallback(async () => {
     setLoading(true)
@@ -332,6 +348,59 @@ const CollectConfigTab: React.FC = () => {
     }
   }
 
+  const loadOsEmbeddingStatus = async () => {
+    setOsEmbeddingLoading(true)
+    try {
+      const response = await api.openSource.getEmbeddingStatus()
+      setOsEmbeddingStatus(response.data)
+      const progressResponse = await api.openSource.getEmbeddingProgress()
+      setOsEmbeddingProgress(progressResponse.data)
+    } catch {
+      message.error('加载开源嵌入状态失败')
+    } finally {
+      setOsEmbeddingLoading(false)
+    }
+  }
+
+  const handleGenerateOsEmbeddings = async (force: boolean = false) => {
+    try {
+      setOsEmbeddingProgress({ status: 'pending', processed: 0, total: 0, failed: 0 })
+      message.info('正在启动开源向量生成任务...')
+      const response = await api.openSource.generateEmbeddings(50, force)
+      message.success(response.data.message)
+      setOsEmbeddingProgress({ status: 'running', processed: 0, total: 0, failed: 0 })
+
+      const pollInterval = setInterval(async () => {
+        try {
+          const progressResponse = await api.openSource.getEmbeddingProgress()
+          setOsEmbeddingProgress(progressResponse.data)
+          if (progressResponse.data.status === 'completed' || progressResponse.data.status === 'error' || progressResponse.data.status === 'cancelled') {
+            clearInterval(pollInterval)
+            loadOsEmbeddingStatus()
+            if (progressResponse.data.status === 'completed') {
+              message.success(`开源向量生成完成！处理 ${progressResponse.data.processed} 位开发者`)
+            }
+          }
+        } catch { /* ignore */ }
+      }, 2000)
+      setTimeout(() => clearInterval(pollInterval), 600000)
+    } catch (error) {
+      message.error(getErrorMessage(error, '启动开源向量生成失败'))
+      setOsEmbeddingProgress(null)
+    }
+  }
+
+  const handleCancelOsEmbeddingGeneration = async () => {
+    try {
+      await api.openSource.cancelEmbeddingGeneration()
+      message.success('已取消开源向量生成任务')
+      setOsEmbeddingProgress(null)
+      loadOsEmbeddingStatus()
+    } catch (error) {
+      message.error(getErrorMessage(error, '取消失败'))
+    }
+  }
+
   // Auto-refresh for running tasks
   useEffect(() => {
     if (collectSubTab === 'tasks' && tasks.some(t => t.status === 'running')) {
@@ -352,6 +421,7 @@ const CollectConfigTab: React.FC = () => {
       loadCollabSyncStatus()
     } else if (collectSubTab === 'embeddings') {
       loadEmbeddingStatus()
+      loadOsEmbeddingStatus()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collectSubTab])
@@ -619,88 +689,187 @@ const CollectConfigTab: React.FC = () => {
             key: 'embeddings',
             label: <span><CloudUploadOutlined /> 向量生成</span>,
             children: (
-              <Card>
-                <Spin spinning={embeddingLoading}>
-                  <Alert
-                    message="向量嵌入说明"
-                    description="生成人才向量嵌入用于语义搜索和智能推荐。需要先配置 LLM API。生成过程为后台异步执行，耗时取决于人才数量。"
-                    type="info"
-                    showIcon
-                    style={{ marginBottom: 24 }}
-                  />
-                  <Row gutter={16} style={{ marginBottom: 24 }}>
-                    <Col span={6}>
-                      <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
-                        <Statistic title="人才总数" value={embeddingStatus?.total_talents || 0} />
-                      </Card>
-                    </Col>
-                    <Col span={6}>
-                      <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
-                        <Statistic title="已生成向量" value={embeddingStatus?.embedded_talents || 0} valueStyle={{ color: '#52c41a' }} />
-                      </Card>
-                    </Col>
-                    <Col span={6}>
-                      <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
-                        <Statistic title="待生成" value={embeddingStatus?.pending_talents || 0} valueStyle={{ color: '#faad14' }} />
-                      </Card>
-                    </Col>
-                    <Col span={6}>
-                      <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
-                        <Statistic title="覆盖率" value={embeddingStatus?.progress_percent || 0} suffix="%" />
-                      </Card>
-                    </Col>
-                  </Row>
-                  {(embeddingProgress?.status === 'running' || embeddingProgress?.status === 'pending') && (
-                    <Alert
-                      type="info"
-                      showIcon
-                      icon={<SyncOutlined spin />}
-                      style={{ marginBottom: 16 }}
-                      message={embeddingProgress?.status === 'pending' ? '正在启动向量生成...' : '向量生成进行中...'}
-                      description={
-                        <div>
-                          <Progress
-                            percent={embeddingProgress?.total > 0 ? Math.round((embeddingProgress.processed / embeddingProgress.total) * 100) : 0}
-                            status="active"
+              <Tabs
+                type="card"
+                items={[
+                  {
+                    key: 'academic',
+                    label: '学术人才库',
+                    children: (
+                      <Card>
+                        <Spin spinning={embeddingLoading}>
+                          <Alert
+                            message="学术人才向量嵌入"
+                            description="生成学术人才向量嵌入用于语义搜索和智能推荐。需要先配置 LLM API。生成过程为后台异步执行，耗时取决于人才数量。"
+                            type="info"
+                            showIcon
+                            style={{ marginBottom: 24 }}
                           />
-                          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                            <Text type="secondary">
-                              已处理 {formatNumber(embeddingProgress?.processed)} / {formatNumber(embeddingProgress?.total)} 位人才
-                            </Text>
-                            {embeddingProgress?.failed > 0 && (
-                              <Text type="danger">失败 {embeddingProgress.failed}</Text>
+                          <Row gutter={16} style={{ marginBottom: 24 }}>
+                            <Col span={6}>
+                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                                <Statistic title="人才总数" value={embeddingStatus?.total_talents || 0} />
+                              </Card>
+                            </Col>
+                            <Col span={6}>
+                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                                <Statistic title="已生成向量" value={embeddingStatus?.embedded_talents || 0} valueStyle={{ color: '#52c41a' }} />
+                              </Card>
+                            </Col>
+                            <Col span={6}>
+                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                                <Statistic title="待生成" value={embeddingStatus?.pending_talents || 0} valueStyle={{ color: '#faad14' }} />
+                              </Card>
+                            </Col>
+                            <Col span={6}>
+                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                                <Statistic title="覆盖率" value={embeddingStatus?.progress_percent || 0} suffix="%" />
+                              </Card>
+                            </Col>
+                          </Row>
+                          {(embeddingProgress?.status === 'running' || embeddingProgress?.status === 'pending') && (
+                            <Alert
+                              type="info"
+                              showIcon
+                              icon={<SyncOutlined spin />}
+                              style={{ marginBottom: 16 }}
+                              message={embeddingProgress?.status === 'pending' ? '正在启动向量生成...' : '向量生成进行中...'}
+                              description={
+                                <div>
+                                  <Progress
+                                    percent={embeddingProgress?.total > 0 ? Math.round((embeddingProgress.processed / embeddingProgress.total) * 100) : 0}
+                                    status="active"
+                                  />
+                                  <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                                    <Text type="secondary">
+                                      已处理 {formatNumber(embeddingProgress?.processed)} / {formatNumber(embeddingProgress?.total)} 位人才
+                                    </Text>
+                                    {embeddingProgress?.failed > 0 && (
+                                      <Text type="danger">失败 {embeddingProgress.failed}</Text>
+                                    )}
+                                  </Space>
+                                </div>
+                              }
+                            />
+                          )}
+                          {embeddingProgress?.status === 'completed' && (
+                            <Alert type="success" showIcon icon={<CheckCircleOutlined />} style={{ marginBottom: 16 }} message="向量生成完成" description={`成功处理 ${embeddingProgress.processed} 位人才`} />
+                          )}
+                          {embeddingProgress?.status === 'error' && (
+                            <Alert type="error" showIcon style={{ marginBottom: 16 }} message="向量生成失败" />
+                          )}
+                          <Space>
+                            <Button
+                              type="primary"
+                              icon={<SyncOutlined spin={embeddingProgress?.status === 'running'} />}
+                              onClick={() => handleGenerateEmbeddings(false)}
+                              loading={embeddingProgress?.status === 'running'}
+                              disabled={embeddingProgress?.status === 'running'}
+                            >
+                              {embeddingProgress?.status === 'running' ? '生成中...' : '生成向量'}
+                            </Button>
+                            <Button danger onClick={() => handleGenerateEmbeddings(true)} disabled={embeddingProgress?.status === 'running'}>
+                              强制重新生成
+                            </Button>
+                            {embeddingProgress?.status === 'running' && (
+                              <Button onClick={handleCancelEmbeddingGeneration}>取消</Button>
                             )}
+                            <Button icon={<ReloadOutlined />} onClick={loadEmbeddingStatus} loading={embeddingLoading}>刷新状态</Button>
                           </Space>
-                        </div>
-                      }
-                    />
-                  )}
-                  {embeddingProgress?.status === 'completed' && (
-                    <Alert type="success" showIcon icon={<CheckCircleOutlined />} style={{ marginBottom: 16 }} message="向量生成完成" description={`成功处理 ${embeddingProgress.processed} 位人才`} />
-                  )}
-                  {embeddingProgress?.status === 'error' && (
-                    <Alert type="error" showIcon style={{ marginBottom: 16 }} message="向量生成失败" />
-                  )}
-                  <Space>
-                    <Button
-                      type="primary"
-                      icon={<SyncOutlined spin={embeddingProgress?.status === 'running'} />}
-                      onClick={() => handleGenerateEmbeddings(false)}
-                      loading={embeddingProgress?.status === 'running'}
-                      disabled={embeddingProgress?.status === 'running'}
-                    >
-                      {embeddingProgress?.status === 'running' ? '生成中...' : '生成向量'}
-                    </Button>
-                    <Button danger onClick={() => handleGenerateEmbeddings(true)} disabled={embeddingProgress?.status === 'running'}>
-                      强制重新生成
-                    </Button>
-                    {embeddingProgress?.status === 'running' && (
-                      <Button onClick={handleCancelEmbeddingGeneration}>取消</Button>
-                    )}
-                    <Button icon={<ReloadOutlined />} onClick={loadEmbeddingStatus} loading={embeddingLoading}>刷新状态</Button>
-                  </Space>
-                </Spin>
-              </Card>
+                        </Spin>
+                      </Card>
+                    ),
+                  },
+                  {
+                    key: 'open-source',
+                    label: '开源人才库',
+                    children: (
+                      <Card>
+                        <Spin spinning={osEmbeddingLoading}>
+                          <Alert
+                            message="开源人才向量嵌入"
+                            description={`生成开源开发者向量嵌入用于语义搜索和智能推荐。当前模型：${osEmbeddingStatus?.model_name || '未配置'}。生成过程为后台异步执行，耗时取决于开发者数量。`}
+                            type="info"
+                            showIcon
+                            style={{ marginBottom: 24 }}
+                          />
+                          <Row gutter={16} style={{ marginBottom: 24 }}>
+                            <Col span={6}>
+                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                                <Statistic title="开发者总数" value={osEmbeddingStatus?.total_developers || 0} />
+                              </Card>
+                            </Col>
+                            <Col span={6}>
+                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                                <Statistic title="已生成向量" value={osEmbeddingStatus?.embedded_count || 0} valueStyle={{ color: '#52c41a' }} />
+                              </Card>
+                            </Col>
+                            <Col span={6}>
+                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                                <Statistic title="待生成" value={osEmbeddingStatus?.pending_count || 0} valueStyle={{ color: '#faad14' }} />
+                              </Card>
+                            </Col>
+                            <Col span={6}>
+                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                                <Statistic title="覆盖率" value={osEmbeddingStatus?.progress_percent || 0} suffix="%" />
+                              </Card>
+                            </Col>
+                          </Row>
+                          {(osEmbeddingProgress?.status === 'running' || osEmbeddingProgress?.status === 'pending') && (
+                            <Alert
+                              type="info"
+                              showIcon
+                              icon={<SyncOutlined spin />}
+                              style={{ marginBottom: 16 }}
+                              message={osEmbeddingProgress?.status === 'pending' ? '正在启动向量生成...' : '向量生成进行中...'}
+                              description={
+                                <div>
+                                  <Progress
+                                    percent={osEmbeddingProgress?.total > 0 ? Math.round((osEmbeddingProgress.processed / osEmbeddingProgress.total) * 100) : 0}
+                                    status="active"
+                                  />
+                                  <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                                    <Text type="secondary">
+                                      已处理 {formatNumber(osEmbeddingProgress?.processed)} / {formatNumber(osEmbeddingProgress?.total)} 位开发者
+                                    </Text>
+                                    {osEmbeddingProgress?.failed > 0 && (
+                                      <Text type="danger">失败 {osEmbeddingProgress.failed}</Text>
+                                    )}
+                                  </Space>
+                                </div>
+                              }
+                            />
+                          )}
+                          {osEmbeddingProgress?.status === 'completed' && (
+                            <Alert type="success" showIcon icon={<CheckCircleOutlined />} style={{ marginBottom: 16 }} message="向量生成完成" description={`成功处理 ${osEmbeddingProgress.processed} 位开发者`} />
+                          )}
+                          {osEmbeddingProgress?.status === 'error' && (
+                            <Alert type="error" showIcon style={{ marginBottom: 16 }} message="向量生成失败" />
+                          )}
+                          <Space>
+                            <Button
+                              type="primary"
+                              icon={<SyncOutlined spin={osEmbeddingProgress?.status === 'running'} />}
+                              onClick={() => handleGenerateOsEmbeddings(false)}
+                              loading={osEmbeddingProgress?.status === 'running'}
+                              disabled={osEmbeddingProgress?.status === 'running'}
+                            >
+                              {osEmbeddingProgress?.status === 'running' ? '生成中...' : '生成向量'}
+                            </Button>
+                            <Button danger onClick={() => handleGenerateOsEmbeddings(true)} disabled={osEmbeddingProgress?.status === 'running'}>
+                              强制重新生成
+                            </Button>
+                            {osEmbeddingProgress?.status === 'running' && (
+                              <Button onClick={handleCancelOsEmbeddingGeneration}>取消</Button>
+                            )}
+                            <Button icon={<ReloadOutlined />} onClick={loadOsEmbeddingStatus} loading={osEmbeddingLoading}>刷新状态</Button>
+                          </Space>
+                        </Spin>
+                      </Card>
+                    ),
+                  },
+                ]}
+              />
             ),
           },
         ]}

@@ -14,7 +14,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import verify_access_token
-from app.core.config import settings
 from app.core.database import AsyncSessionLocal, get_async_session
 from app.domains.open_source.schemas.open_source import (
     OSCollectTaskCreate,
@@ -49,6 +48,7 @@ from app.domains.open_source.services.collectors.github_collector import (
     GitHubCollector,
 )
 from app.domains.open_source.services.github_client import GitHubClient
+from app.domains.open_source.repositories.open_source_repository import OpenSourceRepository
 from app.domains.open_source.services.open_source_service import OpenSourceService
 from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
 from app.domains.shared.models.enums import UserRoleType
@@ -460,9 +460,136 @@ async def search_developers(
 ):
     """Unified search endpoint supporting keyword/semantic/hybrid modes."""
     service = OpenSourceService(session)
-    items, total = await service.search_developers(req)
+
+    if req.mode == "keyword" or not req.q:
+        items, total = await service.search_developers(req)
+        return PaginatedResponse.create(
+            items=[OSDeveloperSummary.model_validate(i) for i in items],
+            total=total,
+            page=req.page,
+            page_size=req.page_size,
+        )
+
+    # Semantic / Hybrid modes require LLM gateway
+    from app.domains.shared.services.config_service import ConfigService
+    from app.domains.shared.services.llm import LLMGateway
+    from app.domains.open_source.services.open_source_embedding_service import (
+        OpenSourceEmbeddingService,
+    )
+
+    config_service = ConfigService(session)
+    llm_config = await config_service.get_llm_config()
+
+    if not llm_config.embedding_enabled or not llm_config.embedding_model:
+        # Fallback to keyword if embedding not configured
+        items, total = await service.search_developers(req)
+        return PaginatedResponse.create(
+            items=[OSDeveloperSummary.model_validate(i) for i in items],
+            total=total,
+            page=req.page,
+            page_size=req.page_size,
+        )
+
+    llm_gateway = LLMGateway(
+        api_key=llm_config.api_key,
+        api_base=llm_config.api_base,
+        model=llm_config.model,
+        embedding_model=llm_config.embedding_model,
+        embedding_api_base=llm_config.embedding_api_base,
+        embedding_api_key=llm_config.embedding_api_key,
+        timeout=llm_config.timeout or 60,
+        api_format=llm_config.api_format,
+        embedding_api_format=llm_config.embedding_api_format,
+    )
+
+    embed_service = OpenSourceEmbeddingService(
+        session=session,
+        llm_gateway=llm_gateway,
+        dimension=llm_config.embedding_dimension,
+        model_name=llm_config.embedding_model,
+    )
+
+    try:
+        query_embedding = await embed_service.get_query_embedding(req.q)
+    except Exception as e:
+        logger.warning(f"Failed to generate query embedding, falling back to keyword: {e}")
+        items, total = await service.search_developers(req)
+        return PaginatedResponse.create(
+            items=[OSDeveloperSummary.model_validate(i) for i in items],
+            total=total,
+            page=req.page,
+            page_size=req.page_size,
+        )
+
+    filters = {}
+    if req.filters:
+        if req.filters.tech_elements:
+            filters["tech_elements"] = req.filters.tech_elements
+        if req.filters.languages:
+            filters["languages"] = req.filters.languages
+        if req.filters.location:
+            filters["location"] = req.filters.location
+        if req.filters.company:
+            filters["company"] = req.filters.company
+        if req.filters.min_stars is not None:
+            filters["min_stars"] = req.filters.min_stars
+
+    repo = OpenSourceRepository(session)
+
+    if req.mode == "semantic":
+        semantic_items, total = await repo.search_by_vector_similarity(
+            query_embedding=query_embedding,
+            similarity_threshold=0.7,
+            filters=filters,
+            limit=req.page_size,
+            offset=(req.page - 1) * req.page_size,
+        )
+        return PaginatedResponse.create(
+            items=[OSDeveloperSummary.model_validate(i) for i in semantic_items],
+            total=total,
+            page=req.page,
+            page_size=req.page_size,
+        )
+
+    # Hybrid mode: keyword + semantic merge
+    keyword_items, keyword_total = await service.list_developers(
+        q=req.q,
+        tech_elements=req.filters.tech_elements if req.filters else None,
+        languages=req.filters.languages if req.filters else None,
+        location=req.filters.location if req.filters else None,
+        company=req.filters.company if req.filters else None,
+        min_stars=req.filters.min_stars if req.filters else None,
+        page=1,
+        page_size=req.page_size * 2,
+    )
+
+    semantic_items, semantic_total = await repo.search_by_vector_similarity(
+        query_embedding=query_embedding,
+        similarity_threshold=0.7,
+        filters=filters,
+        limit=req.page_size * 2,
+        offset=0,
+    )
+
+    # Deduplicate and merge: semantic results first, then keyword results not already included
+    seen_ids = set()
+    merged = []
+    for dev in semantic_items:
+        if dev.developer_id not in seen_ids:
+            seen_ids.add(dev.developer_id)
+            merged.append(dev)
+    for dev in keyword_items:
+        if dev.developer_id not in seen_ids:
+            seen_ids.add(dev.developer_id)
+            merged.append(dev)
+
+    total = len(merged)
+    start = (req.page - 1) * req.page_size
+    end = start + req.page_size
+    page_items = merged[start:end]
+
     return PaginatedResponse.create(
-        items=[OSDeveloperSummary.model_validate(i) for i in items],
+        items=[OSDeveloperSummary.model_validate(i) for i in page_items],
         total=total,
         page=req.page,
         page_size=req.page_size,
@@ -834,19 +961,38 @@ async def jd_match(
 
 # ============= Embeddings =============
 
+_os_embedding_progress = {
+    "status": "idle",
+    "processed": 0,
+    "total": 0,
+    "failed": 0,
+    "started_at": None,
+    "completed_at": None,
+    "error_message": None,
+}
+
+
 @router.get("/embeddings/status", response_model=OSEmbeddingStatusResponse)
 async def get_embedding_status(
     session: AsyncSession = Depends(get_async_session),
     _user: dict = Depends(require_admin),
 ):
+    from app.domains.shared.services.config_service import ConfigService
+
     service = OpenSourceService(session)
     status = await service.get_embedding_status()
+    config_service = ConfigService(session)
+    llm_config = await config_service.get_llm_config()
+    total = status["total_developers"] or 0
+    embedded = status["embedded_count"] or 0
+    progress = (embedded / total * 100) if total > 0 else 0
     return OSEmbeddingStatusResponse(
-        total_developers=status["total_developers"],
-        embedded_count=status["embedded_count"],
+        total_developers=total,
+        embedded_count=embedded,
         pending_count=status["pending_count"],
-        dimension=settings.EMBEDDING_DIMENSION,
-        model_name=settings.LLM_EMBEDDING_MODEL or "unknown",
+        progress_percent=round(progress, 1),
+        dimension=llm_config.embedding_dimension,
+        model_name=llm_config.embedding_model or "unknown",
     )
 
 
@@ -856,10 +1002,167 @@ async def generate_embeddings(
     session: AsyncSession = Depends(get_async_session),
     _user: dict = Depends(require_admin),
 ):
-    """Placeholder for batch embedding generation."""
-    service = OpenSourceService(session)
-    result = await service.generate_embeddings(batch_size=req.batch_size)
-    return SuccessResponse(message=f"Embedding generation queued for batch size {req.batch_size}")
+    """Trigger batch embedding generation for all visible developers."""
+    global _os_embedding_progress
+
+    if _os_embedding_progress["status"] == "running":
+        raise HTTPException(status_code=400, detail="Embedding generation is already running")
+
+    from app.domains.shared.services.config_service import ConfigService
+
+    config_service = ConfigService(session)
+    llm_config = await config_service.get_llm_config()
+
+    if not llm_config.embedding_enabled:
+        raise HTTPException(status_code=400, detail="嵌入模型未启用")
+    if not llm_config.embedding_model:
+        raise HTTPException(status_code=400, detail="嵌入模型未配置")
+    if not llm_config.embedding_api_base:
+        raise HTTPException(status_code=400, detail="嵌入 API 地址未配置")
+
+    repo = OpenSourceRepository(session)
+    dev_ids = await repo.get_visible_developer_ids()
+
+    if not dev_ids:
+        raise HTTPException(status_code=400, detail="No developers to process")
+
+    _os_embedding_progress["status"] = "running"
+    _os_embedding_progress["processed"] = 0
+    _os_embedding_progress["total"] = len(dev_ids)
+    _os_embedding_progress["failed"] = 0
+    _os_embedding_progress["started_at"] = datetime.utcnow().isoformat()
+    _os_embedding_progress["completed_at"] = None
+    _os_embedding_progress["error_message"] = None
+
+    asyncio.create_task(_run_os_embedding_generation(dev_ids, req.batch_size, req.force))
+
+    return SuccessResponse(
+        message=f"Embedding generation started for {len(dev_ids)} developers"
+    )
+
+
+async def _run_os_embedding_generation(developer_ids: list[int], batch_size: int, force: bool = False):
+    """Run embedding generation in background.
+
+    Follows the same batch-loop pattern as the academic domain for:
+    - Cancellation check between batches
+    - Real-time progress updates
+    - Per-batch exception isolation
+    """
+    global _os_embedding_progress
+
+    from app.domains.open_source.services.open_source_embedding_service import (
+        OpenSourceEmbeddingService,
+    )
+    from app.domains.shared.services.config_service import ConfigService
+    from app.domains.shared.services.llm import LLMGateway
+
+    try:
+        async with AsyncSessionLocal() as session:
+            config_service = ConfigService(session)
+            llm_config = await config_service.get_llm_config()
+
+            llm_gateway = LLMGateway(
+                api_key=llm_config.api_key,
+                api_base=llm_config.api_base,
+                model=llm_config.model,
+                embedding_model=llm_config.embedding_model,
+                embedding_api_base=llm_config.embedding_api_base,
+                embedding_api_key=llm_config.embedding_api_key,
+                timeout=llm_config.timeout or 60,
+                api_format=llm_config.api_format,
+                embedding_api_format=llm_config.embedding_api_format,
+            )
+
+            embed_service = OpenSourceEmbeddingService(
+                session=session,
+                llm_gateway=llm_gateway,
+                dimension=llm_config.embedding_dimension,
+                model_name=llm_config.embedding_model,
+                rate_limit_delay=1.0,
+            )
+
+            if llm_gateway.embedding_api_format == "minimax":
+                actual_batch_size = min(batch_size, 16)
+            else:
+                actual_batch_size = min(batch_size, 64)
+
+            processed = 0
+            failed = 0
+
+            for i in range(0, len(developer_ids), actual_batch_size):
+                if _os_embedding_progress["status"] == "cancelled":
+                    logger.info("OS embedding generation cancelled")
+                    return
+
+                batch = developer_ids[i : i + actual_batch_size]
+                batch_num = i // actual_batch_size + 1
+
+                try:
+                    stats = await embed_service.batch_generate_embeddings(
+                        developer_ids=batch,
+                        batch_size=actual_batch_size,
+                        force_regenerate=force,
+                    )
+                    processed += stats.get("processed", 0)
+                    failed += stats.get("failed", 0)
+
+                    # 实时更新进度
+                    _os_embedding_progress["processed"] = processed
+                    _os_embedding_progress["failed"] = failed
+                    logger.info(
+                        f"OS Progress: {processed}/{_os_embedding_progress['total']} processed, {failed} failed"
+                    )
+
+                except Exception as e:
+                    logger.error(f"OS batch {batch_num} failed: {e}")
+                    failed += len(batch)
+                    _os_embedding_progress["failed"] = failed
+
+            _os_embedding_progress["status"] = "completed"
+            _os_embedding_progress["completed_at"] = datetime.utcnow().isoformat()
+
+            logger.info(
+                f"OS embedding generation completed: processed={processed}, failed={failed}"
+            )
+    except Exception as e:
+        logger.error(f"OS embedding generation failed: {e}")
+        _os_embedding_progress["status"] = "error"
+        _os_embedding_progress["error_message"] = str(e)
+        _os_embedding_progress["completed_at"] = datetime.utcnow().isoformat()
+
+
+@router.get("/embeddings/progress")
+async def get_embedding_progress(
+    _user: dict = Depends(require_admin),
+):
+    """Get current embedding generation progress."""
+    global _os_embedding_progress
+    return {
+        "status": _os_embedding_progress["status"],
+        "processed": _os_embedding_progress["processed"],
+        "total": _os_embedding_progress["total"],
+        "failed": _os_embedding_progress["failed"],
+        "started_at": _os_embedding_progress["started_at"],
+        "completed_at": _os_embedding_progress["completed_at"],
+        "error_message": _os_embedding_progress["error_message"],
+    }
+
+
+@router.post("/embeddings/cancel")
+async def cancel_embedding_generation(
+    _user: dict = Depends(require_admin),
+):
+    """Cancel running embedding generation."""
+    global _os_embedding_progress
+
+    if _os_embedding_progress["status"] != "running":
+        raise HTTPException(status_code=400, detail="No generation task is running")
+
+    _os_embedding_progress["status"] = "cancelled"
+    _os_embedding_progress["completed_at"] = datetime.utcnow().isoformat()
+
+    return SuccessResponse(message="Generation task cancelled")
 
 
 @router.post("/embeddings/generate/{developer_id}")
@@ -868,8 +1171,47 @@ async def generate_single_embedding(
     session: AsyncSession = Depends(get_async_session),
     _user: dict = Depends(require_admin),
 ):
+    from app.domains.shared.services.config_service import ConfigService
+    from app.domains.shared.services.llm import LLMGateway
+    from app.domains.open_source.services.open_source_embedding_service import (
+        OpenSourceEmbeddingService,
+    )
+
+    config_service = ConfigService(session)
+    llm_config = await config_service.get_llm_config()
+
+    if not llm_config.embedding_enabled:
+        raise HTTPException(status_code=400, detail="嵌入模型未启用")
+
     service = OpenSourceService(session)
     dev = await service.get_developer(developer_id)
     if not dev:
         raise HTTPException(status_code=404, detail="Developer not found")
-    return SuccessResponse(message=f"Embedding generation queued for developer {developer_id}")
+
+    llm_gateway = LLMGateway(
+        api_key=llm_config.api_key,
+        api_base=llm_config.api_base,
+        model=llm_config.model,
+        embedding_model=llm_config.embedding_model,
+        embedding_api_base=llm_config.embedding_api_base,
+        embedding_api_key=llm_config.embedding_api_key,
+        timeout=llm_config.timeout or 60,
+        api_format=llm_config.api_format,
+        embedding_api_format=llm_config.embedding_api_format,
+    )
+
+    embed_service = OpenSourceEmbeddingService(
+        session=session,
+        llm_gateway=llm_gateway,
+        dimension=llm_config.embedding_dimension,
+        model_name=llm_config.embedding_model,
+    )
+
+    try:
+        await embed_service.get_or_create_embedding(developer_id)
+        await session.commit()
+        return SuccessResponse(message=f"Embedding generated for developer {developer_id}")
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Single embedding generation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

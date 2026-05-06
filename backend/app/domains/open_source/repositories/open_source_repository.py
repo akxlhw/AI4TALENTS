@@ -6,9 +6,12 @@ Encapsulates all database queries related to open-source talent.
 
 from __future__ import annotations
 
+import json
+import logging
+import re
 from typing import Any
 
-from sqlalchemy import and_, cast, func, or_, select
+from sqlalchemy import and_, cast, func, or_, select, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +27,24 @@ from app.domains.open_source.models.open_source import (
     OSRepository,
     OSTalentPool,
 )
+
+logger = logging.getLogger(__name__)
+
+# Global cache for database type
+_is_postgres_cache: bool | None = None
+
+
+def _is_postgres(session: AsyncSession) -> bool:
+    """Check if the database is PostgreSQL."""
+    global _is_postgres_cache
+    if _is_postgres_cache is not None:
+        return _is_postgres_cache
+    try:
+        bind = session.get_bind()
+        _is_postgres_cache = bind.dialect.name == "postgresql"
+        return _is_postgres_cache
+    except Exception:
+        return True
 
 
 class OpenSourceRepository:
@@ -632,6 +653,286 @@ class OpenSourceRepository:
         """JD matching placeholder."""
         return {"matches": [], "total": 0}
 
+    # ========== Embedding ==========
+
+    async def get_embedding_by_developer_id(
+        self, developer_id: int, vector_type: str = "profile"
+    ) -> OSEmbedding | None:
+        """Get embedding record by developer ID and vector type."""
+        result = await self.session.execute(
+            select(OSEmbedding).where(
+                OSEmbedding.developer_id == developer_id,
+                OSEmbedding.vector_type == vector_type,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def upsert_embedding(
+        self,
+        developer_id: int,
+        embedding: list[float],
+        model_name: str,
+        source_text_hash: str,
+        vector_type: str = "profile",
+    ) -> OSEmbedding:
+        """Create or update an embedding record."""
+        from datetime import datetime
+
+        now = datetime.utcnow()
+        vector_str = "[" + ",".join(str(v) for v in embedding) + "]"
+
+        if _is_postgres(self.session):
+            await self.session.execute(
+                text(
+                    """
+                    INSERT INTO os_embedding
+                    (developer_id, vector_type, embedding, model_name,
+                     source_text_hash, created_at, updated_at)
+                    VALUES (:developer_id, :vector_type,
+                            CAST(:embedding AS vector), :model_name,
+                            :source_text_hash, :created_at, :updated_at)
+                    ON CONFLICT (developer_id, vector_type) DO UPDATE SET
+                        embedding = EXCLUDED.embedding,
+                        model_name = EXCLUDED.model_name,
+                        source_text_hash = EXCLUDED.source_text_hash,
+                        updated_at = EXCLUDED.updated_at
+                """
+                ),
+                {
+                    "developer_id": developer_id,
+                    "vector_type": vector_type,
+                    "embedding": vector_str,
+                    "model_name": model_name,
+                    "source_text_hash": source_text_hash,
+                    "created_at": now,
+                    "updated_at": now,
+                },
+            )
+            await self.session.flush()
+            return await self.get_embedding_by_developer_id(developer_id, vector_type)
+        else:
+            existing = await self.get_embedding_by_developer_id(developer_id, vector_type)
+            embedding_str = json.dumps(embedding)
+            if existing:
+                existing.embedding = embedding_str
+                existing.model_name = model_name
+                existing.source_text_hash = source_text_hash
+                existing.updated_at = now
+                await self.session.flush()
+                return existing
+            else:
+                record = OSEmbedding(
+                    developer_id=developer_id,
+                    vector_type=vector_type,
+                    embedding=embedding_str,
+                    model_name=model_name,
+                    source_text_hash=source_text_hash,
+                    created_at=now,
+                    updated_at=now,
+                )
+                self.session.add(record)
+                await self.session.flush()
+                return record
+
+    async def batch_upsert_embeddings(self, items: list[dict[str, Any]]) -> int:
+        """Batch upsert embedding records."""
+        if not items:
+            return 0
+
+        from datetime import datetime
+
+        now = datetime.utcnow()
+
+        if _is_postgres(self.session):
+            values_clauses = []
+            params: dict[str, Any] = {}
+            for i, item in enumerate(items):
+                vector_str = "[" + ",".join(str(v) for v in item["embedding"]) + "]"
+                vector_type = item.get("vector_type", "profile")
+                values_clauses.append(
+                    f"(:developer_id_{i}, :vector_type_{i}, "
+                    f"CAST(:embedding_{i} AS vector), :model_name_{i}, "
+                    f":hash_{i}, :created_at, :updated_at)"
+                )
+                params[f"developer_id_{i}"] = item["developer_id"]
+                params[f"vector_type_{i}"] = vector_type
+                params[f"embedding_{i}"] = vector_str
+                params[f"model_name_{i}"] = item["model_name"]
+                params[f"hash_{i}"] = item["source_text_hash"]
+
+            params["created_at"] = now
+            params["updated_at"] = now
+
+            sql = f"""
+                INSERT INTO os_embedding
+                (developer_id, vector_type, embedding, model_name,
+                 source_text_hash, created_at, updated_at)
+                VALUES {', '.join(values_clauses)}
+                ON CONFLICT (developer_id, vector_type) DO UPDATE SET
+                    embedding = EXCLUDED.embedding,
+                    model_name = EXCLUDED.model_name,
+                    source_text_hash = EXCLUDED.source_text_hash,
+                    updated_at = EXCLUDED.updated_at
+            """
+            await self.session.execute(text(sql), params)
+            await self.session.flush()
+            return len(items)
+        else:
+            for item in items:
+                await self.upsert_embedding(
+                    developer_id=item["developer_id"],
+                    embedding=item["embedding"],
+                    model_name=item["model_name"],
+                    source_text_hash=item["source_text_hash"],
+                    vector_type=item.get("vector_type", "profile"),
+                )
+            return len(items)
+
+    async def get_missing_developer_ids(
+        self,
+        developer_ids: list[int],
+        model_name: str | None = None,
+        vector_type: str | None = None,
+    ) -> list[int]:
+        """Get developer IDs that do not have embeddings."""
+        if not developer_ids:
+            return []
+
+        BATCH_SIZE = 5000
+        existing_ids: set[int] = set()
+
+        for i in range(0, len(developer_ids), BATCH_SIZE):
+            batch_ids = developer_ids[i : i + BATCH_SIZE]
+            query = select(OSEmbedding.developer_id).where(OSEmbedding.developer_id.in_(batch_ids))
+            if model_name:
+                query = query.where(OSEmbedding.model_name == model_name)
+            if vector_type:
+                query = query.where(OSEmbedding.vector_type == vector_type)
+            result = await self.session.execute(query)
+            for row in result.fetchall():
+                existing_ids.add(row[0])
+
+        return [did for did in developer_ids if did not in existing_ids]
+
+    async def get_visible_developer_ids(self) -> list[int]:
+        """Get all visible developer IDs."""
+        result = await self.session.execute(
+            select(OSDeveloper.developer_id)
+            .where(OSDeveloper.is_visible.is_(True))
+            .order_by(OSDeveloper.developer_id)
+        )
+        return [row[0] for row in result.fetchall()]
+
+    async def search_by_vector_similarity(
+        self,
+        query_embedding: list[float],
+        similarity_threshold: float = 0.7,
+        filters: dict[str, Any] | None = None,
+        limit: int = 20,
+        offset: int = 0,
+        vector_type: str = "profile",
+    ) -> tuple[list[OSDeveloper], int]:
+        """
+        Search developers by vector similarity using pgvector.
+
+        Args:
+            query_embedding: Query vector
+            similarity_threshold: Minimum similarity score (0.0-1.0)
+            filters: Additional filters (tech_elements, languages, location, company, min_stars)
+            limit: Maximum results
+            offset: Result offset
+            vector_type: Vector type to search
+
+        Returns:
+            Tuple of (developer list, total count)
+        """
+        vector_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
+
+        if not re.match(r"^[\d\.\-\,\s\[\]eE+]+$", vector_str):
+            raise ValueError("Invalid vector format: contains disallowed characters")
+
+        distance_threshold = 1.0 - similarity_threshold
+
+        filter_clauses = ["e.vector_type = :vector_type"]
+        filter_params: dict[str, Any] = {"vector_type": vector_type}
+
+        if filters:
+            if "tech_elements" in filters:
+                filter_clauses.append("d.tech_tags @> :tech_elements::jsonb")
+                filter_params["tech_elements"] = json.dumps(filters["tech_elements"])
+            if "languages" in filters:
+                filter_clauses.append("d.primary_languages @> :languages::jsonb")
+                filter_params["languages"] = json.dumps(filters["languages"])
+            if "location" in filters:
+                filter_clauses.append("d.location ILIKE :location")
+                filter_params["location"] = f"%{filters['location']}%"
+            if "company" in filters:
+                filter_clauses.append("d.company ILIKE :company")
+                filter_params["company"] = f"%{filters['company']}%"
+            if "min_stars" in filters:
+                filter_clauses.append("d.total_stars_received >= :min_stars")
+                filter_params["min_stars"] = filters["min_stars"]
+
+        filter_sql = " AND " + " AND ".join(filter_clauses)
+
+        # Count query
+        count_query_str = f"""
+            SELECT COUNT(*) as total
+            FROM os_developer d
+            INNER JOIN os_embedding e ON d.developer_id = e.developer_id
+            WHERE d.is_visible = TRUE
+            AND e.embedding <=> '{vector_str}'::vector <= :distance_threshold
+            {filter_sql}
+        """
+        filter_params["distance_threshold"] = distance_threshold
+        count_result = await self.session.execute(text(count_query_str), filter_params)
+        total = count_result.scalar() or 0
+
+        # Data query
+        data_query_str = f"""
+            SELECT d.*, e.embedding <=> '{vector_str}'::vector AS distance
+            FROM os_developer d
+            INNER JOIN os_embedding e ON d.developer_id = e.developer_id
+            WHERE d.is_visible = TRUE
+            AND e.embedding <=> '{vector_str}'::vector <= :distance_threshold
+            {filter_sql}
+            ORDER BY distance ASC
+            LIMIT :limit OFFSET :offset
+        """
+        filter_params["limit"] = limit
+        filter_params["offset"] = offset
+
+        result = await self.session.execute(text(data_query_str), filter_params)
+        rows = result.mappings().all()
+
+        developers = []
+        for row in rows:
+            dev = OSDeveloper(
+                developer_id=row["developer_id"],
+                github_login=row["github_login"],
+                github_id=row["github_id"],
+                name=row["name"],
+                bio=row["bio"],
+                location=row["location"],
+                company=row["company"],
+                blog_url=row["blog_url"],
+                email=row["email"],
+                avatar_url=row["avatar_url"],
+                followers_count=row["followers_count"],
+                following_count=row["following_count"],
+                public_repos_count=row["public_repos_count"],
+                total_stars_received=row["total_stars_received"],
+                total_forks_received=row["total_forks_received"],
+                primary_languages=row["primary_languages"],
+                tech_tags=row["tech_tags"],
+                is_visible=row["is_visible"],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"],
+            )
+            developers.append(dev)
+
+        return developers, total
+
     async def generate_embeddings(self, batch_size: int = 50) -> dict[str, Any]:
-        """Generate embeddings placeholder."""
+        """Generate embeddings placeholder (replaced by OpenSourceEmbeddingService)."""
         return {"generated": 0, "batch_size": batch_size}

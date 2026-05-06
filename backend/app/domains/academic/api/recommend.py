@@ -62,7 +62,14 @@ async def recommend_talents(
 
     try:
         # Create services
-        embed_service = EmbeddingService(session=session)
+        from app.domains.shared.services.config_service import ConfigService
+
+        config_service = ConfigService(session)
+        llm_config = await config_service.get_llm_config()
+        embed_service = EmbeddingService(
+            session=session,
+            dimension=llm_config.embedding_dimension,
+        )
         recommend_service = RecommendService(
             session=session,
             embed_service=embed_service,
@@ -121,7 +128,14 @@ async def find_similar_talents(
     time.time()
 
     try:
-        embed_service = EmbeddingService(session=session)
+        from app.domains.shared.services.config_service import ConfigService
+
+        config_service = ConfigService(session)
+        llm_config = await config_service.get_llm_config()
+        embed_service = EmbeddingService(
+            session=session,
+            dimension=llm_config.embedding_dimension,
+        )
         recommend_service = RecommendService(
             session=session,
             embed_service=embed_service,

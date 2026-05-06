@@ -179,6 +179,7 @@ async def enhanced_search_talents(
                 embed_service = EmbeddingService(
                     session=session,
                     llm_gateway=llm_gateway,
+                    dimension=llm_config.embedding_dimension,
                 )
 
         # Create search service

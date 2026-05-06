@@ -338,6 +338,8 @@ class ConfigService:
 
         This handles the special case where embedding dimension changes,
         requiring database DDL to modify the vector column.
+        Affects both academic (core_talent_embedding) and open-source
+        (os_embedding) tables.
 
         Args:
             config: Dictionary of LLM configuration values
@@ -351,8 +353,7 @@ class ConfigService:
         # Update config values first
         await self.update_llm_config(config)
 
-        # Execute DDL to modify vector column
-        # Note: This will clear all existing embeddings
+        # Execute DDL for academic embedding table
         await self.session.execute(text("DROP INDEX IF EXISTS ix_talent_embedding_vector"))
         await self.session.execute(text("DELETE FROM core_talent_embedding"))
         await self.session.execute(
@@ -370,13 +371,58 @@ class ConfigService:
         """
             )
         )
+
+        # Execute DDL for open-source embedding table
+        await self.session.execute(text("DROP INDEX IF EXISTS ix_os_embedding_vector"))
+        await self.session.execute(text("DELETE FROM os_embedding"))
+        await self.session.execute(
+            text(
+                f"ALTER TABLE os_embedding ALTER COLUMN embedding TYPE vector({new_dimension})"
+            )
+        )
+        await self.session.execute(
+            text(
+                f"""
+            CREATE INDEX ix_os_embedding_vector
+            ON os_embedding
+            USING ivfflat (embedding vector_cosine_ops)
+            WITH (lists = 100)
+        """
+            )
+        )
         await self.session.commit()
 
         logger.info(
-            f"[LLM Config] Vector column modified to vector({new_dimension}), existing embeddings cleared"
+            f"[LLM Config] Vector columns modified to vector({new_dimension}) for both "
+            "core_talent_embedding and os_embedding; existing embeddings cleared"
         )
 
         return {"message": "LLM configuration updated successfully"}
+
+    async def get_embedding_config_for_domain(self, domain: str) -> dict[str, Any]:
+        """
+        Get embedding configuration for a specific domain.
+
+        Currently returns the unified LLM embedding config for all domains.
+        This is a convenience wrapper around get_llm_config for domain-aware
+        services.
+
+        Args:
+            domain: Domain identifier, e.g. "academic" or "open_source"
+
+        Returns:
+            dict: Embedding configuration for the domain
+        """
+        llm_config = await self.get_llm_config()
+        return {
+            "domain": domain,
+            "dimension": llm_config.embedding_dimension,
+            "model": llm_config.embedding_model,
+            "api_base": llm_config.embedding_api_base,
+            "api_key": llm_config.embedding_api_key,
+            "api_format": llm_config.embedding_api_format or llm_config.api_format,
+            "enabled": llm_config.embedding_enabled,
+        }
 
     async def set_and_commit(
         self, key: str, value: Any, config_type: str = "string"

@@ -72,6 +72,10 @@ export const openSourceApi = {
 
   getEmbeddingStatus: () =>
     apiClient.get('/open-source/embeddings/status'),
-  generateEmbeddings: (batchSize?: number) =>
-    apiClient.post('/open-source/embeddings/generate', { batch_size: batchSize }),
+  getEmbeddingProgress: () =>
+    apiClient.get('/open-source/embeddings/progress'),
+  generateEmbeddings: (batchSize?: number, force?: boolean) =>
+    apiClient.post('/open-source/embeddings/generate', { batch_size: batchSize, force }),
+  cancelEmbeddingGeneration: () =>
+    apiClient.post('/open-source/embeddings/cancel'),
 }

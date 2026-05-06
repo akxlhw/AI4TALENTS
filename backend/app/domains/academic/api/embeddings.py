@@ -298,6 +298,7 @@ async def _run_embedding_generation(force: bool, batch_size: int, vector_types: 
                 llm_gateway=llm_gateway,
                 rate_limit_delay=1.0,
                 model_name=embedding_model,
+                dimension=llm_config.embedding_dimension,
             )
 
             # Process in batches with multiple vector types
