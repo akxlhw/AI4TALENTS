@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import AsyncSessionLocal
 from app.models.tech_domain import TechDomain
 from app.models.venue import Venue, VenueTechBinding
-from app.repositories.venue_repository import VenueRepository, VenueTechBindingRepository
+from app.domains.academic.repositories.venue_repository import VenueRepository, VenueTechBindingRepository
 
 
 # 已知的 OpenAlex Source ID 映射

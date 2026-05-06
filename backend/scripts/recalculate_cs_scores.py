@@ -19,7 +19,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models.standardized import StdAuthor
 from app.models.raw_data import RawAuthor
-from app.services.common.cs_concepts import CORE_CS_CONCEPTS
+from app.domains.academic.services.common.cs_concepts import CORE_CS_CONCEPTS
 
 logging.basicConfig(
     level=logging.INFO,

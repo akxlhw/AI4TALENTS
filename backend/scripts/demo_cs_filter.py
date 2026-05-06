@@ -10,8 +10,8 @@ import io
 # 设置标准输出为UTF-8编码
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-from app.services.normalizers.author import AuthorNormalizer
-from app.services.common.cs_concepts import CORE_CS_CONCEPTS, CS_SCORE_THRESHOLD
+from app.domains.academic.services.normalizers.author import AuthorNormalizer
+from app.domains.academic.services.common.cs_concepts import CORE_CS_CONCEPTS, CS_SCORE_THRESHOLD
 
 
 def create_demo_data():

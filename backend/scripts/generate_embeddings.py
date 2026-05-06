@@ -35,9 +35,9 @@ from sqlalchemy import select
 from app.core.database import async_session_maker
 from app.core.config import settings
 from app.models.talent import Talent
-from app.services.llm import create_llm_gateway
-from app.services.embedding.embedding_service import EmbeddingService
-from app.services.cache.cache_manager import CacheManager
+from app.domains.shared.services.llm import create_llm_gateway
+from app.domains.academic.services.embedding.embedding_service import EmbeddingService
+from app.domains.shared.services.cache.cache_manager import CacheManager
 
 # Configure logging
 logging.basicConfig(

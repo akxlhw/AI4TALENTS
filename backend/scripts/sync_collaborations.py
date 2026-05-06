@@ -20,8 +20,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.core.database import async_session_maker
-from app.services.collaboration_service import CollaborationService
-from app.services.talent_service import TalentService
+from app.domains.academic.services.collaboration_service import CollaborationService
+from app.domains.academic.services.talent_service import TalentService
 
 
 async def main():

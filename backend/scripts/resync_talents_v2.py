@@ -20,7 +20,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models.talent import Talent, RoleProfile
 from app.models.standardized import StdAuthor
-from app.services.common.cs_concepts import CS_SCORE_THRESHOLD
+from app.domains.academic.services.common.cs_concepts import CS_SCORE_THRESHOLD
 
 logging.basicConfig(
     level=logging.INFO,

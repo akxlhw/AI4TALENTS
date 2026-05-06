@@ -20,9 +20,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import select
 from app.core.database import AsyncSessionLocal
-from app.services.normalizers import AuthorNormalizer, SchoolNormalizer
-from app.services.sync import ServingLayerOrchestrator
-from app.repositories.raw_data_repository import RawAuthorRepository, RawInstitutionRepository
+from app.domains.academic.services.normalizers import AuthorNormalizer, SchoolNormalizer
+from app.domains.academic.services.sync import ServingLayerOrchestrator
+from app.domains.academic.repositories.raw_data_repository import RawAuthorRepository, RawInstitutionRepository
 from app.models.sync import CollectTask
 
 logging.basicConfig(

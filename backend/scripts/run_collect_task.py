@@ -39,8 +39,8 @@ async def run_task(task_id: int):
     """Run the collection task."""
     # Import here to ensure clean environment
     from app.core.database import AsyncSessionLocal
-    from app.services.collect.orchestrator import CollectionOrchestrator
-    from app.services.data_fetchers import WorkFetcher, AuthorFetcher, InstitutionFetcher
+    from app.domains.academic.services.collect.orchestrator import CollectionOrchestrator
+    from app.domains.academic.services.data_fetchers import WorkFetcher, AuthorFetcher, InstitutionFetcher
 
     print(f"[INFO] Starting task {task_id}")
     sys.stdout.flush()

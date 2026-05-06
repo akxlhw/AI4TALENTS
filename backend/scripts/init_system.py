@@ -460,7 +460,7 @@ async def clear_cache():
 
     try:
         from app.core.cache import get_cache_connection
-        from app.services.cache_service import CacheService
+        from app.domains.shared.services.cache_service import CacheService
 
         cache_conn = await get_cache_connection()
         if cache_conn.is_available:

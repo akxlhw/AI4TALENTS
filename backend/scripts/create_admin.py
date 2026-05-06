@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.core.database import AsyncSessionLocal
 from app.core.auth import hash_password
-from app.repositories.user_repository import UserRepository
+from app.domains.shared.repositories.user_repository import UserRepository
 from app.models.enums import UserRoleType
 
 
