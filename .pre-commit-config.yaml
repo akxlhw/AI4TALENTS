@@ -1,0 +1,21 @@
+# Pre-commit hooks — lightweight checks before every git commit
+# Install:  cd backend && uv run pre-commit install
+# Run manually: cd backend && uv run pre-commit run --all-files
+# Skip temporarily: git commit -m "..." --no-verify
+#
+# For FULL CI replication (ruff + black + mypy + tests), run:
+#   Windows: .\scripts\local_ci.ps1
+#   Linux/Mac: make lint-full
+
+repos:
+  - repo: local
+    hooks:
+      # Architecture check is fast (<1s) and catches cross-layer violations
+      # that would fail the remote CI backend-lint job.
+      - id: backend-architecture
+        name: Backend architecture compliance
+        entry: python scripts/precommit_backend.py
+        language: system
+        types: [python]
+        files: ^backend/app/domains/.*/api/.*\.py$
+        pass_filenames: false

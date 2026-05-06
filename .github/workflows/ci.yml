@@ -66,6 +66,14 @@ jobs:
         # To regenerate the baseline after intentional fixes:
         #   python scripts/mypy_gate.py --regenerate
 
+      - name: Run architecture compliance check
+        working-directory: ./backend
+        run: uv run python scripts/check_architecture.py
+        # The gate uses a baseline file (.architecture_baseline.txt) to track
+        # existing violations. New cross-layer imports will fail the build.
+        # To regenerate the baseline after intentional fixes:
+        #   python scripts/check_architecture.py --update-baseline
+
   # Frontend linting
   frontend-lint:
     runs-on: ubuntu-latest

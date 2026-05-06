@@ -35,14 +35,27 @@ test-frontend: ## Run frontend tests
 test: test-backend ## Run all tests
 
 # Linting
-lint-backend: ## Lint backend code
+lint-backend: ## Lint backend code (ruff + black)
 	cd backend && uv run ruff check app tests
 	cd backend && uv run black --check app tests
+
+lint-backend-full: ## Full backend lint (ruff + black + mypy gate + architecture check)
+	cd backend && uv run ruff check app tests
+	cd backend && uv run black --check app tests
+	cd backend && uv run python scripts/mypy_gate.py
+	cd backend && uv run python scripts/check_architecture.py
 
 lint-frontend: ## Run frontend linting
 	cd frontend && npm run lint
 
+lint-frontend-full: ## Full frontend lint (lint + audit + build)
+	cd frontend && npm run lint
+	cd frontend && npm audit --registry https://registry.npmjs.org
+	cd frontend && npm run build
+
 lint: lint-backend lint-frontend ## Run all linting
+
+lint-full: lint-backend-full lint-frontend-full ## Run all linting + gates (matches CI)
 
 # Database
 migrate: ## Run database migrations
