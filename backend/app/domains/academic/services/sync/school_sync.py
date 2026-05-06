@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants.countries import get_country_name_cn, normalize_country_code
+from app.domains.academic.constants.countries import get_country_name_cn, normalize_country_code
 from app.domains.academic.models.school import School, SchoolAlias
 from app.domains.academic.models.standardized import StdSchool
 from app.domains.academic.services.common.batch_utils import batch_in_query_map

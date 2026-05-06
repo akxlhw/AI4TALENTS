@@ -7,7 +7,7 @@ Aggregated from core_school table using country_code.
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants.countries import COUNTRY_NAMES_CN, COUNTRY_NAMES_EN
+from app.domains.academic.constants.countries import COUNTRY_NAMES_CN, COUNTRY_NAMES_EN
 from app.core.database import get_async_session
 from app.domains.academic.repositories.school_repository import SchoolRepository
 from app.domains.academic.schemas.overview import CountryListResponse, CountrySummary

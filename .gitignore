@@ -97,3 +97,7 @@ backend/check_*.py
 backend/fix_alembic.py
 backend/test_db.py
 
+
+.claude/
+
+outputs/*.log
