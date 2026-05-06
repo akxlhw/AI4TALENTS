@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.router import api_router
+from app.api_router import api_router
 from app.core.cache import close_cache_connection, get_cache_connection
 from app.core.config import settings
 from app.core.database import async_engine, async_session_factory
