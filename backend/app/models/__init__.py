@@ -56,7 +56,7 @@ from app.domains.shared.models.iam import (
     UserSchoolScope,
 )
 from app.domains.shared.models.system_config import SystemConfig
-from app.models.enums import (
+from app.domains.shared.models.enums import (
     RoleType,
     ScopeType,
     SourceType,
