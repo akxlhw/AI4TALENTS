@@ -55,10 +55,12 @@ def upgrade() -> None:
     conn.execute(text("DELETE FROM os_embedding"))
 
     # Alter column type from TEXT to vector(N)
+    # USING required: PostgreSQL has no implicit cast from TEXT to vector
     conn.execute(
         text(f"""
             ALTER TABLE os_embedding
             ALTER COLUMN embedding TYPE vector({dimension})
+            USING embedding::vector({dimension})
         """)
     )
 
@@ -100,6 +102,7 @@ def downgrade() -> None:
         text("""
             ALTER TABLE os_embedding
             ALTER COLUMN embedding TYPE TEXT
+            USING embedding::TEXT
         """)
     )
 
