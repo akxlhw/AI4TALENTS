@@ -268,9 +268,27 @@ async def run_os_repo_collect_background(
             contributors_per_repo=contributors_per_repo,
         )
 
+        async def _watch_cancel() -> None:
+            """Watch CANCELLED_TASK_IDS and signal ctx.cancelled when detected."""
+            while not ctx.cancelled.is_set():
+                await asyncio.sleep(1)
+                if task_id in CANCELLED_TASK_IDS:
+                    ctx.cancelled.set()
+                    break
+
         async with GitHubClient(token=token) as client:
             collector = GitHubCollector(client)
-            await collector.collect(ctx)
+            collect_task = asyncio.create_task(collector.collect(ctx))
+            watch_task = asyncio.create_task(_watch_cancel())
+            done, pending = await asyncio.wait(
+                [collect_task, watch_task],
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            for t in pending:
+                t.cancel()
+            # Propagate any exception from collect_task
+            if collect_task in done:
+                await collect_task
 
     except asyncio.CancelledError:
         logger.info(f"Task {task_id} cancelled")

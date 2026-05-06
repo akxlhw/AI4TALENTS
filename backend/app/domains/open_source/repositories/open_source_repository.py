@@ -504,6 +504,7 @@ class OpenSourceRepository:
         member = OSPoolMember(pool_id=pool_id, developer_id=developer_id)
         self.session.add(member)
         await self.session.flush()
+        await self.session.commit()
         await self.session.refresh(member)
         return member
 
@@ -514,6 +515,7 @@ class OpenSourceRepository:
         """Remove a member from a talent pool."""
         await self.session.delete(member)
         await self.session.flush()
+        await self.session.commit()
 
     async def list_pool_members(
         self,
@@ -592,6 +594,7 @@ class OpenSourceRepository:
             return None
         task.status = "cancelled"
         await self.session.flush()
+        await self.session.commit()
         await self.session.refresh(task)
         return task
 
