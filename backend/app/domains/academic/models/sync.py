@@ -176,6 +176,9 @@ class CollectTask(Base, TimestampMixin):
     # Venue snapshot - 保存创建时的顶会顶刊配置
     venue_snapshot = Column(JSON, nullable=True)  # List of {id, name, type}
 
+    # Checkpoint for resume support
+    last_completed_phase = Column(String(50), nullable=True)
+
     # Relationships
     tech_domain = relationship("TechDomain")
 
@@ -280,7 +283,11 @@ class DataCorrectionRecord(Base, TimestampMixin):
     )  # 'pending', 'applied', 'reverted'
 
     def __repr__(self) -> str:
-        return f"<DataCorrectionRecord(correction_id={self.correction_id}, target={self.target_type}:{self.target_id})>"
+        return (
+            f"<DataCorrectionRecord("
+            f"correction_id={self.correction_id}, "
+            f"target={self.target_type}:{self.target_id})>"
+        )
 
 
 class DataQualitySummary(Base, TimestampMixin):

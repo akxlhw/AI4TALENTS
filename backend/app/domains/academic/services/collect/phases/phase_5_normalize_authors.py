@@ -12,8 +12,10 @@ from app.domains.academic.services.normalizers import AuthorNormalizer
 class PhaseNormalizeAuthorsHandler(PhaseHandler):
     """Phase 5: Normalize raw authors into standardized authors."""
 
+    phase_code = "phase_5_normalize_authors"
     phase_name = "标准化作者"
     phase_progress = 50
+    is_critical = True
 
     def __init__(self, session: AsyncSession, progress_tracker: ProgressTracker) -> None:
         super().__init__(session, progress_tracker)

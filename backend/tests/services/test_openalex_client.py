@@ -48,14 +48,12 @@ class TestOpenAlexClient:
             "meta": {"count": 2, "next_cursor": None},
         }
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_instance = AsyncMock()
-            mock_client.return_value.__aenter__.return_value = mock_instance
+        mock_http_response = MagicMock()
+        mock_http_response.json.return_value = mock_response
+        mock_http_response.raise_for_status = MagicMock()
 
-            mock_http_response = MagicMock()
-            mock_http_response.json.return_value = mock_response
-            mock_http_response.raise_for_status = MagicMock()
-            mock_instance.get.return_value = mock_http_response
+        with patch.object(client._client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_http_response
 
             result = await client.get_institutions(country_code="US")
 
@@ -74,14 +72,12 @@ class TestOpenAlexClient:
             "meta": {"count": 1, "next_cursor": None},
         }
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_instance = AsyncMock()
-            mock_client.return_value.__aenter__.return_value = mock_instance
+        mock_http_response = MagicMock()
+        mock_http_response.json.return_value = mock_response
+        mock_http_response.raise_for_status = MagicMock()
 
-            mock_http_response = MagicMock()
-            mock_http_response.json.return_value = mock_response
-            mock_http_response.raise_for_status = MagicMock()
-            mock_instance.get.return_value = mock_http_response
+        with patch.object(client._client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_http_response
 
             result = await client.get_authors(institution_id="I123")
 
@@ -92,20 +88,19 @@ class TestOpenAlexClient:
         """Test rate limit error handling."""
         client = OpenAlexClient()
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_instance = AsyncMock()
-            mock_client.return_value.__aenter__.return_value = mock_instance
+        mock_http_response = MagicMock()
+        mock_http_response.status_code = 429
+        mock_http_response.text = "Rate limit exceeded"
+        mock_http_response.headers = {}
 
-            mock_http_response = MagicMock()
-            mock_http_response.status_code = 429
-            mock_http_response.text = "Rate limit exceeded"
-
-            mock_instance.get.side_effect = httpx.HTTPStatusError(
+        async def _raise_rate_limit(*args, **kwargs):
+            raise httpx.HTTPStatusError(
                 "Rate limit",
                 request=MagicMock(),
                 response=mock_http_response,
             )
 
+        with patch.object(client._client, "get", side_effect=_raise_rate_limit):
             with pytest.raises(OpenAlexRateLimitError):
                 await client.get_institutions()
 

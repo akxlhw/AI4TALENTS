@@ -167,18 +167,26 @@ class CollectionOrchestrator:
             # Build shared context for phase handlers
             context = PhaseContext(task=task, progress=progress, estimated_total=estimated_total)
 
+            # Determine resume point from checkpoint
+            handler_index_map = {h.phase_code: i for i, h in enumerate(self._handlers)}
+            last_completed_idx = handler_index_map.get(task.last_completed_phase or "", -1)
+
             # Phase 1-11: delegated to handlers
             for handler in self._handlers:
+                current_idx = handler_index_map[handler.phase_code]
+                if current_idx <= last_completed_idx:
+                    self.progress_tracker.add_log(
+                        "info", f"跳过 {handler.phase_name}，已在上次完成"
+                    )
+                    continue
+
                 await self.progress_tracker.update_progress(
                     task, handler.phase_name, handler.phase_progress
                 )
                 try:
                     result = await handler.execute(context)
                 except Exception as phase_err:
-                    # Log the failing phase but do not abort the entire pipeline.
-                    # Earlier phases are already committed (or will be rolled back
-                    # if the outer transaction fails).  This prevents a single
-                    # phase failure from discarding all preceding work.
+                    await self.session.rollback()
                     self.progress_tracker.add_log(
                         "error",
                         f"Phase '{handler.phase_name}' failed: {phase_err}",
@@ -187,18 +195,24 @@ class CollectionOrchestrator:
                     logger.error(
                         f"Task {task_id} phase '{handler.phase_name}' failed: {phase_err}"
                     )
-                    # Re-raise so the outer try/except marks the task failed
-                    # and rolls back the current (uncommitted) transaction.
-                    raise
+                    if handler.is_critical:
+                        raise
+                    else:
+                        progress.errors.append(
+                            f"Non-critical phase '{handler.phase_name}' failed: {phase_err}"
+                        )
+                        continue
+
+                # Phase success: commit results and save checkpoint
+                if isinstance(handler, PhaseCollectHandler):
+                    task.total_records = progress.total_works
+
+                await self.session.commit()
+                await self._save_checkpoint(task, handler.phase_code)
 
                 # Phase 7 returns new talents for Phase 8
                 if isinstance(handler, PhaseSyncServingHandler) and result:
                     context.new_talents = result
-
-                # Removed mid-task commit for Phase 1 to avoid dirty writes.
-                # All phase changes are committed atomically at the end.
-                if isinstance(handler, PhaseCollectHandler):
-                    task.total_records = progress.total_works
 
                 if await self._should_cancel(task_id):
                     await self._handle_cancellation(task, progress)
@@ -497,6 +511,11 @@ class CollectionOrchestrator:
         context = PhaseContext(task=task, progress=progress)
         handler = PhaseBuildStatsHandler(self.session, self.progress_tracker)
         await handler.execute(context)
+
+    async def _save_checkpoint(self, task: CollectTask, phase_code: str) -> None:
+        """Persist checkpoint so that a retried task can resume after this phase."""
+        task.last_completed_phase = phase_code
+        await self.session.flush()
 
     def _calculate_duration(self, started_at, completed_at) -> str | None:
         """Calculate human-readable task duration."""

@@ -32,6 +32,14 @@ class PhaseHandler(ABC):
     and may read from or write to it to communicate with other phases.
     """
 
+    # Unique machine-readable phase identifier (e.g. "phase_1_collect").
+    # Used for checkpoint / resume.
+    phase_code: str = ""
+
+    # If True, failure in this phase aborts the entire pipeline.
+    # If False, failure is logged but execution continues.
+    is_critical: bool = True
+
     def __init__(self, session: AsyncSession, progress_tracker: ProgressTracker) -> None:
         self.session = session
         self.progress_tracker = progress_tracker

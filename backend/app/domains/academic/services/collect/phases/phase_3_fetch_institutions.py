@@ -25,8 +25,10 @@ class PhaseFetchInstitutionsHandler(PhaseHandler):
     3. primary_company_id (company)
     """
 
+    phase_code = "phase_3_fetch_institutions"
     phase_name = "获取机构数据"
     phase_progress = 30
+    is_critical = True
 
     def __init__(
         self,

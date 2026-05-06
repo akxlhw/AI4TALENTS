@@ -18,8 +18,10 @@ logger = logging.getLogger(__name__)
 class PhaseCollectHandler(PhaseHandler):
     """Phase 1: Fetch works from venues via sub-tasks."""
 
+    phase_code = "phase_1_collect"
     phase_name = "采集论文数据"
     phase_progress = 20
+    is_critical = True
 
     def __init__(
         self,
@@ -66,8 +68,6 @@ class PhaseCollectHandler(PhaseHandler):
 
                 await self.progress_tracker.update_progress(task, step_msg, work_progress)
 
-                # Commit after each venue sub-task to save progress
-                await self.session.commit()
                 logger.debug(f"完成采集: {venue_name} ({works_fetched} works)")
             except Exception as e:
                 venue_name = await self.venue_executor.get_venue_name(sub_task.venue_id)
@@ -79,4 +79,3 @@ class PhaseCollectHandler(PhaseHandler):
                 await self.sub_task_repo.update_status(
                     sub_task.sub_task_id, "failed", error_message=str(e)
                 )
-                await self.session.commit()

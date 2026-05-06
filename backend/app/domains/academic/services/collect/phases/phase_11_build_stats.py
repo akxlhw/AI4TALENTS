@@ -13,8 +13,10 @@ logger = logging.getLogger(__name__)
 class PhaseBuildStatsHandler(PhaseHandler):
     """Phase 11: Build homepage statistics via :class:`StatBuilder`."""
 
+    phase_code = "phase_11_build_stats"
     phase_name = "构建统计数据"
     phase_progress = 95
+    is_critical = False
 
     async def execute(self, context: PhaseContext) -> None:
         progress = context.progress

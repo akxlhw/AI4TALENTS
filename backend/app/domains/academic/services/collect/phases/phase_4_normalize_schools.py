@@ -12,8 +12,10 @@ from app.domains.academic.services.normalizers import SchoolNormalizer
 class PhaseNormalizeSchoolsHandler(PhaseHandler):
     """Phase 4: Normalize raw institutions into standardized schools."""
 
+    phase_code = "phase_4_normalize_schools"
     phase_name = "标准化学校"
     phase_progress = 40
+    is_critical = True
 
     def __init__(self, session: AsyncSession, progress_tracker: ProgressTracker) -> None:
         super().__init__(session, progress_tracker)

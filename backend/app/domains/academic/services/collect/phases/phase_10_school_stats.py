@@ -20,8 +20,10 @@ class PhaseSchoolStatsHandler(PhaseHandler):
     institution fields are also counted.
     """
 
+    phase_code = "phase_10_school_stats"
     phase_name = "更新学校统计"
     phase_progress = 90
+    is_critical = False
 
     async def execute(self, context: PhaseContext) -> None:
         progress = context.progress
@@ -108,7 +110,7 @@ class PhaseSchoolStatsHandler(PhaseHandler):
         )
 
         updated_schools = 0
-        for i, row in enumerate(result):
+        for _i, row in enumerate(result):
             school_id, prof_count, stu_count = row
             if school_id:
                 await self.session.execute(
@@ -117,8 +119,5 @@ class PhaseSchoolStatsHandler(PhaseHandler):
                     .values(professor_count=prof_count, student_count=stu_count)
                 )
                 updated_schools += 1
-                if (i + 1) % 50 == 0:
-                    await self.session.commit()
-
         await self.session.flush()
         self.progress_tracker.add_log("info", f"更新了 {updated_schools} 所学校的统计")

@@ -21,8 +21,10 @@ class PhaseFetchWorksHandler(PhaseHandler):
     reliability in enterprise intranet environments.
     """
 
+    phase_code = "phase_8_fetch_works"
     phase_name = "计算代表作品"
     phase_progress = 75
+    is_critical = False
 
     def __init__(
         self,
@@ -80,7 +82,9 @@ class PhaseFetchWorksHandler(PhaseHandler):
                         publication_year=work["publication_year"],
                         venue_name=work["venue_name"][:255] if work["venue_name"] else None,
                         citation_count=work["citation_count"],
-                        source_work_id=work["source_work_id"][:100] if work["source_work_id"] else None,
+                        source_work_id=(
+                            work["source_work_id"][:100] if work["source_work_id"] else None
+                        ),
                         doi=work["doi"][:100] if work["doi"] else None,
                         display_order=order,
                     )

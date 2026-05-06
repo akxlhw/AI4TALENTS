@@ -20,8 +20,10 @@ logger = logging.getLogger(__name__)
 class PhaseFetchAuthorsHandler(PhaseHandler):
     """Phase 2: Fetch missing authors from OpenAlex API."""
 
+    phase_code = "phase_2_fetch_authors"
     phase_name = "获取作者数据"
     phase_progress = 20
+    is_critical = True
 
     def __init__(
         self,

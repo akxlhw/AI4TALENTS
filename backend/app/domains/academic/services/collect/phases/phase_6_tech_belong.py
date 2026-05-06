@@ -13,8 +13,10 @@ from app.domains.academic.services.normalizers import TechBelongCalculator
 class PhaseTechBelongHandler(PhaseHandler):
     """Phase 6: Calculate tech-belong relationships for completed venues."""
 
+    phase_code = "phase_6_tech_belong"
     phase_name = "计算技术归属"
     phase_progress = 60
+    is_critical = True
 
     def __init__(self, session: AsyncSession, progress_tracker: ProgressTracker) -> None:
         super().__init__(session, progress_tracker)

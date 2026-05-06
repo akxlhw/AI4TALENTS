@@ -18,8 +18,10 @@ class PhaseTopicTagsHandler(PhaseHandler):
     based on venue.
     """
 
+    phase_code = "phase_9_topic_tags"
     phase_name = "更新技术标签"
     phase_progress = 80
+    is_critical = False
 
     async def execute(self, context: PhaseContext) -> None:
         progress = context.progress

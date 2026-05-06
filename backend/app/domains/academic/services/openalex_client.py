@@ -11,7 +11,13 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 import httpx
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    RetryCallState,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from app.core.config import settings
 
@@ -25,7 +31,9 @@ class OpenAlexAPIError(Exception):
 class OpenAlexRateLimitError(OpenAlexAPIError):
     """Exception raised when rate limit is exceeded."""
 
-    pass
+    def __init__(self, message: str, retry_after: int | None = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
 
 
 class OpenAlexClient:
@@ -94,10 +102,21 @@ class OpenAlexClient:
             await asyncio.sleep(self._min_interval - elapsed)
         self._last_request_time = time.time()
 
+    @staticmethod
+    def _retry_wait(retry_state: RetryCallState) -> float:
+        """Custom wait: prefer API's Retry-After header, fallback to exponential backoff."""
+        exc = retry_state.outcome.exception() if retry_state.outcome else None
+        if isinstance(exc, OpenAlexRateLimitError) and exc.retry_after:
+            return float(exc.retry_after)
+        return wait_exponential(multiplier=1, min=1, max=10)(retry_state)
+
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError, OpenAlexRateLimitError)),
+        stop=stop_after_attempt(5),
+        wait=_retry_wait,
+        retry=retry_if_exception_type(
+            (httpx.TimeoutException, httpx.NetworkError, OpenAlexRateLimitError)
+        ),
+        reraise=True,
     )
     async def _make_request(
         self,
@@ -130,7 +149,17 @@ class OpenAlexClient:
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 429:
-                raise OpenAlexRateLimitError("Rate limit exceeded") from e
+                retry_after = None
+                raw = e.response.headers.get("Retry-After")
+                if raw:
+                    try:
+                        retry_after = int(raw)
+                    except (ValueError, TypeError):
+                        pass
+                raise OpenAlexRateLimitError(
+                    f"Rate limit exceeded (retry_after={retry_after})",
+                    retry_after=retry_after,
+                ) from e
             raise OpenAlexAPIError(
                 f"API error: {e.response.status_code} - {e.response.text}"
             ) from e

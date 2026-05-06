@@ -20,8 +20,10 @@ class PhaseSyncServingHandler(PhaseHandler):
     newly-created talents so that Phase 8 can fetch their selected works.
     """
 
+    phase_code = "phase_7_sync_serving"
     phase_name = "同步到服务层"
     phase_progress = 70
+    is_critical = True
 
     async def execute(self, context: PhaseContext) -> list[dict]:
         progress = context.progress
