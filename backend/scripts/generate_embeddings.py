@@ -34,7 +34,7 @@ from sqlalchemy import select
 
 from app.core.database import async_session_maker
 from app.core.config import settings
-from app.models.talent import Talent
+from app.domains.academic.models.talent import Talent
 from app.domains.shared.services.llm import create_llm_gateway
 from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 from app.domains.shared.services.cache.cache_manager import CacheManager
@@ -58,10 +58,8 @@ class Checkpoint:
 
 
 class EmbeddingGenerator:
-    """嵌入向量生成器
-
-    支持断点续传的批量嵌入生成。
-    """
+    """嵌入向量生成�?
+    支持断点续传的批量嵌入生成�?    """
 
     CHECKPOINT_DIR = Path(__file__).parent.parent / "data"
     CHECKPOINT_FILE = CHECKPOINT_DIR / "embedding_checkpoint.json"
@@ -77,8 +75,7 @@ class EmbeddingGenerator:
 
         Args:
             batch_size: 批次大小
-            rate_limit_delay: 限流延迟（秒）
-            model_name: 模型名称
+            rate_limit_delay: 限流延迟（秒�?            model_name: 模型名称
         """
         self.batch_size = batch_size
         self.rate_limit_delay = rate_limit_delay
@@ -122,8 +119,7 @@ class EmbeddingGenerator:
         获取待处理的人才 ID 列表
 
         Args:
-            session: 数据库会话
-            resume: 是否从检查点恢复
+            session: 数据库会�?            resume: 是否从检查点恢复
 
         Returns:
             List[int]: 人才 ID 列表
@@ -160,7 +156,7 @@ class EmbeddingGenerator:
         Returns:
             dict: 执行结果
         """
-        # 检查 LLM 是否启用
+        # 检�?LLM 是否启用
         if not settings.LLM_ENABLED:
             logger.error("LLM is not enabled. Set LLM_ENABLED=true in .env")
             return {"error": "LLM not enabled"}
@@ -232,7 +228,7 @@ class EmbeddingGenerator:
 
 
 async def main():
-    """主函数"""
+    """主函�?""
     parser = argparse.ArgumentParser(
         description="Batch generate embeddings for talents"
     )
@@ -277,8 +273,7 @@ async def main():
 
     args = parser.parse_args()
 
-    # 创建生成器
-    generator = EmbeddingGenerator(
+    # 创建生成�?    generator = EmbeddingGenerator(
         batch_size=args.batch_size,
         rate_limit_delay=args.rate_limit,
         model_name=args.model,

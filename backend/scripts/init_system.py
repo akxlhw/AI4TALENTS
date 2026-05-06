@@ -1,19 +1,14 @@
 """
 一键初始化系统数据脚本
 
-功能：
-1. 清空业务数据表（默认保留系统配置 sys_config）
-2. 重新运行数据库迁移
-3. 初始化基础数据（管理员、技术领域、开源仓库配置）
+功能�?1. 清空业务数据表（默认保留系统配置 sys_config�?2. 重新运行数据库迁�?3. 初始化基础数据（管理员、技术领域、开源仓库配置）
 
-使用方法：
-    python scripts/init_system.py                   # 交互式确认，默认全部清空
+使用方法�?    python scripts/init_system.py                   # 交互式确认，默认全部清空
     python scripts/init_system.py --force           # 跳过确认
     python scripts/init_system.py --domain academic # 仅清空学术人才库
     python scripts/init_system.py --domain open_source  # 仅清空开源人才库
     python scripts/init_system.py --full            # 全量重置（含用户、技术领域）
-    python scripts/init_system.py --clear-config    # 同时清空系统配置表
-"""
+    python scripts/init_system.py --clear-config    # 同时清空系统配置�?"""
 import asyncio
 import sys
 import argparse
@@ -30,17 +25,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from sqlalchemy import text
 from app.core.database import AsyncSessionLocal
 from app.core.auth import hash_password
-from app.models.enums import UserRoleType, ScopeType
-from app.models.iam import UserAccount, UserSchoolScope
-from app.models.tech_domain import TechDomain
-from app.models.statistics import OverviewStatSnapshot
-from app.models.venue import Venue, VenueTechBinding
+from app.domains.shared.models.enums import UserRoleType, ScopeType
+from app.domains.shared.models.iam import UserAccount, UserSchoolScope
+from app.domains.academic.models.tech_domain import TechDomain
+from app.domains.academic.models.statistics import OverviewStatSnapshot
+from app.domains.academic.models.venue import Venue, VenueTechBinding
 from app.domains.open_source.models.open_source import OSRepoConfig
 
 # 学术人才库业务数据表
 ACADEMIC_TABLES = [
-    # 搜索和审计
-    "search_talent_document",
+    # 搜索和审�?    "search_talent_document",
     "audit_operation_log",
     # 人才相关
     "core_talent_tech_tag",
@@ -62,8 +56,7 @@ ACADEMIC_TABLES = [
     "std_school_alias",
     "std_author",
     "std_school",
-    # 原始数据层
-    "rel_author_tech_belong",
+    # 原始数据�?    "rel_author_tech_belong",
     "raw_work",
     "raw_author",
     "raw_institution",
@@ -84,8 +77,7 @@ ACADEMIC_TABLES = [
     "jd_match_session",
 ]
 
-# 开源人才库业务数据表
-OPEN_SOURCE_TABLES = [
+# 开源人才库业务数据�?OPEN_SOURCE_TABLES = [
     "os_embedding",
     "os_contribution",
     "os_language_skill",
@@ -106,8 +98,7 @@ CONFIG_SYSTEM_TABLES = [
 ]
 
 # 基础配置表（仅在 --full 时清空）
-# 注意：期刊配置(config_venue, config_venue_tech_binding)永不清空，需要保留
-CONFIG_TABLES = [
+# 注意：期刊配�?config_venue, config_venue_tech_binding)永不清空，需要保�?CONFIG_TABLES = [
     "iam_user_school_scope",
     "core_tech_domain",
     "iam_user_account",
@@ -119,33 +110,33 @@ TECH_DOMAINS_DATA = [
         "domain_code": "ai",
         "domain_name": "人工智能",
         "domain_name_en": "Artificial Intelligence",
-        "domain_desc": "人工智能相关技术",
+        "domain_desc": "人工智能相关技�?,
         "sort_order": 1,
     },
     {
         "domain_code": "robotics",
-        "domain_name": "机器人",
+        "domain_name": "机器�?,
         "domain_name_en": "Robotics",
-        "domain_desc": "机器人技术相关领域",
+        "domain_desc": "机器人技术相关领�?,
         "sort_order": 2,
     },
     {
         "domain_code": "data_science",
         "domain_name": "数据科学",
         "domain_name_en": "Data Science",
-        "domain_desc": "数据科学与分析",
+        "domain_desc": "数据科学与分�?,
         "sort_order": 3,
     },
     {
         "domain_code": "networks",
         "domain_name": "网络与通信",
         "domain_name_en": "Networks & Communications",
-        "domain_desc": "计算机网络与通信技术",
+        "domain_desc": "计算机网络与通信技�?,
         "sort_order": 4,
     },
     {
         "domain_code": "systems",
-        "domain_name": "系统与软件",
+        "domain_name": "系统与软�?,
         "domain_name_en": "Systems & Software",
         "domain_desc": "计算机系统与软件工程",
         "sort_order": 5,
@@ -160,7 +151,7 @@ TECH_DOMAINS_DATA = [
 ]
 
 
-# 已知的 OpenAlex Source ID 映射
+# 已知�?OpenAlex Source ID 映射
 KNOWN_OPENALEX_SOURCES = {
     # AI/ML Top Conferences
     "neurips": "S4306420609",
@@ -245,8 +236,7 @@ KNOWN_OPENALEX_SOURCES = {
 }
 
 
-# 默认开源仓库配置（种子数据）
-# 覆盖六大技术领域，共35个仓库，便于快速体验开源人才库功能
+# 默认开源仓库配置（种子数据�?# 覆盖六大技术领域，�?5个仓库，便于快速体验开源人才库功能
 DEFAULT_REPO_CONFIGS = [
     # AI
     {"repo_full_name": "pytorch/pytorch", "display_name": "PyTorch", "tech_element": "ai", "language": "Python", "description": "Tensors and Dynamic neural networks in Python with strong GPU acceleration"},
@@ -385,20 +375,16 @@ async def truncate_tables(
     clear_config: bool = False,
     domain: str = "all",
 ):
-    """清空业务数据表
-
+    """清空业务数据�?
     Args:
-        full_reset: 是否同时清空基础配置表（用户、技术领域等）
-        clear_config: 是否清空系统配置表（sys_config 等）
-        domain: 清空范围，可选 academic / open_source / all（默认 all）
-    """
+        full_reset: 是否同时清空基础配置表（用户、技术领域等�?        clear_config: 是否清空系统配置表（sys_config 等）
+        domain: 清空范围，可�?academic / open_source / all（默�?all�?    """
     print("\n" + "="*60)
-    print("Step 1: 清空数据表")
+    print("Step 1: 清空数据�?)
     print("="*60)
 
     async with AsyncSessionLocal() as session:
-        # 根据 domain 选择要清空的表
-        tables: list[str] = []
+        # 根据 domain 选择要清空的�?        tables: list[str] = []
         if domain in ("all", "academic"):
             tables.extend(ACADEMIC_TABLES)
             print("  [范围: 学术人才库]")
@@ -415,22 +401,20 @@ async def truncate_tables(
             print("  [模式: 全量重置]")
 
         # 使用 TRUNCATE CASCADE 来强制清空，忽略外键约束
-        # 需要按依赖关系逆序处理，或者一次性 TRUNCATE 所有表
+        # 需要按依赖关系逆序处理，或者一次�?TRUNCATE 所有表
         if tables:
             try:
-                # 构建单个 TRUNCATE 语句，CASCADE 会自动处理外键
-                table_list = ", ".join(tables)
+                # 构建单个 TRUNCATE 语句，CASCADE 会自动处理外�?                table_list = ", ".join(tables)
                 await session.execute(text(f"TRUNCATE TABLE {table_list} CASCADE"))
                 await session.commit()
-                print(f"  [OK] 已清空 {len(tables)} 个表 (CASCADE)")
+                print(f"  [OK] 已清�?{len(tables)} 个表 (CASCADE)")
             except Exception as e:
                 error_msg = str(e)
                 # 如果 TRUNCATE 失败，尝试逐个删除
                 print(f"  [WARN] TRUNCATE 失败: {error_msg[:100]}...")
                 print("  [INFO] 尝试逐个处理...")
 
-                # 先禁用外键检查（PostgreSQL）
-                await session.execute(text("SET session_replication_role = 'replica'"))
+                # 先禁用外键检查（PostgreSQL�?                await session.execute(text("SET session_replication_role = 'replica'"))
 
                 truncated_count = 0
                 for table in tables:
@@ -440,16 +424,15 @@ async def truncate_tables(
                         print(f"  [OK] {table}")
                     except Exception as e2:
                         error_msg = str(e2)
-                        if "does not exist" in error_msg or "不存在" in error_msg:
-                            print(f"  [SKIP] {table} (不存在)")
+                        if "does not exist" in error_msg or "不存�? in error_msg:
+                            print(f"  [SKIP] {table} (不存�?")
                         else:
                             print(f"  [WARN] {table}: {error_msg[:50]}...")
                         continue
 
-                # 重新启用外键检查
-                await session.execute(text("SET session_replication_role = 'origin'"))
+                # 重新启用外键检�?                await session.execute(text("SET session_replication_role = 'origin'"))
                 await session.commit()
-                print(f"\n已清空 {truncated_count} 个表")
+                print(f"\n已清�?{truncated_count} 个表")
 
 
 async def clear_cache():
@@ -466,9 +449,9 @@ async def clear_cache():
         if cache_conn.is_available:
             cache = CacheService(cache_conn)
             deleted = await cache.delete_pattern("*")
-            print(f"  [OK] 已清空 {deleted} 个缓存键")
+            print(f"  [OK] 已清�?{deleted} 个缓存键")
         else:
-            print("  [SKIP] Redis 未启用或不可用")
+            print("  [SKIP] Redis 未启用或不可�?)
     except Exception as e:
         print(f"  [WARN] 缓存清理失败: {e}")
 
@@ -486,7 +469,7 @@ async def seed_admin_user():
             select(UserAccount).where(UserAccount.username == "admin")
         )
         if result.scalar_one_or_none():
-            print("  管理员用户已存在，跳过创建")
+            print("  管理员用户已存在，跳过创�?)
             return
 
         admin_password = hash_password("admin123")
@@ -497,7 +480,7 @@ async def seed_admin_user():
             role_type=UserRoleType.SUPER_ADMIN.value,
             is_active=True,
             status="active",
-            display_name="系统管理员",
+            display_name="系统管理�?,
         )
         session.add(admin)
         await session.flush()
@@ -527,14 +510,14 @@ async def seed_admin_user():
         session.add(demo)
 
         await session.commit()
-        print("  [OK] 管理员: admin / admin123")
+        print("  [OK] 管理�? admin / admin123")
         print("  [OK] 演示用户: demo / demo123")
 
 
 async def seed_tech_domains():
-    """初始化技术领域"""
+    """初始化技术领�?""
     print("\n" + "="*60)
-    print("Step 4: 初始化技术领域")
+    print("Step 4: 初始化技术领�?)
     print("="*60)
 
     async with AsyncSessionLocal() as session:
@@ -543,7 +526,7 @@ async def seed_tech_domains():
         # 检查是否已存在
         result = await session.execute(select(TechDomain).limit(1))
         if result.scalar_one_or_none():
-            print("  技术领域已存在，跳过创建")
+            print("  技术领域已存在，跳过创�?)
             return
 
         for domain_data in TECH_DOMAINS_DATA:
@@ -555,16 +538,15 @@ async def seed_tech_domains():
 
 
 async def seed_venues():
-    """初始化顶刊顶会配置"""
+    """初始化顶刊顶会配�?""
     print("\n" + "="*60)
-    print("Step 5: 初始化顶刊顶会配置")
+    print("Step 5: 初始化顶刊顶会配�?)
     print("="*60)
 
     from sqlalchemy import select
 
     async with AsyncSessionLocal() as session:
-        # 获取所有技术领域
-        result = await session.execute(select(TechDomain))
+        # 获取所有技术领�?        result = await session.execute(select(TechDomain))
         tech_domains = {d.domain_code: d for d in result.scalars().all()}
 
         stats = {"venues_created": 0, "bindings_created": 0}
@@ -585,7 +567,7 @@ async def seed_venues():
                 # 查找 OpenAlex ID
                 openalex_id = KNOWN_OPENALEX_SOURCES.get(venue_code)
 
-                # 检查 Venue 是否存在
+                # 检�?Venue 是否存在
                 result = await session.execute(
                     select(Venue).where(Venue.venue_code == venue_code)
                 )
@@ -603,8 +585,7 @@ async def seed_venues():
                     await session.flush()
                     stats["venues_created"] += 1
 
-                # 检查绑定是否存在
-                result = await session.execute(
+                # 检查绑定是否存�?                result = await session.execute(
                     select(VenueTechBinding).where(
                         VenueTechBinding.venue_id == venue.venue_id,
                         VenueTechBinding.tech_domain_id == tech_domain.tech_domain_id
@@ -623,16 +604,16 @@ async def seed_venues():
                     session.add(binding)
                     stats["bindings_created"] += 1
 
-            print(f"  [OK] {tech_domain.domain_name}: {len(venues_data)} 个期刊")
+            print(f"  [OK] {tech_domain.domain_name}: {len(venues_data)} 个期�?)
 
         await session.commit()
         print(f"\n  Venue 创建: {stats['venues_created']}, 绑定创建: {stats['bindings_created']}")
 
 
 async def seed_open_source_repo_configs():
-    """初始化默认开源仓库配置"""
+    """初始化默认开源仓库配�?""
     print("\n" + "="*60)
-    print("Step 5.5: 初始化默认开源仓库配置")
+    print("Step 5.5: 初始化默认开源仓库配�?)
     print("="*60)
 
     async with AsyncSessionLocal() as session:
@@ -645,7 +626,7 @@ async def seed_open_source_repo_configs():
                 )
             )
             if existing:
-                print(f"  [SKIP] {config_data['repo_full_name']} 已存在")
+                print(f"  [SKIP] {config_data['repo_full_name']} 已存�?)
                 continue
 
             config = OSRepoConfig(
@@ -664,9 +645,9 @@ async def seed_open_source_repo_configs():
 
 
 async def seed_statistics_snapshot():
-    """初始化统计快照"""
+    """初始化统计快�?""
     print("\n" + "="*60)
-    print("Step 6: 初始化统计快照")
+    print("Step 6: 初始化统计快�?)
     print("="*60)
 
     async with AsyncSessionLocal() as session:
@@ -682,8 +663,7 @@ async def seed_statistics_snapshot():
 
         version = f"v1.0_{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
-        # 获取技术领域数量
-        result = await session.execute(select(TechDomain))
+        # 获取技术领域数�?        result = await session.execute(select(TechDomain))
         tech_domain_count = len(result.scalars().all())
 
         snapshot = OverviewStatSnapshot(
@@ -709,61 +689,52 @@ async def init_system(
     clear_config: bool = False,
     domain: str = "all",
 ):
-    """执行完整初始化流程
-
+    """执行完整初始化流�?
     Args:
-        full_reset: 是否执行全量重置（清空用户、技术领域等基础数据）
-        clear_config: 是否清空系统配置表（sys_config 等）
-        domain: 初始化范围，可选 academic / open_source / all（默认 all）
-    """
+        full_reset: 是否执行全量重置（清空用户、技术领域等基础数据�?        clear_config: 是否清空系统配置表（sys_config 等）
+        domain: 初始化范围，可�?academic / open_source / all（默�?all�?    """
     print("\n" + "="*60)
-    print("智能人才库 - 系统数据初始化")
+    print("智能人才�?- 系统数据初始�?)
     print("="*60)
 
     start_time = datetime.now()
 
-    # 1. 清空数据表
-    await truncate_tables(full_reset, clear_config, domain)
+    # 1. 清空数据�?    await truncate_tables(full_reset, clear_config, domain)
 
     # 2. 清空缓存
     await clear_cache()
 
-    # 以下步骤仅在全量重置时执行
-    if full_reset:
-        # 3. 初始化用户
-        await seed_admin_user()
+    # 以下步骤仅在全量重置时执�?    if full_reset:
+        # 3. 初始化用�?        await seed_admin_user()
 
-        # 4. 初始化技术领域
-        await seed_tech_domains()
+        # 4. 初始化技术领�?        await seed_tech_domains()
 
-        # 5. 初始化顶刊顶会
-        await seed_venues()
+        # 5. 初始化顶刊顶�?        await seed_venues()
 
     # 5.5 初始化开源仓库配置（幂等：已存在则跳过）
     if domain in ("all", "open_source"):
         await seed_open_source_repo_configs()
 
-    # 6. 初始化统计快照
-    await seed_statistics_snapshot()
+    # 6. 初始化统计快�?    await seed_statistics_snapshot()
 
     # 完成
     elapsed = (datetime.now() - start_time).total_seconds()
 
     print("\n" + "="*60)
-    print("初始化完成!")
+    print("初始化完�?")
     print("="*60)
-    print(f"耗时: {elapsed:.2f} 秒")
+    print(f"耗时: {elapsed:.2f} �?)
 
     if full_reset:
         print("\n默认账号:")
-        print("  管理员: admin / admin123")
+        print("  管理�? admin / admin123")
         print("  演示用户: demo / demo123")
-        print("\n[!] 生产环境请及时修改默认密码!")
+        print("\n[!] 生产环境请及时修改默认密�?")
     else:
-        print("\n[提示] 已清空业务数据，用户和技术领域配置保留")
+        print("\n[提示] 已清空业务数据，用户和技术领域配置保�?)
         if not clear_config:
-            print("[提示] 系统配置表(sys_config)已保留，如需清除请使用 --clear-config")
-        print("[提示] 国家信息已改为常量定义，存储在 app/constants/countries.py")
+            print("[提示] 系统配置�?sys_config)已保留，如需清除请使�?--clear-config")
+        print("[提示] 国家信息已改为常量定义，存储�?app/constants/countries.py")
 
 
 def main():
@@ -773,16 +744,14 @@ def main():
         epilog="""
 示例:
     python scripts/init_system.py                       # 交互式确认，默认清空全部
-    python scripts/init_system.py --force               # 跳过确认，默认清空全部
-    python scripts/init_system.py --domain academic     # 仅清空学术人才库
+    python scripts/init_system.py --force               # 跳过确认，默认清空全�?    python scripts/init_system.py --domain academic     # 仅清空学术人才库
     python scripts/init_system.py --domain open_source  # 仅清空开源人才库
     python scripts/init_system.py --full                # 全量重置（含用户、技术领域）
-    python scripts/init_system.py --clear-config        # 同时清空系统配置表
-    python scripts/init_system.py --full --force        # 全量重置跳过确认
+    python scripts/init_system.py --clear-config        # 同时清空系统配置�?    python scripts/init_system.py --full --force        # 全量重置跳过确认
 
-注意: 默认清空全部业务数据（学术+开源），如需指定领域请使用 --domain
-       默认保留系统配置表(sys_config)，如需清除请使用 --clear-config
-       国家数据已改为常量定义，存储在 app/constants/countries.py
+注意: 默认清空全部业务数据（学�?开源），如需指定领域请使�?--domain
+       默认保留系统配置�?sys_config)，如需清除请使�?--clear-config
+       国家数据已改为常量定义，存储�?app/constants/countries.py
         """
     )
     parser.add_argument(
@@ -793,33 +762,33 @@ def main():
     parser.add_argument(
         "--full",
         action="store_true",
-        help="全量重置（清空用户、技术领域等基础数据）"
+        help="全量重置（清空用户、技术领域等基础数据�?
     )
     parser.add_argument(
         "--clear-config",
         action="store_true",
-        help="同时清空系统配置表(sys_config)"
+        help="同时清空系统配置�?sys_config)"
     )
     parser.add_argument(
         "--domain",
         choices=["academic", "open_source", "all"],
         default="all",
-        help="指定要清空的人才库领域（默认 all）"
+        help="指定要清空的人才库领域（默认 all�?
     )
 
     args = parser.parse_args()
 
     # 确认提示
     if not args.force:
-        domain_label = {"academic": "学术人才库", "open_source": "开源人才库", "all": "全部业务数据"}
+        domain_label = {"academic": "学术人才�?, "open_source": "开源人才库", "all": "全部业务数据"}
         print(f"\n[!] 警告: 此操作将清空 {domain_label[args.domain]}!")
         if args.full:
-            print("[!] 注意: 全量重置模式，用户和技术领域等基础数据也将被清空!")
+            print("[!] 注意: 全量重置模式，用户和技术领域等基础数据也将被清�?")
         if args.clear_config:
-            print("[!] 注意: 系统配置表(sys_config)也将被清空!")
+            print("[!] 注意: 系统配置�?sys_config)也将被清�?")
         confirm = input("\n确认执行? (y/N): ").strip().lower()
         if confirm != "y":
-            print("已取消操作")
+            print("已取消操�?)
             return
 
     asyncio.run(init_system(full_reset=args.full, clear_config=args.clear_config, domain=args.domain))

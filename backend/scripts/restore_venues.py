@@ -1,6 +1,6 @@
 """
 恢复期刊配置数据脚本
-从技术领域配置中恢复 Venue 和 VenueTechBinding 表
+从技术领域配置中恢复 Venue �?VenueTechBinding �?
 
 用法:
     python scripts/restore_venues.py
@@ -18,12 +18,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
-from app.models.tech_domain import TechDomain
-from app.models.venue import Venue, VenueTechBinding
+from app.domains.academic.models.tech_domain import TechDomain
+from app.domains.academic.models.venue import Venue, VenueTechBinding
 
 
-# 已知的 OpenAlex Source ID 映射
-# 注意：这些 ID 来自 OpenAlex API，格式为 S + 数字
+# 已知�?OpenAlex Source ID 映射
+# 注意：这�?ID 来自 OpenAlex API，格式为 S + 数字
 # 可通过 https://api.openalex.org/sources?search=CONFERENCE_NAME 验证
 KNOWN_OPENALEX_SOURCES = {
     # AI/ML Top Conferences
@@ -204,7 +204,7 @@ async def restore_venues():
     print("="*60)
 
     async with AsyncSessionLocal() as session:
-        # 获取所有技术领域
+        # 获取所有技术领�?
         result = await session.execute(select(TechDomain))
         tech_domains = {d.domain_code: d for d in result.scalars().all()}
 
@@ -220,10 +220,10 @@ async def restore_venues():
 
             tech_domain = tech_domains.get(domain_code)
             if not tech_domain:
-                print(f"[WARN] 技术领域 {domain_code} 不存在，跳过")
+                print(f"[WARN] 技术领�?{domain_code} 不存在，跳过")
                 continue
 
-            print(f"\n[{tech_domain.domain_name}] 处理 {len(venues_data)} 个期刊...")
+            print(f"\n[{tech_domain.domain_name}] 处理 {len(venues_data)} 个期�?..")
 
             for idx, venue_info in enumerate(venues_data):
                 venue_code = venue_info["id"].lower().replace(" ", "-").replace("_", "-")
@@ -234,14 +234,14 @@ async def restore_venues():
                 openalex_id = KNOWN_OPENALEX_SOURCES.get(venue_code)
 
                 try:
-                    # 检查 Venue 是否存在
+                    # 检�?Venue 是否存在
                     result = await session.execute(
                         select(Venue).where(Venue.venue_code == venue_code)
                     )
                     venue = result.scalar_one_or_none()
 
                     if not venue:
-                        # 创建新 Venue
+                        # 创建�?Venue
                         venue = Venue(
                             venue_code=venue_code,
                             venue_name=venue_name,
@@ -256,7 +256,7 @@ async def restore_venues():
                     else:
                         print(f"  [EXISTS] {venue_code}: {venue_name}")
 
-                    # 检查绑定是否存在
+                    # 检查绑定是否存�?
                     result = await session.execute(
                         select(VenueTechBinding).where(
                             VenueTechBinding.venue_id == venue.venue_id,

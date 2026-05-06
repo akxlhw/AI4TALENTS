@@ -19,9 +19,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import select, func, case, update, text
 from app.core.database import AsyncSessionLocal
-from app.models.school import School
-from app.models.talent import Talent
-from app.models.tech_domain import TechDomain, TalentTechTag
+from app.domains.academic.models.school import School
+from app.domains.academic.models.talent import Talent
+from app.domains.academic.models.tech_domain import TechDomain, TalentTechTag
 
 logging.basicConfig(
     level=logging.INFO,

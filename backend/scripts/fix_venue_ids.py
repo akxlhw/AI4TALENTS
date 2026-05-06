@@ -1,17 +1,17 @@
 """
-更新技术领域配置，使用正确的 OpenAlex Source ID
+更新技术领域配置，使用正确�?OpenAlex Source ID
 """
 import asyncio
 import sys
 sys.path.insert(0, '.')
 
 from app.core.database import AsyncSessionLocal
-from app.models.tech_domain import TechDomain
+from app.domains.academic.models.tech_domain import TechDomain
 from sqlalchemy import select
 import json
 
 
-# 正确的 OpenAlex Source ID (从 OpenAlex API 搜索确认)
+# 正确�?OpenAlex Source ID (�?OpenAlex API 搜索确认)
 VENUE_MAPPINGS = {
     "ai": [
         {"id": "S4306420609", "name": "Neural Information Processing Systems (NeurIPS)", "type": "conference"},

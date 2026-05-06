@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.core.database import AsyncSessionLocal
 from app.core.auth import hash_password
 from app.domains.shared.repositories.user_repository import UserRepository
-from app.models.enums import UserRoleType
+from app.domains.shared.models.enums import UserRoleType
 
 
 async def create_admin_user(
@@ -63,7 +63,7 @@ async def list_users():
         print(f"\nTotal users: {total}")
         print("-" * 60)
         for user in users:
-            status = "âœ“" if user.is_active else "âœ—"
+            status = "âœ? if user.is_active else "âœ?
             print(f"  [{status}] {user.username} ({user.email}) - {user.role_type}")
         print("-" * 60)
 

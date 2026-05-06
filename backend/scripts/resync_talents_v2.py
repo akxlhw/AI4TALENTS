@@ -18,8 +18,8 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from app.models.talent import Talent, RoleProfile
-from app.models.standardized import StdAuthor
+from app.domains.academic.models.talent import Talent, RoleProfile
+from app.domains.academic.models.standardized import StdAuthor
 from app.domains.academic.services.common.cs_concepts import CS_SCORE_THRESHOLD
 
 logging.basicConfig(
@@ -85,7 +85,7 @@ async def resync_talents():
         for author in qualified_authors:
             try:
                 # Create Talent record directly
-                from app.models.enums import VisibilityStatus
+                from app.domains.shared.models.enums import VisibilityStatus
                 from datetime import datetime, timezone
 
                 talent = Talent(

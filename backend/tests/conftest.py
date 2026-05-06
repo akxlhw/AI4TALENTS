@@ -34,9 +34,9 @@ from app.core.database import Base, get_async_session  # noqa: E402
 from app.main import app as _fastapi_app  # noqa: E402
 
 # Import all models to ensure they are registered with Base.metadata for create_all
-import app.models  # noqa: E402, F401
+import app.model_registry  # noqa: E402, F401
 
-# Restore app variable after import app.models rebinds it
+# Restore app variable after import app.model_registry rebinds it
 app = _fastapi_app
 
 # Test database URL (PostgreSQL for testing - MUST be a separate database)

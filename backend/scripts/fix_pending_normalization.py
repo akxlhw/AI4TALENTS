@@ -23,7 +23,7 @@ from app.core.database import AsyncSessionLocal
 from app.domains.academic.services.normalizers import AuthorNormalizer, SchoolNormalizer
 from app.domains.academic.services.sync import ServingLayerOrchestrator
 from app.domains.academic.repositories.raw_data_repository import RawAuthorRepository, RawInstitutionRepository
-from app.models.sync import CollectTask
+from app.domains.academic.models.sync import CollectTask
 
 logging.basicConfig(
     level=logging.INFO,
@@ -97,7 +97,7 @@ async def fix_pending_normalization(task_id: int, run_sync: bool = False):
 
 async def get_default_tech_direction(session, tech_domain_id: int) -> int:
     """Get or create default tech direction for a tech domain."""
-    from app.models.tech_domain import TechDirection
+    from app.domains.academic.models.tech_domain import TechDirection
     from sqlalchemy import func
 
     # Try to get the first available direction

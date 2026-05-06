@@ -1,7 +1,6 @@
 """
 Seed venues from TechDomain collect_sources.
-从技术领域的采集源初始化 Venue 表和 VenueTechBinding 表
-
+从技术领域的采集源初始化 Venue 表和 VenueTechBinding �?
 用法:
     python -m backend.scripts.seed_venues
 """
@@ -18,12 +17,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
-from app.models.tech_domain import TechDomain
-from app.models.venue import Venue, VenueTechBinding
+from app.domains.academic.models.tech_domain import TechDomain
+from app.domains.academic.models.venue import Venue, VenueTechBinding
 from app.domains.academic.repositories.venue_repository import VenueRepository, VenueTechBindingRepository
 
 
-# 已知的 OpenAlex Source ID 映射
+# 已知�?OpenAlex Source ID 映射
 # 格式: venue_code -> openalex_source_id
 KNOWN_OPENALEX_SOURCES = {
     # AI/ML Top Conferences
@@ -93,11 +92,10 @@ async def seed_venues(
     verbose: bool = True
 ) -> Dict[str, Any]:
     """
-    从 TechDomain.collect_sources 初始化 Venue 和 VenueTechBinding
+    �?TechDomain.collect_sources 初始�?Venue �?VenueTechBinding
 
     Args:
-        session: 数据库会话
-        dry_run: 是否只预览不执行
+        session: 数据库会�?        dry_run: 是否只预览不执行
         verbose: 是否打印详细信息
 
     Returns:
@@ -115,8 +113,7 @@ async def seed_venues(
     venue_repo = VenueRepository(session)
     binding_repo = VenueTechBindingRepository(session)
 
-    # 获取所有技术领域
-    result = await session.execute(
+    # 获取所有技术领�?    result = await session.execute(
         select(TechDomain).where(TechDomain.is_enabled == True)
     )
     tech_domains = result.scalars().all()
@@ -161,7 +158,7 @@ async def seed_venues(
                     openalex_id = source_id
 
             try:
-                # 检查 Venue 是否存在
+                # 检�?Venue 是否存在
                 existing_venue = await venue_repo.get_by_code(venue_code)
 
                 if existing_venue:
@@ -175,7 +172,7 @@ async def seed_venues(
                     if verbose:
                         print(f"  [UPDATE] {venue_code}: {source_name} ({source_type})")
                 else:
-                    # 创建新 Venue
+                    # 创建�?Venue
                     venue = Venue(
                         venue_code=venue_code,
                         venue_name=source_name,
@@ -199,8 +196,7 @@ async def seed_venues(
                     existing_binding.is_enabled = True
                     stats["bindings_updated"] += 1
                 else:
-                    # 创建新绑定
-                    binding = VenueTechBinding(
+                    # 创建新绑�?                    binding = VenueTechBinding(
                         venue_id=venue.venue_id,
                         tech_domain_id=tech_domain.tech_domain_id,
                         priority=idx,

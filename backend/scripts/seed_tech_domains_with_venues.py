@@ -17,7 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
 
 from app.core.config import settings
-from app.models.tech_domain import TechDomain, TechDirection
+from app.domains.academic.models.tech_domain import TechDomain, TechDirection
 
 
 # 技术领域与顶会顶刊映射数据
@@ -26,13 +26,13 @@ TECH_DOMAINS_WITH_VENUES = [
         "domain_code": "ai",
         "domain_name": "人工智能",
         "domain_name_en": "Artificial Intelligence",
-        "domain_desc": "人工智能相关技术，包括机器学习、深度学习、NLP、计算机视觉等",
+        "domain_desc": "人工智能相关技术，包括机器学习、深度学习、NLP、计算机视觉�?,
         "sort_order": 1,
         "directions": [
             {"direction_code": "ml", "direction_name": "机器学习", "direction_name_en": "Machine Learning"},
             {"direction_code": "dl", "direction_name": "深度学习", "direction_name_en": "Deep Learning"},
             {"direction_code": "nlp", "direction_name": "自然语言处理", "direction_name_en": "Natural Language Processing"},
-            {"direction_code": "cv", "direction_name": "计算机视觉", "direction_name_en": "Computer Vision"},
+            {"direction_code": "cv", "direction_name": "计算机视�?, "direction_name_en": "Computer Vision"},
             {"direction_code": "rl", "direction_name": "强化学习", "direction_name_en": "Reinforcement Learning"},
         ],
         "collect_sources": [
@@ -53,12 +53,12 @@ TECH_DOMAINS_WITH_VENUES = [
     },
     {
         "domain_code": "robotics",
-        "domain_name": "机器人",
+        "domain_name": "机器�?,
         "domain_name_en": "Robotics",
         "domain_desc": "机器人技术相关领域，包括机器人控制、人机交互、自主系统等",
         "sort_order": 2,
         "directions": [
-            {"direction_code": "robot_control", "direction_name": "机器人控制", "direction_name_en": "Robot Control"},
+            {"direction_code": "robot_control", "direction_name": "机器人控�?, "direction_name_en": "Robot Control"},
             {"direction_code": "human_robot", "direction_name": "人机交互", "direction_name_en": "Human-Robot Interaction"},
             {"direction_code": "autonomous", "direction_name": "自主系统", "direction_name_en": "Autonomous Systems"},
         ],
@@ -76,12 +76,12 @@ TECH_DOMAINS_WITH_VENUES = [
         "domain_code": "data_science",
         "domain_name": "数据科学",
         "domain_name_en": "Data Science",
-        "domain_desc": "数据科学与分析，包括大数据、数据挖掘、可视化等",
+        "domain_desc": "数据科学与分析，包括大数据、数据挖掘、可视化�?,
         "sort_order": 3,
         "directions": [
-            {"direction_code": "big_data", "direction_name": "大数据", "direction_name_en": "Big Data"},
+            {"direction_code": "big_data", "direction_name": "大数�?, "direction_name_en": "Big Data"},
             {"direction_code": "data_mining", "direction_name": "数据挖掘", "direction_name_en": "Data Mining"},
-            {"direction_code": "visualization", "direction_name": "可视化", "direction_name_en": "Visualization"},
+            {"direction_code": "visualization", "direction_name": "可视�?, "direction_name_en": "Visualization"},
         ],
         "collect_sources": [
             {"id": "KDD", "name": "ACM SIGKDD Conference on Knowledge Discovery and Data Mining", "type": "conference"},
@@ -98,10 +98,10 @@ TECH_DOMAINS_WITH_VENUES = [
         "domain_code": "networks",
         "domain_name": "网络与通信",
         "domain_name_en": "Networks & Communications",
-        "domain_desc": "计算机网络与通信技术，包括物联网、5G、网络安全等",
+        "domain_desc": "计算机网络与通信技术，包括物联网�?G、网络安全等",
         "sort_order": 4,
         "directions": [
-            {"direction_code": "iot", "direction_name": "物联网", "direction_name_en": "IoT"},
+            {"direction_code": "iot", "direction_name": "物联�?, "direction_name_en": "IoT"},
             {"direction_code": "5g", "direction_name": "5G通信", "direction_name_en": "5G Communications"},
             {"direction_code": "network_security", "direction_name": "网络安全", "direction_name_en": "Network Security"},
         ],
@@ -117,13 +117,13 @@ TECH_DOMAINS_WITH_VENUES = [
     },
     {
         "domain_code": "systems",
-        "domain_name": "系统与软件",
+        "domain_name": "系统与软�?,
         "domain_name_en": "Systems & Software",
         "domain_desc": "计算机系统与软件工程，包括分布式系统、云计算、软件工程等",
         "sort_order": 5,
         "directions": [
-            {"direction_code": "distributed", "direction_name": "分布式系统", "direction_name_en": "Distributed Systems"},
-            {"direction_code": "cloud", "direction_name": "云计算", "direction_name_en": "Cloud Computing"},
+            {"direction_code": "distributed", "direction_name": "分布式系�?, "direction_name_en": "Distributed Systems"},
+            {"direction_code": "cloud", "direction_name": "云计�?, "direction_name_en": "Cloud Computing"},
             {"direction_code": "software_eng", "direction_name": "软件工程", "direction_name_en": "Software Engineering"},
         ],
         "collect_sources": [
@@ -142,12 +142,12 @@ TECH_DOMAINS_WITH_VENUES = [
         "domain_code": "security",
         "domain_name": "信息安全",
         "domain_name_en": "Information Security",
-        "domain_desc": "信息安全与密码学，包括密码学、隐私保护、区块链等",
+        "domain_desc": "信息安全与密码学，包括密码学、隐私保护、区块链�?,
         "sort_order": 6,
         "directions": [
-            {"direction_code": "cryptography", "direction_name": "密码学", "direction_name_en": "Cryptography"},
+            {"direction_code": "cryptography", "direction_name": "密码�?, "direction_name_en": "Cryptography"},
             {"direction_code": "privacy", "direction_name": "隐私保护", "direction_name_en": "Privacy"},
-            {"direction_code": "blockchain", "direction_name": "区块链", "direction_name_en": "Blockchain"},
+            {"direction_code": "blockchain", "direction_name": "区块�?, "direction_name_en": "Blockchain"},
         ],
         "collect_sources": [
             {"id": "CCS", "name": "ACM Conference on Computer and Communications Security", "type": "conference"},

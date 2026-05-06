@@ -20,9 +20,9 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from app.models.talent import Talent, RoleProfile
-from app.models.standardized import StdAuthor
-from app.models.school import School
+from app.domains.academic.models.talent import Talent, RoleProfile
+from app.domains.academic.models.standardized import StdAuthor
+from app.domains.academic.models.school import School
 from app.domains.academic.services.sync.author_sync import AuthorSyncService
 from app.domains.academic.services.common.cs_concepts import CS_SCORE_THRESHOLD
 

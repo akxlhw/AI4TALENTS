@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
-from app.models import (
+from app.model_registry import (
     OverviewStatSnapshot,
     School,
     SyncBatch,
