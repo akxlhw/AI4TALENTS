@@ -98,6 +98,7 @@ class OpenSourceRepository:
         config = OSRepoConfig(**data)
         self.session.add(config)
         await self.session.flush()
+        await self.session.commit()
         await self.session.refresh(config)
         return config
 
@@ -113,6 +114,7 @@ class OpenSourceRepository:
         for field, value in data.items():
             setattr(config, field, value)
         await self.session.flush()
+        await self.session.commit()
         await self.session.refresh(config)
         return config
 
@@ -125,6 +127,7 @@ class OpenSourceRepository:
         if config:
             await self.session.delete(config)
             await self.session.flush()
+            await self.session.commit()
             return True
         return False
 
@@ -170,6 +173,7 @@ class OpenSourceRepository:
         task = OSCollectTask(**data)
         self.session.add(task)
         await self.session.flush()
+        await self.session.commit()
         await self.session.refresh(task)
         return task
 
@@ -388,6 +392,7 @@ class OpenSourceRepository:
         )
         self.session.add(favourite)
         await self.session.flush()
+        await self.session.commit()
         await self.session.refresh(favourite)
         return favourite
 
@@ -400,6 +405,7 @@ class OpenSourceRepository:
         for field, value in data.items():
             setattr(favourite, field, value)
         await self.session.flush()
+        await self.session.commit()
         await self.session.refresh(favourite)
         return favourite
 
@@ -410,6 +416,7 @@ class OpenSourceRepository:
         """Soft-delete a favourite by setting is_active=False."""
         favourite.is_active = False
         await self.session.flush()
+        await self.session.commit()
 
     # ========== TalentPool ==========
 
@@ -443,6 +450,7 @@ class OpenSourceRepository:
         pool = OSTalentPool(**data)
         self.session.add(pool)
         await self.session.flush()
+        await self.session.commit()
         await self.session.refresh(pool)
         return pool
 
@@ -458,6 +466,7 @@ class OpenSourceRepository:
         for field, value in data.items():
             setattr(pool, field, value)
         await self.session.flush()
+        await self.session.commit()
         await self.session.refresh(pool)
         return pool
 
@@ -470,6 +479,7 @@ class OpenSourceRepository:
         if pool:
             await self.session.delete(pool)
             await self.session.flush()
+            await self.session.commit()
 
     async def get_pool_member(
         self,
