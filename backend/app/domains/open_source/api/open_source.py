@@ -674,7 +674,10 @@ async def delete_collect_task(
     _user: dict = Depends(require_admin),
 ):
     service = OpenSourceService(session)
-    success = await service.delete_collect_task(task_id)
+    try:
+        success = await service.delete_collect_task(task_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     if not success:
         raise HTTPException(status_code=404, detail="Task not found")
     return SuccessResponse(message="Task deleted")

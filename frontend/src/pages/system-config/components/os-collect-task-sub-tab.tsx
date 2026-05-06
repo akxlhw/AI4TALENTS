@@ -193,16 +193,20 @@ const OSCollectTaskSubTab: React.FC = () => {
               </Button>
             </Popconfirm>
           )}
-          <Popconfirm
-            title="确定删除此任务记录？"
-            onConfirm={() => handleDeleteTask(record.task_id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
+          {['completed', 'failed', 'cancelled'].includes(record.status) && (
+            <Popconfirm
+              title="确定删除此任务记录？"
+              description="删除后不可恢复"
+              onConfirm={() => handleDeleteTask(record.task_id)}
+              okText="确定"
+              cancelText="取消"
+              okButtonProps={{ danger: true }}
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+                删除
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },

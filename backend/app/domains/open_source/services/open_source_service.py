@@ -290,7 +290,17 @@ class OpenSourceService:
         return await self.repo.cancel_collect_task(task_id)
 
     async def delete_collect_task(self, task_id: int) -> bool:
-        """删除采集任务记录."""
+        """删除采集任务记录.
+
+        与学术域保持一致：running / pending 状态的任务不允许删除。
+        """
+        task = await self.repo.get_collect_task(task_id)
+        if task is None:
+            return False
+
+        if task.status in ("pending", "running"):
+            raise ValueError("Cannot delete running or pending task")
+
         return await self.repo.delete_collect_task(task_id)
 
     async def collect_single_repo(
