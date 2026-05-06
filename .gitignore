@@ -101,3 +101,5 @@ backend/test_db.py
 .claude/
 
 outputs/*.log
+
+AGENTS.md
