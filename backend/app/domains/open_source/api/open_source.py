@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import verify_access_token
-from app.core.database import AsyncSessionLocal, get_async_session
+from app.core.database import get_async_session
 from app.domains.open_source.schemas.open_source import (
     OSCollectTaskCreate,
     OSCollectTaskResponse,
@@ -43,15 +43,9 @@ from app.domains.open_source.schemas.open_source import (
     OSTalentPoolResponse,
     OSTalentPoolUpdate,
 )
-from app.domains.open_source.services.collectors.github_collector import (
-    CollectContext,
-    GitHubCollector,
-)
-from app.domains.open_source.services.github_client import GitHubClient
-from app.domains.open_source.repositories.open_source_repository import OpenSourceRepository
 from app.domains.open_source.services.open_source_service import OpenSourceService
-from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
 from app.domains.shared.models.enums import UserRoleType
+from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
 
 logger = logging.getLogger(__name__)
 
@@ -124,19 +118,6 @@ async def create_repo_config(
     session: AsyncSession = Depends(get_async_session),
     user: dict = Depends(require_admin),
 ):
-    from app.domains.shared.services.config_service import ConfigService
-    config_service = ConfigService(session)
-    github_config = await config_service.get_github_config()
-    token = github_config.tokens if github_config.tokens else None
-    stars_count = 0
-    try:
-        async with GitHubClient(token=token) as client:
-            owner, repo_name = data.repo_full_name.split("/", 1)
-            repo_info = await client.get_repo(owner, repo_name)
-            stars_count = repo_info.get("stargazers_count", 0) or 0
-    except Exception as e:
-        logger.warning(f"Failed to fetch stars for {data.repo_full_name}: {e}")
-
     service = OpenSourceService(session)
     try:
         config = await service.create_repo_config(
@@ -148,10 +129,9 @@ async def create_repo_config(
             language=data.language,
             notes=data.notes,
             created_by=int(user.get("sub")) if user.get("sub") else None,
-            stars_count=stars_count,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400 if "format" in str(e) or "tech_element" in str(e) else 409, detail=str(e))
+        raise HTTPException(status_code=400 if "format" in str(e) or "tech_element" in str(e) else 409, detail=str(e)) from e
     return OSRepoConfigResponse.model_validate(config)
 
 
@@ -179,7 +159,7 @@ async def update_repo_config(
     try:
         config = await service.update_repo_config(repo_config_id, data.model_dump(exclude_unset=True))
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     if not config:
         raise HTTPException(status_code=404, detail="Repo config not found")
     return OSRepoConfigResponse.model_validate(config)
@@ -220,11 +200,11 @@ async def collect_single_repo(
         )
     except ValueError as e:
         status_code = 404 if "not found" in str(e).lower() else 400 if "disabled" in str(e).lower() else 409
-        raise HTTPException(status_code=status_code, detail=str(e))
+        raise HTTPException(status_code=status_code, detail=str(e)) from e
 
     # Start background collection
     asyncio.create_task(
-        run_os_repo_collect_background(
+        service.run_repo_collection_background(
             task_id=task.task_id,
             repo_config_id=repo_config_id,
             repo_full_name=repo_full_name,
@@ -233,82 +213,6 @@ async def collect_single_repo(
         )
     )
     return OSCollectTaskResponse.model_validate(task)
-
-
-async def run_os_repo_collect_background(
-    task_id: int,
-    repo_config_id: int,
-    repo_full_name: str,
-    tech_element: str,
-    contributors_per_repo: int,
-) -> None:
-    """Run single-repo collection in background."""
-    try:
-        async with AsyncSessionLocal() as session:
-            service = OpenSourceService(session)
-            task = await service.get_collect_task(task_id)
-            if not task or task.status != "pending":
-                return
-            task.status = "running"
-            task.started_at = datetime.utcnow()
-            await session.commit()
-
-            # Load GitHub token from database config (frontend-configured)
-            from app.domains.shared.services.config_service import ConfigService
-
-            config_service = ConfigService(session)
-            github_config = await config_service.get_github_config()
-            token = github_config.tokens if github_config.tokens else None
-
-        ctx = CollectContext(
-            task_id=task_id,
-            repo_config_id=repo_config_id,
-            repo_full_name=repo_full_name,
-            tech_element=tech_element,
-            contributors_per_repo=contributors_per_repo,
-        )
-
-        async def _watch_cancel() -> None:
-            """Watch CANCELLED_TASK_IDS and signal ctx.cancelled when detected."""
-            while not ctx.cancelled.is_set():
-                await asyncio.sleep(1)
-                if task_id in CANCELLED_TASK_IDS:
-                    ctx.cancelled.set()
-                    break
-
-        async with GitHubClient(token=token) as client:
-            collector = GitHubCollector(client)
-            collect_task = asyncio.create_task(collector.collect(ctx))
-            watch_task = asyncio.create_task(_watch_cancel())
-            done, pending = await asyncio.wait(
-                [collect_task, watch_task],
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            for t in pending:
-                t.cancel()
-            # Propagate any exception from collect_task
-            if collect_task in done:
-                await collect_task
-
-    except asyncio.CancelledError:
-        logger.info(f"Task {task_id} cancelled")
-        async with AsyncSessionLocal() as session:
-            service = OpenSourceService(session)
-            task = await service.get_collect_task(task_id)
-            if task:
-                task.status = "cancelled"
-                await session.commit()
-    except Exception as e:
-        logger.exception(f"Task {task_id} failed: {e}")
-        async with AsyncSessionLocal() as session:
-            service = OpenSourceService(session)
-            task = await service.get_collect_task(task_id)
-            if task:
-                task.status = "failed"
-                task.error_message = str(e)[:500]
-                await session.commit()
-    finally:
-        CANCELLED_TASK_IDS.discard(task_id)
 
 
 # ============= Developers =============
@@ -357,7 +261,7 @@ async def get_developer(
     try:
         return await service.get_developer_detail(developer_id)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.get("/developers/{developer_id}/repositories", response_model=PaginatedResponse[OSRepositoryItem])
@@ -369,7 +273,7 @@ async def list_developer_repositories(
     session: AsyncSession = Depends(get_async_session),
 ):
     service = OpenSourceService(session)
-    items = await service.repo.get_developer_repositories(developer_id)
+    items = await service.get_developer_repositories(developer_id)
     # Simple in-memory sort/paginate
     reverse = sort_by != "name"
     items = sorted(
@@ -399,7 +303,7 @@ async def list_developer_contributions(
     session: AsyncSession = Depends(get_async_session),
 ):
     service = OpenSourceService(session)
-    result = await service.repo.get_developer_contributions(developer_id)
+    result = await service.get_developer_contributions(developer_id)
     return [
         OSContributionItem(
             contribution_id=c.contribution_id,
@@ -422,7 +326,7 @@ async def list_developer_languages(
     session: AsyncSession = Depends(get_async_session),
 ):
     service = OpenSourceService(session)
-    items = await service.repo.get_developer_languages(developer_id)
+    items = await service.get_developer_languages(developer_id)
     return [OSLanguageSkillItem.model_validate(i) for i in items]
 
 
@@ -436,7 +340,7 @@ async def compare_developers(
         result = await service.compare_developers(data.developer_ids)
         return result
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.get("/developers/{developer_id}/recommend", response_model=list[OSDeveloperSummary])
@@ -460,136 +364,9 @@ async def search_developers(
 ):
     """Unified search endpoint supporting keyword/semantic/hybrid modes."""
     service = OpenSourceService(session)
-
-    if req.mode == "keyword" or not req.q:
-        items, total = await service.search_developers(req)
-        return PaginatedResponse.create(
-            items=[OSDeveloperSummary.model_validate(i) for i in items],
-            total=total,
-            page=req.page,
-            page_size=req.page_size,
-        )
-
-    # Semantic / Hybrid modes require LLM gateway
-    from app.domains.shared.services.config_service import ConfigService
-    from app.domains.shared.services.llm import LLMGateway
-    from app.domains.open_source.services.open_source_embedding_service import (
-        OpenSourceEmbeddingService,
-    )
-
-    config_service = ConfigService(session)
-    llm_config = await config_service.get_llm_config()
-
-    if not llm_config.embedding_enabled or not llm_config.embedding_model:
-        # Fallback to keyword if embedding not configured
-        items, total = await service.search_developers(req)
-        return PaginatedResponse.create(
-            items=[OSDeveloperSummary.model_validate(i) for i in items],
-            total=total,
-            page=req.page,
-            page_size=req.page_size,
-        )
-
-    llm_gateway = LLMGateway(
-        api_key=llm_config.api_key,
-        api_base=llm_config.api_base,
-        model=llm_config.model,
-        embedding_model=llm_config.embedding_model,
-        embedding_api_base=llm_config.embedding_api_base,
-        embedding_api_key=llm_config.embedding_api_key,
-        timeout=llm_config.timeout or 60,
-        api_format=llm_config.api_format,
-        embedding_api_format=llm_config.embedding_api_format,
-    )
-
-    embed_service = OpenSourceEmbeddingService(
-        session=session,
-        llm_gateway=llm_gateway,
-        dimension=llm_config.embedding_dimension,
-        model_name=llm_config.embedding_model,
-    )
-
-    try:
-        query_embedding = await embed_service.get_query_embedding(req.q)
-    except Exception as e:
-        logger.warning(f"Failed to generate query embedding, falling back to keyword: {e}")
-        items, total = await service.search_developers(req)
-        return PaginatedResponse.create(
-            items=[OSDeveloperSummary.model_validate(i) for i in items],
-            total=total,
-            page=req.page,
-            page_size=req.page_size,
-        )
-
-    filters = {}
-    if req.filters:
-        if req.filters.tech_elements:
-            filters["tech_elements"] = req.filters.tech_elements
-        if req.filters.languages:
-            filters["languages"] = req.filters.languages
-        if req.filters.location:
-            filters["location"] = req.filters.location
-        if req.filters.company:
-            filters["company"] = req.filters.company
-        if req.filters.min_stars is not None:
-            filters["min_stars"] = req.filters.min_stars
-
-    repo = OpenSourceRepository(session)
-
-    if req.mode == "semantic":
-        semantic_items, total = await repo.search_by_vector_similarity(
-            query_embedding=query_embedding,
-            similarity_threshold=0.7,
-            filters=filters,
-            limit=req.page_size,
-            offset=(req.page - 1) * req.page_size,
-        )
-        return PaginatedResponse.create(
-            items=[OSDeveloperSummary.model_validate(i) for i in semantic_items],
-            total=total,
-            page=req.page,
-            page_size=req.page_size,
-        )
-
-    # Hybrid mode: keyword + semantic merge
-    keyword_items, keyword_total = await service.list_developers(
-        q=req.q,
-        tech_elements=req.filters.tech_elements if req.filters else None,
-        languages=req.filters.languages if req.filters else None,
-        location=req.filters.location if req.filters else None,
-        company=req.filters.company if req.filters else None,
-        min_stars=req.filters.min_stars if req.filters else None,
-        page=1,
-        page_size=req.page_size * 2,
-    )
-
-    semantic_items, semantic_total = await repo.search_by_vector_similarity(
-        query_embedding=query_embedding,
-        similarity_threshold=0.7,
-        filters=filters,
-        limit=req.page_size * 2,
-        offset=0,
-    )
-
-    # Deduplicate and merge: semantic results first, then keyword results not already included
-    seen_ids = set()
-    merged = []
-    for dev in semantic_items:
-        if dev.developer_id not in seen_ids:
-            seen_ids.add(dev.developer_id)
-            merged.append(dev)
-    for dev in keyword_items:
-        if dev.developer_id not in seen_ids:
-            seen_ids.add(dev.developer_id)
-            merged.append(dev)
-
-    total = len(merged)
-    start = (req.page - 1) * req.page_size
-    end = start + req.page_size
-    page_items = merged[start:end]
-
+    items, total = await service.search_developers(req)
     return PaginatedResponse.create(
-        items=[OSDeveloperSummary.model_validate(i) for i in page_items],
+        items=[OSDeveloperSummary.model_validate(i) for i in items],
         total=total,
         page=req.page,
         page_size=req.page_size,
@@ -609,7 +386,7 @@ async def add_favorite(
     try:
         favorite = await service.add_favourite(user_id, data.developer_id, notes=data.notes)
     except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
     dev = await service.get_developer(data.developer_id)
     resp = OSFavoriteResponse.model_validate(favorite)
     resp.developer = OSDeveloperSummary.model_validate(dev) if dev else None
@@ -631,7 +408,7 @@ async def list_favorites(
     )
     # Load developer details for each favourite
     dev_ids = [f.developer_id for f in favourites]
-    developers = {d.developer_id: d for d in await service.repo.get_developers_by_ids(dev_ids)}
+    developers = {d.developer_id: d for d in await service.get_developers_by_ids(dev_ids)}
     items = []
     for fav in favourites:
         resp = OSFavoriteResponse.model_validate(fav)
@@ -730,7 +507,7 @@ async def update_talent_pool(
     user_id = int(user.get("sub", 0))
     service = OpenSourceService(session)
     # Verify ownership
-    pool = await service.repo.get_talent_pool(pool_id)
+    pool = await service.get_talent_pool(pool_id)
     if not pool or pool.owner_user_id != user_id:
         raise HTTPException(status_code=404, detail="Pool not found")
 
@@ -748,7 +525,7 @@ async def delete_talent_pool(
 ):
     user_id = int(user.get("sub", 0))
     service = OpenSourceService(session)
-    pool = await service.repo.get_talent_pool(pool_id)
+    pool = await service.get_talent_pool(pool_id)
     if not pool or pool.owner_user_id != user_id:
         raise HTTPException(status_code=404, detail="Pool not found")
     success = await service.delete_talent_pool(pool_id)
@@ -766,14 +543,14 @@ async def add_pool_member(
 ):
     user_id = int(user.get("sub", 0))
     service = OpenSourceService(session)
-    pool = await service.repo.get_talent_pool(pool_id)
+    pool = await service.get_talent_pool(pool_id)
     if not pool or pool.owner_user_id != user_id:
         raise HTTPException(status_code=404, detail="Pool not found")
 
     try:
         await service.add_pool_member(pool_id, developer_id)
     except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
     return SuccessResponse(message="Added to pool")
 
 
@@ -786,7 +563,7 @@ async def remove_pool_member(
 ):
     user_id = int(user.get("sub", 0))
     service = OpenSourceService(session)
-    pool = await service.repo.get_talent_pool(pool_id)
+    pool = await service.get_talent_pool(pool_id)
     if not pool or pool.owner_user_id != user_id:
         raise HTTPException(status_code=404, detail="Pool not found")
 
@@ -806,13 +583,13 @@ async def list_pool_members(
 ):
     user_id = int(user.get("sub", 0))
     service = OpenSourceService(session)
-    pool = await service.repo.get_talent_pool(pool_id)
+    pool = await service.get_talent_pool(pool_id)
     if not pool or pool.owner_user_id != user_id:
         raise HTTPException(status_code=404, detail="Pool not found")
 
     members, total = await service.list_pool_members(pool_id, page=page, page_size=page_size)
     dev_ids = [m.developer_id for m in members]
-    developers = {d.developer_id: d for d in await service.repo.get_developers_by_ids(dev_ids)}
+    developers = {d.developer_id: d for d in await service.get_developers_by_ids(dev_ids)}
     items = []
     for member in members:
         resp = OSPoolMemberResponse.model_validate(member)
@@ -882,7 +659,7 @@ async def cancel_collect_task(
     try:
         task = await service.cancel_collect_task(task_id)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -977,22 +754,15 @@ async def get_embedding_status(
     session: AsyncSession = Depends(get_async_session),
     _user: dict = Depends(require_admin),
 ):
-    from app.domains.shared.services.config_service import ConfigService
-
     service = OpenSourceService(session)
-    status = await service.get_embedding_status()
-    config_service = ConfigService(session)
-    llm_config = await config_service.get_llm_config()
-    total = status["total_developers"] or 0
-    embedded = status["embedded_count"] or 0
-    progress = (embedded / total * 100) if total > 0 else 0
+    status = await service.get_embedding_status_with_config()
     return OSEmbeddingStatusResponse(
-        total_developers=total,
-        embedded_count=embedded,
+        total_developers=status["total_developers"],
+        embedded_count=status["embedded_count"],
         pending_count=status["pending_count"],
-        progress_percent=round(progress, 1),
-        dimension=llm_config.embedding_dimension,
-        model_name=llm_config.embedding_model or "unknown",
+        progress_percent=status["progress_percent"],
+        dimension=status["dimension"],
+        model_name=status["model_name"],
     )
 
 
@@ -1008,128 +778,33 @@ async def generate_embeddings(
     if _os_embedding_progress["status"] == "running":
         raise HTTPException(status_code=400, detail="Embedding generation is already running")
 
-    from app.domains.shared.services.config_service import ConfigService
+    service = OpenSourceService(session)
+    try:
+        total = await service.trigger_batch_embedding(batch_size=req.batch_size, force=req.force)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
-    config_service = ConfigService(session)
-    llm_config = await config_service.get_llm_config()
-
-    if not llm_config.embedding_enabled:
-        raise HTTPException(status_code=400, detail="嵌入模型未启用")
-    if not llm_config.embedding_model:
-        raise HTTPException(status_code=400, detail="嵌入模型未配置")
-    if not llm_config.embedding_api_base:
-        raise HTTPException(status_code=400, detail="嵌入 API 地址未配置")
-
-    repo = OpenSourceRepository(session)
-    dev_ids = await repo.get_visible_developer_ids()
-
-    if not dev_ids:
-        raise HTTPException(status_code=400, detail="No developers to process")
-
+    dev_ids = await service.get_visible_developer_ids()
     _os_embedding_progress["status"] = "running"
     _os_embedding_progress["processed"] = 0
-    _os_embedding_progress["total"] = len(dev_ids)
+    _os_embedding_progress["total"] = total
     _os_embedding_progress["failed"] = 0
     _os_embedding_progress["started_at"] = datetime.utcnow().isoformat()
     _os_embedding_progress["completed_at"] = None
     _os_embedding_progress["error_message"] = None
 
-    asyncio.create_task(_run_os_embedding_generation(dev_ids, req.batch_size, req.force))
+    asyncio.create_task(
+        OpenSourceService.run_embedding_generation_background(
+            developer_ids=dev_ids,
+            batch_size=req.batch_size,
+            force=req.force,
+            progress_dict=_os_embedding_progress,
+        )
+    )
 
     return SuccessResponse(
-        message=f"Embedding generation started for {len(dev_ids)} developers"
+        message=f"Embedding generation started for {total} developers"
     )
-
-
-async def _run_os_embedding_generation(developer_ids: list[int], batch_size: int, force: bool = False):
-    """Run embedding generation in background.
-
-    Follows the same batch-loop pattern as the academic domain for:
-    - Cancellation check between batches
-    - Real-time progress updates
-    - Per-batch exception isolation
-    """
-    global _os_embedding_progress
-
-    from app.domains.open_source.services.open_source_embedding_service import (
-        OpenSourceEmbeddingService,
-    )
-    from app.domains.shared.services.config_service import ConfigService
-    from app.domains.shared.services.llm import LLMGateway
-
-    try:
-        async with AsyncSessionLocal() as session:
-            config_service = ConfigService(session)
-            llm_config = await config_service.get_llm_config()
-
-            llm_gateway = LLMGateway(
-                api_key=llm_config.api_key,
-                api_base=llm_config.api_base,
-                model=llm_config.model,
-                embedding_model=llm_config.embedding_model,
-                embedding_api_base=llm_config.embedding_api_base,
-                embedding_api_key=llm_config.embedding_api_key,
-                timeout=llm_config.timeout or 60,
-                api_format=llm_config.api_format,
-                embedding_api_format=llm_config.embedding_api_format,
-            )
-
-            embed_service = OpenSourceEmbeddingService(
-                session=session,
-                llm_gateway=llm_gateway,
-                dimension=llm_config.embedding_dimension,
-                model_name=llm_config.embedding_model,
-                rate_limit_delay=1.0,
-            )
-
-            if llm_gateway.embedding_api_format == "minimax":
-                actual_batch_size = min(batch_size, 16)
-            else:
-                actual_batch_size = min(batch_size, 64)
-
-            processed = 0
-            failed = 0
-
-            for i in range(0, len(developer_ids), actual_batch_size):
-                if _os_embedding_progress["status"] == "cancelled":
-                    logger.info("OS embedding generation cancelled")
-                    return
-
-                batch = developer_ids[i : i + actual_batch_size]
-                batch_num = i // actual_batch_size + 1
-
-                try:
-                    stats = await embed_service.batch_generate_embeddings(
-                        developer_ids=batch,
-                        batch_size=actual_batch_size,
-                        force_regenerate=force,
-                    )
-                    processed += stats.get("processed", 0)
-                    failed += stats.get("failed", 0)
-
-                    # 实时更新进度
-                    _os_embedding_progress["processed"] = processed
-                    _os_embedding_progress["failed"] = failed
-                    logger.info(
-                        f"OS Progress: {processed}/{_os_embedding_progress['total']} processed, {failed} failed"
-                    )
-
-                except Exception as e:
-                    logger.error(f"OS batch {batch_num} failed: {e}")
-                    failed += len(batch)
-                    _os_embedding_progress["failed"] = failed
-
-            _os_embedding_progress["status"] = "completed"
-            _os_embedding_progress["completed_at"] = datetime.utcnow().isoformat()
-
-            logger.info(
-                f"OS embedding generation completed: processed={processed}, failed={failed}"
-            )
-    except Exception as e:
-        logger.error(f"OS embedding generation failed: {e}")
-        _os_embedding_progress["status"] = "error"
-        _os_embedding_progress["error_message"] = str(e)
-        _os_embedding_progress["completed_at"] = datetime.utcnow().isoformat()
 
 
 @router.get("/embeddings/progress")
@@ -1171,47 +846,17 @@ async def generate_single_embedding(
     session: AsyncSession = Depends(get_async_session),
     _user: dict = Depends(require_admin),
 ):
-    from app.domains.shared.services.config_service import ConfigService
-    from app.domains.shared.services.llm import LLMGateway
-    from app.domains.open_source.services.open_source_embedding_service import (
-        OpenSourceEmbeddingService,
-    )
-
-    config_service = ConfigService(session)
-    llm_config = await config_service.get_llm_config()
-
-    if not llm_config.embedding_enabled:
-        raise HTTPException(status_code=400, detail="嵌入模型未启用")
-
     service = OpenSourceService(session)
     dev = await service.get_developer(developer_id)
     if not dev:
         raise HTTPException(status_code=404, detail="Developer not found")
 
-    llm_gateway = LLMGateway(
-        api_key=llm_config.api_key,
-        api_base=llm_config.api_base,
-        model=llm_config.model,
-        embedding_model=llm_config.embedding_model,
-        embedding_api_base=llm_config.embedding_api_base,
-        embedding_api_key=llm_config.embedding_api_key,
-        timeout=llm_config.timeout or 60,
-        api_format=llm_config.api_format,
-        embedding_api_format=llm_config.embedding_api_format,
-    )
-
-    embed_service = OpenSourceEmbeddingService(
-        session=session,
-        llm_gateway=llm_gateway,
-        dimension=llm_config.embedding_dimension,
-        model_name=llm_config.embedding_model,
-    )
-
     try:
-        await embed_service.get_or_create_embedding(developer_id)
-        await session.commit()
-        return SuccessResponse(message=f"Embedding generated for developer {developer_id}")
+        await service.generate_single_embedding(developer_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        await session.rollback()
         logger.error(f"Single embedding generation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return SuccessResponse(message=f"Embedding generated for developer {developer_id}")
