@@ -12,6 +12,7 @@ Allowed for Endpoint use:
   - recommend.recommend_service.RecommendService
   - jd_match.jd_match_service.JDMatchService
   - collaboration_service.CollaborationService
+  - data_version_service.DataVersionService
 
 INTERNAL ONLY — must NOT be imported by Endpoints:
   - embedding.embedding_service.EmbeddingService
