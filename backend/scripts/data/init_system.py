@@ -1,83 +1,111 @@
+"""System data initialization script.
+
+Functions:
+  1. Clear business data tables (retains sys_config by default)
+  2. Re-run database migrations
+  3. Seed base data (admin user, tech domains, open-source repo configs)
+
+Usage:
+    python scripts/init_system.py              # Interactive confirmation
+    python scripts/init_system.py --force      # Skip confirmation
+    python scripts/init_system.py --domain academic    # Academic only
+    python scripts/init_system.py --domain open_source # Open source only
+    python scripts/init_system.py --full       # Full reset (users + domains)
+    python scripts/init_system.py --clear-config       # Also clear sys_config
 """
-一键初始化系统数据脚本
-
-功能�?1. 清空业务数据表（默认保留系统配置 sys_config�?2. 重新运行数据库迁�?3. 初始化基础数据（管理员、技术领域、开源仓库配置）
-
-使用方法�?    python scripts/init_system.py                   # 交互式确认，默认全部清空
-    python scripts/init_system.py --force           # 跳过确认
-    python scripts/init_system.py --domain academic # 仅清空学术人才库
-    python scripts/init_system.py --domain open_source  # 仅清空开源人才库
-    python scripts/init_system.py --full            # 全量重置（含用户、技术领域）
-    python scripts/init_system.py --clear-config    # 同时清空系统配置�?"""
 import asyncio
 import sys
+
+# Fix asyncpg connection issues on Windows
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 import argparse
 import io
 from datetime import datetime
 from pathlib import Path
 
-# 设置标准输出为UTF-8编码
+# Force UTF-8 stdout
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # Add parent directory to path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from sqlalchemy import text
-from app.core.database import AsyncSessionLocal
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.pool import NullPool
+from app.core.config import settings
+from app.core.database import AsyncSessionLocal as _OriginalAsyncSessionLocal
 from app.core.auth import hash_password
+
+# Import model registry first to ensure all SQLAlchemy mappers are properly configured
+import app.model_registry
+
+# Use NullPool for init script to avoid Windows asyncpg connection pool issues
+_init_engine = create_async_engine(settings.DATABASE_URL, poolclass=NullPool)
+AsyncSessionLocal = async_sessionmaker(
+    bind=_init_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
 from app.domains.shared.models.enums import UserRoleType, ScopeType
 from app.domains.shared.models.iam import UserAccount, UserSchoolScope
+from app.domains.academic.models.talent import Talent
 from app.domains.academic.models.tech_domain import TechDomain
 from app.domains.academic.models.statistics import OverviewStatSnapshot
 from app.domains.academic.models.venue import Venue, VenueTechBinding
 from app.domains.open_source.models.open_source import OSRepoConfig
 
-# 学术人才库业务数据表
+# Academic domain business tables
 ACADEMIC_TABLES = [
-    # 搜索和审�?    "search_talent_document",
+    # Search & audit
+    "search_talent_document",
     "audit_operation_log",
-    # 人才相关
+    # Talent-related
     "core_talent_tech_tag",
     "core_selected_work",
     "core_role_profile",
     "core_talent",
     "core_talent_embedding",
-    # 学校相关
+    # School-related
     "core_school_alias",
     "core_school",
-    # 合作网络
+    # Collaboration network
     "core_work_author",
     "core_collaboration",
-    # 收藏和人才池
+    # Favorites & talent pools
     "iam_talent_pool_member",
     "iam_favorite_talent",
     "iam_talent_pool",
-    # 标准化层
+    # Standardized layer
     "std_school_alias",
     "std_author",
     "std_school",
-    # 原始数据�?    "rel_author_tech_belong",
+    # Raw data layer
+    "rel_author_tech_belong",
     "raw_work",
     "raw_author",
     "raw_institution",
-    # 采集任务
+    # Collection tasks
     "sync_venue_sub_task",
     "sync_collect_task",
-    # 统计快照
+    # Statistics snapshots
     "stat_school_snapshot",
     "stat_overview_snapshot",
     "stats_research_topic",
-    # 数据版本
+    # Data versions
     "data_quality_summary",
     "data_correction_record",
     "data_publish_record",
     "data_version",
-    # 岗位匹配
+    # JD matching
     "jd_match_result",
     "jd_match_session",
 ]
 
-# 开源人才库业务数据�?OPEN_SOURCE_TABLES = [
+# Open Source domain business tables
+OPEN_SOURCE_TABLES = [
     "os_embedding",
     "os_contribution",
     "os_language_skill",
@@ -92,66 +120,67 @@ ACADEMIC_TABLES = [
     "os_repo_config",
 ]
 
-# 系统配置表（默认保留，仅 --clear-config 时清空）
+# System config tables (retained by default; cleared with --clear-config)
 CONFIG_SYSTEM_TABLES = [
     "sys_config",
 ]
 
-# 基础配置表（仅在 --full 时清空）
-# 注意：期刊配�?config_venue, config_venue_tech_binding)永不清空，需要保�?CONFIG_TABLES = [
+# Base config tables (cleared only with --full)
+# NOTE: venue config tables are never cleared
+CONFIG_TABLES = [
     "iam_user_school_scope",
     "core_tech_domain",
     "iam_user_account",
 ]
 
-# 初始技术领域数据（6大技术领域）
+# Initial tech domain data (6 domains)
 TECH_DOMAINS_DATA = [
     {
         "domain_code": "ai",
-        "domain_name": "人工智能",
+        "domain_name": "Artificial Intelligence",
         "domain_name_en": "Artificial Intelligence",
-        "domain_desc": "人工智能相关技�?,
+        "domain_desc": "AI-related technologies",
         "sort_order": 1,
     },
     {
         "domain_code": "robotics",
-        "domain_name": "机器�?,
+        "domain_name": "Robotics",
         "domain_name_en": "Robotics",
-        "domain_desc": "机器人技术相关领�?,
+        "domain_desc": "Robotics-related domain",
         "sort_order": 2,
     },
     {
         "domain_code": "data_science",
-        "domain_name": "数据科学",
+        "domain_name": "Data Science",
         "domain_name_en": "Data Science",
-        "domain_desc": "数据科学与分�?,
+        "domain_desc": "Data Science & Analytics",
         "sort_order": 3,
     },
     {
         "domain_code": "networks",
-        "domain_name": "网络与通信",
+        "domain_name": "Networks & Communications",
         "domain_name_en": "Networks & Communications",
-        "domain_desc": "计算机网络与通信技�?,
+        "domain_desc": "Computer Networks & Communications",
         "sort_order": 4,
     },
     {
         "domain_code": "systems",
-        "domain_name": "系统与软�?,
+        "domain_name": "Systems & Software",
         "domain_name_en": "Systems & Software",
-        "domain_desc": "计算机系统与软件工程",
+        "domain_desc": "Computer Systems & Software Engineering",
         "sort_order": 5,
     },
     {
         "domain_code": "security",
-        "domain_name": "信息安全",
+        "domain_name": "Information Security",
         "domain_name_en": "Information Security",
-        "domain_desc": "信息安全与密码学",
+        "domain_desc": "Information Security & Cryptography",
         "sort_order": 6,
     },
 ]
 
 
-# 已知�?OpenAlex Source ID 映射
+# Known OpenAlex Source ID mappings
 KNOWN_OPENALEX_SOURCES = {
     # AI/ML Top Conferences
     "neurips": "S4306420609",
@@ -236,7 +265,7 @@ KNOWN_OPENALEX_SOURCES = {
 }
 
 
-# 默认开源仓库配置（种子数据�?# 覆盖六大技术领域，�?5个仓库，便于快速体验开源人才库功能
+# Default open-source repo seed configs
 DEFAULT_REPO_CONFIGS = [
     # AI
     {"repo_full_name": "pytorch/pytorch", "display_name": "PyTorch", "tech_element": "ai", "language": "Python", "description": "Tensors and Dynamic neural networks in Python with strong GPU acceleration"},
@@ -282,7 +311,7 @@ DEFAULT_REPO_CONFIGS = [
 ]
 
 
-# 技术领域与顶会顶刊映射数据
+# Tech domain -> venue mapping data
 VENUE_DATA = [
     {
         "domain_code": "ai",
@@ -375,46 +404,51 @@ async def truncate_tables(
     clear_config: bool = False,
     domain: str = "all",
 ):
-    """清空业务数据�?
+    """Truncate business data tables.
     Args:
-        full_reset: 是否同时清空基础配置表（用户、技术领域等�?        clear_config: 是否清空系统配置表（sys_config 等）
-        domain: 清空范围，可�?academic / open_source / all（默�?all�?    """
+        full_reset: Also clear base config tables (users, tech domains)
+        clear_config: Also clear system config tables (sys_config)
+        domain: Domain to clear (academic / open_source / all, default all)
+    """
     print("\n" + "="*60)
-    print("Step 1: 清空数据�?)
+    print("Step 1: Clear data tables")
     print("="*60)
 
     async with AsyncSessionLocal() as session:
-        # 根据 domain 选择要清空的�?        tables: list[str] = []
+        # Select tables to clear by domain
+        tables: list[str] = []
         if domain in ("all", "academic"):
             tables.extend(ACADEMIC_TABLES)
-            print("  [范围: 学术人才库]")
+            print("  [Scope: Academic]")
         if domain in ("all", "open_source"):
             tables.extend(OPEN_SOURCE_TABLES)
-            print("  [范围: 开源人才库]")
+            print("  [Scope: Open Source]")
 
         if clear_config:
             tables.extend(CONFIG_SYSTEM_TABLES)
-            print("  [模式: 包含系统配置表]")
+            print("  [Mode: include system config tables]")
 
         if full_reset:
             tables.extend(CONFIG_TABLES)
-            print("  [模式: 全量重置]")
+            print("  [Mode: full reset]")
 
-        # 使用 TRUNCATE CASCADE 来强制清空，忽略外键约束
-        # 需要按依赖关系逆序处理，或者一次�?TRUNCATE 所有表
+        # Use TRUNCATE CASCADE to force-clear, ignoring FK constraints
+        # Process in reverse dependency order, or TRUNCATE all at once
         if tables:
             try:
-                # 构建单个 TRUNCATE 语句，CASCADE 会自动处理外�?                table_list = ", ".join(tables)
+                # Build single TRUNCATE statement; CASCADE handles FKs
+                table_list = ", ".join(tables)
                 await session.execute(text(f"TRUNCATE TABLE {table_list} CASCADE"))
                 await session.commit()
-                print(f"  [OK] 已清�?{len(tables)} 个表 (CASCADE)")
+                print(f"  [OK] Cleared{len(tables)} tables (CASCADE)")
             except Exception as e:
                 error_msg = str(e)
-                # 如果 TRUNCATE 失败，尝试逐个删除
-                print(f"  [WARN] TRUNCATE 失败: {error_msg[:100]}...")
-                print("  [INFO] 尝试逐个处理...")
+                # If TRUNCATE fails, try DELETE row-by-row
+                print(f"  [WARN] TRUNCATE failed: {error_msg[:100]}...")
+                print("  [INFO] Trying row-by-row...")
 
-                # 先禁用外键检查（PostgreSQL�?                await session.execute(text("SET session_replication_role = 'replica'"))
+                # Disable FK checks (PostgreSQL)
+                await session.execute(text("SET session_replication_role = 'replica'"))
 
                 truncated_count = 0
                 for table in tables:
@@ -424,21 +458,22 @@ async def truncate_tables(
                         print(f"  [OK] {table}")
                     except Exception as e2:
                         error_msg = str(e2)
-                        if "does not exist" in error_msg or "不存�? in error_msg:
-                            print(f"  [SKIP] {table} (不存�?")
+                        if "does not exist" in error_msg or "does not exist" in error_msg:
+                            print(f"  [SKIP] {table} (does not exist)")
                         else:
                             print(f"  [WARN] {table}: {error_msg[:50]}...")
                         continue
 
-                # 重新启用外键检�?                await session.execute(text("SET session_replication_role = 'origin'"))
+                # Re-enable FK checks
+                await session.execute(text("SET session_replication_role = 'origin'"))
                 await session.commit()
-                print(f"\n已清�?{truncated_count} 个表")
+                print(f"\nCleared{truncated_count} tables")
 
 
 async def clear_cache():
-    """清空 Redis 缓存"""
+    """Clear Redis cache"""
     print("\n" + "="*60)
-    print("Step 2: 清空缓存")
+    print("Step 2: Clear cache")
     print("="*60)
 
     try:
@@ -449,27 +484,27 @@ async def clear_cache():
         if cache_conn.is_available:
             cache = CacheService(cache_conn)
             deleted = await cache.delete_pattern("*")
-            print(f"  [OK] 已清�?{deleted} 个缓存键")
+            print(f"  [OK] Cleared{deleted} cache keys")
         else:
-            print("  [SKIP] Redis 未启用或不可�?)
+            print("  [SKIP] Redis not enabled or unavailable")
     except Exception as e:
-        print(f"  [WARN] 缓存清理失败: {e}")
+        print(f"  [WARN] Cache clear failed: {e}")
 
 
 async def seed_admin_user():
-    """初始化管理员用户"""
+    """Seed admin user"""
     print("\n" + "="*60)
-    print("Step 3: 初始化管理员用户")
+    print("Step 3: Seed admin user")
     print("="*60)
 
     async with AsyncSessionLocal() as session:
-        # 检查是否已存在
+        # Check if already exists
         from sqlalchemy import select
         result = await session.execute(
             select(UserAccount).where(UserAccount.username == "admin")
         )
         if result.scalar_one_or_none():
-            print("  管理员用户已存在，跳过创�?)
+            print("  Admin user exists, skipping")
             return
 
         admin_password = hash_password("admin123")
@@ -480,12 +515,12 @@ async def seed_admin_user():
             role_type=UserRoleType.SUPER_ADMIN.value,
             is_active=True,
             status="active",
-            display_name="系统管理�?,
+            display_name="System Admin",
         )
         session.add(admin)
         await session.flush()
 
-        # 授予全部学校访问权限
+        # Grant all-school access scope
         admin_scope = UserSchoolScope(
             user_id=admin.user_id,
             scope_type=ScopeType.ALL.value,
@@ -496,7 +531,7 @@ async def seed_admin_user():
         )
         session.add(admin_scope)
 
-        # 创建演示用户
+        # Create demo user
         demo_password = hash_password("demo123")
         demo = UserAccount(
             username="demo",
@@ -505,28 +540,28 @@ async def seed_admin_user():
             role_type=UserRoleType.USER.value,
             is_active=True,
             status="active",
-            display_name="演示用户",
+            display_name="Demo User",
         )
         session.add(demo)
 
         await session.commit()
-        print("  [OK] 管理�? admin / admin123")
-        print("  [OK] 演示用户: demo / demo123")
+        print("  [OK] Admin: admin / admin123")
+        print("  [OK] Demo User: demo / demo123")
 
 
 async def seed_tech_domains():
-    """初始化技术领�?""
+    """Seed tech domains"""
     print("\n" + "="*60)
-    print("Step 4: 初始化技术领�?)
+    print("Step 4: Seed tech domains")
     print("="*60)
 
     async with AsyncSessionLocal() as session:
         from sqlalchemy import select
 
-        # 检查是否已存在
+        # Check if already exists
         result = await session.execute(select(TechDomain).limit(1))
         if result.scalar_one_or_none():
-            print("  技术领域已存在，跳过创�?)
+            print("  Tech domains exist, skipping")
             return
 
         for domain_data in TECH_DOMAINS_DATA:
@@ -538,15 +573,16 @@ async def seed_tech_domains():
 
 
 async def seed_venues():
-    """初始化顶刊顶会配�?""
+    """Seed venue configs"""
     print("\n" + "="*60)
-    print("Step 5: 初始化顶刊顶会配�?)
+    print("Step 5: Seed venue configs")
     print("="*60)
 
     from sqlalchemy import select
 
     async with AsyncSessionLocal() as session:
-        # 获取所有技术领�?        result = await session.execute(select(TechDomain))
+        # Get all tech domains
+        result = await session.execute(select(TechDomain))
         tech_domains = {d.domain_code: d for d in result.scalars().all()}
 
         stats = {"venues_created": 0, "bindings_created": 0}
@@ -564,10 +600,10 @@ async def seed_venues():
                 venue_name = venue_info["name"]
                 venue_type = venue_info["type"]
 
-                # 查找 OpenAlex ID
+                # Lookup OpenAlex ID
                 openalex_id = KNOWN_OPENALEX_SOURCES.get(venue_code)
 
-                # 检�?Venue 是否存在
+                # Check if Venue exists
                 result = await session.execute(
                     select(Venue).where(Venue.venue_code == venue_code)
                 )
@@ -585,7 +621,8 @@ async def seed_venues():
                     await session.flush()
                     stats["venues_created"] += 1
 
-                # 检查绑定是否存�?                result = await session.execute(
+                # Check binding exists
+                result = await session.execute(
                     select(VenueTechBinding).where(
                         VenueTechBinding.venue_id == venue.venue_id,
                         VenueTechBinding.tech_domain_id == tech_domain.tech_domain_id
@@ -604,16 +641,16 @@ async def seed_venues():
                     session.add(binding)
                     stats["bindings_created"] += 1
 
-            print(f"  [OK] {tech_domain.domain_name}: {len(venues_data)} 个期�?)
+            print(f"  [OK] {tech_domain.domain_name}: {len(venues_data)} venues")
 
         await session.commit()
-        print(f"\n  Venue 创建: {stats['venues_created']}, 绑定创建: {stats['bindings_created']}")
+        print(f"\n  Venues created: {stats['venues_created']}, Bindings created: {stats['bindings_created']}")
 
 
 async def seed_open_source_repo_configs():
-    """初始化默认开源仓库配�?""
+    """Seed open-source repo configs"""
     print("\n" + "="*60)
-    print("Step 5.5: 初始化默认开源仓库配�?)
+    print("Step 5.5: Seed open-source repo configs")
     print("="*60)
 
     async with AsyncSessionLocal() as session:
@@ -626,7 +663,7 @@ async def seed_open_source_repo_configs():
                 )
             )
             if existing:
-                print(f"  [SKIP] {config_data['repo_full_name']} 已存�?)
+                print(f"  [SKIP] {config_data['repo_full_name']} already exists")
                 continue
 
             config = OSRepoConfig(
@@ -645,25 +682,26 @@ async def seed_open_source_repo_configs():
 
 
 async def seed_statistics_snapshot():
-    """初始化统计快�?""
+    """Seed statistics snapshot"""
     print("\n" + "="*60)
-    print("Step 6: 初始化统计快�?)
+    print("Step 6: Seed statistics snapshot")
     print("="*60)
 
     async with AsyncSessionLocal() as session:
         from sqlalchemy import select
 
-        # 检查是否已存在活跃快照
+        # Check if active snapshot exists
         result = await session.execute(
             select(OverviewStatSnapshot).where(OverviewStatSnapshot.is_active == 1)
         )
         if result.scalar_one_or_none():
-            print("  统计快照已存在，跳过创建")
+            print("  Snapshot exists, skipping")
             return
 
         version = f"v1.0_{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
-        # 获取技术领域数�?        result = await session.execute(select(TechDomain))
+        # Get tech domain count
+        result = await session.execute(select(TechDomain))
         tech_domain_count = len(result.scalars().all())
 
         snapshot = OverviewStatSnapshot(
@@ -680,8 +718,8 @@ async def seed_statistics_snapshot():
         )
         session.add(snapshot)
         await session.commit()
-        print(f"  [OK] 初始快照: {version}")
-        print(f"  [OK] 技术领域数: {tech_domain_count}")
+        print(f"  [OK] Initial snapshot: {version}")
+        print(f"  [OK] Tech domain count: {tech_domain_count}")
 
 
 async def init_system(
@@ -689,106 +727,117 @@ async def init_system(
     clear_config: bool = False,
     domain: str = "all",
 ):
-    """执行完整初始化流�?
+    """Run full initialization flow.
     Args:
-        full_reset: 是否执行全量重置（清空用户、技术领域等基础数据�?        clear_config: 是否清空系统配置表（sys_config 等）
-        domain: 初始化范围，可�?academic / open_source / all（默�?all�?    """
+        full_reset: Full reset (also clears users, tech domains)
+        clear_config: Also clear system config tables (sys_config)
+        domain: Domain to init (academic / open_source / all, default all)
+    """
     print("\n" + "="*60)
-    print("智能人才�?- 系统数据初始�?)
+    print("AI Talent Platform - System Data Initialization")
     print("="*60)
 
     start_time = datetime.now()
 
-    # 1. 清空数据�?    await truncate_tables(full_reset, clear_config, domain)
+    # 1. Clear data tables
+    await truncate_tables(full_reset, clear_config, domain)
 
-    # 2. 清空缓存
+    # 2. Clear cache
     await clear_cache()
 
-    # 以下步骤仅在全量重置时执�?    if full_reset:
-        # 3. 初始化用�?        await seed_admin_user()
+    # Only run on full reset
+    if full_reset:
+        # 3. Seed admin user
+        await seed_admin_user()
 
-        # 4. 初始化技术领�?        await seed_tech_domains()
+        # 4. Seed tech domains
+        await seed_tech_domains()
 
-        # 5. 初始化顶刊顶�?        await seed_venues()
+        # 5. Seed venues
+        await seed_venues()
 
-    # 5.5 初始化开源仓库配置（幂等：已存在则跳过）
+    # 5.5 Seed open-source repo configs (idempotent)
     if domain in ("all", "open_source"):
         await seed_open_source_repo_configs()
 
-    # 6. 初始化统计快�?    await seed_statistics_snapshot()
+    # 6. Seed statistics snapshot
+    await seed_statistics_snapshot()
 
-    # 完成
+    # Done
     elapsed = (datetime.now() - start_time).total_seconds()
 
     print("\n" + "="*60)
-    print("初始化完�?")
+    print("Initialization complete")
     print("="*60)
-    print(f"耗时: {elapsed:.2f} �?)
+    print(f"Elapsed: {elapsed:.2f}s")
 
     if full_reset:
-        print("\n默认账号:")
-        print("  管理�? admin / admin123")
-        print("  演示用户: demo / demo123")
-        print("\n[!] 生产环境请及时修改默认密�?")
+        print("\nDefault accounts:")
+        print("  Admin: admin / admin123")
+        print("  Demo: demo / demo123")
+        print("\n[!] Change default password in production")
     else:
-        print("\n[提示] 已清空业务数据，用户和技术领域配置保�?)
+        print("[TIP] Business data cleared, user and tech domain configs retained")
         if not clear_config:
-            print("[提示] 系统配置�?sys_config)已保留，如需清除请使�?--clear-config")
-        print("[提示] 国家信息已改为常量定义，存储�?app/constants/countries.py")
+            print("[TIP] System config (sys_config) retained; use --clear-config to remove")
+        print("[TIP] Country data lives in app/constants/countries.py")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="一键初始化系统数据",
+        description="System data initialization",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-示例:
-    python scripts/init_system.py                       # 交互式确认，默认清空全部
-    python scripts/init_system.py --force               # 跳过确认，默认清空全�?    python scripts/init_system.py --domain academic     # 仅清空学术人才库
-    python scripts/init_system.py --domain open_source  # 仅清空开源人才库
-    python scripts/init_system.py --full                # 全量重置（含用户、技术领域）
-    python scripts/init_system.py --clear-config        # 同时清空系统配置�?    python scripts/init_system.py --full --force        # 全量重置跳过确认
+Examples:
+    python scripts/init_system.py                       # Interactive confirm
+    python scripts/init_system.py --force               # Skip confirmation
+    python scripts/init_system.py --domain academic     # Academic only
+    python scripts/init_system.py --domain open_source  # Open source only
+    python scripts/init_system.py --full                # Full reset
+    python scripts/init_system.py --clear-config        # Also clear sys_config
+    python scripts/init_system.py --full --force        # Full reset, no confirm
 
-注意: 默认清空全部业务数据（学�?开源），如需指定领域请使�?--domain
-       默认保留系统配置�?sys_config)，如需清除请使�?--clear-config
-       国家数据已改为常量定义，存储�?app/constants/countries.py
+Notes:
+  - Default clears all business data; use --domain to restrict
+  - Default retains sys_config; use --clear-config to remove
+  - Country data lives in app/constants/countries.py
         """
     )
     parser.add_argument(
         "--force", "-f",
         action="store_true",
-        help="跳过确认提示"
+        help="Skip confirmation prompt"
     )
     parser.add_argument(
         "--full",
         action="store_true",
-        help="全量重置（清空用户、技术领域等基础数据�?
+        help="Full reset (also clears users, tech domains, etc.)"
     )
     parser.add_argument(
         "--clear-config",
         action="store_true",
-        help="同时清空系统配置�?sys_config)"
+        help="Also clear system config tables (sys_config)"
     )
     parser.add_argument(
         "--domain",
         choices=["academic", "open_source", "all"],
         default="all",
-        help="指定要清空的人才库领域（默认 all�?
+        help="Domain to clear (default: all)"
     )
 
     args = parser.parse_args()
 
-    # 确认提示
+    # Confirmation prompt
     if not args.force:
-        domain_label = {"academic": "学术人才�?, "open_source": "开源人才库", "all": "全部业务数据"}
-        print(f"\n[!] 警告: 此操作将清空 {domain_label[args.domain]}!")
+        domain_label = {"academic": "Academic", "open_source": "Open Source", "all": "All business data"}
+        print(f"\n[!] WARNING: This will clear {domain_label[args.domain]}!")
         if args.full:
-            print("[!] 注意: 全量重置模式，用户和技术领域等基础数据也将被清�?")
+            print("[!] NOTE: Full reset will also clear users and tech domains")
         if args.clear_config:
-            print("[!] 注意: 系统配置�?sys_config)也将被清�?")
-        confirm = input("\n确认执行? (y/N): ").strip().lower()
+            print("[!] NOTE: System config (sys_config) will also be cleared")
+        confirm = input("\nConfirm? (y/N): ").strip().lower()
         if confirm != "y":
-            print("已取消操�?)
+            print("Cancelled")
             return
 
     asyncio.run(init_system(full_reset=args.full, clear_config=args.clear_config, domain=args.domain))
