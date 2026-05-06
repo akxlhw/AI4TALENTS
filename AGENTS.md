@@ -63,18 +63,39 @@
 talent-platform/
 ├── backend/                    # 后端服务
 │   ├── app/                   # 应用代码
-│   │   ├── api/v1/endpoints/  # API 路由（按业务模块划分）
-│   │   ├── models/            # SQLAlchemy ORM 模型
-│   │   ├── schemas/           # Pydantic DTO（部分也在 api/v1/schemas/）
-│   │   ├── services/          # 业务逻辑层
-│   │   ├── repositories/      # 数据访问层
-│   │   ├── builders/          # ETL/数据转换（SearchBuilder, StatBuilder）
+│   │   ├── api_router.py      # FastAPI 路由注册表（聚合所有域路由）
+│   │   ├── model_registry.py  # Alembic 模型注册表（聚合所有域模型）
 │   │   ├── core/              # 核心基础设施（config, auth, db, cache, logging, exceptions, metrics）
+│   │   ├── domains/           # 领域驱动核心
+│   │   │   ├── academic/      # 学术人才域
+│   │   │   │   ├── api/       # API 路由
+│   │   │   │   ├── builders/  # ETL/数据转换
+│   │   │   │   ├── constants/ # 域内常量
+│   │   │   │   ├── models/    # SQLAlchemy ORM 模型
+│   │   │   │   ├── repositories/  # 数据访问层
+│   │   │   │   ├── schemas/   # Pydantic DTO
+│   │   │   │   └── services/  # 业务逻辑层
+│   │   │   ├── open_source/   # 开源人才域
+│   │   │   │   ├── api/
+│   │   │   │   ├── models/
+│   │   │   │   ├── repositories/
+│   │   │   │   ├── schemas/
+│   │   │   │   └── services/
+│   │   │   └── shared/        # 共享域（auth, permissions, audit, system_config, llm, cache）
+│   │   │       ├── api/
+│   │   │       ├── models/
+│   │   │       ├── repositories/
+│   │   │       ├── schemas/
+│   │   │       └── services/
 │   │   ├── middleware/        # 中间件（限流、请求日志、指标采集）
 │   │   └── main.py            # FastAPI 入口
 │   ├── migrations/            # Alembic 数据库迁移脚本
-│   ├── tests/                 # pytest 测试
 │   ├── scripts/               # 运维与数据脚本
+│   │   ├── collect/           # 采集脚本
+│   │   ├── data/              # 数据/种子脚本
+│   │   ├── fix/               # 修复/维护脚本
+│   │   └── ops/               # 运维脚本
+│   ├── tests/                 # pytest 测试
 │   ├── pyproject.toml         # Python 依赖与工具配置
 │   ├── uv.lock                # uv 锁定文件
 │   ├── alembic.ini            # Alembic 配置
@@ -83,7 +104,13 @@ talent-platform/
 │   ├── src/
 │   │   ├── pages/             # 页面级组件
 │   │   ├── components/        # 可复用组件
-│   │   ├── services/          # API 客户端（api.ts）
+│   │   ├── services/          # API 客户端
+│   │   │   ├── api.ts         # 聚合导出（统一 api 对象）
+│   │   │   └── api/           # 域拆分模块
+│   │   │       ├── client.ts  # Axios 实例 + 工具
+│   │   │       ├── shared.ts  # 共享 API（auth, admin, system-config）
+│   │   │       ├── academic.ts    # 学术域 API
+│   │   │       └── openSource.ts  # 开源域 API
 │   │   ├── stores/            # Zustand 状态管理
 │   │   ├── hooks/             # 自定义 React Hooks
 │   │   ├── types/             # TypeScript 类型定义
@@ -101,9 +128,11 @@ talent-platform/
 │   ├── docker-compose.yml     # Docker Compose 编排
 │   ├── init-db.sql            # 数据库初始化脚本
 │   └── schema.sql             # 数据库结构备份
-├── docs/                       # 项目文档（按版本 `学术人才库 v1.x/` 组织）
-├── data/seed/                  # 种子数据
-├── pgvector/                   # pgvector 源码（嵌入式）
+├── docs/                       # 项目文档
+│   ├── audit/
+│   ├── academic-v1.x/         # 学术人才库文档（英文目录名）
+│   └── open-source-v2.0/      # 开源人才库文档（英文目录名）
+├── outputs/                    # 输出/日志（gitignored）
 ├── scripts/                    # 根级脚本（dev.sh, restart_services.py）
 ├── Makefile                    # 统一命令入口
 └── .github/workflows/ci.yml    # GitHub Actions CI 配置
@@ -171,13 +200,50 @@ make clean                # 清理 __pycache__、.pytest_cache、node_modules、
 
 ## 代码组织与架构
 
+### 架构约束规则（必须遵守）
+
+#### 跨域隔离（铁律）
+
+- **`domains/academic/` 不得导入 `domains/open_source/` 内部模块**
+- **`domains/open_source/` 不得导入 `domains/academic/` 内部模块**
+- **双方仅可通过 `domains/shared/` 和 `app/core/` 共享能力**
+- **违反此规则会导致 CI 构建失败（代码审查必查项）**
+
+#### 目录放置规则
+
+| 代码类型 | 应放置位置 | 禁止放置位置 |
+|----------|-----------|-------------|
+| 学术域 API 路由 | `domains/academic/api/` | `app/api/v1/endpoints/`（已废弃） |
+| 学术域模型 | `domains/academic/models/` | `app/models/`（已废弃） |
+| 学术域 Service | `domains/academic/services/` | `app/services/`（已废弃） |
+| 学术域 Repository | `domains/academic/repositories/` | `app/repositories/`（已废弃） |
+| 学术域常量 | `domains/academic/constants/` | `app/constants/`（已废弃） |
+| 共享基础设施 | `app/core/` | 任何 domain 内部 |
+| 中间件 | `app/middleware/` | 任何 domain 内部 |
+| 全局路由注册 | `app/api_router.py` | 任何其他位置 |
+| 全局模型注册 | `app/model_registry.py` | 任何其他位置 |
+
+#### 导入路径规则
+
+- **后端**：始终从 `domains/xxx/` 内部导入，禁止通过旧兼容层 `app.models.xxx`、`app.services.xxx` 导入
+- **前端**：API 调用优先使用 `services/api/academic.ts` 或 `services/api/shared.ts`，聚合入口 `services/api.ts` 仅用于需要统一 api 对象的场景
+
+#### 新增文件 checklist
+
+新增代码前必须确认：
+1. 该文件属于哪个业务域？→ 放入对应 `domains/xxx/` 子目录
+2. 是否跨域共享？→ 放入 `domains/shared/`
+3. 是否基础设施？→ 放入 `app/core/` 或 `app/middleware/`
+4. 是否有对应的 `__init__.py` 导出？→ 确保上层可导入
+
 ### 后端分层架构
 
-1. **Endpoints** (`api/v1/endpoints/`) — HTTP 请求处理、Pydantic 参数校验
-2. **Services** (`services/`) — 业务逻辑编排
-3. **Repositories** (`repositories/`) — 数据库查询与操作
-4. **Builders** (`builders/`) — 原始数据 → 领域对象转换（ETL 模式）
-5. **Models** (`models/`) — SQLAlchemy ORM 模型
+1. **Endpoints** (`domains/*/api/`) — HTTP 请求处理、Pydantic 参数校验
+2. **Services** (`domains/*/services/`) — 业务逻辑编排
+3. **Repositories** (`domains/*/repositories/`) — 数据库查询与操作
+4. **Builders** (`domains/academic/builders/`) — 原始数据 → 领域对象转换（ETL 模式）
+5. **Models** (`domains/*/models/`) — SQLAlchemy ORM 模型
+6. **Constants** (`domains/*/constants/`) — 域内常量与枚举
 
 ### 三层数据架构
 
@@ -460,18 +526,20 @@ GitHub Actions 工作流 `.github/workflows/ci.yml`：
 | 后端入口 | `backend/app/main.py` |
 | 配置定义 | `backend/app/core/config.py` |
 | 数据库引擎 | `backend/app/core/database.py` |
-| 采集编排器 | `backend/app/services/collect/orchestrator.py` |
-| 服务层同步编排 | `backend/app/services/sync/orchestrator.py` |
-| CS 背景过滤 | `backend/app/services/common/cs_concepts.py` |
-| 原始数据模型 | `backend/app/models/raw_data.py` |
-| 标准化模型 | `backend/app/models/standardized.py` |
-| 服务层模型（人才） | `backend/app/models/talent.py` |
-| 服务层模型（学校） | `backend/app/models/school.py` |
-| 技术域模型 | `backend/app/models/tech_domain.py` |
-| API 路由汇总 | `backend/app/api/v1/router.py` |
+| 采集编排器 | `backend/app/domains/academic/services/collect/orchestrator.py` |
+| 服务层同步编排 | `backend/app/domains/academic/services/sync/orchestrator.py` |
+| CS 背景过滤 | `backend/app/domains/academic/services/common/cs_concepts.py` |
+| 原始数据模型 | `backend/app/domains/academic/models/raw_data.py` |
+| 标准化模型 | `backend/app/domains/academic/models/standardized.py` |
+| 服务层模型（人才） | `backend/app/domains/academic/models/talent.py` |
+| 服务层模型（学校） | `backend/app/domains/academic/models/school.py` |
+| 技术域模型 | `backend/app/domains/academic/models/tech_domain.py` |
+| API 路由注册表 | `backend/app/api_router.py` |
+| 模型注册表 | `backend/app/model_registry.py` |
 | 前端入口 | `frontend/src/main.tsx` |
 | 前端路由 | `frontend/src/App.tsx` |
-| API 客户端 | `frontend/src/services/api.ts` |
+| API 聚合入口 | `frontend/src/services/api.ts` |
+| API 域模块 | `frontend/src/services/api/{client,shared,academic,openSource}.ts` |
 | 全局布局 | `frontend/src/layouts/MainLayout.tsx` |
 
 ---
