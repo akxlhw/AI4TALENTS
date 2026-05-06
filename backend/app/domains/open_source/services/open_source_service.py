@@ -273,6 +273,10 @@ class OpenSourceService:
 
         return await self.repo.cancel_collect_task(task_id)
 
+    async def delete_collect_task(self, task_id: int) -> bool:
+        """删除采集任务记录."""
+        return await self.repo.delete_collect_task(task_id)
+
     async def collect_single_repo(
         self,
         repo_config_id: int,

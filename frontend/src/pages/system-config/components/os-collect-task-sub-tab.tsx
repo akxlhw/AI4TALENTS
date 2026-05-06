@@ -26,6 +26,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
 import type { OSCollectTask } from '../../../types'
@@ -90,6 +91,16 @@ const OSCollectTaskSubTab: React.FC = () => {
       loadTasks()
     } catch (error) {
       message.error(getErrorMessage(error, '取消失败'))
+    }
+  }
+
+  const handleDeleteTask = async (taskId: number) => {
+    try {
+      await api.openSource.deleteCollectTask(taskId)
+      message.success('任务记录已删除')
+      loadTasks()
+    } catch (error) {
+      message.error(getErrorMessage(error, '删除失败'))
     }
   }
 
@@ -182,6 +193,16 @@ const OSCollectTaskSubTab: React.FC = () => {
               </Button>
             </Popconfirm>
           )}
+          <Popconfirm
+            title="确定删除此任务记录？"
+            onConfirm={() => handleDeleteTask(record.task_id)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },

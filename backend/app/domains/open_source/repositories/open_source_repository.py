@@ -598,6 +598,16 @@ class OpenSourceRepository:
         await self.session.refresh(task)
         return task
 
+    async def delete_collect_task(self, task_id: int) -> bool:
+        """Delete a collect task permanently."""
+        task = await self.get_collect_task(task_id)
+        if task is None:
+            return False
+        await self.session.delete(task)
+        await self.session.flush()
+        await self.session.commit()
+        return True
+
     async def search_developers(
         self,
         req: Any,

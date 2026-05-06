@@ -64,6 +64,8 @@ export const openSourceApi = {
     apiClient.post('/open-source/collect/tasks', data),
   cancelCollectTask: (id: number) =>
     apiClient.post(`/open-source/collect/tasks/${id}/cancel`),
+  deleteCollectTask: (id: number) =>
+    apiClient.delete(`/open-source/collect/tasks/${id}`),
 
   jdMatch: (data: { jd_text: string; filters?: Record<string, unknown>; top_k?: number }) =>
     apiClient.post('/open-source/jd-match', data),

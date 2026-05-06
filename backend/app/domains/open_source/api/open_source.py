@@ -763,6 +763,19 @@ async def cancel_collect_task(
     return SuccessResponse(message="Task cancelled")
 
 
+@router.delete("/collect/tasks/{task_id}")
+async def delete_collect_task(
+    task_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    _user: dict = Depends(require_admin),
+):
+    service = OpenSourceService(session)
+    success = await service.delete_collect_task(task_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return SuccessResponse(message="Task deleted")
+
+
 # ============= Stats =============
 
 @router.get("/stats", response_model=OSStatsResponse)
