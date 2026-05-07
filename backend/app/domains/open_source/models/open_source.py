@@ -96,6 +96,7 @@ class OSContribution(Base, TimestampMixin):
     code_reviews_count = Column(Integer, default=0, nullable=False)
     is_owner = Column(Boolean, default=False, nullable=False)
     is_maintainer = Column(Boolean, default=False, nullable=False)
+    is_committer = Column(Boolean, default=False, nullable=False)
 
 
 class OSLanguageSkill(Base, TimestampMixin):

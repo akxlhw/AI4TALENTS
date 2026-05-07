@@ -170,8 +170,12 @@ const DeveloperDetailPage: React.FC = () => {
       width: 120,
       render: (_: unknown, record: OSContribution) => (
         <Space>
-          {record.is_owner && <Tag color="blue">Owner</Tag>}
-          {record.is_maintainer && <Tag color="green">Maintainer</Tag>}
+          {record.is_owner && <Tag color="gold">Owner</Tag>}
+          {record.is_maintainer && <Tag color="red">Maintainer</Tag>}
+          {record.is_committer && <Tag color="blue">Committer</Tag>}
+          {!record.is_owner && !record.is_maintainer && !record.is_committer && (
+            <Tag>Contributor</Tag>
+          )}
         </Space>
       ),
     },

@@ -128,6 +128,10 @@ class GitHubCollector:
         logger.info(f"Fetched {total} contributors from {ctx.repo_full_name}")
         await self._update_task(ctx.task_id, total_records=total, current_step="fetch_profiles", progress_percent=20)
 
+        # Step 2b: Pre-fetch collaborators map for role detection (maintainer)
+        # Cost: 1~5 API calls per repo (amortized across all contributors → near-zero)
+        collaborators_map = await self._fetch_collaborators_map(owner, repo_name)
+
         # Step 3-5: Process each contributor serially
         # Each contributor uses an independent transaction to ensure failure isolation.
         for idx, contributor in enumerate(contributors, 1):
@@ -141,7 +145,9 @@ class GitHubCollector:
             try:
                 async with AsyncSessionLocal() as session:
                     sync = SyncService(session)
-                    await self._process_contributor(ctx, login, sync, repo_info)
+                    await self._process_contributor(
+                        ctx, login, sync, repo_info, contributor, collaborators_map
+                    )
                     await session.commit()
             except Exception as e:
                 logger.exception(f"Failed to process contributor {login}: {e}")
@@ -165,12 +171,34 @@ class GitHubCollector:
         )
         logger.info(f"Collection completed for repo {ctx.repo_full_name}, task={ctx.task_id}")
 
+    async def _fetch_collaborators_map(self, owner: str, repo: str) -> dict[str, str]:
+        """Return {login: permission} for all repo collaborators.
+
+        Permission values from GitHub: ``admin``, ``maintain``, ``push``,
+        ``triage``, ``read``, ``none``.
+        """
+        try:
+            collabs = await self.client.list_collaborators(owner, repo)
+            return {
+                c["login"]: next(
+                    (p for p, val in c.get("permissions", {}).items() if val),
+                    "read",
+                )
+                for c in collabs
+                if c.get("login")
+            }
+        except Exception as e:
+            logger.warning(f"Failed to fetch collaborators for {owner}/{repo}: {e}")
+            return {}
+
     async def _process_contributor(
         self,
         ctx: CollectContext,
         login: str,
         sync: SyncService,
         repo_info: dict[str, Any],
+        contributor: dict[str, Any],
+        collaborators_map: dict[str, str],
     ) -> None:
         """Process a single contributor: profile → repos → languages → sync."""
         try:
@@ -226,15 +254,23 @@ class GitHubCollector:
                 }
                 repo_obj = await sync.upsert_repository(dev.developer_id, repo_data)
 
-                # Upsert contribution (mark as owner if matches login)
+                # Upsert contribution with role detection
+                #   - contributor: implicit (anyone in the list is a contributor)
+                #   - committer:  derived from commits traversal (passed via contributor dict)
+                #   - maintainer: derived from repo collaborators permissions
                 is_owner = owner_name == login
+                permission = collaborators_map.get(login, "")
+                is_maintainer = permission in ("admin", "maintain")
+                is_committer = contributor.get("is_committer", False)
+
                 contrib_data = {
-                    "commits_count": 0,
+                    "commits_count": contributor.get("contributions", 0),
                     "prs_count": 0,
                     "issues_count": 0,
                     "code_reviews_count": 0,
                     "is_owner": is_owner,
-                    "is_maintainer": False,
+                    "is_maintainer": is_maintainer,
+                    "is_committer": is_committer,
                 }
                 await sync.upsert_contribution(dev.developer_id, repo_obj.repo_id, contrib_data)
 

@@ -103,7 +103,7 @@ class SyncService:
 
         for key in [
             "commits_count", "prs_count", "issues_count",
-            "code_reviews_count", "is_owner", "is_maintainer",
+            "code_reviews_count", "is_owner", "is_maintainer", "is_committer",
         ]:
             if key in data and data[key] is not None:
                 setattr(contrib, key, data[key])

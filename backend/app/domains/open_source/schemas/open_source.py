@@ -108,6 +108,7 @@ class OSContributionItem(BaseModel):
     code_reviews_count: int
     is_owner: bool
     is_maintainer: bool
+    is_committer: bool
 
     class Config:
         from_attributes = True

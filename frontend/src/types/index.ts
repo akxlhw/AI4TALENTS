@@ -451,6 +451,7 @@ export interface OSContribution {
   code_reviews_count: number
   is_owner: boolean
   is_maintainer: boolean
+  is_committer: boolean
 }
 
 export interface OSLanguageSkill {
