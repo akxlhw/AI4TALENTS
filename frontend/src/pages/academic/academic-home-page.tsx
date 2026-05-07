@@ -364,46 +364,46 @@ const AcademicHomePage: React.FC = () => {
 
               {/* Schools — domestic vs overseas split */}
               <div>
-                <Row gutter={12}>
-                  <Col span={12}>
-                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                      国内顶尖院校机构
-                    </Text>
-                    <div>
-                      {topDomesticSchools.slice(0, 5).map((item) => (
-                        <Tag
-                          key={`dom-${item.school_id}`}
-                          style={{ marginBottom: 6, cursor: 'pointer', fontSize: 12, background: '#F0F4F8', color: '#2D5A87', border: '1px solid #2D5A8733' }}
-                          onClick={() => handleSchoolClick(item.school_id)}
-                        >
-                          {item.school_name} ({item.talent_count})
-                        </Tag>
-                      ))}
-                      {topDomesticSchools.length === 0 && (
-                        <Text type="secondary" style={{ fontSize: 12 }}>暂无数据</Text>
-                      )}
-                    </div>
-                  </Col>
-                  <Col span={12}>
-                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                      海外顶尖院校机构
-                    </Text>
-                    <div>
-                      {topOverseasSchools.slice(0, 5).map((item) => (
-                        <Tag
-                          key={`os-${item.school_id}`}
-                          style={{ marginBottom: 6, cursor: 'pointer', fontSize: 12, background: '#F5F0F8', color: '#6B4C87', border: '1px solid #6B4C8733' }}
-                          onClick={() => handleSchoolClick(item.school_id)}
-                        >
-                          {item.school_name} ({item.talent_count})
-                        </Tag>
-                      ))}
-                      {topOverseasSchools.length === 0 && (
-                        <Text type="secondary" style={{ fontSize: 12 }}>暂无数据</Text>
-                      )}
-                    </div>
-                  </Col>
-                </Row>
+                {/* Domestic */}
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
+                    国内顶尖院校机构
+                  </Text>
+                  <div>
+                    {topDomesticSchools.slice(0, 5).map((item) => (
+                      <Tag
+                        key={`dom-${item.school_id}`}
+                        style={{ marginBottom: 6, cursor: 'pointer', fontSize: 12, background: '#F0F4F8', color: '#2D5A87', border: '1px solid #2D5A8733' }}
+                        onClick={() => handleSchoolClick(item.school_id)}
+                      >
+                        {item.school_name} ({item.talent_count})
+                      </Tag>
+                    ))}
+                    {topDomesticSchools.length === 0 && (
+                      <Text type="secondary" style={{ fontSize: 12 }}>暂无数据</Text>
+                    )}
+                  </div>
+                </div>
+                {/* Overseas */}
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
+                    海外顶尖院校机构
+                  </Text>
+                  <div>
+                    {topOverseasSchools.slice(0, 5).map((item) => (
+                      <Tag
+                        key={`os-${item.school_id}`}
+                        style={{ marginBottom: 6, cursor: 'pointer', fontSize: 12, background: '#F5F0F8', color: '#6B4C87', border: '1px solid #6B4C8733' }}
+                        onClick={() => handleSchoolClick(item.school_id)}
+                      >
+                        {item.school_name} ({item.talent_count})
+                      </Tag>
+                    ))}
+                    {topOverseasSchools.length === 0 && (
+                      <Text type="secondary" style={{ fontSize: 12 }}>暂无数据</Text>
+                    )}
+                  </div>
+                </div>
               </div>
             </Card>
           </Col>
