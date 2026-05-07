@@ -1,7 +1,7 @@
 """
 Architecture compliance checker for backend API endpoints.
 
-Checks two independent rules:
+Checks three independent rules:
 
 1. Endpoint Layering: files under domains/*/api/ must NOT directly import:
    - Any *Repository class
@@ -17,6 +17,10 @@ Checks two independent rules:
 
    Allowed:  academic → shared     open_source → shared     shared → shared
    Banned:   shared → academic     shared → open_source
+
+3. HTTP Client Unification (baseline-tolerant):
+   All outbound HTTP requests must go through HttpClientFactory.
+   Direct import of httpx / aiohttp / requests is prohibited.
 
 Usage:
     python scripts/check_architecture.py
@@ -36,6 +40,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 API_GLOB = "app/domains/*/api/*.py"
 DOMAIN_GLOB = "app/domains/*/**/*.py"
+APP_GLOB = "app/**/*.py"
 
 # --- Rule definitions: Endpoint Layering ---
 
@@ -79,6 +84,13 @@ ALLOWED_NAMES = {
     "PermissionService",
     "SystemConfigService",
     "OSRepositoryItem",
+}
+
+# --- Rule definitions: HTTP Client Unification ---
+
+HTTP_CLIENT_MODULES = {"httpx", "aiohttp", "requests"}
+HTTP_CLIENT_ALLOWLIST = {
+    "http_client.py",  # HttpClientFactory itself
 }
 
 # --- Rule definitions: Cross-Domain Dependencies ---
@@ -130,9 +142,9 @@ def _is_banned(module: str, name: str) -> bool | str:
     return False
 
 
-def _file_hash(path: str, module: str, name: str) -> str:
+def _file_hash(check_type: str, path: str, module: str, name: str) -> str:
     """Stable hash for a violation entry."""
-    content = f"{path}:{module}:{name}"
+    content = f"{check_type}:{path}:{module}:{name}"
     return hashlib.sha256(content.encode()).hexdigest()[:16]
 
 
@@ -195,6 +207,61 @@ def _is_cross_domain_allowed(module: str) -> bool:
         if re.search(pat, module):
             return True
     return False
+
+
+def check_http_client_imports(filepath: Path) -> list[dict]:
+    """
+    Check that app/ files do NOT directly import low-level HTTP client libraries.
+    All outbound HTTP must go through HttpClientFactory.
+    """
+    violations = []
+    relative = filepath.relative_to(PROJECT_ROOT)
+
+    # Skip allowlisted files
+    if filepath.name in HTTP_CLIENT_ALLOWLIST:
+        return violations
+
+    try:
+        source = filepath.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+    except SyntaxError as exc:
+        violations.append({
+            "file": str(relative),
+            "line": exc.lineno or 1,
+            "module": "<syntax-error>",
+            "name": "<syntax-error>",
+            "reason": f"SyntaxError: {exc}",
+        })
+        return violations
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            root_module = module.split(".")[0]
+            if root_module in HTTP_CLIENT_MODULES:
+                for alias in node.names:
+                    violations.append({
+                        "file": str(relative),
+                        "line": node.lineno,
+                        "module": module,
+                        "name": alias.name,
+                        "reason": f"Direct import of {root_module} — "
+                                   f"all outbound HTTP must use HttpClientFactory",
+                    })
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                root_module = alias.name.split(".")[0]
+                if root_module in HTTP_CLIENT_MODULES:
+                    violations.append({
+                        "file": str(relative),
+                        "line": node.lineno,
+                        "module": alias.name,
+                        "name": alias.asname or root_module,
+                        "reason": f"Direct import of {root_module} — "
+                                   f"all outbound HTTP must use HttpClientFactory",
+                    })
+
+    return violations
 
 
 def check_cross_domain(filepath: Path) -> list[dict]:
@@ -288,7 +355,7 @@ def main() -> int:
     parser.add_argument(
         "--update-baseline",
         action="store_true",
-        help="Update baseline with current Endpoint-layer violations",
+        help="Update baseline with current violations",
     )
     args = parser.parse_args()
 
@@ -340,45 +407,70 @@ def main() -> int:
         print(f"ERROR: No API files found matching {API_GLOB}")
         return 1
 
-    all_violations: list[dict] = []
+    endpoint_violations: list[dict] = []
     for filepath in api_files:
         if filepath.name == "__init__.py":
             continue
-        all_violations.extend(check_file(filepath))
+        endpoint_violations.extend(check_file(filepath))
+
+    # ================================================================
+    # CHECK 3: HTTP Client Unification (baseline-tolerant)
+    # ================================================================
+    app_files = list(PROJECT_ROOT.glob(APP_GLOB))
+    http_violations: list[dict] = []
+    for filepath in app_files:
+        if filepath.name == "__init__.py":
+            continue
+        http_violations.extend(check_http_client_imports(filepath))
 
     baseline_hashes = load_baseline(args.baseline)
-    new_violations = []
-    known_violations = []
 
-    for v in all_violations:
-        h = _file_hash(v["file"], v["module"], v["name"])
+    endpoint_new = []
+    endpoint_known = []
+    for v in endpoint_violations:
+        h = _file_hash("endpoint", v["file"], v["module"], v["name"])
         if h in baseline_hashes:
-            known_violations.append(v)
+            endpoint_known.append(v)
         else:
-            new_violations.append(v)
+            endpoint_new.append(v)
+
+    http_new = []
+    http_known = []
+    for v in http_violations:
+        h = _file_hash("http_client", v["file"], v["module"], v["name"])
+        if h in baseline_hashes:
+            http_known.append(v)
+        else:
+            http_new.append(v)
 
     if args.update_baseline:
-        all_hashes = {_file_hash(v["file"], v["module"], v["name"]) for v in all_violations}
+        all_hashes = set()
+        for v in endpoint_violations:
+            all_hashes.add(_file_hash("endpoint", v["file"], v["module"], v["name"]))
+        for v in http_violations:
+            all_hashes.add(_file_hash("http_client", v["file"], v["module"], v["name"]))
         save_baseline(args.baseline, all_hashes)
         print(f"Baseline updated: {len(all_hashes)} violations recorded")
-        print(f"  - New: {len(new_violations)}")
-        print(f"  - Known: {len(known_violations)}")
-        # Return cross-domain exit code even when updating baseline
+        print(f"  - Endpoint new: {len(endpoint_new)}")
+        print(f"  - Endpoint known: {len(endpoint_known)}")
+        print(f"  - HTTP client new: {len(http_new)}")
+        print(f"  - HTTP client known: {len(http_known)}")
         return exit_code
 
+    # --- Endpoint Layering Report ---
     print("=" * 70)
     print("ENDPOINT LAYERING CHECK")
     print("=" * 70)
     print(f"Scanned files: {len(api_files)}")
-    print(f"Total violations: {len(all_violations)}")
-    print(f"Known (baseline): {len(known_violations)}")
-    print(f"NEW violations: {len(new_violations)}")
+    print(f"Total violations: {len(endpoint_violations)}")
+    print(f"Known (baseline): {len(endpoint_known)}")
+    print(f"NEW violations: {len(endpoint_new)}")
     print()
 
-    if new_violations:
+    if endpoint_new:
         print("NEW violations (these must be fixed or baseline updated):")
         print("-" * 70)
-        for v in new_violations:
+        for v in endpoint_new:
             print(
                 f"  {v['file']}:{v['line']}\n"
                 f"    from {v['module']} import {v['name']}\n"
@@ -387,21 +479,64 @@ def main() -> int:
         print()
         exit_code = 1
 
-    if known_violations:
+    if endpoint_known:
         print("Known violations (existing technical debt):")
         print("-" * 70)
-        for v in known_violations:
+        for v in endpoint_known:
             print(
                 f"  {v['file']}:{v['line']}\n"
                 f"    from {v['module']} import {v['name']}"
             )
         print()
 
-    if new_violations:
+    if endpoint_new:
         print("RESULT: FAILED — new Endpoint-layer violations detected.")
         print("Fix the violations or run: python scripts/check_architecture.py --update-baseline")
     else:
         print("RESULT: PASSED — no new Endpoint-layer violations.")
+    print()
+
+    # --- HTTP Client Unification Report ---
+    print("=" * 70)
+    print("HTTP CLIENT UNIFICATION CHECK")
+    print("=" * 70)
+    print(f"Scanned files: {len(app_files)}")
+    print(f"Total violations: {len(http_violations)}")
+    print(f"Known (baseline): {len(http_known)}")
+    print(f"NEW violations: {len(http_new)}")
+    print()
+
+    if http_new:
+        print("NEW violations (these must be fixed or baseline updated):")
+        print("-" * 70)
+        for v in http_new:
+            print(
+                f"  {v['file']}:{v['line']}\n"
+                f"    from {v['module']} import {v['name']}\n"
+                f"    reason: {v['reason']}"
+            )
+        print()
+        exit_code = 1
+
+    if http_known:
+        print("Known violations (existing technical debt):")
+        print("-" * 70)
+        for v in http_known:
+            if v['module'] == v['name'] or v['name'] == v['module'].split('.')[0]:
+                display = f"import {v['module']}"
+            else:
+                display = f"from {v['module']} import {v['name']}"
+            print(
+                f"  {v['file']}:{v['line']}\n"
+                f"    {display}"
+            )
+        print()
+
+    if http_new:
+        print("RESULT: FAILED — new HTTP client violations detected.")
+        print("Fix the violations or run: python scripts/check_architecture.py --update-baseline")
+    else:
+        print("RESULT: PASSED — no new HTTP client violations.")
 
     return exit_code
 
