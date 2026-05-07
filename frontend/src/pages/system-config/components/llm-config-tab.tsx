@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Card,
   Typography,
@@ -53,13 +53,21 @@ const LLMConfigTab: React.FC = () => {
     try {
       const response = await api.systemConfig.getLLMConfig()
       setLLMConfig(response.data)
-      llmForm.setFieldsValue(response.data)
+      llmForm.setFieldsValue({
+        ...response.data,
+        api_key: response.data.api_key_masked,
+        embedding_api_key: response.data.embedding_api_key_masked,
+      })
     } catch {
       message.error('加载 LLM 配置失败')
     } finally {
       setLLMLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadLLMConfig()
+  }, [])
 
   const handleSaveLLMConfig = async () => {
     try {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Card,
   Space,
@@ -87,10 +87,9 @@ const GitHubConfigTab: React.FC = () => {
     }
   }
 
-  // Load on mount
-  useState(() => {
+  useEffect(() => {
     loadGitHubConfig()
-  })
+  }, [])
 
   return (
     <Card>

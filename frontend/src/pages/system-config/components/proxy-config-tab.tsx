@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Card,
   Space,
@@ -51,13 +51,20 @@ const ProxyConfigTab: React.FC = () => {
     try {
       const response = await api.systemConfig.getProxyConfig()
       setProxyConfig(response.data)
-      proxyForm.setFieldsValue(response.data)
+      proxyForm.setFieldsValue({
+        ...response.data,
+        password: response.data.password_masked,
+      })
     } catch {
       message.error('加载代理配置失败')
     } finally {
       setProxyLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadProxyConfig()
+  }, [])
 
   const handleSaveProxyConfig = async () => {
     try {
