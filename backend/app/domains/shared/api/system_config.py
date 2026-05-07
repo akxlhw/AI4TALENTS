@@ -595,8 +595,6 @@ async def test_proxy_connection(
     1. External API access through proxy
     2. Internal URL direct connection (if no_proxy configured)
     """
-    from urllib.parse import urlparse, urlunparse
-
     import httpx
 
     from app.domains.shared.services.common.http_client import HttpClientFactory
@@ -629,24 +627,14 @@ async def test_proxy_connection(
             message="Proxy URL is required",
         )
 
-    # Build proxy URL with authentication
-    if username and password:
-        parsed = urlparse(proxy_url)
-        netloc = f"{username}:{password}@{parsed.hostname}"
-        if parsed.port:
-            netloc += f":{parsed.port}"
-        full_proxy_url = urlunparse(
-            (
-                parsed.scheme,
-                netloc,
-                parsed.path,
-                parsed.params,
-                parsed.query,
-                parsed.fragment,
-            )
-        )
-    else:
-        full_proxy_url = proxy_url
+    # Configure Factory early so both external and internal tests use it
+    HttpClientFactory.configure(
+        proxy_url=proxy_url,
+        proxy_username=username,
+        proxy_password=password,
+        no_proxy=no_proxy,
+        ssl_verify=ssl_verify,
+    )
 
     results = []
 
@@ -655,8 +643,8 @@ async def test_proxy_connection(
     openalex_base = settings.OPENALEX_BASE_URL or "https://api.openalex.org"
     external_url = f"{openalex_base}/works?per_page=1"
     try:
-        async with httpx.AsyncClient(
-            proxy=full_proxy_url, timeout=30.0, verify=ssl_verify, trust_env=False
+        async with HttpClientFactory.create_client_for_url(
+            external_url, timeout=30.0
         ) as client:
             response = await client.get(external_url)
 
@@ -733,19 +721,13 @@ async def test_proxy_connection(
                         break
 
         if internal_url:
-            # Configure HttpClientFactory to check if URL should bypass proxy
-            HttpClientFactory.configure(
-                proxy_url=proxy_url,
-                proxy_username=username,
-                proxy_password=password,
-                no_proxy=no_proxy,
-            )
-
             HttpClientFactory.should_use_proxy(internal_url)
 
             try:
                 # Test direct connection (no proxy for internal URLs)
-                async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
+                async with HttpClientFactory.create_client_for_url(
+                    internal_url, timeout=10.0
+                ) as client:
                     response = await client.get(internal_url)
 
                     if response.status_code in [200, 401, 403, 404]:
@@ -871,7 +853,7 @@ async def test_github_connection(
     current_user: dict = Depends(require_admin_user),
 ):
     """Test GitHub API connection using configured tokens."""
-    import httpx
+    from app.domains.shared.services.common.http_client import HttpClientFactory
 
     config_service = ConfigService(session)
     config = await config_service.get_github_config()
@@ -886,11 +868,10 @@ async def test_github_connection(
     results = []
     for token in tokens:
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.get(
-                    f"{config.base_url}/rate_limit",
-                    headers={"Authorization": f"Bearer {token}"},
-                )
+            async with HttpClientFactory.create_client_for_url(
+                config.base_url, timeout=10, headers={"Authorization": f"Bearer {token}"}
+            ) as client:
+                response = await client.get(f"{config.base_url}/rate_limit")
                 if response.status_code == 200:
                     data = response.json()
                     rate = data.get("rate", {})

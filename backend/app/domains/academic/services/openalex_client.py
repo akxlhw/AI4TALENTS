@@ -20,6 +20,7 @@ from tenacity import (
 )
 
 from app.core.config import settings
+from app.domains.shared.services.common.http_client import HttpClientFactory
 
 
 class OpenAlexAPIError(Exception):
@@ -82,10 +83,11 @@ class OpenAlexClient:
             ),
         }
 
-        # Reusable HTTP client (connection pooling)
-        self._client = httpx.AsyncClient(
+        # Reusable HTTP client via factory (proxy + no_proxy support)
+        self._client = HttpClientFactory.create_client_for_url(
+            self.base_url,
+            timeout=self.timeout,
             headers=self.headers,
-            timeout=httpx.Timeout(self.timeout),
         )
 
     def _wait_for_rate_limit(self):
@@ -403,7 +405,7 @@ class OpenAlexClient:
         """Close the underlying HTTP client."""
         await self._client.aclose()
 
-    async def __aenter__(self) -> "OpenAlexClient":
+    async def __aenter__(self) -> OpenAlexClient:
         return self
 
     async def __aexit__(self, *args: Any) -> None:

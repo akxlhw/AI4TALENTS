@@ -85,6 +85,16 @@ class OpenAlexClient:
         self.email = email
         self.base_url = OPENALEX_API_BASE
 
+    def create_session(self, timeout=None):
+        """Create aiohttp session aligned with HttpClientFactory config."""
+        from app.domains.shared.services.common.http_client import HttpClientFactory
+
+        connector = aiohttp.TCPConnector(ssl=HttpClientFactory.get_ssl_verify())
+        kwargs = {"trust_env": False, "connector": connector}
+        if timeout:
+            kwargs["timeout"] = timeout
+        return aiohttp.ClientSession(**kwargs)
+
     def get_proxy_for_request(self, url: str) -> str | None:
         """
         Get proxy URL for a specific request using HttpClientFactory.
@@ -187,7 +197,7 @@ class WorkFetcher:
         openalex_url = f"{OPENALEX_API_BASE}/works"
         proxy = self.client.get_proxy_for_request(openalex_url)
 
-        async with aiohttp.ClientSession(timeout=DEFAULT_TIMEOUT) as http_session:
+        async with self.client.create_session(timeout=DEFAULT_TIMEOUT) as http_session:
             async with http_session.get(
                 url, params=params, headers=headers, proxy=proxy
             ) as response:
@@ -217,7 +227,7 @@ class WorkFetcher:
         openalex_url = f"{OPENALEX_API_BASE}/works"
         proxy = self.client.get_proxy_for_request(openalex_url)
 
-        async with aiohttp.ClientSession(timeout=DEFAULT_TIMEOUT) as http_session:
+        async with self.client.create_session(timeout=DEFAULT_TIMEOUT) as http_session:
             cursor = "*"
             total_fetched = 0
             batch_size = 100  # Commit every 100 records
@@ -344,7 +354,7 @@ class WorkFetcher:
 
         works = []
         proxy = self.client.get_proxy_for_request(url)
-        async with aiohttp.ClientSession() as http_session:
+        async with self.client.create_session() as http_session:
             async with http_session.get(
                 url, params=params, headers=headers, proxy=proxy
             ) as response:
@@ -578,7 +588,7 @@ class AuthorFetcher:
         # Determine proxy for OpenAlex API
         openalex_url = f"{OPENALEX_API_BASE}/authors"
         proxy = self.client.get_proxy_for_request(openalex_url)
-        async with aiohttp.ClientSession() as http_session:
+        async with self.client.create_session() as http_session:
             batch_size = 50
             total_batches = (len(ids_to_fetch) + batch_size - 1) // batch_size
 
@@ -702,7 +712,7 @@ class InstitutionFetcher:
         # Determine proxy for OpenAlex API
         openalex_url = f"{OPENALEX_API_BASE}/institutions"
         proxy = self.client.get_proxy_for_request(openalex_url)
-        async with aiohttp.ClientSession() as http_session:
+        async with self.client.create_session() as http_session:
             batch_size = 50
             total_batches = (len(missing_ids) + batch_size - 1) // batch_size
 
