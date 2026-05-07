@@ -364,11 +364,10 @@ const AcademicHomePage: React.FC = () => {
 
               {/* Schools — domestic vs overseas split */}
               <div>
-                <Text type="secondary" style={{ fontSize: 12 }}>顶尖院校机构</Text>
-                <Row gutter={12} style={{ marginTop: 6 }}>
+                <Row gutter={12}>
                   <Col span={12}>
-                    <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
-                      国内顶尖 Top5
+                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
+                      国内顶尖院校机构
                     </Text>
                     <div>
                       {topDomesticSchools.slice(0, 5).map((item) => (
@@ -386,8 +385,8 @@ const AcademicHomePage: React.FC = () => {
                     </div>
                   </Col>
                   <Col span={12}>
-                    <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
-                      海外顶尖 Top5
+                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
+                      海外顶尖院校机构
                     </Text>
                     <div>
                       {topOverseasSchools.slice(0, 5).map((item) => (
