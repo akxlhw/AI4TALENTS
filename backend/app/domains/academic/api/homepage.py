@@ -39,7 +39,8 @@ async def get_highlights(
     Returns:
     - hot_tech_domains: 热门技术领域列表 (按人才数Top6)
     - top_countries: 主要国家列表 (按人才数Top5)
-    - top_schools: Top院校列表 (按人才数Top5)
+    - top_domestic_schools: 国内顶尖院校列表 (按人才数Top5)
+    - top_overseas_schools: 海外顶尖院校列表 (按人才数Top5)
     - hot_research_topics: 热门研究方向列表 (按人才数Top10)
     """
     # Initialize cache service
@@ -53,13 +54,17 @@ async def get_highlights(
         # Fetch all data in parallel
         hot_tech_domains = await repo.get_hot_tech_domains(limit=6)
         top_countries = await repo.get_top_countries(limit=5)
-        top_schools = await repo.get_top_schools(limit=5)
+        top_domestic_schools = await repo.get_top_schools(limit=5, country_code="CN")
+        top_overseas_schools = await repo.get_top_schools(
+            limit=5, country_code="__OVERSEAS__"
+        )
         hot_research_topics = await repo.get_hot_research_topics(limit=10)
 
         return {
             "hot_tech_domains": hot_tech_domains,
             "top_countries": top_countries,
-            "top_schools": top_schools,
+            "top_domestic_schools": top_domestic_schools,
+            "top_overseas_schools": top_overseas_schools,
             "hot_research_topics": hot_research_topics,
         }
 
@@ -73,14 +78,18 @@ async def get_highlights(
     if cached_data:
         hot_tech_domains = cached_data.get("hot_tech_domains", [])
         top_countries = cached_data.get("top_countries", [])
-        top_schools = cached_data.get("top_schools", [])
+        top_domestic_schools = cached_data.get("top_domestic_schools", [])
+        top_overseas_schools = cached_data.get("top_overseas_schools", [])
         hot_research_topics = cached_data.get("hot_research_topics", [])
     else:
         # Fallback to direct database query
         repo = HomepageRepository(session)
         hot_tech_domains = await repo.get_hot_tech_domains(limit=6)
         top_countries = await repo.get_top_countries(limit=5)
-        top_schools = await repo.get_top_schools(limit=5)
+        top_domestic_schools = await repo.get_top_schools(limit=5, country_code="CN")
+        top_overseas_schools = await repo.get_top_schools(
+            limit=5, country_code="__OVERSEAS__"
+        )
         hot_research_topics = await repo.get_hot_research_topics(limit=10)
 
     now = datetime.now()
@@ -89,7 +98,8 @@ async def get_highlights(
     return HomepageHighlightsResponse(
         hot_tech_domains=[HotTechDomainItem(**item) for item in hot_tech_domains],
         top_countries=[TopCountryItem(**item) for item in top_countries],
-        top_schools=[TopSchoolItem(**item) for item in top_schools],
+        top_domestic_schools=[TopSchoolItem(**item) for item in top_domestic_schools],
+        top_overseas_schools=[TopSchoolItem(**item) for item in top_overseas_schools],
         hot_research_topics=[HotResearchTopicItem(**item) for item in hot_research_topics],
         version=version,
         generated_at=now.isoformat(),

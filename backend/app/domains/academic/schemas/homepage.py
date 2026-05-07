@@ -49,7 +49,15 @@ class HomepageHighlightsResponse(BaseModel):
         default_factory=list, description="热门技术领域列表"
     )
     top_countries: list[TopCountryItem] = Field(default_factory=list, description="主要国家列表")
-    top_schools: list[TopSchoolItem] = Field(default_factory=list, description="Top院校列表")
+    top_schools: list[TopSchoolItem] = Field(
+        default_factory=list, description="Top院校列表 (兼容旧字段)"
+    )
+    top_domestic_schools: list[TopSchoolItem] = Field(
+        default_factory=list, description="国内顶尖院校列表"
+    )
+    top_overseas_schools: list[TopSchoolItem] = Field(
+        default_factory=list, description="海外顶尖院校列表"
+    )
     hot_research_topics: list[HotResearchTopicItem] = Field(
         default_factory=list, description="热门研究方向列表"
     )

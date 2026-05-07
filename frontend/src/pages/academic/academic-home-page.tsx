@@ -30,6 +30,7 @@ interface TopSchool {
   school_id: number
   school_name: string
   country_name: string | null
+  country_code: string | null
   talent_count: number
 }
 
@@ -82,7 +83,8 @@ const AcademicHomePage: React.FC = () => {
 
   const hotTechDomains: HotTechDomain[] = highlights?.hot_tech_domains || []
   const topCountries: TopCountry[] = highlights?.top_countries || []
-  const topSchools: TopSchool[] = highlights?.top_schools || []
+  const topDomesticSchools: TopSchool[] = highlights?.top_domestic_schools || []
+  const topOverseasSchools: TopSchool[] = highlights?.top_overseas_schools || []
   const hotResearchTopics: HotResearchTopic[] = highlights?.hot_research_topics || []
 
   return (
@@ -360,23 +362,49 @@ const AcademicHomePage: React.FC = () => {
 
               <Divider style={{ margin: '8px 0' }} />
 
-              {/* Schools */}
+              {/* Schools — domestic vs overseas split */}
               <div>
                 <Text type="secondary" style={{ fontSize: 12 }}>顶尖院校机构</Text>
-                <div style={{ marginTop: 6 }}>
-                  {topSchools.slice(0, 8).map((item) => (
-                    <Tag
-                      key={item.school_id}
-                      style={{ marginBottom: 6, cursor: 'pointer', fontSize: 13, background: '#F0F4F8', color: '#2D5A87', border: '1px solid #2D5A8733' }}
-                      onClick={() => handleSchoolClick(item.school_id)}
-                    >
-                      {item.school_name} ({item.talent_count})
-                    </Tag>
-                  ))}
-                  {topSchools.length === 0 && (
-                    <Text type="secondary">暂无数据</Text>
-                  )}
-                </div>
+                <Row gutter={12} style={{ marginTop: 6 }}>
+                  <Col span={12}>
+                    <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
+                      国内顶尖 Top5
+                    </Text>
+                    <div>
+                      {topDomesticSchools.slice(0, 5).map((item) => (
+                        <Tag
+                          key={`dom-${item.school_id}`}
+                          style={{ marginBottom: 6, cursor: 'pointer', fontSize: 12, background: '#F0F4F8', color: '#2D5A87', border: '1px solid #2D5A8733' }}
+                          onClick={() => handleSchoolClick(item.school_id)}
+                        >
+                          {item.school_name} ({item.talent_count})
+                        </Tag>
+                      ))}
+                      {topDomesticSchools.length === 0 && (
+                        <Text type="secondary" style={{ fontSize: 12 }}>暂无数据</Text>
+                      )}
+                    </div>
+                  </Col>
+                  <Col span={12}>
+                    <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
+                      海外顶尖 Top5
+                    </Text>
+                    <div>
+                      {topOverseasSchools.slice(0, 5).map((item) => (
+                        <Tag
+                          key={`os-${item.school_id}`}
+                          style={{ marginBottom: 6, cursor: 'pointer', fontSize: 12, background: '#F5F0F8', color: '#6B4C87', border: '1px solid #6B4C8733' }}
+                          onClick={() => handleSchoolClick(item.school_id)}
+                        >
+                          {item.school_name} ({item.talent_count})
+                        </Tag>
+                      ))}
+                      {topOverseasSchools.length === 0 && (
+                        <Text type="secondary" style={{ fontSize: 12 }}>暂无数据</Text>
+                      )}
+                    </div>
+                  </Col>
+                </Row>
               </div>
             </Card>
           </Col>

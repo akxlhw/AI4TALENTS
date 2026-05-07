@@ -127,13 +127,17 @@ class HomepageRepository:
             for row in rows
         ]
 
-    async def get_top_schools(self, limit: int = 5) -> list[dict]:
+    async def get_top_schools(
+        self, limit: int = 5, country_code: str | None = None
+    ) -> list[dict]:
         """
         Get top schools by talent count.
         按人才数获取Top院校
 
         Args:
             limit: Maximum number of results
+            country_code: Filter by country code (e.g. "CN" for domestic,
+                or "__OVERSEAS__" for all non-CN/non-XX countries)
 
         Returns:
             List of dictionaries with school info and talent count
@@ -148,9 +152,18 @@ class HomepageRepository:
             )
             .select_from(School)
             .where(School.is_visible.is_(True))
-            .order_by((School.professor_count + School.student_count).desc())
-            .limit(limit)
         )
+
+        if country_code == "__OVERSEAS__":
+            query = query.where(
+                School.country_code.notin_(["CN", "XX"]),
+            )
+        elif country_code:
+            query = query.where(School.country_code == country_code)
+
+        query = query.order_by(
+            (School.professor_count + School.student_count).desc()
+        ).limit(limit)
 
         result = await self.session.execute(query)
         rows = result.all()
