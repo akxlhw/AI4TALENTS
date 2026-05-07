@@ -40,7 +40,7 @@ async def get_highlights(
     - hot_tech_domains: 热门技术领域列表 (按人才数Top6)
     - top_countries: 主要国家列表 (按人才数Top5)
     - top_schools: Top院校列表 (按人才数Top5)
-    - hot_research_topics: 热门研究方向列表 (按人才数Top5)
+    - hot_research_topics: 热门研究方向列表 (按人才数Top10)
     """
     # Initialize cache service
     cache_conn = await get_cache_connection()
@@ -54,7 +54,7 @@ async def get_highlights(
         hot_tech_domains = await repo.get_hot_tech_domains(limit=6)
         top_countries = await repo.get_top_countries(limit=5)
         top_schools = await repo.get_top_schools(limit=5)
-        hot_research_topics = await repo.get_hot_research_topics(limit=5)
+        hot_research_topics = await repo.get_hot_research_topics(limit=10)
 
         return {
             "hot_tech_domains": hot_tech_domains,
@@ -81,7 +81,7 @@ async def get_highlights(
         hot_tech_domains = await repo.get_hot_tech_domains(limit=6)
         top_countries = await repo.get_top_countries(limit=5)
         top_schools = await repo.get_top_schools(limit=5)
-        hot_research_topics = await repo.get_hot_research_topics(limit=5)
+        hot_research_topics = await repo.get_hot_research_topics(limit=10)
 
     now = datetime.now()
     version = now.strftime("%Y%m%d-%H%M%S")
