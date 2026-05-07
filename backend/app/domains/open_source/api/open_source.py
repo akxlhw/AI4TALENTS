@@ -315,6 +315,7 @@ async def list_developer_contributions(
             code_reviews_count=c.code_reviews_count,
             is_owner=c.is_owner,
             is_maintainer=c.is_maintainer,
+            is_committer=c.is_committer,
         )
         for c, full_name in result
     ]
