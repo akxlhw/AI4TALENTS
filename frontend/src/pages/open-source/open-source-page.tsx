@@ -12,6 +12,7 @@ import {
   Spin,
   Empty,
   Button,
+  Tooltip,
 } from 'antd'
 import {
   CodeOutlined,
@@ -334,23 +335,43 @@ const OpenSourcePage: React.FC = () => {
                       {dev.bio || '暂无简介'}
                     </Paragraph>
 
-                    <Space size={4} wrap style={{ marginBottom: 8 }}>
-                      {(dev.primary_languages || []).slice(0, 3).map((lang) => (
-                        <Tag key={lang} style={{ fontSize: 11, borderRadius: 4, margin: 0 }}>
-                          {lang}
-                        </Tag>
-                      ))}
-                    </Space>
-
                     <Row gutter={16}>
-                      <Col span={8}>
+                      <Col span={6}>
                         <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Stars</Text>
                         <div style={{ fontWeight: 700, color: primary, fontSize: 13 }}>
                           <StarOutlined style={{ fontSize: 11, marginRight: 2 }} />
                           {(dev.total_stars_received / 1000).toFixed(1)}k
                         </div>
                       </Col>
-                      <Col span={8}>
+                      <Col span={6}>
+                        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>开发语言</Text>
+                        <Tooltip
+                          title={
+                            <Space size={4} wrap>
+                              {(dev.primary_languages || []).map((lang) => (
+                                <Tag key={lang} style={{ fontSize: 11, borderRadius: 4, margin: 0 }}>
+                                  {lang}
+                                </Tag>
+                              ))}
+                              {(dev.primary_languages || []).length === 0 && '无'}
+                            </Space>
+                          }
+                        >
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              color: primary,
+                              fontSize: 13,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {(dev.primary_languages || []).slice(0, 2).join(', ') || '-'}
+                          </div>
+                        </Tooltip>
+                      </Col>
+                      <Col span={6}>
                         <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>公司</Text>
                         <div
                           style={{
@@ -365,7 +386,7 @@ const OpenSourcePage: React.FC = () => {
                           {dev.company || '-'}
                         </div>
                       </Col>
-                      <Col span={8}>
+                      <Col span={6}>
                         <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>地区</Text>
                         <div
                           style={{
