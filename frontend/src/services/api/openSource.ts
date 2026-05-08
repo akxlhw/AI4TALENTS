@@ -51,6 +51,8 @@ export const openSourceApi = {
 
   listRepoConfigs: (params?: Record<string, unknown>) =>
     apiClient.get('/open-source/repo-configs', { params }),
+  listRepositories: (params?: Record<string, unknown>) =>
+    apiClient.get('/open-source/repositories', { params }),
   createRepoConfig: (data: Record<string, unknown>) =>
     apiClient.post('/open-source/repo-configs', data),
   updateRepoConfig: (id: number, data: Record<string, unknown>) =>

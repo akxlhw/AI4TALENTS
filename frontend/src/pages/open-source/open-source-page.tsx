@@ -205,6 +205,13 @@ const OpenSourcePage: React.FC = () => {
               <FireOutlined style={{ marginRight: 8, color: '#F6AD55' }} />
               Trending 仓库
             </Title>
+            <Button
+              type="link"
+              onClick={() => navigate('/opensource/repos')}
+              style={{ fontSize: 14, padding: 0 }}
+            >
+              查看全部 →
+            </Button>
           </div>
           {trendingRepos.length === 0 ? (
             <Empty description="暂无仓库数据" />

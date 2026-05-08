@@ -70,6 +70,7 @@ class OpenSourceRepository:
         is_active = filters.get("is_active")
         collect_enabled = filters.get("collect_enabled")
         collected_only = filters.get("collected_only", False)
+        q = filters.get("q")
 
         if tech_element:
             conditions.append(OSRepoConfig.tech_element == tech_element)
@@ -77,6 +78,15 @@ class OpenSourceRepository:
             conditions.append(OSRepoConfig.is_active == is_active)
         if collect_enabled is not None:
             conditions.append(OSRepoConfig.collect_enabled == collect_enabled)
+        if q:
+            pattern = f"%{q}%"
+            conditions.append(
+                or_(
+                    OSRepoConfig.repo_full_name.ilike(pattern),
+                    OSRepoConfig.display_name.ilike(pattern),
+                    OSRepoConfig.description.ilike(pattern),
+                )
+            )
 
         stmt = select(OSRepoConfig).where(and_(*conditions)) if conditions else select(OSRepoConfig)
 

@@ -417,6 +417,38 @@ async def recommend_similar_developers(
     return [OSDeveloperSummary.model_validate(i) for i in items]
 
 
+# ============= Public Repository List =============
+
+@router.get("/repositories", response_model=PaginatedResponse[OSRepoConfigResponse])
+async def list_public_repositories(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    tech_element: str | None = Query(None),
+    q: str | None = Query(None, description="Search by repo name or description"),
+    sort_by: str = Query("stars", description="stars | id_desc"),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(get_current_user),
+):
+    """List all public repositories (collected repo configs)."""
+    service = OpenSourceService(session)
+    items, total = await service.list_repo_configs(
+        page=page,
+        page_size=page_size,
+        tech_element=tech_element,
+        is_active=True,
+        collect_enabled=None,
+        sort_by=sort_by,
+        collected_only=True,
+        q=q,
+    )
+    return PaginatedResponse.create(
+        items=[OSRepoConfigResponse.model_validate(i) for i in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
 # ============= Repository (Project) Detail =============
 
 @router.get("/repositories/{owner}/{name}", response_model=OSRepositoryDetailResponse)

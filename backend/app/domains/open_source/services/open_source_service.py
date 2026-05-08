@@ -78,6 +78,7 @@ class OpenSourceService:
         collect_enabled: bool | None = None,
         sort_by: str = "id_desc",
         collected_only: bool = False,
+        q: str | None = None,
     ) -> tuple[list[OSRepoConfig], int]:
         """
         获取仓库配置列表（带筛选）
@@ -103,6 +104,8 @@ class OpenSourceService:
             filters["collect_enabled"] = collect_enabled
         if collected_only:
             filters["collected_only"] = collected_only
+        if q:
+            filters["q"] = q
         return await self.repo.list_repo_configs(
             filters=filters,
             sort_by=sort_by,

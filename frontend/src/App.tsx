@@ -20,6 +20,7 @@ import OpenSourcePage from './pages/open-source/open-source-page'
 import OpenSourceSearchPage from './pages/open-source/open-source-search-page'
 import DeveloperDetailPage from './pages/open-source/open-source-developer-detail-page'
 import RepoDetailPage from './pages/open-source/repo-detail-page'
+import RepoListPage from './pages/open-source/repo-list-page'
 import CompetitionDemoPage from './pages/competition/competition-demo-page'
 import IndustryDemoPage from './pages/industry/industry-demo-page'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
@@ -124,6 +125,7 @@ function AppRoutes() {
         <Route path="opensource" element={<OpenSourcePage />} />
         <Route path="opensource/search" element={<OpenSourceSearchPage />} />
         <Route path="opensource/developers/:id" element={<DeveloperDetailPage />} />
+        <Route path="opensource/repos" element={<RepoListPage />} />
         <Route path="opensource/repos/:owner/:name" element={<RepoDetailPage />} />
         <Route path="demo-competition" element={<CompetitionDemoPage />} />
         <Route path="demo-industry" element={<IndustryDemoPage />} />
