@@ -11,7 +11,7 @@ import logging
 import re
 from typing import Any
 
-from sqlalchemy import and_, cast, func, or_, select, text
+from sqlalchemy import and_, cast, exists, func, or_, select, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -258,12 +258,20 @@ class OpenSourceRepository:
             conditions.append(OSDeveloper.total_stars_received >= min_stars)
 
         stmt = select(OSDeveloper).where(and_(*conditions))
+
+        # 子查询：判断开发者是否有 Committer 角色（排序时优先）
+        has_committer = exists().where(
+            OSContribution.developer_id == OSDeveloper.developer_id,
+            OSContribution.is_committer.is_(True),
+        )
+
         order_map = {
-            "stars_desc": OSDeveloper.total_stars_received.desc(),
-            "stars_asc": OSDeveloper.total_stars_received.asc(),
-            "name_asc": OSDeveloper.name.asc(),
+            "stars_desc": [has_committer.desc(), OSDeveloper.total_stars_received.desc()],
+            "stars_asc": [has_committer.desc(), OSDeveloper.total_stars_received.asc()],
+            "name_asc": [has_committer.desc(), OSDeveloper.name.asc()],
         }
-        stmt = stmt.order_by(order_map.get(sort_by, OSDeveloper.total_stars_received.desc()))
+        order_clauses = order_map.get(sort_by, [OSDeveloper.total_stars_received.desc()])
+        stmt = stmt.order_by(*order_clauses)
 
         total = await self.session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
         stmt = stmt.offset((page - 1) * page_size).limit(page_size)
