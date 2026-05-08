@@ -15,6 +15,7 @@ import {
   Empty,
   Pagination,
   Form,
+  Tooltip,
 } from 'antd'
 import {
   SearchOutlined,
@@ -22,13 +23,11 @@ import {
   StarOutlined,
   HeartOutlined,
   HeartFilled,
-  EnvironmentOutlined,
-  BuildOutlined,
 } from '@ant-design/icons'
 import { api } from '../../services/api'
 import type { OSDeveloper, OSSearchQuery } from '../../types'
 
-const { Title, Text } = Typography
+const { Title, Text, Paragraph } = Typography
 
 const TECH_ELEMENT_OPTIONS = [
   { value: 'ai', label: '人工智能' },
@@ -261,75 +260,98 @@ const OpenSourceSearchPage: React.FC = () => {
                 <Card
                   hoverable
                   className="domain-card"
-                  bodyStyle={{ padding: 20 }}
+                  style={{ borderLeft: '3px solid #48BB78', transition: 'all 0.2s ease' }}
+                  bodyStyle={{ padding: '14px 16px' }}
                   onClick={() => navigate(`/opensource/developers/${dev.developer_id}`)}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <Space align="start">
                       {dev.avatar_url ? (
                         <img
                           src={`${dev.avatar_url}${dev.avatar_url.includes('?') ? '&' : '?'}s=64`}
                           alt={dev.name || dev.github_login}
                           loading="lazy"
-                          style={{ width: 48, height: 48, borderRadius: 24, objectFit: 'cover' }}
+                          style={{ width: 40, height: 40, borderRadius: 20, objectFit: 'cover' }}
                         />
                       ) : (
-                        <div style={{ width: 48, height: 48, borderRadius: 24, background: primary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 600 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 20, background: primary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 16, fontWeight: 600 }}>
                           {(dev.name || dev.github_login)?.[0]?.toUpperCase()}
                         </div>
                       )}
                       <div>
-                        <Text strong style={{ fontSize: 16, display: 'block' }}>
+                        <Text strong style={{ fontSize: 14, display: 'block' }}>
                           {dev.name || dev.github_login}
                         </Text>
-                        <Text type="secondary" style={{ fontSize: 13 }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
                           @{dev.github_login}
                         </Text>
                       </div>
                     </Space>
-                    <Button
-                      type="text"
-                      icon={favoriteIds.has(dev.developer_id) ? <HeartFilled style={{ color: '#F56565' }} /> : <HeartOutlined />}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleToggleFavorite(dev.developer_id)
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ marginTop: 12, marginBottom: 12 }}>
-                    <Space wrap size={4}>
-                      {(dev.primary_languages || []).slice(0, 4).map((lang) => (
-                        <Tag key={lang} style={{ fontSize: 11, borderRadius: 4 }}>{lang}</Tag>
-                      ))}
-                      {(dev.tech_tags || []).slice(0, 3).map((tag) => (
-                        <Tag key={tag} color="success" style={{ fontSize: 11, borderRadius: 4 }}>{tag}</Tag>
-                      ))}
+                    <Space size={4} style={{ flexShrink: 0, marginLeft: 8 }}>
+                      {dev.roles?.includes('Owner') && (
+                        <Tag style={{ fontSize: 10, lineHeight: '16px', padding: '0 6px', borderRadius: 4, margin: 0, background: '#D69E2E', color: '#fff', border: 'none', fontWeight: 600 }}>
+                          Owner
+                        </Tag>
+                      )}
+                      {dev.roles?.includes('Committer') && (
+                        <Tag style={{ fontSize: 10, lineHeight: '16px', padding: '0 6px', borderRadius: 4, margin: 0, background: '#3182CE', color: '#fff', border: 'none', fontWeight: 600 }}>
+                          Committer
+                        </Tag>
+                      )}
+                      <Button
+                        type="text"
+                        size="small"
+                        style={{ padding: '0 4px', margin: 0 }}
+                        icon={favoriteIds.has(dev.developer_id) ? <HeartFilled style={{ color: '#F56565' }} /> : <HeartOutlined />}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleToggleFavorite(dev.developer_id)
+                        }}
+                      />
                     </Space>
                   </div>
 
+                  <Paragraph
+                    ellipsis={{ rows: 1 }}
+                    style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}
+                  >
+                    {dev.bio || '暂无简介'}
+                  </Paragraph>
+
                   <Row gutter={16}>
-                    <Col span={8}>
-                      <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                        <StarOutlined style={{ marginRight: 4 }} />Stars
-                      </Text>
-                      <div style={{ fontWeight: 700, color: primary }}>
-                        {dev.total_stars_received}
+                    <Col span={6}>
+                      <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Stars</Text>
+                      <div style={{ fontWeight: 700, color: primary, fontSize: 13 }}>
+                        <StarOutlined style={{ fontSize: 11, marginRight: 2 }} />
+                        {(dev.total_stars_received / 1000).toFixed(1)}k
                       </div>
                     </Col>
-                    <Col span={8}>
-                      <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                        <BuildOutlined style={{ marginRight: 4 }} />公司
-                      </Text>
-                      <div style={{ fontWeight: 700, color: primary, fontSize: 13 }}>
+                    <Col span={6}>
+                      <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>开发语言</Text>
+                      <Tooltip
+                        title={
+                          <Space size={4} wrap>
+                            {(dev.primary_languages || []).map((lang) => (
+                              <Tag key={lang} style={{ fontSize: 11, borderRadius: 4, margin: 0 }}>{lang}</Tag>
+                            ))}
+                            {(dev.primary_languages || []).length === 0 && '无'}
+                          </Space>
+                        }
+                      >
+                        <div style={{ fontWeight: 700, color: primary, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {(dev.primary_languages || []).slice(0, 2).join(', ') || '-'}
+                        </div>
+                      </Tooltip>
+                    </Col>
+                    <Col span={6}>
+                      <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>公司</Text>
+                      <div style={{ fontWeight: 700, color: primary, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {dev.company || '-'}
                       </div>
                     </Col>
-                    <Col span={8}>
-                      <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                        <EnvironmentOutlined style={{ marginRight: 4 }} />地区
-                      </Text>
-                      <div style={{ fontWeight: 700, color: primary, fontSize: 13 }}>
+                    <Col span={6}>
+                      <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>地区</Text>
+                      <div style={{ fontWeight: 700, color: primary, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {dev.location || '-'}
                       </div>
                     </Col>
