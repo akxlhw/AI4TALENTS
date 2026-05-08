@@ -128,34 +128,42 @@ class GitHubCollector:
         logger.info(f"Fetched {total} contributors from {ctx.repo_full_name}")
         await self._update_task(ctx.task_id, total_records=total, current_step="fetch_profiles", progress_percent=20)
 
-        # Step 3-5: Process each contributor serially
+        # Step 3-5: Process contributors concurrently with semaphore
         # Each contributor uses an independent transaction to ensure failure isolation.
-        for idx, contributor in enumerate(contributors, 1):
+        sem = asyncio.Semaphore(5)
+        processed = 0
+
+        async def _process_one(contributor: dict[str, Any]) -> None:
+            nonlocal processed
             if await self._is_cancelled(ctx):
                 return
 
             login = contributor.get("login")
             if not login:
-                continue
+                return
 
-            try:
-                async with AsyncSessionLocal() as session:
-                    sync = SyncService(session)
-                    await self._process_contributor(
-                        ctx, login, sync, repo_info, contributor
-                    )
-                    await session.commit()
-            except Exception as e:
-                logger.exception(f"Failed to process contributor {login}: {e}")
-                # Continue with next contributor; partial failures are logged but not fatal.
+            async with sem:
+                try:
+                    async with AsyncSessionLocal() as session:
+                        sync = SyncService(session)
+                        await self._process_contributor(
+                            ctx, login, sync, repo_info, contributor
+                        )
+                        await session.commit()
+                except Exception as e:
+                    logger.exception(f"Failed to process contributor {login}: {e}")
+                    # Continue with next contributor; partial failures are logged but not fatal.
 
-            # Small delay between contributors to avoid rate limiting
-            if idx < total:
-                await asyncio.sleep(0.5)
+                processed += 1
+                # Update progress every contributor
+                progress = 20 + int((processed / total) * 70)
+                await self._update_task(
+                    ctx.task_id,
+                    processed_records=processed,
+                    progress_percent=min(progress, 90),
+                )
 
-            # Update progress every contributor
-            progress = 20 + int((idx / total) * 70)
-            await self._update_task(ctx.task_id, processed_records=idx, progress_percent=min(progress, 90))
+        await asyncio.gather(*[_process_one(c) for c in contributors])
 
         # Step 6: Done
         await self._update_task(
@@ -175,31 +183,41 @@ class GitHubCollector:
         repo_info: dict[str, Any],
         contributor: dict[str, Any],
     ) -> None:
-        """Process a single contributor: profile → repos → languages → sync."""
+        """Process a single contributor: profile → repos → languages → sync.
+
+        Optimized for batch DB operations with minimal flushes:
+        1. Concurrent API calls (get_user + list_user_repos)
+        2. Collect all repo/contribution data in memory
+        3. Batch upsert repos → single flush → batch upsert contributions → single flush
+        4. Batch upsert language skills → single flush
+        """
         try:
-            # Fetch profile
-            user = await self.client.get_user(login)
+            # P1: Concurrent API calls — get_user and list_user_repos have no data dependency
+            user_task = self.client.get_user(login)
+            repos_task = self.client.list_user_repos(login, per_page=100)
+            user, user_repos = await asyncio.gather(user_task, repos_task)
+
             if not user:
                 logger.warning(f"User not found: {login}")
                 return
-
-            # Build developer data
-            dev_data = self._build_developer_data(user, ctx.tech_element)
-            dev = await sync.upsert_developer(dev_data)
-
-            # Fetch user's repos (GitHub max 100 per page, single fetch)
-            user_repos = await self.client.list_user_repos(login, per_page=100)
             if await self._is_cancelled(ctx):
                 return
 
-            # Aggregate languages across repos using 'language' field from list_user_repos
-            # (avoiding per-repo get_repo_languages API calls which consume rate limit heavily)
+            # Build developer data and upsert (defer flush)
+            dev_data = self._build_developer_data(user, ctx.tech_element)
+            dev = await sync.upsert_developer(dev_data, auto_flush=False)
+
+            # Flush once if developer is new (need developer_id for foreign keys)
+            if dev.developer_id is None:
+                await sync.session.flush()
+
+            # Aggregate languages and totals while collecting repo operations
             lang_stats: dict[str, dict[str, Any]] = {}
             total_stars = 0
             total_forks = 0
+            repo_ops: list[tuple[str, dict[str, Any], dict[str, Any]]] = []
 
-            # Step 1: Create contribution for the TARGET repo (always, regardless of whether
-            # it appears in the user's own repo list). This is where role detection lives.
+            # Step 1: Target repo contribution (always create, role detection lives here)
             target_full_name = repo_info.get("full_name", "")
             if repo_info and target_full_name:
                 target_owner, target_repo_name = target_full_name.split("/", 1)
@@ -213,37 +231,27 @@ class GitHubCollector:
                     "topics": repo_info.get("topics", []),
                     "is_fork": repo_info.get("fork", False),
                 }
-                target_repo_obj = await sync.upsert_repository(dev.developer_id, target_repo_data)
-
-                # Role detection for target repo only
                 is_owner = target_owner == login
                 is_committer = contributor.get("is_committer", False)
+                target_contrib_data = {
+                    "commits_count": contributor.get("contributions", 0),
+                    "prs_count": 0,
+                    "issues_count": 0,
+                    "code_reviews_count": 0,
+                    "is_owner": is_owner,
+                    "is_maintainer": False,
+                    "is_committer": is_committer,
+                }
+                repo_ops.append(("target", target_repo_data, target_contrib_data))
 
-                await sync.upsert_contribution(
-                    dev.developer_id,
-                    target_repo_obj.repo_id,
-                    {
-                        "commits_count": contributor.get("contributions", 0),
-                        "prs_count": 0,
-                        "issues_count": 0,
-                        "code_reviews_count": 0,
-                        "is_owner": is_owner,
-                        "is_maintainer": False,
-                        "is_committer": is_committer,
-                    },
-                )
-
-            # Step 2: Process user's OWN repos (no roles, just stats)
+            # Step 2: Collect user's OWN repos (no roles, just stats)
             for ur in user_repos:
                 if await self._is_cancelled(ctx):
                     return
 
-                # Skip target repo if it happens to be in the user's repo list
-                # (already handled above with correct roles)
                 if ur.get("full_name") == target_full_name:
                     continue
 
-                # Language stats from repo's primary language
                 lang = ur.get("language")
                 if lang:
                     if lang not in lang_stats:
@@ -258,7 +266,6 @@ class GitHubCollector:
                 if not owner_name or not repo_name:
                     continue
 
-                # Upsert repository
                 repo_data = {
                     "github_repo_id": ur.get("id"),
                     "full_name": ur.get("full_name", f"{owner_name}/{repo_name}"),
@@ -269,40 +276,55 @@ class GitHubCollector:
                     "topics": ur.get("topics", []),
                     "is_fork": ur.get("fork", False),
                 }
-                repo_obj = await sync.upsert_repository(dev.developer_id, repo_data)
+                contrib_data = {
+                    "commits_count": 0,
+                    "prs_count": 0,
+                    "issues_count": 0,
+                    "code_reviews_count": 0,
+                    "is_owner": False,
+                    "is_maintainer": False,
+                    "is_committer": False,
+                }
+                repo_ops.append(("own", repo_data, contrib_data))
 
-                # No role detection for user's own repos
-                await sync.upsert_contribution(
-                    dev.developer_id,
-                    repo_obj.repo_id,
-                    {
-                        "commits_count": 0,
-                        "prs_count": 0,
-                        "issues_count": 0,
-                        "code_reviews_count": 0,
-                        "is_owner": False,
-                        "is_maintainer": False,
-                        "is_committer": False,
-                    },
-                )
+            # Batch upsert all repos (defer flush)
+            repo_results: list[tuple[str, Any, dict[str, Any]]] = []
+            for kind, repo_data, contrib_data in repo_ops:
+                repo_obj = await sync.upsert_repository(dev.developer_id, repo_data, auto_flush=False)
+                repo_results.append((kind, repo_obj, contrib_data))
+
+            # Flush ①: allocate repo_ids for newly inserted repos
+            await sync.session.flush()
+
+            # Batch upsert all contributions (defer flush)
+            for kind, repo_obj, contrib_data in repo_results:
+                await sync.upsert_contribution(dev.developer_id, repo_obj.repo_id, contrib_data, auto_flush=False)
+
+            # Flush ②: persist contributions
+            await sync.session.flush()
 
             # Update developer totals
             dev.total_stars_received = total_stars
             dev.total_forks_received = total_forks
             dev.primary_languages = list(lang_stats.keys())[:5]
+
+            # Flush ③: persist totals
             await sync.session.flush()
 
-            # Calculate and upsert language skills (proficiency based on repo count proportion)
+            # Batch upsert language skills (defer flush)
             total_repos_with_lang = sum(s["repo_count"] for s in lang_stats.values())
             for lang, stats in lang_stats.items():
                 proportion = stats["repo_count"] / total_repos_with_lang if total_repos_with_lang > 0 else 0
-                proficiency = min(proportion * 10, 10.0)  # Cap at 10.0
+                proficiency = min(proportion * 10, 10.0)
                 skill_data = {
                     "repo_count": stats["repo_count"],
                     "total_commits": 0,
                     "proficiency_score": round(proficiency, 2),
                 }
-                await sync.upsert_language_skill(dev.developer_id, lang, skill_data)
+                await sync.upsert_language_skill(dev.developer_id, lang, skill_data, auto_flush=False)
+
+            # Flush ④: persist language skills
+            await sync.session.flush()
 
         except Exception as e:
             logger.exception(f"Failed to process contributor {login}: {e}")

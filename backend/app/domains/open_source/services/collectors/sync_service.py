@@ -27,7 +27,7 @@ class SyncService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def upsert_developer(self, data: dict[str, Any]) -> OSDeveloper:
+    async def upsert_developer(self, data: dict[str, Any], auto_flush: bool = True) -> OSDeveloper:
         """Upsert a developer by github_id (primary) or github_login (fallback)."""
         github_id = data.get("github_id")
         login = data.get("github_login")
@@ -59,11 +59,12 @@ class SyncService:
             if key in data and data[key] is not None:
                 setattr(dev, key, data[key])
 
-        await self.session.flush()
+        if auto_flush:
+            await self.session.flush()
         return dev
 
     async def upsert_repository(
-        self, developer_id: int, data: dict[str, Any]
+        self, developer_id: int, data: dict[str, Any], auto_flush: bool = True
     ) -> OSRepository:
         """Upsert a repository by full_name for a given developer."""
         full_name = data["full_name"]
@@ -83,11 +84,12 @@ class SyncService:
             if key in data and data[key] is not None:
                 setattr(repo, key, data[key])
 
-        await self.session.flush()
+        if auto_flush:
+            await self.session.flush()
         return repo
 
     async def upsert_contribution(
-        self, developer_id: int, repo_id: int, data: dict[str, Any]
+        self, developer_id: int, repo_id: int, data: dict[str, Any], auto_flush: bool = True
     ) -> OSContribution:
         """Upsert a contribution record."""
         stmt = select(OSContribution).where(
@@ -108,11 +110,12 @@ class SyncService:
             if key in data and data[key] is not None:
                 setattr(contrib, key, data[key])
 
-        await self.session.flush()
+        if auto_flush:
+            await self.session.flush()
         return contrib
 
     async def upsert_language_skill(
-        self, developer_id: int, language: str, data: dict[str, Any]
+        self, developer_id: int, language: str, data: dict[str, Any], auto_flush: bool = True
     ) -> OSLanguageSkill:
         """Upsert a language skill record."""
         stmt = select(OSLanguageSkill).where(
@@ -130,5 +133,6 @@ class SyncService:
             if key in data and data[key] is not None:
                 setattr(skill, key, data[key])
 
-        await self.session.flush()
+        if auto_flush:
+            await self.session.flush()
         return skill
