@@ -283,32 +283,54 @@ class GitHubClient:
         """
         commit_counts: dict[str, int] = {}
         committers: set[str] = set()  # Track who has committed (not just authored)
-        page = 1
         per_page = 100
         max_pages = 2500  # Safety cap: 2500 * 100 = 250k commits
+        batch_size = 10  # Concurrent pages per batch
+        current_page = 1
 
-        while True:
-            commits = await self.list_commits(owner, repo, per_page=per_page, page=page)
-            if not commits:
+        while current_page <= max_pages:
+            batch_end = min(current_page + batch_size - 1, max_pages)
+            pages = list(range(current_page, batch_end + 1))
+
+            # Fetch pages concurrently
+            results = await asyncio.gather(
+                *[self.list_commits(owner, repo, per_page=per_page, page=p) for p in pages],
+                return_exceptions=True,
+            )
+
+            should_stop = False
+            for i, commits in enumerate(results):
+                page_num = current_page + i
+                if isinstance(commits, Exception):
+                    logger.warning(f"Failed to fetch commits page {page_num} for {owner}/{repo}: {commits}")
+                    continue
+
+                if not commits:
+                    should_stop = True
+                    break
+
+                for commit in commits:
+                    # Author (existing logic)
+                    author = commit.get("author")
+                    if author and isinstance(author, dict) and author.get("login"):
+                        login = author["login"]
+                        commit_counts[login] = commit_counts.get(login, 0) + 1
+
+                    # Committer (new: GitHub user who actually committed the code)
+                    committer = commit.get("committer")
+                    if committer and isinstance(committer, dict) and committer.get("login"):
+                        committers.add(committer["login"])
+
+                # If this page returned fewer than per_page, we've reached the end
+                if len(commits) < per_page:
+                    should_stop = True
+                    break
+
+            if should_stop:
                 break
 
-            for commit in commits:
-                # Author (existing logic)
-                author = commit.get("author")
-                if author and isinstance(author, dict) and author.get("login"):
-                    login = author["login"]
-                    commit_counts[login] = commit_counts.get(login, 0) + 1
-
-                # Committer (new: GitHub user who actually committed the code)
-                committer = commit.get("committer")
-                if committer and isinstance(committer, dict) and committer.get("login"):
-                    committers.add(committer["login"])
-
-            if len(commits) < per_page:
-                break
-
-            page += 1
-            if page > max_pages:
+            current_page = batch_end + 1
+            if current_page > max_pages:
                 logger.warning(
                     f"Commits API pagination capped at {max_pages} pages "
                     f"for {owner}/{repo}"
