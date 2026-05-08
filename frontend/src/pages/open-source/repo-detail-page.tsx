@@ -53,6 +53,8 @@ const RepoDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [contribLoading, setContribLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('team')
+  const [contribPage, setContribPage] = useState(1)
+  const [contribPageSize] = useState(20)
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -76,8 +78,8 @@ const RepoDetailPage: React.FC = () => {
       try {
         setContribLoading(true)
         const res = await api.openSource.getRepositoryContributors(owner, name, {
-          page: 1,
-          page_size: 100,
+          page: contribPage,
+          page_size: contribPageSize,
         })
         setContributors(res.data.items || [])
         setContributorTotal(res.data.total || 0)
@@ -88,7 +90,7 @@ const RepoDetailPage: React.FC = () => {
       }
     }
     fetchContributors()
-  }, [owner, name])
+  }, [owner, name, contribPage, contribPageSize])
 
   const primary = '#2D3748'
   const secondary = '#48BB78'
@@ -285,7 +287,14 @@ const RepoDetailPage: React.FC = () => {
       columns={contributorColumns}
       rowKey="developer_id"
       loading={contribLoading}
-      pagination={false}
+      pagination={{
+        current: contribPage,
+        pageSize: contribPageSize,
+        total: contributorTotal,
+        showSizeChanger: false,
+        showTotal: (t) => `共 ${t} 位贡献者`,
+        onChange: (p) => setContribPage(p),
+      }}
       onRow={(record) => ({
         onClick: () => navigate(`/opensource/developers/${record.developer_id}`),
         style: { cursor: 'pointer' },
