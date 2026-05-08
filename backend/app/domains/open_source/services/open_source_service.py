@@ -43,6 +43,13 @@ logger = logging.getLogger(__name__)
 VALID_TECH_ELEMENTS = {"ai", "robotics", "data_science", "networks", "systems", "security"}
 REPO_FULL_NAME_PATTERN = re.compile(r"^[\w.-]+/[\w.-]+$")
 
+# Global semaphore to limit concurrent repository collection tasks.
+# Each GitHubClient instance has its own _min_interval throttle (5 req/s),
+# so without global control N concurrent tasks = N x 5 req/s which easily
+# exceeds GitHub's 5000 req/hour rate limit. Limiting to 1 concurrent
+# collection ensures sequential execution across all batch/single operations.
+COLLECTION_SEMAPHORE = asyncio.Semaphore(1)
+
 
 class OpenSourceService:
     """
@@ -346,6 +353,67 @@ class OpenSourceService:
             "created_by": created_by,
         })
         return task, config.repo_full_name, config.tech_element
+
+    async def collect_batch_repos(
+        self,
+        repo_config_ids: list[int],
+        contributors_per_repo: int,
+        created_by: int,
+    ) -> tuple[list[OSCollectTask], list[dict[str, Any]]]:
+        """
+        批量为多个仓库创建采集任务
+
+        Args:
+            repo_config_ids: 仓库配置ID列表
+            contributors_per_repo: 每个仓库采集的contributor数量
+            created_by: 创建者用户ID
+
+        Returns:
+            Tuple[List[OSCollectTask], List[dict]]: 成功创建的任务列表、跳过的记录列表
+        """
+        created_tasks: list[OSCollectTask] = []
+        skipped: list[dict[str, Any]] = []
+
+        for repo_config_id in repo_config_ids:
+            config = await self.repo.get_repo_config(repo_config_id)
+            if not config:
+                skipped.append({
+                    "repo_config_id": repo_config_id,
+                    "repo_full_name": None,
+                    "reason": "Repo config not found",
+                })
+                continue
+            if not config.collect_enabled:
+                skipped.append({
+                    "repo_config_id": repo_config_id,
+                    "repo_full_name": config.repo_full_name,
+                    "reason": "Repository collection is disabled",
+                })
+                continue
+
+            existing = await self.repo.get_active_collect_task(config.repo_full_name)
+            if existing:
+                skipped.append({
+                    "repo_config_id": repo_config_id,
+                    "repo_full_name": config.repo_full_name,
+                    "reason": "A collection task is already running for this repository",
+                })
+                continue
+
+            task = await self.repo.create_collect_task({
+                "task_name": config.repo_full_name,
+                "status": "pending",
+                "config_json": {
+                    "repo_config_id": repo_config_id,
+                    "repo_full_name": config.repo_full_name,
+                    "tech_element": config.tech_element,
+                    "contributors_per_repo": contributors_per_repo,
+                },
+                "created_by": created_by,
+            })
+            created_tasks.append(task)
+
+        return created_tasks, skipped
 
     # ============= Developer =============
 
@@ -1262,46 +1330,49 @@ class OpenSourceService:
         from app.domains.shared.services.config_service import ConfigService
 
         try:
-            async with AsyncSessionLocal() as session:
-                inner_service = OpenSourceService(session)
-                task = await inner_service.get_collect_task(task_id)
-                if not task or task.status != "pending":
-                    return
-                task.status = "running"
-                task.started_at = datetime.utcnow()
-                await session.commit()
+            # Wait for global collection semaphore to ensure sequential
+            # execution across all single/batch collection tasks.
+            async with COLLECTION_SEMAPHORE:
+                async with AsyncSessionLocal() as session:
+                    inner_service = OpenSourceService(session)
+                    task = await inner_service.get_collect_task(task_id)
+                    if not task or task.status != "pending":
+                        return
+                    task.status = "running"
+                    task.started_at = datetime.utcnow()
+                    await session.commit()
 
-                config_service = ConfigService(session)
-                github_config = await config_service.get_github_config()
-                token = github_config.tokens if github_config.tokens else None
+                    config_service = ConfigService(session)
+                    github_config = await config_service.get_github_config()
+                    token = github_config.tokens if github_config.tokens else None
 
-            ctx = CollectContext(
-                task_id=task_id,
-                repo_config_id=repo_config_id,
-                repo_full_name=repo_full_name,
-                tech_element=tech_element,
-                contributors_per_repo=contributors_per_repo,
-            )
-
-            async def _watch_cancel() -> None:
-                while not ctx.cancelled.is_set():
-                    await asyncio.sleep(1)
-                    if task_id in CANCELLED_TASK_IDS:
-                        ctx.cancelled.set()
-                        break
-
-            async with GitHubClient(token=token) as client:
-                collector = GitHubCollector(client)
-                collect_task = asyncio.create_task(collector.collect(ctx))
-                watch_task = asyncio.create_task(_watch_cancel())
-                done, pending = await asyncio.wait(
-                    [collect_task, watch_task],
-                    return_when=asyncio.FIRST_COMPLETED,
+                ctx = CollectContext(
+                    task_id=task_id,
+                    repo_config_id=repo_config_id,
+                    repo_full_name=repo_full_name,
+                    tech_element=tech_element,
+                    contributors_per_repo=contributors_per_repo,
                 )
-                for t in pending:
-                    t.cancel()
-                if collect_task in done:
-                    await collect_task
+
+                async def _watch_cancel() -> None:
+                    while not ctx.cancelled.is_set():
+                        await asyncio.sleep(1)
+                        if task_id in CANCELLED_TASK_IDS:
+                            ctx.cancelled.set()
+                            break
+
+                async with GitHubClient(token=token) as client:
+                    collector = GitHubCollector(client)
+                    collect_task = asyncio.create_task(collector.collect(ctx))
+                    watch_task = asyncio.create_task(_watch_cancel())
+                    done, pending = await asyncio.wait(
+                        [collect_task, watch_task],
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    for t in pending:
+                        t.cancel()
+                    if collect_task in done:
+                        await collect_task
 
         except asyncio.CancelledError:
             logger.info(f"Task {task_id} cancelled")

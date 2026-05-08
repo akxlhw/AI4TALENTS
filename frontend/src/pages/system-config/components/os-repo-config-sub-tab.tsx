@@ -9,6 +9,7 @@ import {
   Modal,
   Form,
   Input,
+  InputNumber,
   Select,
   Switch,
   message,
@@ -65,6 +66,9 @@ const OSRepoConfigSubTab: React.FC = () => {
   const [collectingIds, setCollectingIds] = useState<Set<number>>(new Set())
   const [collectModalVisible, setCollectModalVisible] = useState(false)
   const [collectRecord, setCollectRecord] = useState<OSRepoConfig | null>(null)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [batchCollectModalVisible, setBatchCollectModalVisible] = useState(false)
+  const [batchContributorsPerRepo, setBatchContributorsPerRepo] = useState<number>(0)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -154,6 +158,57 @@ const OSRepoConfigSubTab: React.FC = () => {
         const next = new Set(prev)
         next.delete(collectRecord.repo_config_id)
         return next
+      })
+    }
+  }
+
+  const handleBatchCollect = () => {
+    if (selectedRowKeys.length === 0) return
+    setBatchCollectModalVisible(true)
+  }
+
+  const handleConfirmBatchCollect = async () => {
+    try {
+      setBatchCollectModalVisible(false)
+      const ids = selectedRowKeys.map((k) => Number(k))
+      ids.forEach((id) => {
+        setCollectingIds((prev) => new Set(prev).add(id))
+      })
+      const response = await api.openSource.collectBatchRepos(ids, batchContributorsPerRepo)
+      const { created, skipped } = response.data
+      if (created.length > 0) {
+        message.success(`已成功启动 ${created.length} 个仓库的采集任务`)
+      }
+      if (skipped.length > 0) {
+        const reasons = skipped.map((s: { repo_full_name?: string; reason: string }) =>
+          `${s.repo_full_name || '未知仓库'}: ${s.reason}`
+        )
+        Modal.warning({
+          title: `${skipped.length} 个仓库被跳过`,
+          content: (
+            <div style={{ maxHeight: 240, overflow: 'auto' }}>
+              {reasons.map((r: string, i: number) => (
+                <div key={i} style={{ marginBottom: 4 }}>{r}</div>
+              ))}
+            </div>
+          ),
+        })
+      }
+      if (created.length === 0 && skipped.length === 0) {
+        message.info('未启动任何采集任务')
+      }
+      setSelectedRowKeys([])
+    } catch (error) {
+      message.error(getErrorMessage(error, '批量启动采集失败'))
+    } finally {
+      // Clear loading state for selected ids
+      const ids = selectedRowKeys.map((k) => Number(k))
+      ids.forEach((id) => {
+        setCollectingIds((prev) => {
+          const next = new Set(prev)
+          next.delete(id)
+          return next
+        })
       })
     }
   }
@@ -260,10 +315,44 @@ const OSRepoConfigSubTab: React.FC = () => {
           </Col>
         </Row>
 
+        {selectedRowKeys.length > 0 && (
+          <div
+            style={{
+              background: '#fafafa',
+              padding: '8px 16px',
+              marginBottom: 16,
+              borderRadius: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Text>
+              已选择 <strong>{selectedRowKeys.length}</strong> 个仓库
+            </Text>
+            <Space>
+              <Button size="small" onClick={() => setSelectedRowKeys([])}>
+                取消选择
+              </Button>
+              <Button
+                type="primary"
+                size="small"
+                icon={<PlayCircleOutlined />}
+                onClick={handleBatchCollect}
+              >
+                批量采集
+              </Button>
+            </Space>
+          </div>
+        )}
         <Table
           dataSource={data}
           columns={columns}
           rowKey="repo_config_id"
+          rowSelection={{
+            selectedRowKeys,
+            onChange: setSelectedRowKeys,
+          }}
           pagination={{
             current: page,
             pageSize: 10,
@@ -347,6 +436,31 @@ const OSRepoConfigSubTab: React.FC = () => {
         <p style={{ margin: 0, fontSize: 14 }}>
           确认要采集 <strong>{collectRecord?.repo_full_name}</strong> 的贡献者数据吗？
         </p>
+      </Modal>
+
+      {/* Batch Collect Confirm Modal */}
+      <Modal
+        title="确认批量采集"
+        open={batchCollectModalVisible}
+        onCancel={() => setBatchCollectModalVisible(false)}
+        onOk={handleConfirmBatchCollect}
+        okText="确认"
+        cancelText="取消"
+        width={400}
+      >
+        <p style={{ margin: '0 0 16px 0', fontSize: 14 }}>
+          确认要批量采集 <strong>{selectedRowKeys.length}</strong> 个仓库的贡献者数据吗？
+        </p>
+        <div style={{ marginBottom: 8 }}>
+          <Text type="secondary">每个仓库采集贡献者数量（0=全部）</Text>
+        </div>
+        <InputNumber
+          min={0}
+          max={2000}
+          value={batchContributorsPerRepo}
+          onChange={(v) => setBatchContributorsPerRepo(v ?? 0)}
+          style={{ width: '100%' }}
+        />
       </Modal>
     </Card>
   )

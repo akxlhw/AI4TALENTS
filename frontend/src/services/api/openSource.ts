@@ -59,6 +59,11 @@ export const openSourceApi = {
     apiClient.delete(`/open-source/repo-configs/${id}`),
   collectRepo: (id: number, contributorsPerRepo?: number) =>
     apiClient.post(`/open-source/repo-configs/${id}/collect`, null, { params: { contributors_per_repo: contributorsPerRepo } }),
+  collectBatchRepos: (repoConfigIds: number[], contributorsPerRepo?: number) =>
+    apiClient.post('/open-source/repo-configs/collect-batch', {
+      repo_config_ids: repoConfigIds,
+      contributors_per_repo: contributorsPerRepo ?? 0,
+    }),
 
   listCollectTasks: () =>
     apiClient.get('/open-source/collect/tasks'),

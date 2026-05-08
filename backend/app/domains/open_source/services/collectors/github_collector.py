@@ -218,31 +218,33 @@ class GitHubCollector:
             repo_ops: list[tuple[str, dict[str, Any], dict[str, Any]]] = []
 
             # Step 1: Target repo contribution (always create, role detection lives here)
-            target_full_name = repo_info.get("full_name", "")
-            if repo_info and target_full_name:
-                target_owner, target_repo_name = target_full_name.split("/", 1)
-                target_repo_data = {
-                    "github_repo_id": repo_info.get("id"),
-                    "full_name": target_full_name,
-                    "name": target_repo_name,
-                    "language": repo_info.get("language"),
-                    "stars_count": repo_info.get("stargazers_count", 0) or 0,
-                    "forks_count": repo_info.get("forks_count", 0) or 0,
-                    "topics": repo_info.get("topics", []),
-                    "is_fork": repo_info.get("fork", False),
-                }
-                is_owner = target_owner == login
-                is_committer = contributor.get("is_committer", False)
-                target_contrib_data = {
-                    "commits_count": contributor.get("contributions", 0),
-                    "prs_count": 0,
-                    "issues_count": 0,
-                    "code_reviews_count": 0,
-                    "is_owner": is_owner,
-                    "is_maintainer": False,
-                    "is_committer": is_committer,
-                }
-                repo_ops.append(("target", target_repo_data, target_contrib_data))
+            # Use ctx.repo_full_name (the configured name) instead of repo_info["full_name"]
+            # to handle GitHub repo renames/redirects. The configured name is the stable
+            # identifier that users see and click on.
+            target_full_name = ctx.repo_full_name
+            target_owner, target_repo_name = target_full_name.split("/", 1)
+            target_repo_data = {
+                "github_repo_id": repo_info.get("id"),
+                "full_name": target_full_name,
+                "name": target_repo_name,
+                "language": repo_info.get("language"),
+                "stars_count": repo_info.get("stargazers_count", 0) or 0,
+                "forks_count": repo_info.get("forks_count", 0) or 0,
+                "topics": repo_info.get("topics", []),
+                "is_fork": repo_info.get("fork", False),
+            }
+            is_owner = target_owner == login
+            is_committer = contributor.get("is_committer", False)
+            target_contrib_data = {
+                "commits_count": contributor.get("contributions", 0),
+                "prs_count": 0,
+                "issues_count": 0,
+                "code_reviews_count": 0,
+                "is_owner": is_owner,
+                "is_maintainer": False,
+                "is_committer": is_committer,
+            }
+            repo_ops.append(("target", target_repo_data, target_contrib_data))
 
             # Step 2: Collect user's OWN repos (no roles, just stats)
             for ur in user_repos:
@@ -297,7 +299,7 @@ class GitHubCollector:
             await sync.session.flush()
 
             # Batch upsert all contributions (defer flush)
-            for kind, repo_obj, contrib_data in repo_results:
+            for _kind, repo_obj, contrib_data in repo_results:
                 await sync.upsert_contribution(dev.developer_id, repo_obj.repo_id, contrib_data, auto_flush=False)
 
             # Flush ②: persist contributions

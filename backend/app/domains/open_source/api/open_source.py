@@ -16,6 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import verify_access_token
 from app.core.database import get_async_session
 from app.domains.open_source.schemas.open_source import (
+    OSBatchCollectRequest,
+    OSBatchCollectResponse,
+    OSBatchCollectSkippedItem,
     OSCollectTaskCreate,
     OSCollectTaskResponse,
     OSContributionItem,
@@ -215,6 +218,46 @@ async def collect_single_repo(
         )
     )
     return OSCollectTaskResponse.model_validate(task)
+
+
+@router.post("/repo-configs/collect-batch", response_model=OSBatchCollectResponse)
+async def collect_batch_repos(
+    data: OSBatchCollectRequest,
+    session: AsyncSession = Depends(get_async_session),
+    user: dict = Depends(require_admin),
+):
+    """Start background collection tasks for multiple repositories."""
+    service = OpenSourceService(session)
+    created_tasks, skipped = await service.collect_batch_repos(
+        repo_config_ids=data.repo_config_ids,
+        contributors_per_repo=data.contributors_per_repo,
+        created_by=int(user.get("sub", 0)),
+    )
+
+    # Start background collection for each created task
+    for task in created_tasks:
+        config_json = task.config_json or {}
+        asyncio.create_task(
+            service.run_repo_collection_background(
+                task_id=task.task_id,
+                repo_config_id=config_json.get("repo_config_id", 0),
+                repo_full_name=config_json.get("repo_full_name", ""),
+                tech_element=config_json.get("tech_element", ""),
+                contributors_per_repo=config_json.get("contributors_per_repo", 0),
+            )
+        )
+
+    return OSBatchCollectResponse(
+        created=[OSCollectTaskResponse.model_validate(t) for t in created_tasks],
+        skipped=[
+            OSBatchCollectSkippedItem(
+                repo_config_id=s["repo_config_id"],
+                repo_full_name=s["repo_full_name"],
+                reason=s["reason"],
+            )
+            for s in skipped
+        ],
+    )
 
 
 # ============= Developers =============

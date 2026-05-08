@@ -304,6 +304,28 @@ class OSCollectTaskResponse(BaseModel):
         from_attributes = True
 
 
+class OSBatchCollectRequest(BaseModel):
+    """Batch collect request."""
+
+    repo_config_ids: list[int] = Field(..., min_length=1)
+    contributors_per_repo: int = Field(default=0, ge=0, le=2000)
+
+
+class OSBatchCollectSkippedItem(BaseModel):
+    """Skipped item in batch collect response."""
+
+    repo_config_id: int
+    repo_full_name: str | None
+    reason: str
+
+
+class OSBatchCollectResponse(BaseModel):
+    """Batch collect response."""
+
+    created: list[OSCollectTaskResponse]
+    skipped: list[OSBatchCollectSkippedItem]
+
+
 # ============= Stats =============
 
 class OSStatsResponse(BaseModel):
