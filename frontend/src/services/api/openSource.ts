@@ -9,6 +9,10 @@ export const openSourceApi = {
     apiClient.get('/open-source/developers', { params }),
   getDeveloper: (id: number) =>
     apiClient.get(`/open-source/developers/${id}`),
+  getRepository: (owner: string, name: string) =>
+    apiClient.get(`/open-source/repositories/${owner}/${name}`),
+  getRepositoryContributors: (owner: string, name: string, params?: { page?: number; page_size?: number }) =>
+    apiClient.get(`/open-source/repositories/${owner}/${name}/contributors`, { params }),
   getRepositories: (id: number, params?: { page?: number; page_size?: number; sort_by?: string }) =>
     apiClient.get(`/open-source/developers/${id}/repositories`, { params }),
   getContributions: (id: number) =>

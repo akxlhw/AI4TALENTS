@@ -377,3 +377,43 @@ class OSEmbeddingGenerateRequest(BaseModel):
 
     batch_size: int = Field(default=50, ge=1, le=200)
     force: bool = Field(default=False, description="强制重新生成，忽略已有向量")
+
+
+# ============= Repository Detail =============
+
+class OSRepositoryDetailResponse(BaseModel):
+    """Repository detail response."""
+
+    repo_id: int
+    full_name: str
+    display_name: str | None
+    description: str | None
+    language: str | None
+    stars_count: int
+    forks_count: int
+    topics: list[str] = Field(default_factory=list)
+    tech_element: str
+    contributor_count: int
+
+    class Config:
+        from_attributes = True
+
+
+class OSRepositoryContributor(BaseModel):
+    """Contributor of a repository."""
+
+    developer_id: int
+    github_login: str
+    name: str | None
+    avatar_url: str | None
+    company: str | None
+    location: str | None
+    commits_count: int
+    prs_count: int
+    issues_count: int
+    is_owner: bool
+    is_committer: bool
+    roles: list[str] = Field(default_factory=list)
+
+    class Config:
+        from_attributes = True

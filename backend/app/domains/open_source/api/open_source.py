@@ -36,6 +36,8 @@ from app.domains.open_source.schemas.open_source import (
     OSRepoConfigCreate,
     OSRepoConfigResponse,
     OSRepoConfigUpdate,
+    OSRepositoryContributor,
+    OSRepositoryDetailResponse,
     OSRepositoryItem,
     OSSearchRequest,
     OSStatsResponse,
@@ -370,6 +372,43 @@ async def recommend_similar_developers(
     service = OpenSourceService(session)
     items = await service.recommend_similar(developer_id, limit=limit)
     return [OSDeveloperSummary.model_validate(i) for i in items]
+
+
+# ============= Repository (Project) Detail =============
+
+@router.get("/repositories/{owner}/{name}", response_model=OSRepositoryDetailResponse)
+async def get_repository(
+    owner: str,
+    name: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get repository detail with contributor count by full name."""
+    service = OpenSourceService(session)
+    try:
+        return await service.get_repository_detail(f"{owner}/{name}")
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+@router.get("/repositories/{owner}/{name}/contributors", response_model=PaginatedResponse[OSRepositoryContributor])
+async def get_repository_contributors(
+    owner: str,
+    name: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get contributors for a repository by full name."""
+    service = OpenSourceService(session)
+    items, total = await service.get_repository_contributors(f"{owner}/{name}", page, page_size)
+    return PaginatedResponse.create(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 # ============= Search (v2 unified) =============

@@ -351,6 +351,51 @@ class OpenSourceRepository:
         )
         return list(result.scalars().all())
 
+    # ========== Repository (Project) ==========
+
+    async def get_repository_by_id(self, repo_id: int) -> OSRepository | None:
+        """Get a repository by its ID."""
+        result = await self.session.execute(
+            select(OSRepository).where(OSRepository.repo_id == repo_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_repository_by_full_name(self, full_name: str) -> OSRepository | None:
+        """Get a repository by its full name (owner/repo)."""
+        result = await self.session.execute(
+            select(OSRepository)
+            .where(OSRepository.full_name == full_name)
+            .order_by(OSRepository.stars_count.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_repository_contributors(
+        self,
+        repo_id: int,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[list[tuple[OSDeveloper, OSContribution]], int]:
+        """Get contributors for a repository with their contribution records, ordered by commits desc."""
+        stmt = (
+            select(OSDeveloper, OSContribution)
+            .join(OSContribution, OSDeveloper.developer_id == OSContribution.developer_id)
+            .where(OSContribution.repo_id == repo_id)
+            .order_by(OSContribution.commits_count.desc())
+        )
+        total = await self.session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+        stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+        result = await self.session.execute(stmt)
+        return list(result.all()), total
+
+    async def count_repository_contributors(self, repo_id: int) -> int:
+        """Count distinct contributors for a repository."""
+        result = await self.session.scalar(
+            select(func.count(func.distinct(OSContribution.developer_id)))
+            .where(OSContribution.repo_id == repo_id)
+        )
+        return result or 0
+
     # ========== Favourite ==========
 
     async def list_favourites(

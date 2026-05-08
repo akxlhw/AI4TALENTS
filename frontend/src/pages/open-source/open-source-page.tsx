@@ -219,6 +219,13 @@ const OpenSourcePage: React.FC = () => {
                     style={{
                       borderLeft: '3px solid #F6AD55',
                       transition: 'all 0.2s ease',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => {
+                      const parts = repo.repo_full_name.split('/')
+                      if (parts.length === 2) {
+                        navigate(`/opensource/repos/${parts[0]}/${parts[1]}`)
+                      }
                     }}
                   >
                     <Space style={{ marginBottom: 6 }}>

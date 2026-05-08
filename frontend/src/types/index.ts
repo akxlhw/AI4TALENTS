@@ -516,3 +516,31 @@ export interface OSSearchQuery {
   page?: number
   page_size?: number
 }
+
+export interface OSRepositoryDetail {
+  repo_id: number
+  full_name: string
+  display_name: string | null
+  description: string | null
+  language: string | null
+  stars_count: number
+  forks_count: number
+  topics: string[]
+  tech_element: string
+  contributor_count: number
+}
+
+export interface OSRepositoryContributor {
+  developer_id: number
+  github_login: string
+  name: string | null
+  avatar_url: string | null
+  company: string | null
+  location: string | null
+  commits_count: number
+  prs_count: number
+  issues_count: number
+  is_owner: boolean
+  is_committer: boolean
+  roles: string[]
+}

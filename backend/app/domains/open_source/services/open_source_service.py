@@ -32,6 +32,7 @@ from app.domains.open_source.schemas.open_source import (
     OSDeveloperSummary,
     OSJDMatchResponse,
     OSLanguageSkillItem,
+    OSRepositoryContributor,
     OSRepositoryItem,
     OSSearchRequest,
     OSStatsResponse,
@@ -472,6 +473,81 @@ class OpenSourceService:
             language_skills=language_skills,
             similar_developers=similar_developers,
         )
+
+    async def get_repository_detail(self, repo_full_name: str) -> dict[str, Any]:
+        """
+        获取仓库详情（含贡献者统计）
+
+        Args:
+            repo_full_name: 仓库全名，如 "deepspeedai/DeepSpeed"
+
+        Returns:
+            dict: 仓库详情字典
+        """
+        repo = await self.repo.get_repository_by_full_name(repo_full_name)
+        if not repo:
+            raise ValueError("Repository not found")
+
+        contributor_count = await self.repo.count_repository_contributors(repo.repo_id)
+
+        return {
+            "repo_id": repo.repo_id,
+            "full_name": repo.full_name,
+            "display_name": repo.name,
+            "description": repo.description,
+            "language": repo.language,
+            "stars_count": repo.stars_count,
+            "forks_count": repo.forks_count,
+            "topics": repo.topics or [],
+            "tech_element": "",
+            "contributor_count": contributor_count,
+        }
+
+    async def get_repository_contributors(
+        self,
+        repo_full_name: str,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[list[OSRepositoryContributor], int]:
+        """
+        获取仓库贡献者列表
+
+        Args:
+            repo_full_name: 仓库全名
+            page: 页码
+            page_size: 每页数量
+
+        Returns:
+            Tuple[List[OSRepositoryContributor], int]: 贡献者列表和总数
+        """
+        repo = await self.repo.get_repository_by_full_name(repo_full_name)
+        if not repo:
+            raise ValueError("Repository not found")
+        items, total = await self.repo.get_repository_contributors(repo.repo_id, page, page_size)
+        contributors: list[OSRepositoryContributor] = []
+        for dev, contrib in items:
+            roles: list[str] = []
+            if contrib.is_owner:
+                roles.append("Owner")
+            if contrib.is_committer:
+                roles.append("Committer")
+            contributors.append(
+                OSRepositoryContributor(
+                    developer_id=dev.developer_id,
+                    github_login=dev.github_login,
+                    name=dev.name,
+                    avatar_url=dev.avatar_url,
+                    company=dev.company,
+                    location=dev.location,
+                    commits_count=contrib.commits_count,
+                    prs_count=contrib.prs_count,
+                    issues_count=contrib.issues_count,
+                    is_owner=contrib.is_owner,
+                    is_committer=contrib.is_committer,
+                    roles=roles,
+                )
+            )
+        return contributors, total
 
     async def search_developers(
         self, req: OSSearchRequest
