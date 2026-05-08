@@ -210,7 +210,7 @@ const OpenSourcePage: React.FC = () => {
               onClick={() => navigate('/opensource/repos')}
               style={{ fontSize: 14, padding: 0 }}
             >
-              查看全部 →
+              查看全部 ↓
             </Button>
           </div>
           {trendingRepos.length === 0 ? (
@@ -281,7 +281,7 @@ const OpenSourcePage: React.FC = () => {
               onClick={() => navigate('/opensource/search')}
               style={{ fontSize: 14, padding: 0 }}
             >
-              查看全部 →
+              查看全部 ↓
             </Button>
           </div>
           {topDevelopers.length === 0 ? (
