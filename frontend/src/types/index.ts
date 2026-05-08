@@ -510,6 +510,7 @@ export interface OSSearchQuery {
   location?: string
   company?: string
   min_stars?: number
+  is_committer?: boolean
   sort_by?: string
   mode?: 'keyword' | 'semantic' | 'hybrid'
   page?: number

@@ -16,6 +16,7 @@ import {
   Pagination,
   Form,
   Tooltip,
+  Checkbox,
 } from 'antd'
 import {
   SearchOutlined,
@@ -61,6 +62,7 @@ const OpenSourceSearchPage: React.FC = () => {
     location: searchParams.get('location') || '',
     company: searchParams.get('company') || '',
     min_stars: searchParams.get('min_stars') ? parseInt(searchParams.get('min_stars')!) : undefined,
+    is_committer: searchParams.get('is_committer') === 'true',
     sort_by: searchParams.get('sort_by') || 'stars_desc',
     mode: (searchParams.get('mode') as OSSearchQuery['mode']) || 'keyword',
     page: parseInt(searchParams.get('page') || '1'),
@@ -77,6 +79,7 @@ const OpenSourceSearchPage: React.FC = () => {
         location: query.location,
         company: query.company,
         min_stars: query.min_stars,
+        is_committer: query.is_committer,
         sort_by: query.sort_by,
         page: query.page,
         page_size: query.page_size,
@@ -112,6 +115,7 @@ const OpenSourceSearchPage: React.FC = () => {
     if (newQuery.location) params.set('location', newQuery.location)
     if (newQuery.company) params.set('company', newQuery.company)
     if (newQuery.min_stars) params.set('min_stars', String(newQuery.min_stars))
+    if (newQuery.is_committer) params.set('is_committer', 'true')
     if (newQuery.sort_by && newQuery.sort_by !== 'stars_desc') params.set('sort_by', newQuery.sort_by)
     if (newQuery.mode && newQuery.mode !== 'keyword') params.set('mode', newQuery.mode)
     if (newQuery.page && newQuery.page > 1) params.set('page', String(newQuery.page))
@@ -235,6 +239,16 @@ const OpenSourceSearchPage: React.FC = () => {
                   value={query.min_stars}
                   onChange={(e) => setQuery({ ...query, min_stars: e.target.value ? parseInt(e.target.value) : undefined })}
                 />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item label="角色筛选" style={{ marginBottom: 8 }}>
+                <Checkbox
+                  checked={query.is_committer}
+                  onChange={(e) => setQuery({ ...query, is_committer: e.target.checked })}
+                >
+                  Committer
+                </Checkbox>
               </Form.Item>
             </Col>
           </Row>

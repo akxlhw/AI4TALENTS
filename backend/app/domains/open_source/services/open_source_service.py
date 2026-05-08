@@ -356,6 +356,7 @@ class OpenSourceService:
         location: str | None = None,
         company: str | None = None,
         min_stars: int | None = None,
+        is_committer: bool | None = None,
         sort_by: str = "stars_desc",
         page: int = 1,
         page_size: int = 20,
@@ -390,6 +391,8 @@ class OpenSourceService:
             filters["company"] = company
         if min_stars is not None:
             filters["min_stars"] = min_stars
+        if is_committer is not None:
+            filters["is_committer"] = is_committer
         return await self.repo.list_developers(
             filters=filters,
             sort_by=sort_by,
