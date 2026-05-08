@@ -197,9 +197,51 @@ class GitHubCollector:
             lang_stats: dict[str, dict[str, Any]] = {}
             total_stars = 0
             total_forks = 0
+
+            # Step 1: Create contribution for the TARGET repo (always, regardless of whether
+            # it appears in the user's own repo list). This is where role detection lives.
+            target_full_name = repo_info.get("full_name", "")
+            if repo_info and target_full_name:
+                target_owner, target_repo_name = target_full_name.split("/", 1)
+                target_repo_data = {
+                    "github_repo_id": repo_info.get("id"),
+                    "full_name": target_full_name,
+                    "name": target_repo_name,
+                    "language": repo_info.get("language"),
+                    "stars_count": repo_info.get("stargazers_count", 0) or 0,
+                    "forks_count": repo_info.get("forks_count", 0) or 0,
+                    "topics": repo_info.get("topics", []),
+                    "is_fork": repo_info.get("fork", False),
+                }
+                target_repo_obj = await sync.upsert_repository(dev.developer_id, target_repo_data)
+
+                # Role detection for target repo only
+                is_owner = target_owner == login
+                is_committer = contributor.get("is_committer", False)
+
+                await sync.upsert_contribution(
+                    dev.developer_id,
+                    target_repo_obj.repo_id,
+                    {
+                        "commits_count": contributor.get("contributions", 0),
+                        "prs_count": 0,
+                        "issues_count": 0,
+                        "code_reviews_count": 0,
+                        "is_owner": is_owner,
+                        "is_maintainer": False,
+                        "is_committer": is_committer,
+                    },
+                )
+
+            # Step 2: Process user's OWN repos (no roles, just stats)
             for ur in user_repos:
                 if await self._is_cancelled(ctx):
                     return
+
+                # Skip target repo if it happens to be in the user's repo list
+                # (already handled above with correct roles)
+                if ur.get("full_name") == target_full_name:
+                    continue
 
                 # Language stats from repo's primary language
                 lang = ur.get("language")
@@ -229,26 +271,20 @@ class GitHubCollector:
                 }
                 repo_obj = await sync.upsert_repository(dev.developer_id, repo_data)
 
-                # Upsert contribution with role detection
-                #   - contributor: implicit (anyone in the list is a contributor)
-                #   - committer:  derived from target-repo commits traversal
-                #   - owner:      only for the target repo being collected
-                #   - maintainer: not available via public API (requires push access)
-                target_full_name = repo_info.get("full_name", "")
-                is_target_repo = ur.get("full_name") == target_full_name
-                is_owner = is_target_repo and (owner_name == login)
-                is_committer = is_target_repo and contributor.get("is_committer", False)
-
-                contrib_data = {
-                    "commits_count": contributor.get("contributions", 0) if is_target_repo else 0,
-                    "prs_count": 0,
-                    "issues_count": 0,
-                    "code_reviews_count": 0,
-                    "is_owner": is_owner,
-                    "is_maintainer": False,
-                    "is_committer": is_committer,
-                }
-                await sync.upsert_contribution(dev.developer_id, repo_obj.repo_id, contrib_data)
+                # No role detection for user's own repos
+                await sync.upsert_contribution(
+                    dev.developer_id,
+                    repo_obj.repo_id,
+                    {
+                        "commits_count": 0,
+                        "prs_count": 0,
+                        "issues_count": 0,
+                        "code_reviews_count": 0,
+                        "is_owner": False,
+                        "is_maintainer": False,
+                        "is_committer": False,
+                    },
+                )
 
             # Update developer totals
             dev.total_stars_received = total_stars
