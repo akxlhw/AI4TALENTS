@@ -51,7 +51,7 @@ const OpenSourcePage: React.FC = () => {
         setStats(statsRes.data)
         setTopDevelopers(devRes.data.items || [])
         // Trending repos from config
-        const repoRes = await api.openSource.listRepoConfigs({ page_size: 6, is_active: true, sort_by: 'stars', collected_only: true })
+        const repoRes = await api.openSource.listRepoConfigs({ page_size: 8, is_active: true, sort_by: 'stars', collected_only: true })
         setTrendingRepos(repoRes.data.items || [])
       } catch (e) {
         console.error('Failed to load open source overview', e)
