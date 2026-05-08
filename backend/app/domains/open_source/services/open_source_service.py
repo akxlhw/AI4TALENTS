@@ -490,16 +490,23 @@ class OpenSourceService:
 
         contributor_count = await self.repo.count_repository_contributors(repo.repo_id)
 
+        # Fetch description and tech_element from OSRepoConfig (OSRepository doesn't have these fields)
+        from sqlalchemy import select
+        config_result = await self.session.execute(
+            select(OSRepoConfig).where(OSRepoConfig.repo_full_name == repo_full_name)
+        )
+        config = config_result.scalar_one_or_none()
+
         return {
             "repo_id": repo.repo_id,
             "full_name": repo.full_name,
             "display_name": repo.name,
-            "description": repo.description,
+            "description": config.description if config else None,
             "language": repo.language,
             "stars_count": repo.stars_count,
             "forks_count": repo.forks_count,
             "topics": repo.topics or [],
-            "tech_element": "",
+            "tech_element": config.tech_element if config else "",
             "contributor_count": contributor_count,
         }
 
