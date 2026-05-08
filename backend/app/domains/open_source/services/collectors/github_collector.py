@@ -231,13 +231,16 @@ class GitHubCollector:
 
                 # Upsert contribution with role detection
                 #   - contributor: implicit (anyone in the list is a contributor)
-                #   - committer:  derived from commits traversal (passed via contributor dict)
+                #   - committer:  derived from target-repo commits traversal
+                #   - owner:      only for the target repo being collected
                 #   - maintainer: not available via public API (requires push access)
-                is_owner = owner_name == login
-                is_committer = contributor.get("is_committer", False)
+                target_full_name = repo_info.get("full_name", "")
+                is_target_repo = ur.get("full_name") == target_full_name
+                is_owner = is_target_repo and (owner_name == login)
+                is_committer = is_target_repo and contributor.get("is_committer", False)
 
                 contrib_data = {
-                    "commits_count": contributor.get("contributions", 0),
+                    "commits_count": contributor.get("contributions", 0) if is_target_repo else 0,
                     "prs_count": 0,
                     "issues_count": 0,
                     "code_reviews_count": 0,
