@@ -279,36 +279,36 @@ const OpenSourceSearchPage: React.FC = () => {
                         </div>
                       )}
                       <div>
-                        <Text strong style={{ fontSize: 14, display: 'block' }}>
-                          {dev.name || dev.github_login}
-                        </Text>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                          <Text strong style={{ fontSize: 14 }}>
+                            {dev.name || dev.github_login}
+                          </Text>
+                          {dev.roles?.includes('Owner') && (
+                            <Tag style={{ fontSize: 10, lineHeight: '16px', padding: '0 6px', borderRadius: 4, margin: 0, background: '#D69E2E', color: '#fff', border: 'none', fontWeight: 600 }}>
+                              Owner
+                            </Tag>
+                          )}
+                          {dev.roles?.includes('Committer') && (
+                            <Tag style={{ fontSize: 10, lineHeight: '16px', padding: '0 6px', borderRadius: 4, margin: 0, background: '#3182CE', color: '#fff', border: 'none', fontWeight: 600 }}>
+                              Committer
+                            </Tag>
+                          )}
+                        </div>
                         <Text type="secondary" style={{ fontSize: 12 }}>
                           @{dev.github_login}
                         </Text>
                       </div>
                     </Space>
-                    <Space size={4} style={{ flexShrink: 0, marginLeft: 8 }}>
-                      {dev.roles?.includes('Owner') && (
-                        <Tag style={{ fontSize: 10, lineHeight: '16px', padding: '0 6px', borderRadius: 4, margin: 0, background: '#D69E2E', color: '#fff', border: 'none', fontWeight: 600 }}>
-                          Owner
-                        </Tag>
-                      )}
-                      {dev.roles?.includes('Committer') && (
-                        <Tag style={{ fontSize: 10, lineHeight: '16px', padding: '0 6px', borderRadius: 4, margin: 0, background: '#3182CE', color: '#fff', border: 'none', fontWeight: 600 }}>
-                          Committer
-                        </Tag>
-                      )}
-                      <Button
-                        type="text"
-                        size="small"
-                        style={{ padding: '0 4px', margin: 0 }}
-                        icon={favoriteIds.has(dev.developer_id) ? <HeartFilled style={{ color: '#F56565' }} /> : <HeartOutlined />}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleToggleFavorite(dev.developer_id)
-                        }}
-                      />
-                    </Space>
+                    <Button
+                      type="text"
+                      size="small"
+                      style={{ padding: '0 4px', margin: 0, flexShrink: 0 }}
+                      icon={favoriteIds.has(dev.developer_id) ? <HeartFilled style={{ color: '#F56565' }} /> : <HeartOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleToggleFavorite(dev.developer_id)
+                      }}
+                    />
                   </div>
 
                   <Paragraph
