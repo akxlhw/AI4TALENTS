@@ -195,128 +195,198 @@ const OpenSourcePage: React.FC = () => {
         ))}
       </Row>
 
-      {/* Top Developers */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, padding: '0 32px' }}>
-        <Title level={4} style={{ margin: 0 }}>
-          <StarOutlined style={{ marginRight: 8, color: secondary }} />
-          顶尖开发者
-        </Title>
-        <Button type="link" onClick={() => navigate('/opensource/search')} style={{ fontSize: 16 }}>
-          查看全部 →
-        </Button>
-      </div>
-      {topDevelopers.length === 0 ? (
-        <Empty description="暂无开发者数据，请先执行采集任务" />
-      ) : (
-        <Row gutter={16} style={{ marginBottom: 24, padding: '0 32px' }}>
-          {topDevelopers.map((dev) => (
-            <Col span={8} key={dev.developer_id} style={{ marginBottom: 16 }}>
-              <Card
-                hoverable
-                className="domain-card"
-                style={{ borderTop: `3px solid ${secondary}` }}
-                bodyStyle={{ padding: 20 }}
-                onClick={() => navigate(`/opensource/developers/${dev.developer_id}`)}
-              >
-                <Space align="start" style={{ marginBottom: 12 }}>
-                  {dev.avatar_url ? (
-                    <img
-                      src={`${dev.avatar_url}${dev.avatar_url.includes('?') ? '&' : '?'}s=64`}
-                      alt={dev.name || dev.github_login}
-                      loading="lazy"
-                      style={{ width: 48, height: 48, borderRadius: 24, objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <div style={{ width: 48, height: 48, borderRadius: 24, background: primary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 600 }}>
-                      {(dev.name || dev.github_login)?.[0]?.toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <Text strong style={{ fontSize: 16, display: 'block' }}>
-                      {dev.name || dev.github_login}
-                    </Text>
-                    <Text type="secondary" style={{ fontSize: 13 }}>
-                      @{dev.github_login}
-                    </Text>
-                  </div>
-                </Space>
-
-                <Paragraph style={{ marginBottom: 12, fontSize: 13, color: 'var(--text-secondary)', minHeight: 40 }}>
-                  {dev.bio || '暂无简介'}
-                </Paragraph>
-
-                <Space size={4} wrap style={{ marginBottom: 12 }}>
-                  {(dev.primary_languages || []).slice(0, 4).map((lang) => (
-                    <Tag key={lang} style={{ fontSize: 11, borderRadius: 4 }}>{lang}</Tag>
-                  ))}
-                </Space>
-
-                <Row gutter={16}>
-                  <Col span={8}>
-                    <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Stars</Text>
-                    <div style={{ fontWeight: 700, color: primary }}>
-                      <StarOutlined style={{ fontSize: 12, marginRight: 4 }} />
-                      {(dev.total_stars_received / 1000).toFixed(1)}k
-                    </div>
-                  </Col>
-                  <Col span={8}>
-                    <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>公司</Text>
-                    <div style={{ fontWeight: 700, color: primary, fontSize: 13 }}>
-                      {dev.company || '-'}
-                    </div>
-                  </Col>
-                  <Col span={8}>
-                    <Text style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>地区</Text>
-                    <div style={{ fontWeight: 700, color: primary, fontSize: 13 }}>
-                      {dev.location || '-'}
-                    </div>
-                  </Col>
-                </Row>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      )}
-
-      {/* Trending Repos */}
-      <Title level={4} style={{ marginBottom: 16, padding: '0 32px' }}>
-        <FireOutlined style={{ marginRight: 8, color: secondary }} />
-        Trending 仓库
-      </Title>
-      <Row gutter={16} style={{ padding: '0 32px' }}>
-        {trendingRepos.length === 0 ? (
-          <Col span={24}>
+      {/* ═══════════ Trending Repos + Top Developers (side by side) ═══════════ */}
+      <Row gutter={24} style={{ padding: '0 32px' }}>
+        {/* ───── Left: Trending Repos ───── */}
+        <Col span={12}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Title level={4} style={{ margin: 0 }}>
+              <FireOutlined style={{ marginRight: 8, color: '#F6AD55' }} />
+              Trending 仓库
+            </Title>
+          </div>
+          {trendingRepos.length === 0 ? (
             <Empty description="暂无仓库数据" />
-          </Col>
-        ) : (
-          trendingRepos.map((repo) => (
-            <Col span={8} key={repo.repo_config_id} style={{ marginBottom: 16 }}>
-              <Card className="domain-card" bodyStyle={{ padding: 16 }}>
-                <Space style={{ marginBottom: 8 }}>
-                  <GithubOutlined style={{ color: primary }} />
-                  <Text strong style={{ fontSize: 14, fontFamily: 'monospace' }}>
-                    {repo.repo_full_name}
-                  </Text>
-                </Space>
-                <Paragraph style={{ fontSize: 13, color: 'var(--text-secondary)', minHeight: 40 }}>
-                  {repo.description || repo.display_name}
-                </Paragraph>
-                <Space size={16}>
-                  <Text style={{ fontSize: 13 }}>
-                    <StarOutlined style={{ color: '#F6AD55', marginRight: 4 }} />
-                    {repo.stars_count || 0}
-                  </Text>
-                  <Tag color="success" style={{ fontSize: 11, lineHeight: '18px' }}>
-                    {repo.tech_element}
-                  </Tag>
-                  <Tag style={{ fontSize: 11, lineHeight: '18px' }}>
-                    {repo.language || 'N/A'}
-                  </Tag>
-                </Space>
-              </Card>
-            </Col>
-          ))
-        )}
+          ) : (
+            <Row gutter={[12, 12]}>
+              {trendingRepos.map((repo) => (
+                <Col span={24} key={repo.repo_config_id}>
+                  <Card
+                    className="domain-card"
+                    hoverable
+                    bodyStyle={{ padding: '14px 16px' }}
+                    style={{
+                      borderLeft: '3px solid #F6AD55',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <Space style={{ marginBottom: 6 }}>
+                      <GithubOutlined style={{ color: primary, fontSize: 16 }} />
+                      <Text strong style={{ fontSize: 14, fontFamily: 'monospace' }}>
+                        {repo.repo_full_name}
+                      </Text>
+                    </Space>
+                    <Paragraph
+                      ellipsis={{ rows: 1 }}
+                      style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}
+                    >
+                      {repo.description || repo.display_name || '暂无描述'}
+                    </Paragraph>
+                    <Space size={12}>
+                      <Text style={{ fontSize: 12 }}>
+                        <StarOutlined style={{ color: '#F6AD55', marginRight: 4 }} />
+                        {repo.stars_count || 0}
+                      </Text>
+                      <Tag
+                        color="success"
+                        style={{ fontSize: 11, lineHeight: '18px', margin: 0 }}
+                      >
+                        {repo.tech_element}
+                      </Tag>
+                      <Tag style={{ fontSize: 11, lineHeight: '18px', margin: 0 }}>
+                        {repo.language || 'N/A'}
+                      </Tag>
+                    </Space>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          )}
+        </Col>
+
+        {/* ───── Right: Top Developers ───── */}
+        <Col span={12}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Title level={4} style={{ margin: 0 }}>
+              <StarOutlined style={{ marginRight: 8, color: secondary }} />
+              顶尖开发者
+            </Title>
+            <Button
+              type="link"
+              onClick={() => navigate('/opensource/search')}
+              style={{ fontSize: 14, padding: 0 }}
+            >
+              查看全部 →
+            </Button>
+          </div>
+          {topDevelopers.length === 0 ? (
+            <Empty description="暂无开发者数据，请先执行采集任务" />
+          ) : (
+            <Row gutter={[12, 12]}>
+              {topDevelopers.map((dev) => (
+                <Col span={24} key={dev.developer_id}>
+                  <Card
+                    hoverable
+                    className="domain-card"
+                    style={{
+                      borderLeft: `3px solid ${secondary}`,
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer',
+                    }}
+                    bodyStyle={{ padding: '14px 16px' }}
+                    onClick={() => navigate(`/opensource/developers/${dev.developer_id}`)}
+                  >
+                    <Space align="start" style={{ marginBottom: 8 }}>
+                      {dev.avatar_url ? (
+                        <img
+                          src={`${dev.avatar_url}${dev.avatar_url.includes('?') ? '&' : '?'}s=64`}
+                          alt={dev.name || dev.github_login}
+                          loading="lazy"
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 20,
+                            objectFit: 'cover',
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 20,
+                            background: primary,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontSize: 16,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {(dev.name || dev.github_login)?.[0]?.toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <Text strong style={{ fontSize: 14, display: 'block' }}>
+                          {dev.name || dev.github_login}
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          @{dev.github_login}
+                        </Text>
+                      </div>
+                    </Space>
+
+                    <Paragraph
+                      ellipsis={{ rows: 1 }}
+                      style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}
+                    >
+                      {dev.bio || '暂无简介'}
+                    </Paragraph>
+
+                    <Space size={4} wrap style={{ marginBottom: 8 }}>
+                      {(dev.primary_languages || []).slice(0, 3).map((lang) => (
+                        <Tag key={lang} style={{ fontSize: 11, borderRadius: 4, margin: 0 }}>
+                          {lang}
+                        </Tag>
+                      ))}
+                    </Space>
+
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Stars</Text>
+                        <div style={{ fontWeight: 700, color: primary, fontSize: 13 }}>
+                          <StarOutlined style={{ fontSize: 11, marginRight: 2 }} />
+                          {(dev.total_stars_received / 1000).toFixed(1)}k
+                        </div>
+                      </Col>
+                      <Col span={8}>
+                        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>公司</Text>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            color: primary,
+                            fontSize: 13,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {dev.company || '-'}
+                        </div>
+                      </Col>
+                      <Col span={8}>
+                        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>地区</Text>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            color: primary,
+                            fontSize: 13,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {dev.location || '-'}
+                        </div>
+                      </Col>
+                    </Row>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          )}
+        </Col>
       </Row>
     </div>
   )
