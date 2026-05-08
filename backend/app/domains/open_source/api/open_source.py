@@ -243,8 +243,23 @@ async def list_developers(
         page=page,
         page_size=page_size,
     )
+
+    # Enrich each summary with aggregated role tags from contributions
+    summaries: list[OSDeveloperSummary] = []
+    for dev in items:
+        summary = OSDeveloperSummary.model_validate(dev)
+        contributions = await service.get_developer_contributions(dev.developer_id)
+        role_set: set[str] = set()
+        for c, _ in contributions:
+            if c.is_owner:
+                role_set.add("Owner")
+            if c.is_committer:
+                role_set.add("Committer")
+        summary.roles = sorted(role_set)
+        summaries.append(summary)
+
     return PaginatedResponse.create(
-        items=[OSDeveloperSummary.model_validate(i) for i in items],
+        items=summaries,
         total=total,
         page=page,
         page_size=page_size,

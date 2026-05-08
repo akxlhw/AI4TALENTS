@@ -287,46 +287,84 @@ const OpenSourcePage: React.FC = () => {
                     bodyStyle={{ padding: '14px 16px' }}
                     onClick={() => navigate(`/opensource/developers/${dev.developer_id}`)}
                   >
-                    <Space align="start" style={{ marginBottom: 8 }}>
-                      {dev.avatar_url ? (
-                        <img
-                          src={`${dev.avatar_url}${dev.avatar_url.includes('?') ? '&' : '?'}s=64`}
-                          alt={dev.name || dev.github_login}
-                          loading="lazy"
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 20,
-                            objectFit: 'cover',
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 20,
-                            background: primary,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#fff',
-                            fontSize: 16,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {(dev.name || dev.github_login)?.[0]?.toUpperCase()}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                      <Space align="start">
+                        {dev.avatar_url ? (
+                          <img
+                            src={`${dev.avatar_url}${dev.avatar_url.includes('?') ? '&' : '?'}s=64`}
+                            alt={dev.name || dev.github_login}
+                            loading="lazy"
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 20,
+                              objectFit: 'cover',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 20,
+                              background: primary,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#fff',
+                              fontSize: 16,
+                              fontWeight: 600,
+                            }}
+                          >
+                            {(dev.name || dev.github_login)?.[0]?.toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <Text strong style={{ fontSize: 14, display: 'block' }}>
+                            {dev.name || dev.github_login}
+                          </Text>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            @{dev.github_login}
+                          </Text>
                         </div>
-                      )}
-                      <div>
-                        <Text strong style={{ fontSize: 14, display: 'block' }}>
-                          {dev.name || dev.github_login}
-                        </Text>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          @{dev.github_login}
-                        </Text>
-                      </div>
-                    </Space>
+                      </Space>
+                      <Space size={4} style={{ flexShrink: 0, marginLeft: 8 }}>
+                        {dev.roles?.includes('Owner') && (
+                          <Tag
+                            style={{
+                              fontSize: 10,
+                              lineHeight: '16px',
+                              padding: '0 6px',
+                              borderRadius: 4,
+                              margin: 0,
+                              background: '#D69E2E',
+                              color: '#fff',
+                              border: 'none',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Owner
+                          </Tag>
+                        )}
+                        {dev.roles?.includes('Committer') && (
+                          <Tag
+                            style={{
+                              fontSize: 10,
+                              lineHeight: '16px',
+                              padding: '0 6px',
+                              borderRadius: 4,
+                              margin: 0,
+                              background: '#3182CE',
+                              color: '#fff',
+                              border: 'none',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Committer
+                          </Tag>
+                        )}
+                      </Space>
+                    </div>
 
                     <Paragraph
                       ellipsis={{ rows: 1 }}

@@ -413,6 +413,7 @@ export interface OSDeveloper {
   primary_languages: string[]
   tech_tags: string[]
   is_visible: boolean
+  roles?: string[]
 }
 
 export interface OSDeveloperDetail extends OSDeveloper {

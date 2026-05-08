@@ -74,6 +74,7 @@ class OSDeveloperSummary(BaseModel):
     primary_languages: list[str]
     tech_tags: list[str]
     is_visible: bool
+    roles: list[str] = Field(default_factory=list, description="角色标签 (Owner, Committer)")
 
     class Config:
         from_attributes = True
