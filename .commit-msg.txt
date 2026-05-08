@@ -1,6 +1,0 @@
-feat(os): 首页 Trending 仓库添加查看全部按钮，跳转仓库列表页
-
-- 后端新增 GET /open-source/repositories 公开端点（任何登录用户可见）
-- 支持按技术领域、关键词搜索、排序（Stars/最新添加）
-- 前端新增仓库列表页 /opensource/repos，卡片网格布局
-- 首页 Trending 仓库区域添加 查看全部 → 按钮
