@@ -244,33 +244,6 @@ class GitHubClient:
         """Fetch repository language breakdown."""
         return cast(dict[str, int], await self._get(f"/repos/{owner}/{repo}/languages"))
 
-    async def list_collaborators(
-        self, owner: str, repo: str
-    ) -> list[dict[str, Any]]:
-        """Fetch repository collaborators with permissions.
-
-        Returns a list of collaborator objects, each containing ``login``
-        and a ``permissions`` dict (``admin``, ``maintain``, ``push``, …).
-        """
-        all_collabs: list[dict[str, Any]] = []
-        page = 1
-        per_page = 100
-        while True:
-            batch = cast(
-                list[dict[str, Any]],
-                await self._get(
-                    f"/repos/{owner}/{repo}/collaborators",
-                    params={"per_page": per_page, "page": page},
-                ),
-            )
-            if not batch:
-                break
-            all_collabs.extend(batch)
-            if len(batch) < per_page:
-                break
-            page += 1
-        return all_collabs
-
     async def list_commits(
         self, owner: str, repo: str, sha: str | None = None, per_page: int = 100, page: int = 1
     ) -> list[dict[str, Any]]:
