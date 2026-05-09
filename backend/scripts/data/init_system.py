@@ -1,17 +1,18 @@
 """System data initialization script.
 
 Functions:
-  1. Clear business data tables (retains sys_config by default)
+  1. Clear business data tables (retains collection configs & sys_config by default)
   2. Re-run database migrations
   3. Seed base data (admin user, tech domains, open-source repo configs)
 
 Usage:
-    python scripts/init_system.py              # Interactive confirmation
-    python scripts/init_system.py --force      # Skip confirmation
-    python scripts/init_system.py --domain academic    # Academic only
-    python scripts/init_system.py --domain open_source # Open source only
-    python scripts/init_system.py --full       # Full reset (users + domains)
-    python scripts/init_system.py --clear-config       # Also clear sys_config
+    python scripts/init_system.py                       # Interactive confirmation
+    python scripts/init_system.py --force               # Skip confirmation
+    python scripts/init_system.py --domain academic     # Academic only
+    python scripts/init_system.py --domain open_source  # Open source only
+    python scripts/init_system.py --full                # Full reset (users + domains)
+    python scripts/init_system.py --clear-collection    # Also clear collection configs
+    python scripts/init_system.py --clear-config        # Also clear sys_config
 """
 import asyncio
 import sys
@@ -57,7 +58,7 @@ from app.domains.academic.models.statistics import OverviewStatSnapshot
 from app.domains.academic.models.venue import Venue, VenueTechBinding
 from app.domains.open_source.models.open_source import OSRepoConfig
 
-# Academic domain business tables
+# Academic domain business tables (cleared by default)
 ACADEMIC_TABLES = [
     # Search & audit
     "search_talent_document",
@@ -87,9 +88,6 @@ ACADEMIC_TABLES = [
     "raw_work",
     "raw_author",
     "raw_institution",
-    # Collection tasks
-    "sync_venue_sub_task",
-    "sync_collect_task",
     # Statistics snapshots
     "stat_school_snapshot",
     "stat_overview_snapshot",
@@ -104,7 +102,13 @@ ACADEMIC_TABLES = [
     "jd_match_session",
 ]
 
-# Open Source domain business tables
+# Academic collection config tables (preserved by default; cleared with --clear-collection)
+ACADEMIC_COLLECTION_TABLES = [
+    "sync_venue_sub_task",
+    "sync_collect_task",
+]
+
+# Open Source domain business tables (cleared by default)
 OPEN_SOURCE_TABLES = [
     "os_embedding",
     "os_contribution",
@@ -116,6 +120,10 @@ OPEN_SOURCE_TABLES = [
     "os_raw_developer",
     "os_repo_mapping",
     "os_developer",
+]
+
+# Open Source collection config tables (preserved by default; cleared with --clear-collection)
+OPEN_SOURCE_COLLECTION_TABLES = [
     "os_collect_task",
     "os_repo_config",
 ]
@@ -412,12 +420,14 @@ VENUE_DATA = [
 async def truncate_tables(
     full_reset: bool = False,
     clear_config: bool = False,
+    clear_collection: bool = False,
     domain: str = "all",
 ):
     """Truncate business data tables.
     Args:
         full_reset: Also clear base config tables (users, tech domains)
         clear_config: Also clear system config tables (sys_config)
+        clear_collection: Also clear collection config tables (tasks, repo configs)
         domain: Domain to clear (academic / open_source / all, default all)
     """
     print("\n" + "="*60)
@@ -433,6 +443,14 @@ async def truncate_tables(
         if domain in ("all", "open_source"):
             tables.extend(OPEN_SOURCE_TABLES)
             print("  [Scope: Open Source]")
+
+        if clear_collection:
+            if domain in ("all", "academic"):
+                tables.extend(ACADEMIC_COLLECTION_TABLES)
+                print("  [Mode: include academic collection configs]")
+            if domain in ("all", "open_source"):
+                tables.extend(OPEN_SOURCE_COLLECTION_TABLES)
+                print("  [Mode: include open-source collection configs]")
 
         if clear_config:
             tables.extend(CONFIG_SYSTEM_TABLES)
@@ -735,12 +753,14 @@ async def seed_statistics_snapshot():
 async def init_system(
     full_reset: bool = False,
     clear_config: bool = False,
+    clear_collection: bool = False,
     domain: str = "all",
 ):
     """Run full initialization flow.
     Args:
         full_reset: Full reset (also clears users, tech domains)
         clear_config: Also clear system config tables (sys_config)
+        clear_collection: Also clear collection config tables (tasks, repo configs)
         domain: Domain to init (academic / open_source / all, default all)
     """
     print("\n" + "="*60)
@@ -750,7 +770,7 @@ async def init_system(
     start_time = datetime.now()
 
     # 1. Clear data tables
-    await truncate_tables(full_reset, clear_config, domain)
+    await truncate_tables(full_reset, clear_config, clear_collection, domain)
 
     # 2. Clear cache
     await clear_cache()
@@ -788,6 +808,8 @@ async def init_system(
         print("\n[!] Change default password in production")
     else:
         print("[TIP] Business data cleared, user and tech domain configs retained")
+        if not clear_collection:
+            print("[TIP] Collection configs (tasks, repo configs) retained; use --clear-collection to remove")
         if not clear_config:
             print("[TIP] System config (sys_config) retained; use --clear-config to remove")
         print("[TIP] Country data lives in app/constants/countries.py")
@@ -804,11 +826,13 @@ Examples:
     python scripts/init_system.py --domain academic     # Academic only
     python scripts/init_system.py --domain open_source  # Open source only
     python scripts/init_system.py --full                # Full reset
+    python scripts/init_system.py --clear-collection    # Also clear collection configs
     python scripts/init_system.py --clear-config        # Also clear sys_config
     python scripts/init_system.py --full --force        # Full reset, no confirm
 
 Notes:
-  - Default clears all business data; use --domain to restrict
+  - Default clears business data; use --domain to restrict
+  - Default retains collection configs; use --clear-collection to remove
   - Default retains sys_config; use --clear-config to remove
   - Country data lives in app/constants/countries.py
         """
@@ -822,6 +846,11 @@ Notes:
         "--full",
         action="store_true",
         help="Full reset (also clears users, tech domains, etc.)"
+    )
+    parser.add_argument(
+        "--clear-collection",
+        action="store_true",
+        help="Also clear collection config tables (tasks, repo configs)"
     )
     parser.add_argument(
         "--clear-config",
@@ -843,6 +872,8 @@ Notes:
         print(f"\n[!] WARNING: This will clear {domain_label[args.domain]}!")
         if args.full:
             print("[!] NOTE: Full reset will also clear users and tech domains")
+        if args.clear_collection:
+            print("[!] NOTE: Collection configs (tasks, repo configs) will also be cleared")
         if args.clear_config:
             print("[!] NOTE: System config (sys_config) will also be cleared")
         confirm = input("\nConfirm? (y/N): ").strip().lower()
@@ -850,7 +881,7 @@ Notes:
             print("Cancelled")
             return
 
-    asyncio.run(init_system(full_reset=args.full, clear_config=args.clear_config, domain=args.domain))
+    asyncio.run(init_system(full_reset=args.full, clear_config=args.clear_config, clear_collection=args.clear_collection, domain=args.domain))
 
 
 if __name__ == "__main__":
