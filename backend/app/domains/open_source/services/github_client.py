@@ -40,6 +40,9 @@ class GitHubClient:
         self._client: httpx.AsyncClient | None = None
         self._last_request_time: float = 0.0
         self._min_interval: float = 0.2  # 200ms between requests
+        # Track per-token rate limit state for intelligent token selection
+        self._token_remaining: dict[int, int] = {}
+        self._token_reset_at: dict[int, int] = {}
 
     @staticmethod
     def _parse_tokens(token: str | None) -> list[str]:
@@ -56,9 +59,55 @@ class GitHubClient:
         return self.tokens[self.current_token_idx % len(self.tokens)]
 
     def _switch_token(self) -> bool:
+        """Rotate to the next token (legacy round-robin). Kept for compatibility."""
         if len(self.tokens) <= 1:
             return False
         self.current_token_idx = (self.current_token_idx + 1) % len(self.tokens)
+        self._update_auth_header()
+        return True
+
+    def _record_rate_limit(self, headers: httpx.Headers) -> None:
+        """Update per-token rate limit state from response headers."""
+        remaining = headers.get("X-RateLimit-Remaining")
+        reset_at = headers.get("X-RateLimit-Reset")
+        if remaining is not None:
+            try:
+                self._token_remaining[self.current_token_idx] = int(remaining)
+            except ValueError:
+                pass
+        if reset_at is not None:
+            try:
+                self._token_reset_at[self.current_token_idx] = int(reset_at)
+            except ValueError:
+                pass
+
+    def _pick_best_token(self) -> None:
+        """Switch to the token with the highest remaining quota before making a request."""
+        if len(self.tokens) <= 1:
+            return
+        best_idx = max(
+            range(len(self.tokens)),
+            key=lambda i: self._token_remaining.get(i, 5000),
+        )
+        if best_idx != self.current_token_idx:
+            self.current_token_idx = best_idx
+            self._update_auth_header()
+
+    def _switch_to_best_alternative(self) -> bool:
+        """After hitting 403/429, switch to the healthiest alternative token."""
+        if len(self.tokens) <= 1:
+            return False
+        best_idx = max(
+            (i for i in range(len(self.tokens)) if i != self.current_token_idx),
+            key=lambda i: self._token_remaining.get(i, 5000),
+            default=None,
+        )
+        if best_idx is None:
+            return False
+        # Only switch if the alternative has meaningful quota left
+        if self._token_remaining.get(best_idx, 0) <= 0:
+            return False
+        self.current_token_idx = best_idx
         self._update_auth_header()
         return True
 
@@ -125,7 +174,13 @@ class GitHubClient:
     )
     async def _get(self, path: str, params: dict[str, Any] | None = None) -> Any:
         """Generic GET with rate-limit handling, token rotation, and retry."""
+        # Proactively pick the healthiest token before each request
+        self._pick_best_token()
+
         response = await self._do_get(path, params)
+
+        # Record rate limit state from every response (not just errors)
+        self._record_rate_limit(response.headers)
 
         if response.status_code == 404:
             logger.warning(f"GitHub API 404: {path}")
@@ -139,9 +194,12 @@ class GitHubClient:
                 f"reset_at={reset_at}, token_idx={self.current_token_idx}"
             )
 
-            # Try switching to next token
-            if self._switch_token():
-                logger.info(f"Switched to token #{self.current_token_idx + 1}")
+            # Try switching to the best alternative token (not round-robin)
+            if self._switch_to_best_alternative():
+                logger.info(
+                    f"Switched to token #{self.current_token_idx + 1} "
+                    f"(remaining={self._token_remaining.get(self.current_token_idx, '?')})"
+                )
                 await self._rebuild_client()
                 response = await self._do_get(path, params)
             elif reset_at:
@@ -285,14 +343,14 @@ class GitHubClient:
         committers: set[str] = set()  # Track who has committed (not just authored)
         per_page = 100
         max_pages = 2500  # Safety cap: 2500 * 100 = 250k commits
-        batch_size = 10  # Concurrent pages per batch
+        batch_size = 5  # Reduced from 10 to avoid burst-triggered abuse detection
         current_page = 1
 
         while current_page <= max_pages:
             batch_end = min(current_page + batch_size - 1, max_pages)
             pages = list(range(current_page, batch_end + 1))
 
-            # Fetch pages concurrently
+            # Fetch pages concurrently (capped at 5 to stay under abuse thresholds)
             results = await asyncio.gather(
                 *[self.list_commits(owner, repo, per_page=per_page, page=p) for p in pages],
                 return_exceptions=True,
@@ -330,6 +388,10 @@ class GitHubClient:
                 break
 
             current_page = batch_end + 1
+
+            # Cooldown between batches to avoid triggering GitHub abuse detection
+            await asyncio.sleep(0.5)
+
             if current_page > max_pages:
                 logger.warning(
                     f"Commits API pagination capped at {max_pages} pages "
