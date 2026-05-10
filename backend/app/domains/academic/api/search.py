@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.academic.repositories.talent_repository import TalentRepository
 from app.domains.academic.schemas.overview import SearchResponse, SearchTalentResult
 from app.domains.academic.schemas.v1_4 import (
     EnhancedSearchResponse,
@@ -21,8 +20,7 @@ from app.domains.academic.schemas.v1_4 import (
 )
 from app.domains.academic.services.search.errors import EmptyQueryError
 from app.domains.academic.services.search.search_service import SearchService
-from app.domains.shared.services.config_service import ConfigService
-from app.domains.shared.services.llm import LLMGateway
+from app.domains.academic.services.talent_service import TalentService
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
@@ -51,18 +49,13 @@ async def search_talents(
     Supports filtering by role_type.
     Results are ordered by citation count.
     """
-    repo = TalentRepository(session)
-
-    offset = (page - 1) * page_size
-
-    # Database-level pagination with real total count
-    paginated_results = await repo.search(
+    service = TalentService(session)
+    paginated_results, total = await service.search_talents_basic(
         keyword=q,
-        limit=page_size,
-        offset=offset,
+        page=page,
+        page_size=page_size,
         role_type=role_type,
     )
-    total = await repo.search_count(keyword=q, role_type=role_type)
 
     items = [
         SearchTalentResult(
@@ -152,41 +145,8 @@ async def enhanced_search_talents(
         filters["tech_domain_id"] = tech_domain_id
 
     try:
-        # Create embedding service for semantic/hybrid search
-        embed_service = None
-        if mode in [SearchMode.SEMANTIC, SearchMode.HYBRID]:
-            # Get LLM config from database
-            config_service = ConfigService(session)
-            llm_config = await config_service.get_llm_config()
-
-            if llm_config.enabled and llm_config.api_key:
-                # Create LLM gateway with database config
-                llm_gateway = LLMGateway(
-                    api_key=llm_config.api_key,
-                    api_base=llm_config.api_base,
-                    model=llm_config.model,
-                    embedding_model=llm_config.embedding_model,
-                    embedding_api_base=llm_config.embedding_api_base,
-                    embedding_api_key=llm_config.embedding_api_key,
-                    timeout=llm_config.timeout or 60,
-                    api_format=llm_config.api_format,
-                    embedding_api_format=llm_config.embedding_api_format,
-                )
-                from app.domains.academic.services.embedding.embedding_service import (
-                    EmbeddingService,
-                )
-
-                embed_service = EmbeddingService(
-                    session=session,
-                    llm_gateway=llm_gateway,
-                    dimension=llm_config.embedding_dimension,
-                )
-
-        # Create search service
-        search_service = SearchService(
-            session=session,
-            embedding_service=embed_service,
-        )
+        # Create search service (with embedding service if semantic/hybrid mode)
+        search_service = await SearchService.create_with_embedding(session, mode=mode)
 
         # Execute search
         results = await search_service.search(

@@ -1,77 +1,77 @@
-# 阶段2：代码异味热力图扫描
+# 阶段2：代码异味热力图扫描 (v2.0.0 更新)
 
-> 扫描时间：2026-05-05  
-> 扫描范围：`backend/app/` (~182 .py) + `frontend/src/` (~60 .ts/.tsx)  
-> 方法：静态行数统计 + 函数体长分析 + 命名风格检查 + 重复模式搜索
+> 扫描时间：2026-05-09
+> 扫描范围：`backend/app/` (~120 .py 源文件) + `frontend/src/` (~60 .ts/.tsx)
+> 方法：静态行数统计 + 函数体长分析 + 重复模式搜索
 
 ---
 
 ## P0 级异味（必须立即修复）
 
-### 1. 巨型文件（单文件 >300行）
-
-#### 后端
+### 1. 巨型文件（单文件 >300行）— 后端 30 个
 
 | # | 文件路径 | 行数 | 说明 |
 |---|---------|------|------|
-| 1 | [`app/repositories/talent_repository.py`](../../backend/app/repositories/talent_repository.py) | **1188** | 人才查询仓库，含大量条件分支和原始 SQL |
-| 2 | [`app/api/v1/endpoints/open_source.py`](../../backend/app/api/v1/endpoints/open_source.py) | **1138** | 开源人才 REST API，功能过度集中 |
-| 3 | [`app/api/v1/endpoints/system_config.py`](../../backend/app/api/v1/endpoints/system_config.py) | **990** | 系统配置 API，含大量外部服务测试逻辑 |
-| 4 | [`app/repositories/user_repository.py`](../../backend/app/repositories/user_repository.py) | **844** | 用户仓库 |
-| 5 | [`app/api/v1/endpoints/permissions.py`](../../backend/app/api/v1/endpoints/permissions.py) | **767** | 权限管理 API |
-| 6 | [`app/services/data_fetchers.py`](../../backend/app/services/data_fetchers.py) | **748** | OpenAlex 数据采集器 |
-| 7 | [`app/api/v1/endpoints/collect.py`](../../backend/app/api/v1/endpoints/collect.py) | **702** | 采集任务 API |
-| 8 | [`app/repositories/raw_data_repository.py`](../../backend/app/repositories/raw_data_repository.py) | **696** | 原始数据仓库 |
-| 9 | [`app/repositories/tech_domain_repository.py`](../../backend/app/repositories/tech_domain_repository.py) | **686** | 技术领域仓库 |
-| 10 | [`app/services/llm/llm_gateway.py`](../../backend/app/services/llm/llm_gateway.py) | **639** | LLM 网关 |
-| 11 | [`app/services/collaboration_service.py`](../../backend/app/services/collaboration_service.py) | **583** | 合作网络服务 |
-| 12 | [`app/api/v1/endpoints/auth.py`](../../backend/app/api/v1/endpoints/auth.py) | **570** | 认证 API |
-| 13 | [`app/api/v1/endpoints/talents.py`](../../backend/app/api/v1/endpoints/talents.py) | **565** | 人才 API |
-| 14 | [`app/repositories/embedding_repository.py`](../../backend/app/repositories/embedding_repository.py) | **534** | 嵌入仓库 |
-| 15 | [`app/services/config_service.py`](../../backend/app/services/config_service.py) | **526** | 配置服务 |
-| 16 | [`app/services/sync/author_sync.py`](../../backend/app/services/sync/author_sync.py) | **502** | 作者同步服务 |
-| 17 | [`app/services/collect/orchestrator.py`](../../backend/app/services/collect/orchestrator.py) | **495** | 采集编排器 |
-| 18 | [`app/services/embedding/embedding_service.py`](../../backend/app/services/embedding/embedding_service.py) | **458** | 嵌入服务 |
-| 19 | [`app/repositories/data_version_repository.py`](../../backend/app/repositories/data_version_repository.py) | **456** | 数据版本仓库 |
-| 20 | [`app/services/recommend/recommend_service.py`](../../backend/app/services/recommend/recommend_service.py) | **451** | 推荐服务 |
-| 21 | [`app/api/v1/endpoints/data_version.py`](../../backend/app/api/v1/endpoints/data_version.py) | **421** | 数据版本 API |
-| 22 | [`app/services/normalizers/author.py`](../../backend/app/services/normalizers/author.py) | **417** | 作者标准化 |
-| 23 | [`app/api/v1/endpoints/tech_domain.py`](../../backend/app/api/v1/endpoints/tech_domain.py) | **396** | 技术领域 API |
-| 24 | [`app/services/jd_match/jd_match_service.py`](../../backend/app/services/jd_match/jd_match_service.py) | **384** | JD 匹配服务 |
-| 25 | [`app/services/openalex_client.py`](../../backend/app/services/openalex_client.py) | **380** | OpenAlex 客户端 |
-| 26 | [`app/schemas/open_source.py`](../../backend/app/schemas/open_source.py) | **378** | 开源 DTO 定义 |
-| 27 | [`app/core/metrics.py`](../../backend/app/core/metrics.py) | **376** | 指标采集 |
-| 28 | [`app/api/v1/endpoints/schools.py`](../../backend/app/api/v1/endpoints/schools.py) | **348** | 学校 API |
-| 29 | [`app/api/v1/endpoints/embeddings.py`](../../backend/app/api/v1/endpoints/embeddings.py) | **346** | 嵌入 API |
-| 30 | [`app/repositories/collect_repository.py`](../../backend/app/repositories/collect_repository.py) | **344** | 采集仓库 |
+| 1 | `domains/open_source/services/open_source_service.py` | **1398** | ⚠️ 最大文件，含搜索/导出/统计/嵌入全部逻辑 |
+| 2 | `domains/open_source/repositories/open_source_repository.py` | **1002** | 全部查询集中在一个 repository |
+| 3 | `domains/open_source/api/open_source.py` | **997** | 所有开源 API 端点聚合在一个文件 |
+| 4 | `domains/shared/api/system_config.py` | **973** | 系统配置 + LLM/代理/嵌入连接测试 |
+| 5 | `domains/shared/repositories/user_repository.py` | **847** | 用户管理全部查询 |
+| 6 | `domains/academic/services/data_fetchers.py` | **785** | OpenAlex 数据采集器 |
+| 7 | `domains/shared/api/permissions.py` | **767** | 权限管理 API |
+| 8 | `domains/academic/repositories/raw_data_repository.py` | **702** | 原始数据仓库 |
+| 9 | `domains/academic/repositories/talent/talent_search_repository.py` | **683** | 搜索仓库（v2.0 拆分后仍偏大）|
+| 10 | `domains/shared/services/llm/llm_gateway.py` | **675** | LLM 网关 |
+| 11 | `domains/academic/api/collect.py` | **614** | 采集任务 API |
+| 12 | `domains/academic/services/collaboration_service.py` | **583** | 合作网络服务 |
+| 13 | `domains/shared/services/config_service.py` | **572** | 配置服务 |
+| 14 | `domains/shared/api/auth.py` | **570** | 认证 API |
+| 15 | `domains/academic/api/talents.py` | **565** | 人才 API |
+| 16 | `domains/academic/services/collect/orchestrator.py` | **537** | 采集编排器 |
+| 17 | `domains/academic/repositories/embedding_repository.py` | **534** | 嵌入仓库 |
+| 18 | `domains/academic/repositories/tech_domain_repository.py` | **533** | 技术领域仓库 |
+| 19 | `domains/academic/services/sync/author_sync.py` | **502** | 作者同步服务 |
+| 20 | `domains/academic/services/embedding/embedding_service.py` | **494** | 嵌入服务 |
+| 21 | `domains/academic/repositories/data_version_repository.py` | **461** | 数据版本仓库 |
+| 22 | `domains/academic/services/recommend/recommend_service.py` | **451** | 推荐服务 |
+| 23 | `domains/open_source/schemas/open_source.py` | **441** | 开源 DTO 定义 |
+| 24 | `domains/academic/services/openalex_client.py` | **421** | OpenAlex 客户端 |
+| 25 | `domains/academic/services/normalizers/author.py` | **417** | 作者标准化 |
+| 26 | `domains/open_source/services/github_client.py` | **412** | GitHub 客户端 |
+| 27 | `domains/open_source/services/collectors/github_collector.py` | **411** | GitHub 采集器 |
+| 28 | `domains/academic/api/tech_domain.py` | **396** | 技术领域 API |
+| 29 | `domains/academic/repositories/talent/base_talent_repository.py` | **393** | 基础人才仓库（v2.0 拆分后）|
+| 30 | `domains/academic/services/jd_match/jd_match_service.py` | **384** | JD 匹配服务 |
 
-> 后端共 **30** 个文件超过 300 行，占 .py 文件总数的 **~16.5%**
+> 后端共 **30** 个文件超过 300 行，占比约 **25%**。
+> **v2.0.0 改进**: TalentRepository 从 1188 行拆分为 3 个文件，但 OpenSourceService 成为新的最大文件 (1398行)。
 
-#### 前端
+### 巨型文件 — 前端 19 个
 
 | # | 文件路径 | 行数 | 说明 |
 |---|---------|------|------|
-| 1 | [`src/pages/academic/academic-search-page.tsx`](../../frontend/src/pages/academic/academic-search-page.tsx) | **1141** | 学术搜索页面 |
-| 2 | [`src/pages/system-config/components/collect-config-tab.tsx`](../../frontend/src/pages/system-config/components/collect-config-tab.tsx) | **863** | 采集配置子标签 |
-| 3 | [`src/pages/user/favorites-page.tsx`](../../frontend/src/pages/user/favorites-page.tsx) | **701** | 收藏页面 |
-| 4 | [`src/services/api.ts`](../../frontend/src/services/api.ts) | **605** | API 客户端 |
-| 5 | [`src/pages/admin/admin-page.tsx`](../../frontend/src/pages/admin/admin-page.tsx) | **567** | 管理页面 |
-| 6 | [`src/pages/admin/data-version-page.tsx`](../../frontend/src/pages/admin/data-version-page.tsx) | **537** | 数据版本页面 |
-| 7 | [`src/pages/academic/academic-talent-detail-page.tsx`](../../frontend/src/pages/academic/academic-talent-detail-page.tsx) | **525** | 人才详情页 |
-| 8 | [`src/types/index.ts`](../../frontend/src/types/index.ts) | **515** | 类型定义 |
-| 9 | [`src/hooks/useQueries.ts`](../../frontend/src/hooks/useQueries.ts) | **481** | Query Hooks |
-| 10 | [`src/pages/open-source/open-source-developer-detail-page.tsx`](../../frontend/src/pages/open-source/open-source-developer-detail-page.tsx) | **404** | 开源开发者详情 |
-| 11 | [`src/pages/academic/academic-country-school-page.tsx`](../../frontend/src/pages/academic/academic-country-school-page.tsx) | **396** | 国家学校页面 |
-| 12 | [`src/pages/academic/academic-home-page.tsx`](../../frontend/src/pages/academic/academic-home-page.tsx) | **389** | 学术首页 |
-| 13 | [`src/pages/industry/industry-demo-page.tsx`](../../frontend/src/pages/industry/industry-demo-page.tsx) | **382** | 行业演示页 |
-| 14 | [`src/pages/academic/academic-tech-domain-page.tsx`](../../frontend/src/pages/academic/academic-tech-domain-page.tsx) | **364** | 技术领域页面 |
-| 15 | [`src/pages/open-source/open-source-search-page.tsx`](../../frontend/src/pages/open-source/open-source-search-page.tsx) | **357** | 开源搜索页 |
-| 16 | [`src/pages/system-config/components/os-repo-config-sub-tab.tsx`](../../frontend/src/pages/system-config/components/os-repo-config-sub-tab.tsx) | **354** | 仓库配置子标签 |
-| 17 | [`src/pages/academic/academic-school-detail-page.tsx`](../../frontend/src/pages/academic/academic-school-detail-page.tsx) | **336** | 学校详情页 |
-| 18 | [`src/pages/competition/competition-demo-page.tsx`](../../frontend/src/pages/competition/competition-demo-page.tsx) | **327** | 竞赛演示页 |
-| 19 | [`src/pages/open-source/open-source-page.tsx`](../../frontend/src/pages/open-source/open-source-page.tsx) | **317** | 开源首页 |
+| 1 | `pages/system-config/components/collect-config-tab.tsx` | **1033** | 采集配置标签（v2.0 反而增长）|
+| 2 | `pages/user/favorites-page.tsx` | **706** | 收藏页面 |
+| 3 | `pages/admin/admin-page.tsx` | **585** | 管理页面 |
+| 4 | `types/index.ts` | **546** | 所有类型定义集中在一个文件 |
+| 5 | `pages/academic/components/search-tab.tsx` | **544** | 搜索子标签（v2.0 拆分后仍偏大）|
+| 6 | `pages/admin/data-version-page.tsx` | **543** | 数据版本页面 |
+| 7 | `pages/academic/academic-talent-detail-page.tsx` | **526** | 人才详情页 |
+| 8 | `hooks/useQueries.ts` | **481** | Query Hooks |
+| 9 | `pages/open-source/repo-detail-page.tsx` | **473** | 仓库详情页 |
+| 10 | `pages/system-config/components/os-repo-config-sub-tab.tsx` | **469** | 仓库配置子标签 |
+| 11 | `pages/open-source/open-source-page.tsx` | **468** | 开源首页 |
+| 12 | `pages/academic/academic-home-page.tsx` | **416** | 学术首页 |
+| 13 | `pages/academic/academic-country-school-page.tsx` | **412** | 国家学校页面 |
+| 14 | `pages/open-source/open-source-developer-detail-page.tsx` | **408** | 开发者详情 |
+| 15 | `pages/open-source/open-source-search-page.tsx` | **393** | 开源搜索 |
+| 16 | `pages/industry/industry-demo-page.tsx` | **386** | 行业演示页 |
+| 17 | `pages/academic/academic-tech-domain-page.tsx` | **373** | 技术领域页面 |
+| 18 | `pages/academic/academic-school-detail-page.tsx` | **336** | 学校详情页 |
+| 19 | `pages/competition/competition-demo-page.tsx` | **329** | 竞赛演示页 |
 
-> 前端共 **19** 个文件超过 300 行，占 .ts/.tsx 文件总数的 **~31.7%**
+> 前端共 **19** 个文件超过 300 行，占比约 **32%**。
+> **v2.0.0 改进**: `academic-search-page.tsx` 从 1141 行拆分为 3 个 tab 组件，但 collect-config-tab 增长至 1033 行。
 
 ---
 
@@ -79,170 +79,115 @@
 
 #### 后端
 
-| # | 文件路径 | 函数名 | 起始行 | 体长 | 说明 |
-|---|---------|--------|--------|------|------|
-| 1 | [`app/repositories/embedding_repository.py`](../../backend/app/repositories/embedding_repository.py) | `_is_postgres` | L32 | **502** | 巨大的条件判断函数，需拆分 |
-| 2 | [`app/services/data_fetchers.py`](../../backend/app/services/data_fetchers.py) | `with_retry` | L52 | **411** | 重试装饰器，逻辑过于集中 |
-| 3 | [`app/services/data_fetchers.py`](../../backend/app/services/data_fetchers.py) | `extract_institutions` | L464 | **306** | 机构数据提取 |
-| 4 | [`app/api/v1/endpoints/system_config.py`](../../backend/app/api/v1/endpoints/system_config.py) | `test_proxy_connection` | L587 | **235** | 代理连接测试 |
-| 5 | [`app/api/v1/endpoints/system_config.py`](../../backend/app/api/v1/endpoints/system_config.py) | `_test_embedding_model` | L368 | **142** | 嵌入模型测试 |
-| 6 | [`app/api/v1/endpoints/search.py`](../../backend/app/api/v1/endpoints/search.py) | `enhanced_search_talents` | L99 | **142** | 增强搜索 |
-| 7 | [`app/api/v1/endpoints/embeddings.py`](../../backend/app/api/v1/endpoints/embeddings.py) | `_run_embedding_generation` | L225 | **126** | 嵌入生成执行 |
-| 8 | [`app/api/v1/endpoints/auth.py`](../../backend/app/api/v1/endpoints/auth.py) | `login` | L264 | **129** | 登录逻辑 |
-| 9 | [`app/schemas/collect.py`](../../backend/app/schemas/collect.py) | `get_current_year` | L19 | **126** | ⚠️ 获取当前年份竟有 126 行，疑似包含大量业务逻辑 |
-| 10 | [`app/api/v1/endpoints/system_config.py`](../../backend/app/api/v1/endpoints/system_config.py) | `_test_chat_model` | L205 | **113** | 聊天模型测试 |
-| 11 | [`app/api/v1/endpoints/collect.py`](../../backend/app/api/v1/endpoints/collect.py) | `trigger_task` | L291 | **110** | 触发采集任务 |
-| 12 | [`app/api/v1/endpoints/talents.py`](../../backend/app/api/v1/endpoints/talents.py) | `export_talents` | L246 | **107** | 人才导出 |
+| # | 文件路径 | 函数名 | 体长 | 说明 |
+|---|---------|--------|------|------|
+| 1 | `academic/repositories/embedding_repository.py` | `_is_postgres` | ~500 | 巨大的条件判断函数 |
+| 2 | `academic/services/data_fetchers.py` | `with_retry` | ~400 | 重试装饰器 |
+| 3 | `academic/services/data_fetchers.py` | `extract_institutions` | ~300 | 机构数据提取 |
+| 4 | `open_source/services/open_source_service.py` | 多个方法 | 100-200 | Service 方法过长 |
+| 5 | `shared/api/system_config.py` | `test_proxy_connection` | ~230 | 代理连接测试 |
+| 6 | `shared/api/system_config.py` | `_test_embedding_model` | ~140 | 嵌入模型测试 |
+| 7 | `shared/api/auth.py` | `login` | ~130 | 登录逻辑 |
+| 8 | `open_source/api/open_source.py` | 多个端点函数 | 100-150 | 端点函数逻辑过重 |
+| 9 | `shared/api/system_config.py` | `_test_chat_model` | ~110 | 聊天模型测试 |
+| 10 | `academic/api/talents.py` | `export_talents` | ~100 | 人才导出 |
 
 #### 前端
 
-| # | 文件路径 | 函数/组件名 | 起始行 | 体长 | 说明 |
-|---|---------|-----------|--------|------|------|
-| 1 | [`src/pages/academic/academic-search-page.tsx`](../../frontend/src/pages/academic/academic-search-page.tsx) | `SearchRecommendPage` | L88 | **1078** | 页面组件，需拆分子组件 |
-| 2 | [`src/pages/system-config/components/collect-config-tab.tsx`](../../frontend/src/pages/system-config/components/collect-config-tab.tsx) | `CollectConfigTab` | L58 | **806** | 配置标签组件 |
-| 3 | [`src/pages/user/favorites-page.tsx`](../../frontend/src/pages/user/favorites-page.tsx) | `FavoritesPage` | L42 | **664** | 收藏页面 |
-| 4 | [`src/services/api.ts`](../../frontend/src/services/api.ts) | `api` | L133 | **472** | API 客户端对象定义 |
-| 5 | [`src/pages/admin/admin-page.tsx`](../../frontend/src/pages/admin/admin-page.tsx) | `AdminPage` | L83 | **484** | 管理页面 |
-| 6 | [`src/pages/admin/data-version-page.tsx`](../../frontend/src/pages/admin/data-version-page.tsx) | `DataVersionPage` | L89 | **448** | 数据版本页面 |
-| 7 | [`src/pages/academic/academic-talent-detail-page.tsx`](../../frontend/src/pages/academic/academic-talent-detail-page.tsx) | `TalentDetailPage` | L84 | **412** | 人才详情 |
-| 8 | [`src/pages/open-source/open-source-developer-detail-page.tsx`](../../frontend/src/pages/open-source/open-source-developer-detail-page.tsx) | `DeveloperDetailPage` | L35 | **369** | 开发者详情 |
-| 9 | [`src/pages/academic/academic-home-page.tsx`](../../frontend/src/pages/academic/academic-home-page.tsx) | `AcademicHomePage` | L42 | **347** | 学术首页 |
-| 10 | [`src/pages/academic/academic-country-school-page.tsx`](../../frontend/src/pages/academic/academic-country-school-page.tsx) | `CountrySchoolPage` | L81 | **331** | 国家学校页 |
-
-> 注：React 页面组件体长包含 JSX 渲染逻辑，100+ 行在页面级组件中较常见，但 >300 行建议拆分。
+| # | 文件路径 | 组件名 | 体长 | 说明 |
+|---|---------|--------|------|------|
+| 1 | `pages/system-config/components/collect-config-tab.tsx` | `CollectConfigTab` | ~970 | 配置标签组件 |
+| 2 | `pages/user/favorites-page.tsx` | `FavoritesPage` | ~660 | 收藏页面 |
+| 3 | `pages/academic/components/search-tab.tsx` | `SearchTab` | ~500 | 搜索标签（v2.0 拆分后）|
+| 4 | `pages/admin/admin-page.tsx` | `AdminPage` | ~500 | 管理页面 |
+| 5 | `pages/admin/data-version-page.tsx` | `DataVersionPage` | ~450 | 数据版本页面 |
+| 6 | `pages/academic/academic-talent-detail-page.tsx` | `TalentDetailPage` | ~420 | 人才详情 |
+| 7 | `pages/open-source/repo-detail-page.tsx` | `RepoDetailPage` | ~430 | 仓库详情 |
+| 8 | `pages/open-source/open-source-developer-detail-page.tsx` | `DeveloperDetailPage` | ~370 | 开发者详情 |
 
 ---
 
 ### 3. 圈复杂度估算（>15）
 
-> 以下函数基于 `if/elif/else/for/while/and/or` 嵌套层数估算，**需人工复核**。
-
 | # | 文件路径 | 函数名 | 估算圈复杂度 | 依据 |
 |---|---------|--------|-------------|------|
-| 1 | [`app/repositories/talent_repository.py`](../../backend/app/repositories/talent_repository.py) | `get_talent_list` | **~25** | 大量过滤条件分支 + 排序逻辑 |
-| 2 | [`app/services/data_fetchers.py`](../../backend/app/services/data_fetchers.py) | `with_retry` | **~20** | 多重装饰器包装 + 异常分支 |
-| 3 | [`app/api/v1/endpoints/open_source.py`](../../backend/app/api/v1/endpoints/open_source.py) | `list_developers` | **~18** | 多过滤条件 + 排序 + 分页组合 |
-| 4 | [`app/api/v1/endpoints/system_config.py`](../../backend/app/api/v1/endpoints/system_config.py) | `test_proxy_connection` | **~18** | 多协议测试分支 |
-| 5 | [`app/services/llm/llm_gateway.py`](../../backend/app/services/llm/llm_gateway.py) | `call_llm` | **~16** | 多 Provider 路由 + 重试逻辑 |
+| 1 | `open_source/services/open_source_service.py` | `search_developers` | ~22 | 多过滤条件 + 排序 + 分页 |
+| 2 | `academic/services/data_fetchers.py` | `with_retry` | ~20 | 多重装饰器 + 异常分支 |
+| 3 | `shared/api/system_config.py` | `test_proxy_connection` | ~18 | 多协议测试分支 |
+| 4 | `shared/services/llm/llm_gateway.py` | `call_llm` | ~16 | 多 Provider 路由 + 重试 |
+| 5 | `academic/services/search/search_service.py` | `search` | ~16 | 多策略路由 + 降级逻辑 |
 
 ---
 
 ## P1 级异味（建议本月修复）
 
-### 4. 重复代码
+### 4. 重复代码（60+ 处）
 
-#### 后端：通用异常处理模式（>10处相似）
-
+**后端通用异常处理模式**（散落于 20+ 个文件）：
 ```python
-# 模式：broad except + logger + 无重新抛出
 except Exception as e:
     logger.error(f"...failed: {e}")
 ```
 
-| 文件 | 行号 | 重复度 |
-|------|------|--------|
-| [`app/api/v1/endpoints/system_config.py`](../../backend/app/api/v1/endpoints/system_config.py) | L197, L360, L697 | 3 处几乎相同的测试错误处理 |
-| [`app/api/v1/endpoints/embeddings.py`](../../backend/app/api/v1/endpoints/embeddings.py) | L336, L347 | 2 处批处理错误处理 |
-| [`app/api/v1/endpoints/open_source.py`](../../backend/app/api/v1/endpoints/open_source.py) | L181, L350 | 2 处采集错误处理 |
-| [`app/services/data_fetchers.py`](../../backend/app/services/data_fetchers.py) | L251, L372 | 2 处数据解析错误处理 |
-| [`app/services/collaboration_service.py`](../../backend/app/services/collaboration_service.py) | L160, L379 | 2 处论文处理错误处理 |
+| 高频位置 | 出现次数 |
+|---------|---------|
+| `shared/api/system_config.py` | 5 处测试错误处理 |
+| `open_source/api/open_source.py` | 4 处采集错误处理 |
+| `academic/api/*.py` | 各 1-2 处 |
+| `academic/services/data_fetchers.py` | 3 处数据解析错误处理 |
 
-> 共 **60+** 处该模式分散在各文件中，建议封装为统一装饰器。
-
-#### 前端：API 错误处理模式
-
+**前端 API 调用模式**（30+ 处重复）：
 ```typescript
-// 模式：try/catch + message.error + setLoading(false)
-try {
-  setLoading(true)
-  const res = await api.xxx.yyy()
-  setData(res.data)
-} catch (err) {
-  message.error('...')
-} finally {
-  setLoading(false)
-}
+try { setLoading(true); const res = await api.xxx.yyy(); setData(res.data); }
+catch (err) { message.error('...'); }
+finally { setLoading(false); }
 ```
 
-> 该模式在几乎每个页面组件中重复出现（>30 处），建议封装为自定义 Hook（如 `useApiCall`）。
-
-#### 前端：Empty/Loading 状态渲染
-
+**前端 Loading/Empty 状态渲染**（几乎所有列表页重复）：
 ```tsx
-// 多个页面中存在相同的 Loading + Empty 组合
 {loading ? <Spin /> : data.length === 0 ? <Empty /> : <Table ... />}
 ```
 
-> 在列表页面中高度重复。
-
----
-
 ### 5. 命名风格
 
-#### 后端
+| 域 | 风格 | 评估 |
+|----|------|------|
+| 后端 | snake_case (函数/变量) + PascalCase (类/Schema) + UPPER_SNAKE (常量) | ✅ 统一 |
+| 前端 | camelCase (变量/函数) + PascalCase (类型/组件) + snake_case (API DTO字段) | ✅ 有意识分层 |
 
-| 风格 | 出现位置 | 评估 |
-|------|---------|------|
-| **snake_case** | 函数、变量、模块 | ✅ Python 标准 |
-| **PascalCase** | 类名、Pydantic Schema | ✅ Python 标准 |
-| **UPPER_SNAKE_CASE** | 常量、枚举 | ✅ 标准 |
-
-> 后端命名风格统一，无混乱。
-
-#### 前端
-
-| 风格 | 出现位置 | 评估 |
-|------|---------|------|
-| **camelCase** | 变量、函数、Hooks | ✅ 前端标准 |
-| **PascalCase** | 类型、组件 | ✅ TS/React 标准 |
-| **snake_case** | API DTO 字段 | ✅ 后端契约映射 |
-
-> 前端命名风格统一，3 种风格为**有意识的领域分层**，非混乱。详见 [阶段1报告](01-dependency-graph.md)。
+> 无命名混乱问题。
 
 ---
 
 ## P2 级异味（季度优化）
 
-### 6. 死代码
+### 6. 前端死代码
 
-#### 后端
+| # | 文件路径 | 名称 | 说明 |
+|---|---------|------|------|
+| 1 | `hooks/useQueries.ts` | `useTalentWorks` | 未被任何页面 import |
+| 2 | `hooks/useQueries.ts` | `useTalentCollaborations` | 未被任何页面 import |
+| 3 | `hooks/useQueries.ts` | `useSchoolTalents` | 未被任何页面 import |
+| 4 | `hooks/useQueries.ts` | `useFavoriteIds` | 未被任何页面 import (已迁移到 Zustand) |
+| 5 | `hooks/useQueries.ts` | `useFavoriteCheck` | 未被任何页面 import |
+| 6 | `hooks/useQueries.ts` | `useAddFavorite` | 未被任何页面 import |
+| 7 | `hooks/useQueries.ts` | `useRemoveFavorite` | 未被任何页面 import |
+| 8 | `hooks/useQueries.ts` | `useCollectTechDomains` | 未被任何页面 import |
+| 9 | `hooks/useQueries.ts` | `useCollectTasks` | 未被任何页面 import |
+| 10 | `hooks/useQueries.ts` | `useActiveCollectTasks` | 未被任何页面 import |
+| 11 | `constants/roleType.ts` | `getRoleTypeColor`, `isValidRoleType`, `getRoleTypeOptions` | 未被引用 |
+| 12 | `services/api.ts` | `createCancellableRequest`, `isCancellationError` | 无实际 import |
 
-> 静态扫描未发现明显死函数。原因：
-> 1. FastAPI 端点函数通过装饰器隐式注册，静态分析无法追踪调用链
-> 2. SQLAlchemy ORM 模型方法通过元类隐式调用
-> 3. Alembic 迁移脚本通过 revision ID 隐式调用
-> 4. pytest fixture 通过 conftest.py 隐式注入
->
-> **建议**：通过运行时覆盖率工具（如 `pytest-cov`）识别真实死代码。
+> `useQueries.ts` 中 v2.0 将 favorites 迁移至 Zustand 后，旧的 favorites hooks 变成死代码。
 
-#### 前端
+### 7. 后端架构问题
 
-| # | 文件路径 | 名称 | 行号 | 说明 |
-|---|---------|------|------|------|
-| 1 | [`src/constants/roleType.ts`](../../frontend/src/constants/roleType.ts) | `getRoleTypeColor` | L76 | 未被任何业务代码引用 |
-| 2 | [`src/constants/roleType.ts`](../../frontend/src/constants/roleType.ts) | `isValidRoleType` | L86 | 未被任何业务代码引用 |
-| 3 | [`src/constants/roleType.ts`](../../frontend/src/constants/roleType.ts) | `getRoleTypeOptions` | L95 | 未被任何业务代码引用 |
-| 4 | [`src/services/api.ts`](../../frontend/src/services/api.ts) | `createCancellableRequest` | L100 | 仅 JSDoc 示例，无实际 import |
-| 5 | [`src/services/api.ts`](../../frontend/src/services/api.ts) | `isCancellationError` | L124 | 无实际 import |
-| 6 | [`src/hooks/useKeyboardShortcuts.ts`](../../frontend/src/hooks/useKeyboardShortcuts.ts) | `createCommonShortcuts` | L78 | 无实际 import |
-| 7 | [`src/hooks/useQueries.ts`](../../frontend/src/hooks/useQueries.ts) | `useTalentWorks` | L230 | 未在任何页面 import |
-| 8 | [`src/hooks/useQueries.ts`](../../frontend/src/hooks/useQueries.ts) | `useTalentCollaborations` | L246 | 未在任何页面 import |
-| 9 | [`src/hooks/useQueries.ts`](../../frontend/src/hooks/useQueries.ts) | `useSchoolTalents` | L304 | 未在任何页面 import |
-| 10 | [`src/hooks/useQueries.ts`](../../frontend/src/hooks/useQueries.ts) | `useFavoriteIds` | L367 | 未在任何页面 import |
-| 11 | [`src/hooks/useQueries.ts`](../../frontend/src/hooks/useQueries.ts) | `useFavoriteCheck` | L381 | 未在任何页面 import |
-| 12 | [`src/hooks/useQueries.ts`](../../frontend/src/hooks/useQueries.ts) | `useAddFavorite` | L400 | 未在任何页面 import |
-| 13 | [`src/hooks/useQueries.ts`](../../frontend/src/hooks/useQueries.ts) | `useRemoveFavorite` | L416 | 未在任何页面 import |
-| 14 | [`src/hooks/useQueries.ts`](../../frontend/src/hooks/useQueries.ts) | `useCollectTechDomains` | L435 | 未在任何页面 import |
-| 15 | [`src/hooks/useQueries.ts`](../../frontend/src/hooks/useQueries.ts) | `useCollectTasks` | L450 | 未在任何页面 import |
-| 16 | [`src/hooks/useQueries.ts`](../../frontend/src/hooks/useQueries.ts) | `useActiveCollectTasks` | L470 | 未在任何页面 import |
-
-> `useQueries.ts` 中大量 Hook 仅为"预封装"，实际未被消费，属于过度设计。
-
-#### 补充：重复代码（新增）
-
-| 文件A | 文件B | 重复内容 | 说明 |
-|------|------|---------|------|
-| `pages/academic/academic-search-page.tsx:74` | `pages/system-config/components/utils.ts:5` | `getErrorMessage` | 本地定义与工具函数重复，可统一复用 |
+| # | 问题 | 位置 | 说明 |
+|---|------|------|------|
+| 1 | `open_source/api/open_source.py` 单文件 997 行 | 整个文件 | 应拆分为 developers/repos/collect/search/export/embedding 子模块 |
+| 2 | `open_source/services/open_source_service.py` 单文件 1398 行 | 整个文件 | 应按功能拆分（search/export/embedding/crud） |
+| 3 | `open_source/repositories/open_source_repository.py` 1002 行 | 整个文件 | 应按实体拆分（developer/repo/contribution/collect） |
+| 4 | `shared/api/system_config.py` 973 行 | 整个文件 | 连接测试逻辑应移至 Service 层 |
 
 ---
 
@@ -250,13 +195,24 @@ try {
 
 | 异味类型 | P0 | P1 | P2 | 总计 |
 |---------|----|----|----|------|
-| 巨型文件 | 49 | — | — | 49 |
-| 过长函数 | 22 | — | — | 22 |
-| 高圈复杂度 | 5 | — | — | 5 |
-| 重复代码 | — | 60+ | — | 60+ |
+| 巨型文件 (>300行) | 49 | — | — | 49 |
+| 过长函数 (>100行) | 18 | — | — | 18 |
+| 高圈复杂度 (>15) | 5 | — | — | 5 |
+| 重复代码 | — | 90+ | — | 90+ |
 | 命名混乱 | — | 0 | — | 0 |
-| 死代码 | — | — | 0 | 0 |
+| 死代码 | — | — | 12 | 12 |
+
+### v2.0.0 改进项目
+
+| 项目 | 变更前 | 变更后 | 状态 |
+|------|--------|--------|------|
+| TalentRepository | 1157 行 | 拆分为 base(393) + search(683) + export | ✅ |
+| academic-search-page | 1166 行 | 拆分为 SearchTab + JDMatchTab + RecommendTab | ✅ |
+| 前端 any 类型 | 21 处 | 治理为 unknown + 类型守卫 | ✅ |
+| AuthContext/FavoritesContext | Context API | 迁移至 Zustand | ✅ |
+| search.py/collect.py/embeddings.py | 13 项跨层穿透 | 已治理 | ✅ |
+| CI | 仅后端测试 | 新增前端 Vitest | ✅ |
 
 ---
 
-> 下一步：等待用户确认后，进入阶段3「AI生成代码特征识别」。
+> 关联报告：[01-dependency-graph.md](01-dependency-graph.md) | [03-ai-style-markers.md](03-ai-style-markers.md) | [04-pipeline-resilience.md](04-pipeline-resilience.md)

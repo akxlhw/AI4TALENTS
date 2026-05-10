@@ -76,6 +76,48 @@ class SearchService:
             mode.value: strategy for mode, strategy in self._strategies.items()
         }
 
+    @classmethod
+    async def create_with_embedding(
+        cls, session: AsyncSession, mode: SearchMode | str | None = None
+    ) -> "SearchService":
+        """Factory that creates a SearchService with embedding service configured from DB."""
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
+        from app.domains.shared.services.config_service import ConfigService
+        from app.domains.shared.services.llm import LLMGateway
+
+        # Only configure embedding for modes that actually need it
+        needs_embedding = False
+        if mode is not None:
+            if isinstance(mode, str):
+                needs_embedding = mode.lower() in (SearchMode.SEMANTIC.value, SearchMode.HYBRID.value)
+            else:
+                needs_embedding = mode in (SearchMode.SEMANTIC, SearchMode.HYBRID)
+
+        embed_service = None
+        if needs_embedding:
+            config_service = ConfigService(session)
+            llm_config = await config_service.get_llm_config()
+
+            if llm_config.enabled and llm_config.api_key:
+                llm_gateway = LLMGateway(
+                    api_key=llm_config.api_key,
+                    api_base=llm_config.api_base,
+                    model=llm_config.model,
+                    embedding_model=llm_config.embedding_model,
+                    embedding_api_base=llm_config.embedding_api_base,
+                    embedding_api_key=llm_config.embedding_api_key,
+                    timeout=llm_config.timeout or 60,
+                    api_format=llm_config.api_format,
+                    embedding_api_format=llm_config.embedding_api_format,
+                )
+                embed_service = EmbeddingService(
+                    session=session,
+                    llm_gateway=llm_gateway,
+                    dimension=llm_config.embedding_dimension,
+                )
+
+        return cls(session=session, embedding_service=embed_service)
+
     async def search(
         self,
         query: str,

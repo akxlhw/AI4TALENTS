@@ -9,15 +9,15 @@
 | 人才类型 | 数据来源 | 状态 |
 |---------|---------|------|
 | 学术人才 | OpenAlex 学术数据库 | ✅ 已完成 |
-| 开源人才 | GitHub 等开源社区 | 📋 规划中 |
+| 开源人才 | GitHub 等开源社区 | ✅ 已完成 |
 | 竞赛人才 | ICPC、数学建模等计算机顶尖竞赛获奖者 | 📋 规划中 |
 | 行业人才 | 招聘平台、企业数据 | 📋 规划中 |
 
 **当前版本 V2.0.0**，主要功能包括：
-- 学术人才发现：基于 OpenAlex 学术数据库的人才搜索
-- 人才画像查看：查看学者的研究成果、合作网络等信息
-- 候选人筛选与排序：按多种维度筛选和排序候选人
-- 重点人才导出：导出有价值的候选人列表
+- 学术人才发现：基于 OpenAlex 学术数据库的人才搜索与推荐
+- 开源人才发现：基于 GitHub API 的开源开发者搜索与评估
+- 智能匹配：JD 岗位语义匹配、相似人才推荐（LLM 驱动）
+- 候选人管理：收藏、导出、对比、人才池管理
 
 ## 技术栈
 
@@ -37,27 +37,42 @@
 
 ```
 talent-platform/
-├── backend/           # 后端服务
-│   ├── app/          # 应用代码
-│   │   ├── api/      # API 路由
-│   │   ├── models/   # 数据模型
-│   │   ├── schemas/  # Pydantic DTO
-│   │   ├── services/ # 业务服务
-│   │   └── ...
-│   ├── migrations/   # 数据库迁移
-│   ├── tests/        # 测试
-│   └── scripts/      # 脚本
-├── frontend/          # 前端应用
-│   ├── src/
-│   │   ├── pages/    # 页面
-│   │   ├── components/ # 组件
-│   │   ├── services/ # API 服务
-│   │   └── ...
-│   └── ...
-├── deploy/            # 部署配置
-├── scripts/           # 脚本工具
-├── docs/              # 项目文档
-└── data/              # 数据文件
+├── backend/                    # 后端服务
+│   ├── app/
+│   │   ├── core/              # 核心基础设施 (config, auth, database, cache)
+│   │   ├── middleware/        # 中间件 (rate_limit, request_logging, metrics)
+│   │   ├── domains/
+│   │   │   ├── academic/      # 学术人才域
+│   │   │   │   ├── api/       # FastAPI routers (17 个端点模块)
+│   │   │   │   ├── models/    # SQLAlchemy ORM 模型
+│   │   │   │   ├── schemas/   # Pydantic DTOs
+│   │   │   │   ├── repositories/  # 数据库操作层
+│   │   │   │   └── services/  # 业务逻辑 (采集/搜索/推荐/嵌入/JD匹配)
+│   │   │   ├── open_source/   # 开源人才域 (v2.0)
+│   │   │   │   ├── api/       # FastAPI routers
+│   │   │   │   ├── models/    # ORM (developer, repository, contribution)
+│   │   │   │   ├── schemas/   # DTOs
+│   │   │   │   ├── repositories/
+│   │   │   │   └── services/  # GitHub 采集/搜索/嵌入
+│   │   │   └── shared/        # 共享基础设施
+│   │   │       ├── api/       # auth, audit, health, metrics, permissions
+│   │   │       ├── models/    # iam, audit, system_config
+│   │   │       └── services/  # cache, llm, http_client, config
+│   │   └── api_router.py     # 路由聚合
+│   ├── migrations/            # Alembic 数据库迁移
+│   ├── tests/                 # 后端测试 (681+)
+│   └── scripts/               # 数据初始化与运维脚本
+├── frontend/                   # 前端应用
+│   └── src/
+│       ├── pages/             # 页面 (academic/, open-source/, admin/, auth/)
+│       ├── components/        # 可复用组件
+│       ├── services/api/      # API 客户端 (academic, openSource, shared)
+│       ├── stores/            # Zustand 状态管理
+│       ├── hooks/             # React Hooks
+│       └── theme/             # 领域主题系统
+├── deploy/                    # Docker Compose 部署配置
+├── docs/                      # 项目文档
+└── scripts/                   # 脚本工具
 ```
 
 ## 快速开始
@@ -301,7 +316,7 @@ npx playwright test --ui      # UI 模式运行
 - 数据采集改进 (分离教育/公司机构、顶会顶刊快照)
 - UI/UX 优化 (院校机构命名、人才列表显示)
 
-### v1.5.0 主题系统与架构治理 (当前版本)
+### v1.5.0 主题系统与架构治理 (已完成)
 
 - [x] 领域主题系统 (基于六大技术领域的动态主题切换)
 - [x] 用户注册审批 (注册后需管理员审核，支持 employee_id)
@@ -311,6 +326,18 @@ npx playwright test --ui      # UI 模式运行
 - [x] 数据采集稳定性 (冗余请求去除、批量入库优化)
 - [x] 院校显示一致性 (JD 匹配/推荐/搜索统一机构字段)
 - [x] 热门研究方向统计 (首页展示 Top 研究方向)
+
+### V2.0.0 开源人才与架构治理 (当前版本)
+
+- [x] 开源人才库基础骨架 (`domains/open_source/` 域模块)
+- [x] GitHub REST API 采集 (多 Token 轮换、速率限制、仓库/开发者/贡献数据)
+- [x] 开源人才搜索、详情、导出
+- [x] 架构治理：search/collect/embeddings 共 13 项 Endpoint 分层修复
+- [x] TalentRepository 拆分 (1157行 → base/search/export 三个文件)
+- [x] 前端大文件拆分 (academic-search-page → SearchTab/JDMatchTab/RecommendTab)
+- [x] 状态管理迁移 (AuthContext/FavoritesContext → Zustand)
+- [x] 前端类型安全治理 (21 处 any → unknown + 类型守卫)
+- [x] CI 完善 (GitHub Actions 新增前端 Vitest 单元测试)
 
 ### 功能清单
 

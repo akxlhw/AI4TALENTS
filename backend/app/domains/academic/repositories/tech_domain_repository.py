@@ -16,7 +16,6 @@ from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.database import IS_SQLITE
 from app.domains.academic.models.school import School
 from app.domains.academic.models.talent import Talent
 from app.domains.academic.models.tech_domain import TalentTechTag, TechDirection, TechDomain
@@ -61,110 +60,45 @@ class TechDomainRepository:
     async def get_domain_stats(self, domain_id: int | None = None) -> dict:
         """Get statistics for tech domain(s).
 
-        Optimized to use a single CTE query for PostgreSQL.
+        Uses a single CTE query for efficiency.
         """
         if domain_id:
-            if not IS_SQLITE:
-                # PostgreSQL: Single CTE query
-                cte_query = text(
-                    """
-                    WITH domain_tags AS (
-                        SELECT DISTINCT ttt.talent_id, ttt.tech_direction_id,
-                               t.role_type, t.school_id
-                        FROM core_talent_tech_tag ttt
-                        INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
-                        WHERE ttt.tech_domain_id = :domain_id
-                    )
-                    SELECT
-                        (SELECT COUNT(DISTINCT talent_id) FROM domain_tags) AS talent_count,
-                        (SELECT COUNT(DISTINCT talent_id) FROM domain_tags
-                         WHERE role_type = 'professor') AS professor_count,
-                        (SELECT COUNT(DISTINCT talent_id) FROM domain_tags
-                         WHERE role_type IN ('student', 'graduated')) AS student_count,
-                        (SELECT COUNT(DISTINCT tech_direction_id) FROM domain_tags) AS direction_count,
-                        (SELECT COUNT(DISTINCT s.country_code)
-                         FROM domain_tags et
-                         INNER JOIN core_school s ON et.school_id = s.school_id
-                         WHERE s.country_code IS NOT NULL) AS country_count,
-                        (SELECT COUNT(DISTINCT s.school_id)
-                         FROM domain_tags et
-                         INNER JOIN core_school s ON et.school_id = s.school_id) AS school_count
+            cte_query = text(
                 """
+                WITH domain_tags AS (
+                    SELECT DISTINCT ttt.talent_id, ttt.tech_direction_id,
+                           t.role_type, t.school_id
+                    FROM core_talent_tech_tag ttt
+                    INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
+                    WHERE ttt.tech_domain_id = :domain_id
                 )
-
-                result = await self.session.execute(cte_query, {"domain_id": domain_id})
-                row = result.one()
-
-                return {
-                    "talent_count": row.talent_count or 0,
-                    "professor_count": row.professor_count or 0,
-                    "student_count": row.student_count or 0,
-                    "direction_count": row.direction_count or 0,
-                    "country_count": row.country_count or 0,
-                    "school_count": row.school_count or 0,
-                }
-
-            # SQLite fallback: Separate queries
-            base_query = select(
-                func.count(func.distinct(TalentTechTag.talent_id)).label("talent_count"),
-                func.count(func.distinct(TalentTechTag.tech_direction_id)).label("direction_count"),
-            ).where(TalentTechTag.tech_domain_id == domain_id)
-
-            professor_count_query = (
-                select(func.count(func.distinct(Talent.talent_id)))
-                .select_from(TalentTechTag)
-                .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
-                .where(
-                    and_(TalentTechTag.tech_domain_id == domain_id, Talent.role_type == "professor")
-                )
+                SELECT
+                    (SELECT COUNT(DISTINCT talent_id) FROM domain_tags) AS talent_count,
+                    (SELECT COUNT(DISTINCT talent_id) FROM domain_tags
+                     WHERE role_type = 'professor') AS professor_count,
+                    (SELECT COUNT(DISTINCT talent_id) FROM domain_tags
+                     WHERE role_type IN ('student', 'graduated')) AS student_count,
+                    (SELECT COUNT(DISTINCT tech_direction_id) FROM domain_tags) AS direction_count,
+                    (SELECT COUNT(DISTINCT s.country_code)
+                     FROM domain_tags et
+                     INNER JOIN core_school s ON et.school_id = s.school_id
+                     WHERE s.country_code IS NOT NULL) AS country_count,
+                    (SELECT COUNT(DISTINCT s.school_id)
+                     FROM domain_tags et
+                     INNER JOIN core_school s ON et.school_id = s.school_id) AS school_count
+            """
             )
 
-            student_count_query = (
-                select(func.count(func.distinct(Talent.talent_id)))
-                .select_from(TalentTechTag)
-                .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
-                .where(
-                    and_(
-                        TalentTechTag.tech_domain_id == domain_id,
-                        Talent.role_type.in_(["student", "graduated"]),
-                    )
-                )
-            )
-
-            country_count_query = (
-                select(func.count(func.distinct(School.country_code)))
-                .select_from(TalentTechTag)
-                .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
-                .join(School, Talent.school_id == School.school_id)
-                .where(
-                    TalentTechTag.tech_domain_id == domain_id,
-                    School.country_code.isnot(None),
-                )
-            )
-
-            school_count_query = (
-                select(func.count(func.distinct(School.school_id)))
-                .select_from(TalentTechTag)
-                .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
-                .join(School, Talent.school_id == School.school_id)
-                .where(TalentTechTag.tech_domain_id == domain_id)
-            )
-
-            result = await self.session.execute(base_query)
+            result = await self.session.execute(cte_query, {"domain_id": domain_id})
             row = result.one()
-
-            professor_result = await self.session.execute(professor_count_query)
-            student_result = await self.session.execute(student_count_query)
-            country_result = await self.session.execute(country_count_query)
-            school_result = await self.session.execute(school_count_query)
 
             return {
                 "talent_count": row.talent_count or 0,
-                "professor_count": professor_result.scalar() or 0,
-                "student_count": student_result.scalar() or 0,
+                "professor_count": row.professor_count or 0,
+                "student_count": row.student_count or 0,
                 "direction_count": row.direction_count or 0,
-                "country_count": country_result.scalar() or 0,
-                "school_count": school_result.scalar() or 0,
+                "country_count": row.country_count or 0,
+                "school_count": row.school_count or 0,
             }
         else:
             # Global stats
@@ -187,135 +121,48 @@ class TechDomainRepository:
             }
 
     async def get_overall_stats(self) -> dict:
-        """
-        Get overall statistics for the tech domain page.
+        """Get overall statistics for the tech domain page.
 
-        Optimized to use a single CTE query for PostgreSQL,
-        falls back to multiple queries for SQLite.
+        Uses a single CTE query for efficiency.
         """
-        if not IS_SQLITE:
-            # PostgreSQL: Use single CTE query for efficiency
-            cte_query = text(
-                """
-                WITH enabled_tags AS (
-                    SELECT DISTINCT ttt.talent_id, ttt.tech_domain_id,
-                           ttt.tech_direction_id, t.role_type, t.school_id
-                    FROM core_talent_tech_tag ttt
-                    INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
-                    WHERE ttt.is_enabled = true
-                )
-                SELECT
-                    (SELECT COUNT(DISTINCT talent_id) FROM enabled_tags) AS talent_count,
-                    (SELECT COUNT(DISTINCT talent_id) FROM enabled_tags
-                     WHERE role_type = 'professor') AS professor_count,
-                    (SELECT COUNT(DISTINCT talent_id) FROM enabled_tags
-                     WHERE role_type IN ('student', 'graduated')) AS student_count,
-                    (SELECT COUNT(DISTINCT tech_domain_id) FROM enabled_tags) AS tech_domain_count,
-                    (SELECT COUNT(DISTINCT tech_direction_id) FROM enabled_tags) AS tech_direction_count,
-                    (SELECT COUNT(DISTINCT s.country_code)
-                     FROM enabled_tags et
-                     INNER JOIN core_school s ON et.school_id = s.school_id
-                     WHERE s.country_code IS NOT NULL) AS country_count,
-                    (SELECT COUNT(DISTINCT s.school_id)
-                     FROM enabled_tags et
-                     INNER JOIN core_school s ON et.school_id = s.school_id) AS school_count
+        cte_query = text(
             """
+            WITH enabled_tags AS (
+                SELECT DISTINCT ttt.talent_id, ttt.tech_domain_id,
+                       ttt.tech_direction_id, t.role_type, t.school_id
+                FROM core_talent_tech_tag ttt
+                INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
+                WHERE ttt.is_enabled = true
             )
-
-            result = await self.session.execute(cte_query)
-            row = result.one()
-
-            return {
-                "talent_count": row.talent_count or 0,
-                "professor_count": row.professor_count or 0,
-                "student_count": row.student_count or 0,
-                "country_count": row.country_count or 0,
-                "school_count": row.school_count or 0,
-                "tech_domain_count": row.tech_domain_count or 0,
-                "tech_direction_count": row.tech_direction_count or 0,
-            }
-
-        # SQLite fallback: Use separate queries
-        # Total talent count with tech tags
-        talent_count_query = (
-            select(func.count(func.distinct(Talent.talent_id)))
-            .select_from(TalentTechTag)
-            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
-            .where(TalentTechTag.is_enabled.is_(True))
+            SELECT
+                (SELECT COUNT(DISTINCT talent_id) FROM enabled_tags) AS talent_count,
+                (SELECT COUNT(DISTINCT talent_id) FROM enabled_tags
+                 WHERE role_type = 'professor') AS professor_count,
+                (SELECT COUNT(DISTINCT talent_id) FROM enabled_tags
+                 WHERE role_type IN ('student', 'graduated')) AS student_count,
+                (SELECT COUNT(DISTINCT tech_domain_id) FROM enabled_tags) AS tech_domain_count,
+                (SELECT COUNT(DISTINCT tech_direction_id) FROM enabled_tags) AS tech_direction_count,
+                (SELECT COUNT(DISTINCT s.country_code)
+                 FROM enabled_tags et
+                 INNER JOIN core_school s ON et.school_id = s.school_id
+                 WHERE s.country_code IS NOT NULL) AS country_count,
+                (SELECT COUNT(DISTINCT s.school_id)
+                 FROM enabled_tags et
+                 INNER JOIN core_school s ON et.school_id = s.school_id) AS school_count
+        """
         )
 
-        # Professor count
-        professor_count_query = (
-            select(func.count(func.distinct(Talent.talent_id)))
-            .select_from(TalentTechTag)
-            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
-            .where(and_(TalentTechTag.is_enabled.is_(True), Talent.role_type == "professor"))
-        )
-
-        # Student count
-        student_count_query = (
-            select(func.count(func.distinct(Talent.talent_id)))
-            .select_from(TalentTechTag)
-            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
-            .where(
-                and_(
-                    TalentTechTag.is_enabled.is_(True),
-                    Talent.role_type.in_(["student", "graduated"]),
-                )
-            )
-        )
-
-        # Country count
-        country_count_query = (
-            select(func.count(func.distinct(School.country_code)))
-            .select_from(TalentTechTag)
-            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
-            .join(School, Talent.school_id == School.school_id)
-            .where(
-                TalentTechTag.is_enabled.is_(True),
-                School.country_code.isnot(None),
-            )
-        )
-
-        # School count
-        school_count_query = (
-            select(func.count(func.distinct(School.school_id)))
-            .select_from(TalentTechTag)
-            .join(Talent, TalentTechTag.talent_id == Talent.talent_id)
-            .join(School, Talent.school_id == School.school_id)
-            .where(TalentTechTag.is_enabled.is_(True))
-        )
-
-        # Tech domain count
-        domain_count_query = (
-            select(func.count(func.distinct(TechDomain.tech_domain_id)))
-            .select_from(TalentTechTag)
-            .join(TechDomain, TalentTechTag.tech_domain_id == TechDomain.tech_domain_id)
-            .where(TalentTechTag.is_enabled.is_(True))
-        )
-
-        # Tech direction count
-        direction_count_query = select(
-            func.count(func.distinct(TalentTechTag.tech_direction_id))
-        ).where(TalentTechTag.is_enabled.is_(True))
-
-        # Execute all queries
-        talent_count = await self.session.execute(talent_count_query)
-        professor_count = await self.session.execute(professor_count_query)
-        student_count = await self.session.execute(student_count_query)
-        country_count = await self.session.execute(country_count_query)
-        school_count = await self.session.execute(school_count_query)
-        domain_count = await self.session.execute(domain_count_query)
-        direction_count = await self.session.execute(direction_count_query)
+        result = await self.session.execute(cte_query)
+        row = result.one()
 
         return {
-            "talent_count": talent_count.scalar() or 0,
-            "professor_count": professor_count.scalar() or 0,
-            "student_count": student_count.scalar() or 0,
-            "country_count": country_count.scalar() or 0,
-            "school_count": school_count.scalar() or 0,
-            "tech_domain_count": domain_count.scalar() or 0,
-            "tech_direction_count": direction_count.scalar() or 0,
+            "talent_count": row.talent_count or 0,
+            "professor_count": row.professor_count or 0,
+            "student_count": row.student_count or 0,
+            "country_count": row.country_count or 0,
+            "school_count": row.school_count or 0,
+            "tech_domain_count": row.tech_domain_count or 0,
+            "tech_direction_count": row.tech_direction_count or 0,
         }
 
     async def get_country_distribution(

@@ -41,6 +41,7 @@ class TestEmbeddingServiceGeneration:
     """嵌入生成测试"""
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_pgvector
     async def test_get_or_create_embedding_returns_vector(
         self, test_session: AsyncSession, sample_talent: dict
     ):
@@ -62,6 +63,7 @@ class TestEmbeddingServiceGeneration:
         assert len(result) == 1536
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_pgvector
     async def test_get_or_create_embedding_uses_cache(
         self, test_session: AsyncSession, sample_talent: dict
     ):
@@ -84,6 +86,7 @@ class TestEmbeddingServiceGeneration:
         assert mock_llm.call_count == 0
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_pgvector
     async def test_generate_embedding_stores_in_database(
         self, test_session: AsyncSession, sample_talent: dict
     ):
@@ -108,6 +111,7 @@ class TestEmbeddingServiceBatch:
     """批量生成测试"""
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_pgvector
     async def test_batch_generate_processes_all(
         self, test_session: AsyncSession, sample_talent: dict
     ):
@@ -128,6 +132,7 @@ class TestEmbeddingServiceBatch:
         assert result["processed"] >= 0
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_pgvector
     async def test_batch_generate_respects_batch_size(self, test_session: AsyncSession):
         """批量生成应遵守批次大小"""
         # Arrange
@@ -146,6 +151,7 @@ class TestEmbeddingServiceBatch:
         # 具体断言取决于实现
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_pgvector
     async def test_batch_generate_handles_failures(self, test_session: AsyncSession):
         """批量生成应处理失败"""
         # Arrange
@@ -220,6 +226,7 @@ class TestEmbeddingServiceRateLimiting:
     """限流测试"""
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_pgvector
     async def test_rate_limit_delay_between_batches(self, test_session: AsyncSession):
         """批次间应有延迟"""
         # Arrange
@@ -300,6 +307,7 @@ class TestEmbeddingServiceModelTracking:
     """模型追踪测试"""
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_pgvector
     async def test_embedding_stores_model_name(
         self, test_session: AsyncSession, sample_talent: dict
     ):
@@ -331,6 +339,7 @@ class TestEmbeddingServiceErrorHandling:
     """错误处理测试"""
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_pgvector
     async def test_handles_invalid_talent_id(self, test_session: AsyncSession):
         """应处理无效人才ID"""
         # Arrange

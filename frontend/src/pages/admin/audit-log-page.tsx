@@ -87,7 +87,7 @@ const AuditLogPage: React.FC = () => {
   const loadLogs = useCallback(async () => {
     setLoading(true)
     try {
-      const params: any = { page, page_size: pageSize }
+      const params: Record<string, unknown> = { page, page_size: pageSize }
       if (filters.event_type) params.event_type = filters.event_type
       if (filters.date_range) {
         params.start_time = filters.date_range[0].toISOString()
@@ -146,7 +146,7 @@ const AuditLogPage: React.FC = () => {
       title: '事件',
       key: 'event',
       width: 160,
-      render: (_: any, record: AuditLog) => (
+      render: (_: unknown, record: AuditLog) => (
         <Tag color={record.event_type === 'authentication' ? 'blue' : record.event_type === 'authorization' ? 'orange' : 'green'}>
           {formatEvent(record.event_type, record.operation)}
         </Tag>

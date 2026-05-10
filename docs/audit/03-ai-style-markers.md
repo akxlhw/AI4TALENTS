@@ -1,231 +1,130 @@
-# 阶段3：AI生成代码特征识别
+# 阶段3：AI生成代码特征识别 (v2.0.0 更新)
 
-> 扫描时间：2026-05-05  
-> 扫描范围：`backend/app/` + `frontend/src/`  
-> 方法：模式匹配 + 人工审查
-
----
-
-## 特征1：过度冗长
-
-### 示例1：冗余的中间变量
-- **文件**：[`backend/app/services/open_source/collectors/github_collector.py`](../../backend/app/services/open_source/collectors/github_collector.py) L183
-- **代码片段**：
-  ```python
-  user_repos = await self.client.list_user_repos(login, per_page=100)
-  ```
-- **问题**：`per_page=100` 被硬编码在调用处，且 `list_user_repos` 内部已有 `per_page: int = 100` 的默认参数，此处显式传值冗余
-- **建议**：使用默认参数，或提取为配置常量
-
-### 示例2：可内联的临时变量
-- **文件**：[`backend/app/api/v1/endpoints/permissions.py`](../../backend/app/api/v1/endpoints/permissions.py) L220
-- **代码片段**：
-  ```python
-  # 典型模式（需人工复核具体位置）
-  result = await some_operation()
-  return result
-  ```
-- **问题**：当 `result` 仅被返回一次时，可直接 `return await some_operation()`
-- **建议**：消除仅使用一次的中间变量
-
-### 示例3：过度显式的错误处理包装
-- **文件**：[`backend/app/services/data_fetchers.py`](../../backend/app/services/data_fetchers.py) L52
-- **代码片段**：`with_retry` 函数体长 411 行，内部嵌套多层装饰器逻辑
-- **问题**：`tenacity` 库已提供现成的重试装饰器，但项目自建了 400+ 行的重试逻辑
-- **建议**：评估是否可用 `tenacity.retry` 替代自定义实现
+> 扫描时间：2026-05-09
+> 扫描范围：`backend/app/` + `frontend/src/`
+> 方法：AI 代码模式匹配 + 人工复核
 
 ---
 
-## 特征2：无意义注释
+## 特征1：硬编码魔法值
 
-### 示例1：描述"做了什么"而非"为什么"
-- **文件**：[`backend/app/repositories/embedding_repository.py`](../../backend/app/repositories/embedding_repository.py) L40
-- **代码片段**：
-  ```python
-  # 获取连接并检查方言
-  ```
-- **问题**：代码本身已清晰表达 `get_dialect()`，注释未提供额外信息
-- **建议**：删除或改为解释"为什么要检查方言"
+### 典型案例
 
-### 示例2：与代码语义完全重复的注释
-- **文件**：[`backend/app/services/collaboration_service.py`](../../backend/app/services/collaboration_service.py) L138
-- **代码片段**：
-  ```python
-  # 获取发表年份
-  publication_year = work.publication_date.year if work.publication_date else None
-  ```
-- **问题**：注释直接翻译了代码语义，未解释"为什么需要处理空日期"
-- **建议**：改为 `# OpenAlex 部分论文无 publication_date，需容错`
+| # | 文件 | 行号 | 硬编码内容 | 风险 | 建议 |
+|---|------|------|-----------|------|------|
+| 1 | `core/config.py` | 27 | `DATABASE_URL` 硬编码默认连接字符串 | 低 | Settings 默认值，但含明文密码 |
+| 2 | `core/config.py` | 41 | `SECRET_KEY: str = "your-secret-key-change-in-production"` | **高** | 生产环境必须覆盖 |
+| 3 | `core/config.py` | 55 | `DEFAULT_PAGE_SIZE: int = 20` | 低 | ✅ 已有配置项 |
+| 4 | `core/config.py` | 59 | `BATCH_SIZE: int = 1000` | 低 | ✅ 已有配置项 |
+| 5 | `academic/services/openalex_client.py` | 47 | `BASE_URL = "https://api.openalex.org"` | 低 | ✅ 类常量 |
+| 6 | `open_source/services/github_client.py` | 42 | `_min_interval: float = 0.2` | 中 | 应通过 Settings 覆盖 |
+| 7 | `academic/services/data_fetchers.py` | 多处 | `per_page = 200`, `max_pages = 5` | 中 | 分散在采集逻辑中 |
+| 8 | `academic/services/search/` | 多处 | `threshold = 0.5`, `threshold = 0.95` | 中 | 部分已在 config.py |
+| 9 | `open_source/services/open_source_service.py` | 多处 | `per_page=20`, `batch_size=100` | 中 | 分散在各方法中 |
+| 10 | `frontend/src/hooks/useQueries.ts` | 多处 | `staleTime: 5 * 60 * 1000` | 低 | ✅ React Query 标准模式 |
 
-### 示例3：批量出现的"获取/创建/更新"注释
-- **文件**：[`backend/app/services/collaboration_service.py`](../../backend/app/services/collaboration_service.py)
-- **行号**：L225, L239, L313, L396, L416, L502, L524, L562
-- **代码片段**：
-  ```python
-  # 更新现有合作关系
-  # 创建新的合作关系
-  # 获取该学者的所有合作关系
-  # 获取主学者信息（预加载 school 关系）
-  ```
-- **问题**：8处注释全部为"动词+名词"结构，与代码变量名/函数名完全同义
-- **建议**：删除这些注释，或仅在复杂算法处保留
-
-### 示例4：无意义的段落分隔线
-- **文件**：[`backend/app/services/recommend/recommend_service.py`](../../backend/app/services/recommend/recommend_service.py)
-- **代码片段**：
-  ```python
-  # 获取参考人才
-  # ...
-  # 获取相似人才
-  ```
-- **问题**：用注释代替函数拆分的边界
-- **建议**：将每个段落提取为独立函数，函数名即注释
+> **v2.0.0 评估**: Settings 类已将大部分配置集中管理，但业务逻辑中仍散落魔法数字。
 
 ---
 
-## 特征3：硬编码魔法值
+## 特征2：错误处理精神分裂
 
-### 示例1：超时时间散落各处
-- **文件**：[`backend/app/services/open_source/github_client.py`](../../backend/app/services/open_source/github_client.py) L76
-- **代码片段**：
-  ```python
-  timeout=30.0,
-  ```
-- **文件**：[`backend/app/api/v1/endpoints/system_config.py`](../../backend/app/api/v1/endpoints/system_config.py) L746
-- **代码片段**：
-  ```python
-  async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
-  ```
-- **文件**：[`backend/app/api/v1/endpoints/system_config.py`](../../backend/app/api/v1/endpoints/system_config.py) L887
-- **代码片段**：
-  ```python
-  async with httpx.AsyncClient(timeout=10) as client:
-  ```
-- **问题**：同一项目内出现 30.0、10.0、10 三种超时值，且无统一配置来源
-- **建议**：在 `core/config.py` 中定义 `HTTP_TIMEOUT_DEFAULT = 30.0`
+### 典型案例
 
-### 示例2：分页大小魔法值
-- **文件**：[`backend/app/services/open_source/collectors/github_collector.py`](../../backend/app/services/open_source/collectors/github_collector.py) L183
-- **代码片段**：
-  ```python
-  user_repos = await self.client.list_user_repos(login, per_page=100)
-  ```
-- **文件**：[`backend/app/api/v1/endpoints/homepage.py`](../../backend/app/api/v1/endpoints/homepage.py) L54-57
-- **代码片段**：
-  ```python
-  hot_tech_domains = await repo.get_hot_tech_domains(limit=6)
-  top_countries = await repo.get_top_countries(limit=5)
-  top_schools = await repo.get_top_schools(limit=5)
-  hot_research_topics = await repo.get_hot_research_topics(limit=5)
-  ```
-- **问题**：`100`、`6`、`5` 等数字无命名常量，且重复出现
-- **建议**：`GITHUB_PER_PAGE = 100`，`HOMEPAGE_LIMIT_TOP = 5`
+**同一文件内 3 种错误处理风格混用**（`shared/api/system_config.py`）:
 
-### 示例3：API Endpoint 硬编码
-- **文件**：[`backend/app/api/v1/endpoints/system_config.py`](../../backend/app/api/v1/endpoints/system_config.py) L654
-- **代码片段**：
-  ```python
-  external_url = "https://api.openalex.org/works?per_page=1"
-  ```
-- **问题**：OpenAlex API URL 硬编码在 Endpoint 层的测试函数中
-- **建议**：使用 `settings.OPENALEX_BASE_URL` 拼接
+```python
+# 风格1: try/except + HTTPException
+try:
+    ...
+except Exception as e:
+    raise HTTPException(status_code=500, detail=str(e))
 
-### 示例4：状态码直接比较
-- **文件**：需进一步搜索（如 `if response.status_code == 200` 等模式）
-- **评估**：FastAPI/httpx 生态中直接使用状态码比较较常见，但如果混合使用 `200`、`201`、`404`、`500` 等字面量而非 `status.HTTP_200_OK`，则属于魔法值
-- **建议**：使用 `fastapi.status` 或 `httpx.codes` 常量
+# 风格2: try/except + logger + return dict
+try:
+    ...
+except Exception as e:
+    logger.error(f"Test failed: {e}")
+    return {"success": False, "error": str(e)}
+
+# 风格3: try/except + logger + pass (吞掉异常)
+try:
+    ...
+except Exception:
+    logger.warning("...")
+    pass
+```
+
+**影响范围**:
+- `shared/api/system_config.py`: 3 种风格混用
+- `open_source/api/open_source.py`: 混用 HTTPException + return dict
+- `academic/services/data_fetchers.py`: 混用 raise + return None + logger
 
 ---
 
-## 特征4：错误处理精神分裂
+## 特征3：无意义注释
 
-### 示例1：后端 — 同文件内混合处理模式
-- **文件**：[`backend/app/api/v1/endpoints/system_config.py`](../../backend/app/api/v1/endpoints/system_config.py)
-- **代码片段**：
-  ```python
-  # 模式A：logger.error 后静默继续
-  except Exception as e:
-      logger.error(f"LLM connection test failed: {e}")
-  
-  # 模式B：raise HTTPException
-  except ValueError as e:
-      raise HTTPException(status_code=400, detail=str(e))
-  
-  # 模式C：return 错误字典
-  if not result:
-      return {"success": False, "error": "..."}
-  ```
-- **问题**：同一文件中存在 3 种错误处理风格，调用方无法统一处理
-- **建议**：统一使用异常抛出，由全局异常处理器格式化响应
+| # | 文件 | 注释内容 | 评估 |
+|---|------|---------|------|
+| 1 | `openalex_client.py` | `"""OpenAlex API Client. Handles communication with the OpenAlex API."""` | ⚠️ 复述函数名 |
+| 2 | `data_fetchers.py` | `# Get data from API` `# Parse response` | ⚠️ 复述代码 |
+| 3 | `talent_service.py` | `# Query database` `# Return results` | ⚠️ 无意义 |
+| 4 | `search_service.py` | `# Execute search` | ⚠️ 复述函数名 |
 
-### 示例2：后端 — 吞掉所有异常
-- **文件**：[`backend/app/api/v1/endpoints/open_source.py`](../../backend/app/api/v1/endpoints/open_source.py) L350
-- **代码片段**：
-  ```python
-  except Exception as e:
-      logger.exception(f"Task {task_id} failed: {e}")
-  ```
-- **问题**：采集任务失败后被吞掉，调用方收到 200 OK 但任务实际失败
-- **建议**：任务状态应更新为 `failed`，并返回明确的错误信息
-
-### 示例3：前端 — 混合使用多种错误提示
-- **文件**：[`frontend/src/contexts/FavoritesContext.tsx`](../../frontend/src/contexts/FavoritesContext.tsx) L35
-- **代码片段**：
-  ```typescript
-  } catch (err) {
-    console.error('Failed to load favorites:', err)
-  }
-  ```
-- **文件**：其他页面组件
-- **代码片段**：
-  ```typescript
-  } catch (e) {
-    message.error('加载失败')
-  }
-  ```
-- **问题**：有的用 `console.error`（用户看不到），有的用 `message.error`（用户能看到），无统一规范
-- **建议**：封装统一的错误处理 Hook（如 `useErrorHandler`）
+> **整体**: 大量"做什么"注释，缺少"为什么"注释。CS 概念评分、RRF 融合、采集流水线等核心算法缺少策略说明。
 
 ---
 
-## 特征5：过度防御
+## 特征4：过度防御
 
-### 示例1：不可能为空的参数再校验
-- **文件**：[`backend/app/api/v1/endpoints/talent_pool.py`](../../backend/app/api/v1/endpoints/talent_pool.py)
-- **代码片段**：
-  ```python
-  members, total = await repo.get_pool_members(pool_id, page=1, page_size=1)
-  if members and len(members) > 0:
-      ...
-  ```
-- **问题**：当逻辑已保证 `pool_id` 存在时，仍对返回结果做空检查
-- **建议**：信任 Repository 契约，除非有明确的空值风险
+```python
+# data_fetchers.py - 对 API 返回值做 3 重空值校验
+if data and data.get("results") and len(data.get("results", [])) > 0:
+    for result in data["results"]:
+        if result and result.get("id"):
+            ...
+```
 
-### 示例2：前端三重空值校验
-- **文件**：需进一步搜索（如 `if (data && data.items && data.items.length > 0)` 模式）
-- **评估**：前端大量存在 `data?.items?.length || 0` 的防御模式，部分属于过度防御
-- **建议**：在 API 层统一保证响应结构，减少组件层的防御代码
-
-### 示例3：Pydantic 校验后的重复校验
-- **文件**：[`backend/app/api/v1/endpoints/open_source.py`](../../backend/app/api/v1/endpoints/open_source.py)
-- **代码片段**：
-  ```python
-  if data.developer_id is None:
-      raise HTTPException(status_code=400, detail="developer_id required")
-  ```
-- **问题**：如果 `developer_id` 在 Pydantic Schema 中已标记为 `required`，则此检查冗余
-- **建议**：依赖 Pydantic 自动校验，仅在业务逻辑层面做额外校验
+```typescript
+// 前端多处 - TanStack Query 已保证 data 存在
+if (data && data.data && data.data.items && data.data.items.length > 0) { ... }
+```
 
 ---
 
-## 总结
+## 特征5：过度冗长
 
-| 特征 | 严重程度 | 出现频率 | 典型位置 |
+| # | 文件 | 说明 | 建议 |
+|---|------|------|------|
+| 1 | `data_fetchers.py` 自建 411 行 `with_retry` | 项目已引入 `tenacity`，重复造轮子 | 用 tenacity 替代 |
+| 2 | `embedding_repository.py` `_is_postgres` 500 行 | 巨大条件判断 | 拆分为策略模式 |
+| 3 | `open_source/api/open_source.py` 997 行 | 所有端点在一个文件 | 按资源拆分为 5-6 个文件 |
+| 4 | `open_source_service.py` 1398 行 | 搜索/导出/嵌入/CRUD 全在一个类 | 拆分为多个 Service |
+| 5 | `system_config.py` 连接测试在 Endpoint 层 | 代理/LLM/嵌入测试逻辑应在 Service 层 | 移至 Service |
+
+---
+
+## 特征6：AI 生成代码特征总结
+
+| 特征 | 严重程度 | 出现范围 | 典型表现 |
 |------|---------|---------|---------|
-| 无意义注释 | 🟡 中 | 高 | `services/collaboration_service.py`, `services/recommend/` |
-| 硬编码魔法值 | 🔴 高 | 高 | `endpoints/system_config.py`, `github_client.py`, `homepage.py` |
-| 错误处理精神分裂 | 🔴 高 | 高 | 所有 endpoints 文件 |
-| 过度冗长 | 🟡 中 | 中 | `data_fetchers.py`, `github_collector.py` |
-| 过度防御 | 🟢 低 | 中 | `talent_pool.py`, 前端组件 |
+| 硬编码魔法值 | 中 | 散落各处 | `per_page=200`, `max_pages=5`, `threshold=0.5` |
+| 错误处理混乱 | **高** | 20+ 文件 | try/except/raise/return dict/logger.error/pass 混用 |
+| 无意义注释 | 低 | 全项目 | "做什么"注释多，"为什么"注释少 |
+| 过度防御 | 低 | 10+ 文件 | 对 API 返回值进行 3 重空值校验 |
+| 过度冗长 | **高** | 10+ 文件 | 1000+ 行文件，500+ 行函数 |
+| 重复造轮子 | 中 | 2 处 | data_fetchers 自建重试 vs tenacity |
 
-> 下一步：等待用户确认后，进入阶段4「数据采集链路单点故障分析」（重点）。
+---
+
+## 关键建议
+
+1. **统一错误处理**: 创建 `@handle_errors` 装饰器，统一异常→HTTP 响应映射
+2. **消除魔法数字**: 将 `per_page`、`max_pages`、`threshold` 提取到各域的 `constants/` 或 `Settings`
+3. **用 tenacity 替代自建重试**: `data_fetchers.py` 的 `with_retry` 可用 tenacity 实现
+4. **拆分巨型文件**: 优先拆分 `open_source_service.py`(1398行) 和 `open_source/api/open_source.py`(997行)
+5. **注释改进**: 为核心算法（CS 概念评分、RRF 融合、采集流水线）补充"为什么"的解释
+
+---
+
+> 关联报告：[01-dependency-graph.md](01-dependency-graph.md) | [02-code-smell-heatmap.md](02-code-smell-heatmap.md) | [04-pipeline-resilience.md](04-pipeline-resilience.md)

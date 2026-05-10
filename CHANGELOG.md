@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [2.0.1] - TBD
+
+### Planned — 技术债务偿还
+
+- **Endpoint 层剩余 18 项违规**：`countries.py`、`favorites.py`、`homepage.py`、`jd_match.py`、`overview.py`、`recommend.py`、`schools.py`、`talents.py`、`talent_pool.py`、`tech_domain.py`、`venue.py`、`audit.py`、`auth.py`、`permissions.py`
+- **模块体积超标**：`OpenSourceService`（1345行）拆分、`LLMGateway`（570行）拆分
+- **魔法数字集中化**：`batch_size`、`per_page`、`max_pages` 等分散配置提取到各域 `constants/`
+- **异常处理精细化**：替换过度宽泛的 `except Exception: HTTPException(500, ...)`
+- **前端 Demo 页面重复代码**：提取通用 `DemoPlaceholderPage` 布局组件
+- **前端性能优化**：定时器 cleanup、useMemo 缓存菜单数组、useEffect 依赖补全
+
+## [2.0.0] - 2026-05-09
+
+### Added
+
+- 开源人才库基础骨架（`domains/open_source/` 域模块）
+- 版本号统一升级至 2.0.0
+
+### Changed
+
+- **架构治理（Endpoint 分层）**：`search.py`、`collect.py`、`embeddings.py` 移除 13 项 Endpoint 层直接 Repository/LLMGateway 引用，改为通过 Service 层调用
+- **模块拆分**：`TalentRepository`（1157行）拆分为 `BaseTalentRepository` / `TalentSearchRepository` / `TalentExportRepository`
+- **前端大文件拆分**：`academic-search-page.tsx`（1166行）拆分为 SearchTab / JDMatchTab / RecommendTab 三个子组件
+- **前端类型安全**：治理 21 处 `any` 类型滥用，统一使用 `unknown` + 类型守卫
+- **状态管理统一**：`AuthContext` / `FavoritesContext` 从 Context API 迁移至 Zustand，消除不必要重渲染
+- **CI 完善**：GitHub Actions 新增前端 Vitest 单元测试步骤
+
+### Fixed
+
+- **版本号同步**：统一 `CHANGELOG.md`、`README.md`、`pyproject.toml`、`package.json` 版本号为 2.0.0
+- **安全修复**：移除 `jd_match.py` 中硬编码的 `user_id = 15`，未认证用户现在将收到 401 错误
+- **架构一致性**：清理 `database.py` 中残留的 SQLite 降级代码，与文档声明保持一致
+- **Makefile 修复**：`make test` 现在同时运行后端和前端测试
+
 ## [1.4.2] - 2026-04-26
 
 ### Fixed

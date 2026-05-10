@@ -170,7 +170,7 @@ const DataVersionPage: React.FC = () => {
     setVersionModalVisible(true)
   }
 
-  const handleSaveVersion = async (values: any) => {
+  const handleSaveVersion = async (values: Record<string, unknown>) => {
     try {
       await api.dataVersion.createVersion({
         version_code: values.version_code,
@@ -181,8 +181,11 @@ const DataVersionPage: React.FC = () => {
       message.success('版本创建成功')
       setVersionModalVisible(false)
       loadVersions()
-    } catch (error: any) {
-      message.error(error.response?.data?.detail || '创建失败')
+    } catch (error: unknown) {
+      const detail = error instanceof Error && 'response' in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      message.error(detail || '创建失败')
     }
   }
 
@@ -192,8 +195,11 @@ const DataVersionPage: React.FC = () => {
       message.success('版本发布成功')
       loadVersions()
       loadActiveVersion()
-    } catch (error: any) {
-      message.error(error.response?.data?.detail || '发布失败')
+    } catch (error: unknown) {
+      const detail = error instanceof Error && 'response' in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      message.error(detail || '发布失败')
     }
   }
 
@@ -223,7 +229,7 @@ const DataVersionPage: React.FC = () => {
     {
       title: '数据统计',
       key: 'stats',
-      render: (_: any, record: DataVersion) => (
+      render: (_: unknown, record: DataVersion) => (
         <Space size={4}>
           <Tooltip title="人才">
             <Tag>{record.total_talents} 人才</Tag>
@@ -237,7 +243,7 @@ const DataVersionPage: React.FC = () => {
     {
       title: '状态',
       key: 'status',
-      render: (_: any, record: DataVersion) => (
+      render: (_: unknown, record: DataVersion) => (
         <Space>
           {record.is_active && (
             <Badge status="success" text="当前生效" />
@@ -261,7 +267,7 @@ const DataVersionPage: React.FC = () => {
       title: '操作',
       key: 'actions',
       width: 120,
-      render: (_: any, record: DataVersion) => (
+      render: (_: unknown, record: DataVersion) => (
         <Space>
           {!record.is_active && !record.is_published && (
             <Button

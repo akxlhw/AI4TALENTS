@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.academic.repositories.embedding_repository import EmbeddingRepository
+from app.domains.academic.services.embedding_domain_service import EmbeddingDomainService
 from app.domains.shared.api.auth import require_user
 from app.domains.shared.schemas.common import SuccessResponse
 from app.domains.shared.services.config_service import ConfigService
@@ -82,8 +82,8 @@ async def get_embedding_status(
     current_user: dict = Depends(require_super_admin),
 ):
     """Get embedding generation status."""
-    repo = EmbeddingRepository(session)
-    status = await repo.get_embedding_status()
+    service = EmbeddingDomainService(session)
+    status = await service.get_embedding_status()
 
     total_talents = status["total_talents"]
     embedded_talents = status["embedded_talents"]
@@ -168,9 +168,9 @@ async def trigger_generation(
                 status_code=400, detail=f"Invalid vector type: {t}. Valid types: research, papers"
             )
 
-    # Count talents using repository
-    repo = EmbeddingRepository(session)
-    status = await repo.get_embedding_status()
+    # Count talents
+    embed_service = EmbeddingDomainService(session)
+    status = await embed_service.get_embedding_status()
     total_talents = status["total_talents"]
 
     if total_talents == 0:
@@ -226,127 +226,9 @@ async def _run_embedding_generation(force: bool, batch_size: int, vector_types: 
     """Run embedding generation in background."""
     global _embedding_progress
 
-    from datetime import datetime
-
-    from app.core.database import AsyncSessionLocal
-    from app.domains.academic.services.embedding.embedding_service import EmbeddingService
-    from app.domains.shared.services.llm import LLMGateway
-
-    try:
-        async with AsyncSessionLocal() as session:
-            # Get LLM config from database
-            config_service = ConfigService(session)
-            llm_config = await config_service.get_llm_config()
-
-            # 检查嵌入模型是否启用
-            if not llm_config.embedding_enabled:
-                _embedding_progress["status"] = "error"
-                _embedding_progress["error_message"] = "嵌入模型未启用。请先启用嵌入模型功能。"
-                return
-
-            # 检查嵌入模型配置（独立配置，不复用对话模型配置）
-            if not llm_config.embedding_model:
-                _embedding_progress["status"] = "error"
-                _embedding_progress["error_message"] = "嵌入模型名称未配置。请配置嵌入模型名称。"
-                return
-
-            if not llm_config.embedding_api_base:
-                _embedding_progress["status"] = "error"
-                _embedding_progress["error_message"] = (
-                    "嵌入 API 地址未配置。请配置嵌入模型的 API 地址。"
-                )
-                return
-
-            # Create LLM gateway with database config
-            logger.info(
-                f"Creating LLMGateway with embedding_api_base={llm_config.embedding_api_base}, embedding_model={llm_config.embedding_model}"
-            )
-
-            llm_gateway = LLMGateway(
-                api_key=llm_config.api_key,
-                api_base=llm_config.api_base,
-                model=llm_config.model,
-                embedding_model=llm_config.embedding_model,
-                embedding_api_base=llm_config.embedding_api_base,
-                embedding_api_key=llm_config.embedding_api_key,
-                timeout=llm_config.timeout or 60,
-                api_format=llm_config.api_format,
-                embedding_api_format=llm_config.embedding_api_format,
-            )
-
-            logger.info(
-                f"LLMGateway api_format={llm_gateway.api_format}, embedding_api_format={llm_gateway.embedding_api_format}"
-            )
-
-            # Get talent IDs using repository
-            repo = EmbeddingRepository(session)
-            talent_ids = await repo.get_visible_talent_ids()
-
-            # 使用用户配置的嵌入模型名称
-            embedding_model = llm_config.embedding_model
-
-            _embedding_progress["total"] = len(talent_ids) * len(vector_types)
-
-            if not talent_ids:
-                _embedding_progress["status"] = "completed"
-                _embedding_progress["completed_at"] = datetime.utcnow().isoformat()
-                return
-
-            # Create embedding service
-            embed_service = EmbeddingService(
-                session=session,
-                llm_gateway=llm_gateway,
-                rate_limit_delay=1.0,
-                model_name=embedding_model,
-                dimension=llm_config.embedding_dimension,
-            )
-
-            # Process in batches with multiple vector types
-            processed = 0
-            failed = 0
-            # 按 provider 动态调整 batch_size
-            if llm_gateway.embedding_api_format == "minimax":
-                actual_batch_size = min(batch_size, 16)   # MiniMax 内部再分 16
-            else:
-                actual_batch_size = min(batch_size, 64)   # 通用安全值
-
-            for i in range(0, len(talent_ids), actual_batch_size):
-                if _embedding_progress["status"] == "cancelled":
-                    logger.info("Embedding generation cancelled")
-                    return
-
-                batch = talent_ids[i : i + actual_batch_size]
-
-                try:
-                    stats = await embed_service.batch_generate_embeddings(
-                        talent_ids=batch,
-                        batch_size=actual_batch_size,
-                        force_regenerate=force,
-                        vector_types=vector_types,
-                    )
-                    processed += stats.get("processed", 0)
-                    failed += stats.get("failed", 0)
-
-                    # 实时更新进度
-                    _embedding_progress["processed"] = processed
-                    _embedding_progress["failed"] = failed
-                    logger.info(
-                        f"Progress: {processed}/{_embedding_progress['total']} processed, {failed} failed"
-                    )
-
-                except Exception as e:
-                    logger.error(f"Batch {i // actual_batch_size + 1} failed: {e}")
-                    failed += len(batch) * len(vector_types)
-                    _embedding_progress["failed"] = failed
-
-            # Mark as completed
-            _embedding_progress["status"] = "completed"
-            _embedding_progress["completed_at"] = datetime.utcnow().isoformat()
-
-            logger.info(f"Embedding generation completed: processed={processed}, failed={failed}")
-
-    except Exception as e:
-        logger.error(f"Embedding generation failed: {e}")
-        _embedding_progress["status"] = "error"
-        _embedding_progress["error_message"] = str(e)
-        _embedding_progress["completed_at"] = datetime.utcnow().isoformat()
+    await EmbeddingDomainService.run_background_generation(
+        force=force,
+        batch_size=batch_size,
+        vector_types=vector_types,
+        progress_tracker=_embedding_progress,
+    )

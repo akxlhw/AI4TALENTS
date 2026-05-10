@@ -99,6 +99,10 @@ jobs:
         working-directory: ./frontend
         run: npm audit --registry https://registry.npmjs.org
 
+      - name: Run unit tests
+        working-directory: ./frontend
+        run: npm run test -- --run
+
       - name: Build
         working-directory: ./frontend
         run: npm run build

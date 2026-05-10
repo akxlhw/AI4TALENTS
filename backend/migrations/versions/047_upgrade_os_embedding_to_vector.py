@@ -13,8 +13,8 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
 # revision identifiers, used by Alembic.
-revision = '047'
-down_revision = '046'
+revision: str = '047'
+down_revision: str | None = '046'
 branch_labels = None
 depends_on = None
 

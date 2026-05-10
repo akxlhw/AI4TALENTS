@@ -219,6 +219,32 @@ class TalentService:
         """
         return await self.talent_repo.search(query, page, page_size)
 
+    async def search_talents_basic(
+        self,
+        keyword: str,
+        page: int = 1,
+        page_size: int = 20,
+        role_type: str | None = None,
+    ) -> tuple[list[Talent], int]:
+        """
+        基础关键词搜索人才（带总数）
+
+        Args:
+            keyword: 搜索关键词
+            page: 页码
+            page_size: 每页数量
+            role_type: 角色类型筛选
+
+        Returns:
+            Tuple[List[Talent], int]: 人才列表和总数
+        """
+        offset = (page - 1) * page_size
+        results = await self.talent_repo.search(
+            keyword=keyword, limit=page_size, offset=offset, role_type=role_type
+        )
+        total = await self.talent_repo.search_count(keyword=keyword, role_type=role_type)
+        return results, total
+
     async def update_talent(self, talent_id: int, updates: dict) -> Talent | None:
         """
         更新人才信息

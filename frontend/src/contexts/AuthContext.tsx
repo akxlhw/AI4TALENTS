@@ -1,8 +1,13 @@
-/* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { message } from 'antd'
-import { api } from '../services/api'
-import { applyDomainCssVars } from '../theme'
+/**
+ * AuthContext compatibility layer.
+ *
+ * Previously used React Context API + useState.
+ * Now delegates to Zustand (stores/authStore) for fine-grained subscriptions
+ * while keeping the same hook interface for consumers.
+ */
+
+import React from 'react'
+import { useAuthStore } from '../stores/authStore'
 import type { User } from '../types'
 
 interface AuthContextType {
@@ -17,98 +22,26 @@ interface AuthContextType {
   hasRole: (roles: string[]) => boolean
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  // Check if user is already logged in on mount
-  useEffect(() => {
-    const initAuth = async () => {
-      const token = localStorage.getItem('token')
-      if (token) {
-        try {
-          const response = await api.auth.me()
-          setUser(response.data)
-        } catch {
-          // Token is invalid or expired
-          localStorage.removeItem('token')
-          localStorage.removeItem('refresh_token')
-          localStorage.removeItem('user')
-        }
-      }
-      setLoading(false)
-    }
-
-    initAuth()
-  }, [])
-
-  const login = useCallback(async (username: string, password: string) => {
-    const response = await api.auth.login(username, password)
-    const { access_token, refresh_token, user } = response.data
-
-    localStorage.setItem('token', access_token)
-    localStorage.setItem('refresh_token', refresh_token)
-    localStorage.setItem('user', JSON.stringify(user))
-
-    setUser(user)
-    message.success(`欢迎回来，${user.display_name || user.username}！`)
-  }, [])
-
-  const logout = useCallback(async () => {
-    try {
-      await api.auth.logout()
-    } catch {
-      // Ignore logout errors
-    } finally {
-      localStorage.removeItem('token')
-      localStorage.removeItem('refresh_token')
-      localStorage.removeItem('user')
-      setUser(null)
-      applyDomainCssVars('academic')
-      message.info('已退出登录')
-    }
-  }, [])
-
-  const refreshUser = useCallback(async () => {
-    try {
-      const response = await api.auth.me()
-      setUser(response.data)
-    } catch (err) {
-      console.error('Failed to refresh user:', err)
-    }
-  }, [])
-
-  const hasRole = useCallback((roles: string[]) => {
-    return user ? roles.includes(user.role) : false
-  }, [user])
-
-  const value: AuthContextType = {
-    user,
-    loading,
-    isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin' || user?.role === 'super_admin',
-    isSuperAdmin: user?.role === 'super_admin',
-    login,
-    logout,
-    refreshUser,
-    hasRole,
-  }
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
+  // Provider is now a no-op because Zustand manages state outside React tree.
+  // Kept here to avoid breaking existing tree structure.
+  return <>{children}</>
 }
 
 export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+  const store = useAuthStore()
+
+  return {
+    user: store.user,
+    loading: store.loading,
+    isAuthenticated: !!store.user,
+    isAdmin: store.user?.role === 'admin' || store.user?.role === 'super_admin',
+    isSuperAdmin: store.user?.role === 'super_admin',
+    login: store.login,
+    logout: store.logout,
+    refreshUser: store.refreshUser,
+    hasRole: (roles: string[]) => (store.user ? roles.includes(store.user.role) : false),
   }
-  return context
 }
 
-export default AuthContext
+export default AuthProvider

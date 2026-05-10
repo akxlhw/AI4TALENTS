@@ -167,6 +167,7 @@ class TestSearchServiceMode:
         assert result.search_mode == SearchMode.SEMANTIC.value
         mock_embedding_service.get_query_embedding.assert_called_once()
 
+    @pytest.mark.requires_pgvector
     @pytest.mark.asyncio
     async def test_hybrid_search_combines_keyword_and_semantic(
         self, test_session: AsyncSession, sample_talent: dict

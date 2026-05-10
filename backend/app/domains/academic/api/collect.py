@@ -19,11 +19,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.academic.repositories.collect_repository import (
-    CollectTaskRepository,
-    TechDomainCollectRepository,
-)
-from app.domains.academic.repositories.venue_repository import VenueSubTaskRepository
 from app.domains.academic.schemas.collect import (
     DEFAULT_START_YEAR,
     MIN_START_YEAR,
@@ -41,13 +36,8 @@ from app.domains.academic.schemas.collect import (
     get_year_options,
 )
 from app.domains.academic.schemas.venue import VenueSubTaskListResponse, VenueSubTaskResponse
-from app.domains.academic.services.collect.orchestrator import CollectionOrchestrator
+from app.domains.academic.services.collect_background_service import CollectBackgroundService
 from app.domains.academic.services.collect_service import CollectService
-from app.domains.academic.services.data_fetchers import (
-    AuthorFetcher,
-    InstitutionFetcher,
-    WorkFetcher,
-)
 from app.domains.shared.api.auth import require_user
 from app.domains.shared.schemas.common import SuccessResponse
 
@@ -73,48 +63,13 @@ async def run_collect_task_background(task_id: int):
     Runs the collection task in-process using async/await.
     This avoids SQLite database locking issues with separate processes.
     """
-    from app.core.database import AsyncSessionLocal
-    from app.domains.academic.repositories.collect_repository import CollectTaskRepository
+    bg_service = CollectBackgroundService()
 
     # First, update task status to running immediately
-    async with AsyncSessionLocal() as session:
-        repo = CollectTaskRepository(session)
-        task = await repo.get_by_id(task_id)
-        if task and task.status == "pending":
-            await repo.start_task_and_commit(task_id)
-            logger.info(f"Task {task_id} status updated to running")
+    await bg_service.start_task_if_pending(task_id)
 
     try:
-        await _run_unified_collect(task_id)
-    except Exception as e:
-        logger.error(f"Background task {task_id} failed: {e}")
-        # Update task status to failed
-        async with AsyncSessionLocal() as session:
-            repo = CollectTaskRepository(session)
-            task = await repo.get_by_id(task_id)
-            if task and task.status == "running":
-                await repo.fail_task_and_commit(task_id, str(e))
-            logger.error(f"Task {task_id} marked as failed: {e}")
-
-
-async def _run_unified_collect(task_id: int):
-    """异步执行统一采集任务"""
-    from app.core.database import AsyncSessionLocal
-
-    async with AsyncSessionLocal() as session:
-        # Initialize fetchers
-        work_fetcher = WorkFetcher(session)
-        author_fetcher = AuthorFetcher(session)
-        institution_fetcher = InstitutionFetcher(session)
-
-        # Use CollectionOrchestrator directly
-        orchestrator = CollectionOrchestrator(
-            session,
-            work_fetcher=work_fetcher,
-            author_fetcher=author_fetcher,
-            institution_fetcher=institution_fetcher,
-        )
-        progress = await orchestrator.execute_task(task_id)
+        progress = await bg_service.run_unified_collect(task_id)
 
         if progress.status == "completed":
             logging.info(
@@ -132,6 +87,9 @@ async def _run_unified_collect(task_id: int):
             )
         else:
             logging.error("[BACKGROUND] 任务 #%s 失败: %s", task_id, progress.errors)
+    except Exception as e:
+        logger.error(f"Background task {task_id} failed: {e}")
+        await bg_service.fail_task_if_running(task_id, str(e))
 
 
 # ============ Tech Domain Collect Config Endpoints ============
@@ -148,41 +106,13 @@ async def list_tech_domains_collect(
     current_user: dict = Depends(require_admin_user),
 ):
     """List all tech domains with collect configuration."""
-    repo = TechDomainCollectRepository(session)
-    domains = await repo.list_with_collect_config()
+    service = CollectService(session)
+    items = await service.list_tech_domains_with_config()
 
-    # Get venue bindings for all tech domains
-    from app.domains.academic.repositories.venue_repository import VenueTechBindingRepository
-
-    binding_repo = VenueTechBindingRepository(session)
-
-    items = []
-    for d in domains:
-        # Get bindings from VenueTechBinding table
-        bindings = await binding_repo.get_by_tech_domain(d.tech_domain_id, is_enabled=True)
-        venue_count = len(bindings)
-
-        # Build collect_sources from bindings (for backward compatibility)
-        collect_sources = [
-            {"id": b.venue.venue_code, "name": b.venue.venue_name, "type": b.venue.venue_type}
-            for b in bindings
-            if b.venue
-        ]
-
-        items.append(
-            TechDomainCollectResponse(
-                tech_domain_id=d.tech_domain_id,
-                domain_code=d.domain_code,
-                domain_name=d.domain_name,
-                domain_name_en=d.domain_name_en,
-                collect_sources=collect_sources,
-                last_collect_at=d.last_collect_at,
-                is_enabled=d.is_enabled,
-                venue_count=venue_count,
-            )
-        )
-
-    return TechDomainCollectListResponse(items=items, total=len(items))
+    return TechDomainCollectListResponse(
+        items=[TechDomainCollectResponse(**item) for item in items],
+        total=len(items),
+    )
 
 
 @router.put(
@@ -223,8 +153,8 @@ async def list_tasks(
     current_user: dict = Depends(require_admin_user),
 ):
     """List collect tasks."""
-    repo = CollectTaskRepository(session)
-    tasks, total = await repo.list_tasks(
+    service = CollectService(session)
+    tasks, total = await service.list_tasks(
         status=status,
         tech_domain_id=tech_domain_id,
         page=page,
@@ -301,20 +231,15 @@ async def trigger_task(
     current_user: dict = Depends(require_admin_user),
 ):
     """Trigger a new collect task."""
-    task_repo = CollectTaskRepository(session)
-    domain_repo = TechDomainCollectRepository(session)
+    service = CollectService(session)
 
     # Validate tech domain exists
-    domain = await domain_repo.get_by_id(request.tech_domain_id)
+    domain = await service.get_tech_domain_by_id(request.tech_domain_id)
     if not domain:
         raise HTTPException(status_code=404, detail="Tech domain not found")
 
     # Check if has venue bindings configured
-    from app.domains.academic.repositories.venue_repository import VenueTechBindingRepository
-
-    binding_repo = VenueTechBindingRepository(session)
-    bindings = await binding_repo.get_by_tech_domain(request.tech_domain_id, is_enabled=True)
-
+    bindings = await service.get_venue_bindings_by_tech_domain(request.tech_domain_id)
     if not bindings:
         raise HTTPException(
             status_code=400,
@@ -322,7 +247,7 @@ async def trigger_task(
         )
 
     # Check if there's already a running task for this domain
-    active_tasks = await task_repo.get_active_tasks()
+    active_tasks = await service.get_active_tasks()
     for t in active_tasks:
         if t.tech_domain_id == request.tech_domain_id:
             raise HTTPException(
@@ -355,8 +280,7 @@ async def trigger_task(
     else:
         time_end = datetime(end_year, 12, 31, 23, 59, 59)
 
-    # Create task with sub-tasks using service
-    service = CollectService(session)
+    # Create task with sub-tasks
     task = await service.create_task_with_subtasks(
         tech_domain_id=request.tech_domain_id,
         user_id=current_user.get("user_id"),
@@ -412,8 +336,8 @@ async def get_task(
     current_user: dict = Depends(require_admin_user),
 ):
     """Get collect task details."""
-    repo = CollectTaskRepository(session)
-    task = await repo.get_by_id(task_id)
+    service = CollectService(session)
+    task = await service.get_task_by_id(task_id)
 
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -469,8 +393,8 @@ async def execute_task(
     current_user: dict = Depends(require_admin_user),
 ):
     """Execute a pending task."""
-    repo = CollectTaskRepository(session)
-    task = await repo.get_by_id(task_id)
+    service = CollectService(session)
+    task = await service.get_task_by_id(task_id)
 
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -481,7 +405,7 @@ async def execute_task(
         )
 
     # Check if there's already a running task
-    active_tasks = await repo.get_active_tasks()
+    active_tasks = await service.get_active_tasks()
     for t in active_tasks:
         if t.task_id != task_id and t.status == "running":
             raise HTTPException(
@@ -508,8 +432,8 @@ async def cancel_task(
     current_user: dict = Depends(require_admin_user),
 ):
     """Cancel a running task."""
-    repo = CollectTaskRepository(session)
-    task = await repo.get_by_id(task_id)
+    service = CollectService(session)
+    task = await service.get_task_by_id(task_id)
 
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -517,8 +441,6 @@ async def cancel_task(
     if task.status not in ["pending", "running"]:
         raise HTTPException(status_code=400, detail="Task cannot be cancelled")
 
-    # Update task status via service
-    service = CollectService(session)
     await service.cancel_task(task_id)
 
     return SuccessResponse(message="Task cancelled")
@@ -536,8 +458,8 @@ async def delete_task(
     current_user: dict = Depends(require_admin_user),
 ):
     """Delete a completed task record."""
-    repo = CollectTaskRepository(session)
-    task = await repo.get_by_id(task_id)
+    service = CollectService(session)
+    task = await service.get_task_by_id(task_id)
 
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -545,8 +467,6 @@ async def delete_task(
     if task.status in ["pending", "running"]:
         raise HTTPException(status_code=400, detail="Cannot delete running or pending task")
 
-    # Delete task via service
-    service = CollectService(session)
     await service.delete_task(task_id)
 
     return TaskActionResponse(message="Task deleted", task_id=task_id)
@@ -563,8 +483,8 @@ async def get_active_tasks(
     current_user: dict = Depends(require_admin_user),
 ):
     """Get all active tasks."""
-    repo = CollectTaskRepository(session)
-    tasks = await repo.get_active_tasks()
+    service = CollectService(session)
+    tasks = await service.get_active_tasks()
 
     return [
         CollectTaskResponse(
@@ -641,8 +561,8 @@ async def get_task_sub_tasks(
     current_user: dict = Depends(require_admin_user),
 ):
     """Get venue sub-tasks for a task."""
-    sub_task_repo = VenueSubTaskRepository(session)
-    sub_tasks = await sub_task_repo.get_by_task(task_id)
+    service = CollectService(session)
+    sub_tasks = await service.get_task_sub_tasks(task_id)
 
     return VenueSubTaskListResponse(
         total=len(sub_tasks), items=[VenueSubTaskResponse.model_validate(st) for st in sub_tasks]
@@ -661,18 +581,8 @@ async def get_task_detailed_progress(
     current_user: dict = Depends(require_admin_user),
 ):
     """Get detailed progress for a task."""
-    # Initialize fetchers
-    work_fetcher = WorkFetcher(session)
-    author_fetcher = AuthorFetcher(session)
-    institution_fetcher = InstitutionFetcher(session)
-
-    orchestrator = CollectionOrchestrator(
-        session,
-        work_fetcher=work_fetcher,
-        author_fetcher=author_fetcher,
-        institution_fetcher=institution_fetcher,
-    )
-    return await orchestrator.get_task_progress(task_id)
+    service = CollectService(session)
+    return await service.get_task_detailed_progress(task_id)
 
 
 @router.post(
@@ -688,8 +598,8 @@ async def retry_sub_task(
     current_user: dict = Depends(require_admin_user),
 ):
     """Retry a failed venue sub-task."""
-    sub_task_repo = VenueSubTaskRepository(session)
-    sub_task = await sub_task_repo.get_by_id(sub_task_id)
+    service = CollectService(session)
+    sub_task = await service.get_sub_task_by_id(sub_task_id)
 
     if not sub_task or sub_task.task_id != task_id:
         raise HTTPException(status_code=404, detail="Sub-task not found")
@@ -697,8 +607,6 @@ async def retry_sub_task(
     if sub_task.status != "failed":
         raise HTTPException(status_code=400, detail="Only failed sub-tasks can be retried")
 
-    # Reset status via service
-    service = CollectService(session)
     await service.retry_sub_task(task_id, sub_task_id)
 
     # TODO: Trigger retry execution

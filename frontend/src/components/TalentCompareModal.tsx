@@ -46,8 +46,11 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
     try {
       const response = await api.talents.compare(talentIds)
       setData(response.data)
-    } catch (error: any) {
-      message.error(error.response?.data?.detail || '获取对比数据失败')
+    } catch (error: unknown) {
+      const detail = error instanceof Error && 'response' in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      message.error(detail || '获取对比数据失败')
     } finally {
       setLoading(false)
     }
@@ -87,7 +90,7 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
       case 'cited_by_count':
         return talent[key]?.toLocaleString() || '-'
       default:
-        const value = (talent as any)[key]
+        const value = (talent as Record<string, unknown>)[key]
         return value ?? '-'
     }
   }
@@ -105,14 +108,14 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
       dataIndex: `talent_${t.talent_id}`,
       key: `talent_${t.talent_id}`,
       width: 200,
-      render: (_: any, record: any) => renderValue(record.key, t),
+      render: (_: unknown, record: { key: string; label: string }) => renderValue(record.key, t),
     })),
   ]
 
   const tableData = (data?.comparison_fields || []).map(field => {
-    const row: any = { key: field.key, label: field.label }
+    const row: Record<string, unknown> = { key: field.key, label: field.label }
     data?.talents.forEach(t => {
-      row[`talent_${t.talent_id}`] = (t as any)[field.key]
+      row[`talent_${t.talent_id}`] = (t as Record<string, unknown>)[field.key]
     })
     return row
   })

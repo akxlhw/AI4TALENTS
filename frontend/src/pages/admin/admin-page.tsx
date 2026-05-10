@@ -104,7 +104,7 @@ const AdminPage: React.FC = () => {
   const loadUsers = useCallback(async () => {
     setLoading(true)
     try {
-      const params: any = { page, page_size: pageSize }
+      const params: Record<string, unknown> = { page, page_size: pageSize }
       if (activeTab === 'pending') {
         params.status = 'pending_approval'
       }
@@ -127,8 +127,11 @@ const AdminPage: React.FC = () => {
       await api.admin.approveUser(userId)
       message.success('用户已通过')
       loadUsers()
-    } catch (error: any) {
-      message.error(error.response?.data?.detail || '操作失败')
+    } catch (error: unknown) {
+      const detail = error instanceof Error && 'response' in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      message.error(detail || '操作失败')
     }
   }
 
@@ -137,8 +140,11 @@ const AdminPage: React.FC = () => {
       await api.admin.rejectUser(userId)
       message.success('用户已拒绝')
       loadUsers()
-    } catch (error: any) {
-      message.error(error.response?.data?.detail || '操作失败')
+    } catch (error: unknown) {
+      const detail = error instanceof Error && 'response' in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      message.error(detail || '操作失败')
     }
   }
 
@@ -159,7 +165,7 @@ const AdminPage: React.FC = () => {
     setUserModalVisible(true)
   }
 
-  const handleSaveUser = async (values: any) => {
+  const handleSaveUser = async (values: Record<string, unknown>) => {
     try {
       if (editingUser) {
         await api.admin.updateUser(editingUser.user_id, values)
@@ -170,8 +176,11 @@ const AdminPage: React.FC = () => {
       }
       setUserModalVisible(false)
       loadUsers()
-    } catch (error: any) {
-      message.error(error.response?.data?.detail || '操作失败')
+    } catch (error: unknown) {
+      const detail = error instanceof Error && 'response' in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      message.error(detail || '操作失败')
     }
   }
 
@@ -180,8 +189,11 @@ const AdminPage: React.FC = () => {
       await api.admin.deactivateUser(userId)
       message.success('用户已禁用')
       loadUsers()
-    } catch (error: any) {
-      message.error(error.response?.data?.detail || '操作失败')
+    } catch (error: unknown) {
+      const detail = error instanceof Error && 'response' in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      message.error(detail || '操作失败')
     }
   }
 
@@ -196,7 +208,7 @@ const AdminPage: React.FC = () => {
     setScopeModalVisible(true)
   }
 
-  const handleAddScope = async (values: any) => {
+  const handleAddScope = async (values: Record<string, unknown>) => {
     if (!selectedUserId) return
 
     try {
@@ -209,8 +221,11 @@ const AdminPage: React.FC = () => {
       // Reload scopes
       const response = await api.admin.getUserScopes(selectedUserId)
       setUserScopes(response.data.items)
-    } catch (error: any) {
-      message.error(error.response?.data?.detail || '添加失败')
+    } catch (error: unknown) {
+      const detail = error instanceof Error && 'response' in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      message.error(detail || '添加失败')
     }
   }
 
@@ -223,8 +238,11 @@ const AdminPage: React.FC = () => {
       // Reload scopes
       const response = await api.admin.getUserScopes(selectedUserId)
       setUserScopes(response.data.items)
-    } catch (error: any) {
-      message.error(error.response?.data?.detail || '移除失败')
+    } catch (error: unknown) {
+      const detail = error instanceof Error && 'response' in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      message.error(detail || '移除失败')
     }
   }
 
@@ -293,7 +311,7 @@ const AdminPage: React.FC = () => {
     {
       title: '操作',
       key: 'actions',
-      render: (_: any, record: User) => (
+      render: (_: unknown, record: User) => (
         <Space>
           {record.status === 'pending_approval' && isSuperAdmin ? (
             <>

@@ -1,46 +1,27 @@
 """
 Database connection and session management.
+
+本项目仅支持 PostgreSQL，开发与生产环境均使用 PostgreSQL。
+无 SQLite 降级方案。
 """
 
 from collections.abc import AsyncGenerator, Generator
 from typing import Any
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.core.config import settings
 
-# Check if using SQLite
-IS_SQLITE = "sqlite" in settings.DATABASE_URL
-
-
-def _set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
-    """Enable SQLite WAL mode for concurrent read/write access."""
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA busy_timeout=30000")  # 30 seconds timeout
-    cursor.execute("PRAGMA synchronous=NORMAL")
-    cursor.close()
-
-
 # Async engine for application
-if IS_SQLITE:
-    async_engine = create_async_engine(
-        settings.DATABASE_URL,
-        echo=settings.DEBUG,
-        connect_args={"check_same_thread": False},
-    )
-    # Enable WAL mode for async engine
-    event.listen(async_engine.sync_engine, "connect", _set_sqlite_pragma)
-else:
-    async_engine = create_async_engine(
-        settings.DATABASE_URL,
-        echo=settings.DEBUG,
-        pool_pre_ping=True,
-        pool_size=10,
-        max_overflow=20,
-    )
+async_engine = create_async_engine(
+    settings.DATABASE_URL,
+    echo=settings.DEBUG,
+    pool_pre_ping=True,
+    pool_size=10,
+    max_overflow=20,
+)
 
 # Async session factory
 AsyncSessionLocal = async_sessionmaker(
@@ -55,20 +36,11 @@ AsyncSessionLocal = async_sessionmaker(
 async_session_factory = AsyncSessionLocal
 
 # Sync engine for Alembic migrations
-if IS_SQLITE:
-    sync_engine = create_engine(
-        settings.DATABASE_SYNC_URL,
-        echo=settings.DEBUG,
-        connect_args={"check_same_thread": False},
-    )
-    # Enable WAL mode for sync engine
-    event.listen(sync_engine, "connect", _set_sqlite_pragma)
-else:
-    sync_engine = create_engine(
-        settings.DATABASE_SYNC_URL,
-        echo=settings.DEBUG,
-        pool_pre_ping=True,
-    )
+sync_engine = create_engine(
+    settings.DATABASE_SYNC_URL,
+    echo=settings.DEBUG,
+    pool_pre_ping=True,
+)
 
 # Sync session factory for migrations
 SyncSessionLocal = sessionmaker(

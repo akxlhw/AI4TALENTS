@@ -150,8 +150,12 @@ async def match_talents(
             limit=config_dict.limit,
         )
 
-        # Get user ID from authentication (or use default admin user_id=15)
-        user_id = current_user["user_id"] if current_user else 15
+        # Get user ID from authentication
+        if not current_user:
+            raise HTTPException(
+                status_code=401, detail="用户未认证，无法创建 JD 匹配会话"
+            )
+        user_id = current_user["user_id"]
 
         # Create service
         service = JDMatchService(

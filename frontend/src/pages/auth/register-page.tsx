@@ -32,9 +32,11 @@ const RegisterPage: React.FC = () => {
       })
       message.success('注册成功，请等待管理员审核')
       setTimeout(() => navigate('/login'), 1500)
-    } catch (err: any) {
-      const detail = err.response?.data?.detail || '注册失败，请稍后重试'
-      message.error(detail)
+    } catch (err: unknown) {
+      const detail = err instanceof Error && 'response' in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      message.error(detail || '注册失败，请稍后重试')
     } finally {
       setLoading(false)
     }

@@ -3,7 +3,7 @@ Test configuration and fixtures for Academic Talent System.
 学术人才子系统测试配置
 
 Features:
-- In-memory SQLite for fast test execution
+- PostgreSQL with per-test TRUNCATE for isolation (session-scoped table creation)
 - Async session support
 - Test data factories
 - Common test utilities
@@ -14,6 +14,21 @@ import os
 # Disable rate limiting for tests - must be set before any app imports
 os.environ["RATE_LIMIT_ENABLED"] = "false"
 os.environ["ENVIRONMENT"] = "test"
+
+# Test database URL (PostgreSQL for testing - MUST be a separate database)
+# IMPORTANT: Never use production database for tests! Tests will DROP ALL TABLES after each run.
+# Create test database with: CREATE DATABASE talent_db_test OWNER talent_user;
+TEST_DATABASE_URL = "postgresql+asyncpg://talent_user:ai4recruit@localhost:5432/talent_db_test"
+TEST_DATABASE_SYNC_URL = "postgresql://talent_user:ai4recruit@localhost:5432/talent_db_test"
+
+# Override database URLs so ALL sessions (including AuditService's independent session)
+# point to the test database, not the production database
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["DATABASE_SYNC_URL"] = TEST_DATABASE_SYNC_URL
+
+# Module-level flag: set by test_engine fixture after checking pgvector availability.
+# Tests that require pgvector should be decorated with @pytest.mark.requires_pgvector.
+PGVECTOR_AVAILABLE = False
 
 from collections.abc import AsyncGenerator
 
@@ -39,48 +54,150 @@ import app.model_registry  # noqa: E402, F401
 # Restore app variable after import app.model_registry rebinds it
 app = _fastapi_app
 
-# Test database URL (PostgreSQL for testing - MUST be a separate database)
-# IMPORTANT: Never use production database for tests! Tests will DROP ALL TABLES after each run.
-# Create test database with: CREATE DATABASE talent_db_test OWNER talent_user;
-TEST_DATABASE_URL = "postgresql+asyncpg://talent_user:ai4recruit@localhost:5432/talent_db_test"
-
 
 def pytest_configure(config):
-    """Skip tests that require PostgreSQL-specific features if tables don't exist."""
-    pass
+    """Register custom markers."""
+    config.addinivalue_line(
+        "markers",
+        "requires_pgvector: mark test as requiring pgvector extension in the test database",
+    )
+
+
+@pytest.fixture(autouse=True)
+def require_pgvector(request):
+    """Automatically skip tests marked with @pytest.mark.requires_pgvector when
+    the pgvector extension is not available in the test database."""
+    marker = request.node.get_closest_marker("requires_pgvector")
+    if not marker:
+        return
+    # Dynamically check pgvector availability (in case test_engine hasn't run yet)
+    import asyncio
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy import text
+
+    async def _check():
+        engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
+        try:
+            async with engine.begin() as conn:
+                result = await conn.execute(
+                    text("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
+                )
+                return result.fetchone() is not None
+        except Exception:
+            return False
+        finally:
+            await engine.dispose()
+
+    available = asyncio.run(_check())
+    if not available:
+        pytest.skip("pgvector extension not available in test database")
 
 
 # ============ Database Fixtures ============
 
-# Import all models to ensure they are registered with Base.metadata
+# Module-level flag: ensures tables are created only once per test run.
+# Between tests, TRUNCATE is used for fast cleanup while preserving schema.
+_TABLES_INITIALIZED = False
 
 
 @pytest.fixture(scope="function")
 async def test_engine():
-    """Create test database engine with all tables."""
+    """Create test database engine.
+
+    On first invocation: wipes schema, creates extensions and all tables.
+    On subsequent invocations: TRUNCATEs all tables for fast isolation.
+    """
+    global _TABLES_INITIALIZED, PGVECTOR_AVAILABLE
+
     engine = create_async_engine(
         TEST_DATABASE_URL,
         echo=False,
         poolclass=NullPool,
     )
 
-    # Wipe everything (tables, types, constraints) and recreate public schema.
-    async with engine.begin() as conn:
-        await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
-        await conn.execute(text("CREATE SCHEMA public"))
-        await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
+    if not _TABLES_INITIALIZED:
+        # First test run: full schema setup
+        # Drop all tables (not the entire schema) to preserve extensions like pgvector
+        async with engine.begin() as conn:
+            result = await conn.execute(text("""
+                SELECT tablename FROM pg_tables
+                WHERE schemaname = 'public'
+                AND tablename NOT LIKE 'pg_%'
+                AND tablename NOT LIKE 'sql_%'
+            """))
+            tables = [row[0] for row in result.fetchall()]
+            if tables:
+                await conn.execute(text(f"""
+                    DROP TABLE IF EXISTS {','.join(tables)} CASCADE
+                """))
 
-    # Create all tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        # Ensure pgvector extension exists
+        _pgvector_create_error = None
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        except Exception as e:
+            _pgvector_create_error = str(e)
+
+        # Check pgvector availability
+        try:
+            async with engine.begin() as conn:
+                result = await conn.execute(
+                    text("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
+                )
+                PGVECTOR_AVAILABLE = result.fetchone() is not None
+        except Exception:
+            PGVECTOR_AVAILABLE = False
+
+        if not PGVECTOR_AVAILABLE and _pgvector_create_error:
+            import warnings
+            warnings.warn(
+                f"pgvector extension not available in test database: {_pgvector_create_error[:200]}. "
+                f"Tests marked @pytest.mark.requires_pgvector will be skipped. "
+                f"To enable them, run as superuser: CREATE EXTENSION IF NOT EXISTS vector;",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+
+        # Create all tables
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        # Fix embedding column type: model defines it as String, but migration uses vector(1536)
+        if PGVECTOR_AVAILABLE:
+            try:
+                async with engine.begin() as conn:
+                    await conn.execute(text("""
+                        ALTER TABLE core_talent_embedding
+                        ALTER COLUMN embedding TYPE vector(1536)
+                        USING embedding::vector(1536)
+                    """))
+            except Exception:
+                pass  # Column may already be the correct type
+
+        _TABLES_INITIALIZED = True
+    else:
+        # Fast path: TRUNCATE all tables to maintain isolation
+        async with engine.begin() as conn:
+            result = await conn.execute(text("""
+                SELECT tablename FROM pg_tables
+                WHERE schemaname = 'public'
+                AND tablename NOT LIKE 'pg_%'
+                AND tablename NOT LIKE 'sql_%'
+                ORDER BY tablename
+            """))
+            tables = [row[0] for row in result.fetchall()]
+
+            if tables:
+                await conn.execute(text(f"""
+                    TRUNCATE TABLE {','.join(tables)} RESTART IDENTITY CASCADE
+                """))
+
+    # Dispose the application engine's connection pool
+    from app.core.database import async_engine as app_engine
+    await app_engine.dispose()
 
     yield engine
-
-    # Wipe again after test
-    async with engine.begin() as conn:
-        await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
-        await conn.execute(text("CREATE SCHEMA public"))
-        await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
 
     await engine.dispose()
 

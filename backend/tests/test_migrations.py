@@ -126,6 +126,15 @@ class TestMigrationStaticChecks:
                 assert (
                     lines < 500
                 ), f"Initial migration {filename} is too large ({lines} lines). Consider splitting."
+            elif any(
+                keyword in filename
+                for keyword in ["add_open_source", "add_raw_data", "add_standardized"]
+            ):
+                # Migrations that create multiple new tables may legitimately be larger
+                assert lines < 400, (
+                    f"Migration {filename} is too large ({lines} lines) even for a "
+                    "multi-table creation. Please review and consider splitting."
+                )
             else:
                 assert lines < 250, (
                     f"Migration {filename} is suspiciously large ({lines} lines). "

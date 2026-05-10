@@ -32,7 +32,7 @@ test-backend: ## Run backend tests
 test-frontend: ## Run frontend tests
 	cd frontend && npm run test
 
-test: test-backend ## Run all tests
+test: test-backend test-frontend ## Run all tests
 
 # Linting
 lint-backend: ## Lint backend code (ruff + black)
