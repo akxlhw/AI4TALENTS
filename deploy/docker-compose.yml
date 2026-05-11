@@ -52,6 +52,9 @@ services:
       - LLM_ENABLED=false
       - LLM_PROVIDER=deepseek
       - LLM_API_KEY=${LLM_API_KEY:-}
+      - GITHUB_TOKENS=${GITHUB_TOKENS:-}
+      - GITHUB_BASE_URL=${GITHUB_BASE_URL:-https://api.github.com}
+      - GITHUB_RATE_LIMIT=${GITHUB_RATE_LIMIT:-5000}
       - ENVIRONMENT=development
       - DEBUG=true
     ports:

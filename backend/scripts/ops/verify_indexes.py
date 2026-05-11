@@ -1,8 +1,7 @@
 """
 Verify database indexes for performance optimization.
 
-This script checks that all required performance indexes exist in the database.
-It works with both SQLite and PostgreSQL.
+This script checks that all required performance indexes exist in the PostgreSQL database.
 
 Usage:
     python scripts/verify_indexes.py
@@ -43,23 +42,6 @@ EXISTING_INDEXES = [
 ]
 
 
-def get_sqlite_indexes(engine) -> dict:
-    """Get indexes from SQLite database."""
-    indexes = {}
-    with engine.connect() as conn:
-        result = conn.execute(text(
-            "SELECT name, tbl_name FROM sqlite_master "
-            "WHERE type='index' AND sql IS NOT NULL"
-        ))
-        for row in result:
-            table = row[1]
-            index_name = row[0]
-            if table not in indexes:
-                indexes[table] = set()
-            indexes[table].add(index_name)
-    return indexes
-
-
 def get_postgres_indexes(engine) -> dict:
     """Get indexes from PostgreSQL database."""
     indexes = {}
@@ -83,22 +65,16 @@ def verify_indexes():
     print("=" * 60)
     print("Database Index Verification")
     print("=" * 60)
-    print(f"\nDatabase URL: {settings.DATABASE_SYNC_URL.split('@')[-1] if '@' in settings.DATABASE_SYNC_URL else 'SQLite'}")
+    db_url = settings.DATABASE_SYNC_URL
+    print(f"\nDatabase URL: {db_url.split('@')[-1] if '@' in db_url else db_url}")
+    print("Database type: PostgreSQL")
     print()
 
     # Create sync engine
-    is_sqlite = "sqlite" in settings.DATABASE_URL
     engine = create_engine(settings.DATABASE_SYNC_URL, echo=False)
 
-    # Get indexes based on database type
-    if is_sqlite:
-        indexes = get_sqlite_indexes(engine)
-        print("Database type: SQLite")
-    else:
-        indexes = get_postgres_indexes(engine)
-        print("Database type: PostgreSQL")
-
-    print()
+    # Get indexes
+    indexes = get_postgres_indexes(engine)
 
     # Verify required indexes
     print("-" * 60)

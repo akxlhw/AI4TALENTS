@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { semanticColors } from '../../theme'
 import { useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -46,14 +47,14 @@ const getTechElementLabel = (code: string) => {
 
 const getTechElementColor = (code: string) => {
   const colors: Record<string, string> = {
-    ai: '#2D3748',
-    robotics: '#38A169',
-    data_science: '#3182CE',
-    networks: '#DD6B20',
-    systems: '#805AD5',
-    security: '#E53E3E',
+    ai: semanticColors.osPurple,
+    robotics: semanticColors.osGreen,
+    data_science: semanticColors.osBlue,
+    networks: semanticColors.osOrangeDark,
+    systems: semanticColors.osPurple,
+    security: semanticColors.osRed,
   }
-  return colors[code] || '#999'
+  return colors[code] || semanticColors.textGray
 }
 
 const RepoListPage: React.FC = () => {
@@ -108,7 +109,7 @@ const RepoListPage: React.FC = () => {
       </Button>
 
       <Title level={3} style={{ marginBottom: 24 }}>
-        <FireOutlined style={{ marginRight: 8, color: '#F6AD55' }} />
+        <FireOutlined style={{ marginRight: 8, color: semanticColors.osOrange }} />
         代码仓库列表
       </Title>
 
@@ -161,9 +162,9 @@ const RepoListPage: React.FC = () => {
                   <Card
                     hoverable
                     className="domain-card"
-                    bodyStyle={{ padding: '16px 20px' }}
+                    styles={{ body: { padding: '16px 20px' } }}
                     style={{
-                      borderLeft: '3px solid #F6AD55',
+                      borderLeft: `3px solid ${semanticColors.osOrange}`,
                       transition: 'all 0.2s ease',
                       cursor: 'pointer',
                       height: '100%',
@@ -189,7 +190,7 @@ const RepoListPage: React.FC = () => {
                     </Paragraph>
                     <Space size={12} wrap>
                       <Text style={{ fontSize: 12 }}>
-                        <StarOutlined style={{ color: '#F6AD55', marginRight: 4 }} />
+                        <StarOutlined style={{ color: semanticColors.osOrange, marginRight: 4 }} />
                         {repo.stars_count || 0}
                       </Text>
                       <Tag

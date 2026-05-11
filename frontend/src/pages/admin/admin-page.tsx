@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { semanticColors } from '../../theme'
 import {
   Card,
   Table,
@@ -171,7 +172,7 @@ const AdminPage: React.FC = () => {
         await api.admin.updateUser(editingUser.user_id, values)
         message.success('用户更新成功')
       } else {
-        await api.admin.createUser(values)
+        await api.admin.createUser(values as Parameters<typeof api.admin.createUser>[0])
         message.success('用户创建成功')
       }
       setUserModalVisible(false)
@@ -213,8 +214,7 @@ const AdminPage: React.FC = () => {
 
     try {
       await api.admin.addUserScope(selectedUserId, {
-        user_id: selectedUserId,
-        ...values,
+        ...values as Omit<Parameters<typeof api.admin.addUserScope>[1], 'user_id'>,
       })
       message.success('权限添加成功')
       scopeForm.resetFields()
@@ -318,7 +318,7 @@ const AdminPage: React.FC = () => {
               <Button
                 type="link"
                 size="small"
-                style={{ color: '#52c41a' }}
+                style={{ color: semanticColors.green }}
                 onClick={() => handleApproveUser(record.user_id)}
               >
                 通过

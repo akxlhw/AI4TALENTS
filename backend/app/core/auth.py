@@ -6,7 +6,7 @@ Password hashing and JWT token handling.
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import bcrypt
@@ -72,9 +72,9 @@ def create_access_token(
         JWT token string
     """
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc).replace(tzinfo=None) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(hours=JWT_ACCESS_TOKEN_EXPIRE_HOURS)
+        expire = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=JWT_ACCESS_TOKEN_EXPIRE_HOURS)
 
     payload = {
         "sub": str(user_id),
@@ -82,7 +82,7 @@ def create_access_token(
         "role": role,
         "type": "access",
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": datetime.now(timezone.utc).replace(tzinfo=None),
     }
 
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
@@ -98,13 +98,13 @@ def create_refresh_token(user_id: int) -> str:
     Returns:
         JWT refresh token string
     """
-    expire = datetime.utcnow() + timedelta(days=JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=JWT_REFRESH_TOKEN_EXPIRE_DAYS)
 
     payload = {
         "sub": str(user_id),
         "type": "refresh",
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": datetime.now(timezone.utc).replace(tzinfo=None),
         "jti": secrets.token_hex(16),  # Unique token ID
     }
 

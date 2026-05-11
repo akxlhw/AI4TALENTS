@@ -572,12 +572,12 @@ class CollaborationService:
 
     async def save_sync_time(self):
         """保存最后同步时间"""
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         from app.domains.shared.services.config_service import ConfigService
 
         config_service = ConfigService(self.session)
         await config_service.set_value(
-            "COLLABORATION_LAST_SYNC", datetime.utcnow().isoformat(), "string"
+            "COLLABORATION_LAST_SYNC", datetime.now(timezone.utc).replace(tzinfo=None).isoformat(), "string"
         )
         await self.session.commit()

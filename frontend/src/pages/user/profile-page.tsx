@@ -16,6 +16,7 @@ import {
   SafetyOutlined,
 } from '@ant-design/icons'
 import { api } from '../../services/api'
+import { semanticColors } from '../../theme'
 
 const { Title, Text } = Typography
 
@@ -91,7 +92,7 @@ const ProfilePage: React.FC = () => {
       {/* User Info Card */}
       <Card loading={loading} style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
-          <Avatar size={64} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+          <Avatar size={64} icon={<UserOutlined />} style={{ backgroundColor: semanticColors.blue }} />
           <div style={{ marginLeft: 16 }}>
             <Title level={4} style={{ margin: 0 }}>
               {user?.display_name || user?.username}

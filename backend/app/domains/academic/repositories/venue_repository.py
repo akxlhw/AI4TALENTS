@@ -5,7 +5,7 @@ Venue and VenueTechBinding repository.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -196,7 +196,7 @@ class VenueTechBindingRepository:
         work_count: int | None = None,
     ) -> None:
         """Update collection status for a binding"""
-        values = {"collect_status": status, "last_collect_at": datetime.utcnow()}
+        values = {"collect_status": status, "last_collect_at": datetime.now(timezone.utc).replace(tzinfo=None)}
         if author_count is not None:
             values["author_count"] = author_count
         if work_count is not None:
@@ -259,9 +259,9 @@ class VenueSubTaskRepository:
         """Update sub-task status"""
         values = {"status": status}
         if status == "running":
-            values["started_at"] = datetime.utcnow()
+            values["started_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
         elif status in ("completed", "failed"):
-            values["completed_at"] = datetime.utcnow()
+            values["completed_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
         if works_fetched is not None:
             values["works_fetched"] = works_fetched
         if authors_fetched is not None:

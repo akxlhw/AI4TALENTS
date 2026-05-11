@@ -23,8 +23,7 @@ import RepoDetailPage from './pages/open-source/repo-detail-page'
 import RepoListPage from './pages/open-source/repo-list-page'
 import CompetitionDemoPage from './pages/competition/competition-demo-page'
 import IndustryDemoPage from './pages/industry/industry-demo-page'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { FavoritesProvider } from './contexts/FavoritesContext'
+import { useAuth } from './contexts/AuthContext'
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -180,11 +179,7 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <FavoritesProvider>
-          <AppRoutes />
-        </FavoritesProvider>
-      </AuthProvider>
+      <AppRoutes />
     </BrowserRouter>
   )
 }

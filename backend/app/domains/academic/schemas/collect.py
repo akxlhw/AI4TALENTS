@@ -67,12 +67,6 @@ class TechDomainCollectListResponse(BaseModel):
     total: int = Field(description="总数")
 
 
-class UpdateCollectSourcesRequest(BaseModel):
-    """更新技术领域的采集源配置"""
-
-    collect_sources: list[VenueItem] = Field(..., min_length=1, description="关联的顶会顶刊列表")
-
-
 # ============ Collect Task Schemas ============
 
 

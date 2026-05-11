@@ -12,10 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.domains.shared.api.auth import require_admin, require_user
-from app.domains.shared.repositories.user_repository import UserRepository, UserScopeRepository
+from app.domains.shared.models.enums import UserRoleType
 from app.domains.shared.schemas.common import SuccessResponse
 from app.domains.shared.services.audit_service import AuditService
-from app.domains.shared.models.enums import UserRoleType
+from app.domains.shared.services.user_service import UserService
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
@@ -132,8 +132,8 @@ async def list_users(
     current_user: dict = Depends(require_admin),
 ):
     """List all users (admin only)."""
-    repo = UserRepository(session)
-    users, total = await repo.list_users(
+    service = UserService(session)
+    users, total = await service.list_users(
         role=role,
         is_active=is_active,
         status=status,
@@ -179,8 +179,8 @@ async def list_pending_users(
     current_user: dict = Depends(require_admin),
 ):
     """List pending approval users (admin only)."""
-    repo = UserRepository(session)
-    users, total = await repo.list_users(
+    service = UserService(session)
+    users, total = await service.list_users(
         status="pending_approval",
         page=page,
         page_size=page_size,
@@ -240,27 +240,27 @@ async def create_user(
             detail=f"Invalid role. Must be one of: {valid_roles}",
         )
 
-    repo = UserRepository(session)
+    service = UserService(session)
 
     # Check if username exists
-    existing = await repo.get_by_username(data.username)
+    existing = await service.get_by_username(data.username)
     if existing:
         raise HTTPException(status_code=400, detail="Username already exists")
 
     # Check if email exists
-    existing = await repo.get_by_email(data.email)
+    existing = await service.get_by_email(data.email)
     if existing:
         raise HTTPException(status_code=400, detail="Email already exists")
 
     # Check employee_id uniqueness if provided
     if data.employee_id:
-        existing = await repo.get_by_employee_id(data.employee_id)
+        existing = await service.get_by_employee_id(data.employee_id)
         if existing:
             raise HTTPException(status_code=400, detail="Employee ID already exists")
 
     # Create user (admin created users are active by default)
     password_hash = hash_password(data.password)
-    user = await repo.create_user_and_commit(
+    user = await service.create_user_and_commit(
         username=data.username,
         email=data.email,
         password_hash=password_hash,
@@ -315,8 +315,8 @@ async def get_user(
     ]:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    repo = UserRepository(session)
-    user = await repo.get_by_id(user_id)
+    service = UserService(session)
+    user = await service.get_by_id(user_id)
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -350,8 +350,8 @@ async def update_user(
     current_user: dict = Depends(require_admin),
 ):
     """Update user (admin only)."""
-    repo = UserRepository(session)
-    user = await repo.get_by_id(user_id)
+    service = UserService(session)
+    user = await service.get_by_id(user_id)
     client_ip = request.client.host if request.client else None
     request_id = getattr(request.state, "request_id", None)
 
@@ -364,7 +364,7 @@ async def update_user(
         if current_user["role"] != UserRoleType.SUPER_ADMIN.value:
             raise HTTPException(status_code=403, detail="Only super admin can change roles")
 
-    user = await repo.update_user_and_commit(
+    user = await service.update_user_and_commit(
         user_id,
         display_name=data.display_name,
         department=data.department,
@@ -417,8 +417,8 @@ async def deactivate_user(
     client_ip = request.client.host if request.client else None
     request_id = getattr(request.state, "request_id", None)
 
-    repo = UserRepository(session)
-    success = await repo.deactivate_user_and_commit(user_id)
+    service = UserService(session)
+    success = await service.deactivate_user_and_commit(user_id)
 
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
@@ -451,8 +451,8 @@ async def approve_user(
     client_ip = request.client.host if request.client else None
     request_id = getattr(request.state, "request_id", None)
 
-    repo = UserRepository(session)
-    user = await repo.approve_user_and_commit(user_id)
+    service = UserService(session)
+    user = await service.approve_user_and_commit(user_id)
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found or not pending approval")
@@ -497,8 +497,8 @@ async def reject_user(
     client_ip = request.client.host if request.client else None
     request_id = getattr(request.state, "request_id", None)
 
-    repo = UserRepository(session)
-    user = await repo.reject_user_and_commit(user_id)
+    service = UserService(session)
+    user = await service.reject_user_and_commit(user_id)
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found or not pending approval")
@@ -540,8 +540,8 @@ async def get_user_scopes(
     current_user: dict = Depends(require_admin),
 ):
     """Get user's school scopes (admin only)."""
-    scope_repo = UserScopeRepository(session)
-    scopes = await scope_repo.get_user_scopes(user_id, active_only=False)
+    service = UserService(session)
+    scopes = await service.get_user_scopes(user_id, active_only=False)
 
     items = [
         ScopeResponse(
@@ -575,17 +575,17 @@ async def add_user_scope(
     current_user: dict = Depends(require_admin),
 ):
     """Add school scope to user (admin only)."""
+    service = UserService(session)
+
     # Validate user exists
-    user_repo = UserRepository(session)
-    user = await user_repo.get_by_id(user_id)
+    user = await service.get_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     client_ip = request.client.host if request.client else None
     request_id = getattr(request.state, "request_id", None)
 
-    scope_repo = UserScopeRepository(session)
-    scope = await scope_repo.add_scope_and_commit(
+    scope = await service.add_scope_and_commit(
         user_id=user_id,
         scope_type=data.scope_type,
         scope_value=data.scope_value,
@@ -635,8 +635,8 @@ async def remove_user_scope(
     client_ip = request.client.host if request.client else None
     request_id = getattr(request.state, "request_id", None)
 
-    scope_repo = UserScopeRepository(session)
-    success = await scope_repo.remove_scope_and_commit(scope_id)
+    service = UserService(session)
+    success = await service.remove_scope_and_commit(scope_id)
 
     if not success:
         raise HTTPException(status_code=404, detail="Scope not found")
@@ -666,8 +666,8 @@ async def get_my_accessible_schools(
     current_user: dict = Depends(require_user),
 ):
     """Get current user's accessible school IDs."""
-    scope_repo = UserScopeRepository(session)
-    school_ids = await scope_repo.get_accessible_school_ids(current_user["user_id"])
+    service = UserService(session)
+    school_ids = await service.get_accessible_school_ids(current_user["user_id"])
     return school_ids
 
 
@@ -683,8 +683,8 @@ async def check_school_access(
     current_user: dict = Depends(require_user),
 ):
     """Check if current user can access a specific school."""
-    scope_repo = UserScopeRepository(session)
-    has_access = await scope_repo.check_user_has_access(
+    service = UserService(session)
+    has_access = await service.check_user_has_access(
         current_user["user_id"],
         school_id,
     )
@@ -706,8 +706,8 @@ async def get_my_accessible_tech_domains(
     current_user: dict = Depends(require_user),
 ):
     """Get current user's accessible tech domain IDs."""
-    scope_repo = UserScopeRepository(session)
-    tech_domain_ids = await scope_repo.get_accessible_tech_domain_ids(current_user["user_id"])
+    service = UserService(session)
+    tech_domain_ids = await service.get_accessible_tech_domain_ids(current_user["user_id"])
     return tech_domain_ids
 
 
@@ -722,8 +722,8 @@ async def get_my_accessible_countries(
     current_user: dict = Depends(require_user),
 ):
     """Get current user's accessible country codes."""
-    scope_repo = UserScopeRepository(session)
-    country_codes = await scope_repo.get_accessible_country_codes(current_user["user_id"])
+    service = UserService(session)
+    country_codes = await service.get_accessible_country_codes(current_user["user_id"])
     return country_codes
 
 
@@ -738,8 +738,8 @@ async def get_my_default_view(
     current_user: dict = Depends(require_user),
 ):
     """Get current user's default view preference."""
-    scope_repo = UserScopeRepository(session)
-    default_view = await scope_repo.get_user_default_view(current_user["user_id"])
+    service = UserService(session)
+    default_view = await service.get_user_default_view(current_user["user_id"])
     return DefaultViewResponse(default_view=default_view)
 
 
@@ -755,8 +755,8 @@ async def update_my_default_view(
     current_user: dict = Depends(require_user),
 ):
     """Update current user's default view preference."""
-    scope_repo = UserScopeRepository(session)
-    success = await scope_repo.update_default_view_and_commit(
+    service = UserService(session)
+    success = await service.update_default_view_and_commit(
         current_user["user_id"],
         data.default_view,
     )

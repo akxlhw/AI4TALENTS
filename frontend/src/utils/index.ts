@@ -14,3 +14,5 @@ export {
   formatNumber,
   formatPercent,
 } from './format'
+
+export { getErrorMessage } from './error'

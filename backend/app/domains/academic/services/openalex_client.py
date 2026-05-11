@@ -166,11 +166,8 @@ class OpenAlexClient:
                 f"API error: {e.response.status_code} - {e.response.text}"
             ) from e
 
-        except httpx.TimeoutException as e:
-            raise OpenAlexAPIError(f"Request timeout: {e}") from e
-
-        except httpx.NetworkError as e:
-            raise OpenAlexAPIError(f"Network error: {e}") from e
+        # Let TimeoutException and NetworkError propagate directly
+        # so that the @retry decorator can catch and retry them.
 
     async def get_institutions(
         self,

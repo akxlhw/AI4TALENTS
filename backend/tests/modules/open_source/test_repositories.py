@@ -17,7 +17,7 @@ from app.domains.open_source.models.open_source import (
     OSRepository,
     OSTalentPool,
 )
-from app.domains.open_source.repositories.open_source_repository import OpenSourceRepository
+from app.domains.open_source.repositories.open_source import OpenSourceRepository
 
 
 class TestRepoConfigRepository:

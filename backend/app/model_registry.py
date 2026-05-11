@@ -48,14 +48,6 @@ from app.domains.open_source.models.open_source import (
     OSTalentPool,
 )
 from app.domains.shared.models.audit import AuditOperationLog
-from app.domains.shared.models.iam import (
-    FavoriteTalent,
-    TalentPool,
-    TalentPoolMember,
-    UserAccount,
-    UserSchoolScope,
-)
-from app.domains.shared.models.system_config import SystemConfig
 from app.domains.shared.models.enums import (
     RoleType,
     ScopeType,
@@ -64,6 +56,14 @@ from app.domains.shared.models.enums import (
     UserRoleType,
     VisibilityStatus,
 )
+from app.domains.shared.models.iam import (
+    FavoriteTalent,
+    TalentPool,
+    TalentPoolMember,
+    UserAccount,
+    UserSchoolScope,
+)
+from app.domains.shared.models.system_config import SystemConfig
 
 __all__ = [
     # Enums

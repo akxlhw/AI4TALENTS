@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from app.core.database import AsyncSessionLocal
@@ -67,7 +67,7 @@ class GitHubCollector:
             ctx.task_id,
             status="running",
             current_step="fetch_repo",
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
 
         try:
@@ -171,7 +171,7 @@ class GitHubCollector:
             status="completed",
             progress_percent=100,
             current_step="completed",
-            completed_at=datetime.utcnow(),
+            completed_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         logger.info(f"Collection completed for repo {ctx.repo_full_name}, task={ctx.task_id}")
 

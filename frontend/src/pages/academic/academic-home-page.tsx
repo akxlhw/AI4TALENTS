@@ -8,7 +8,7 @@ import {
   AppstoreOutlined,
 } from '@ant-design/icons'
 import { useHomepageHighlights, useOverviewStats } from '../../hooks/useQueries'
-import { domainThemes } from '../../theme'
+import { domainThemes, semanticColors } from '../../theme'
 
 const { Title, Paragraph, Text } = Typography
 const { Search } = Input
@@ -348,7 +348,7 @@ const AcademicHomePage: React.FC = () => {
                   {topCountries.slice(0, 8).map((item) => (
                     <Tag
                       key={item.country_code}
-                      style={{ marginBottom: 6, cursor: 'pointer', fontSize: 13, background: '#E8F4F8', color: dt.secondary, border: `1px solid ${dt.secondary}44` }}
+                      style={{ marginBottom: 6, cursor: 'pointer', fontSize: 13, background: semanticColors.blueBg, color: dt.secondary, border: `1px solid ${dt.secondary}44` }}
                       onClick={() => handleCountryClick(item.country_code)}
                     >
                       {item.country_name || item.country_code} ({item.talent_count})
@@ -373,7 +373,7 @@ const AcademicHomePage: React.FC = () => {
                     {topDomesticSchools.slice(0, 5).map((item) => (
                       <Tag
                         key={`dom-${item.school_id}`}
-                        style={{ marginBottom: 6, cursor: 'pointer', fontSize: 12, background: '#F0F4F8', color: '#2D5A87', border: '1px solid #2D5A8733' }}
+                        style={{ marginBottom: 6, cursor: 'pointer', fontSize: 12, background: domainThemes.academic.lightBg, color: domainThemes.academic.secondary, border: `1px solid ${domainThemes.academic.secondary}33` }}
                         onClick={() => handleSchoolClick(item.school_id)}
                       >
                         {item.school_name} ({item.talent_count})
@@ -393,7 +393,7 @@ const AcademicHomePage: React.FC = () => {
                     {topOverseasSchools.slice(0, 5).map((item) => (
                       <Tag
                         key={`os-${item.school_id}`}
-                        style={{ marginBottom: 6, cursor: 'pointer', fontSize: 12, background: '#F5F0F8', color: '#6B4C87', border: '1px solid #6B4C8733' }}
+                        style={{ marginBottom: 6, cursor: 'pointer', fontSize: 12, background: semanticColors.purpleBg, color: semanticColors.purple, border: `1px solid ${semanticColors.purple}33` }}
                         onClick={() => handleSchoolClick(item.school_id)}
                       >
                         {item.school_name} ({item.talent_count})

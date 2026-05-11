@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.academic.repositories.favorite_repository import FavoriteRepository
+from app.domains.academic.services.favorite_service import FavoriteService
 from app.domains.shared.api.auth import require_user
 from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
 
@@ -77,22 +77,22 @@ async def add_favorite(
     Requires authentication.
     """
     user_id = current_user["user_id"]
-    repo = FavoriteRepository(session)
+    service = FavoriteService(session)
 
     # Check if already favorited
-    existing = await repo.get_by_user_and_talent(user_id, request.talent_id)
+    existing = await service.get_by_user_and_talent(user_id, request.talent_id)
     if existing:
         raise HTTPException(status_code=400, detail="该人才已在收藏列表中")
 
     # Add favorite
-    favorite = await repo.add_favorite_and_commit(
+    favorite = await service.add_favorite_and_commit(
         user_id=user_id,
         talent_id=request.talent_id,
         notes=request.notes,
     )
 
     # Reload with relationships for response
-    favorite = await repo.get_with_relationships(favorite.favorite_id)
+    favorite = await service.get_with_relationships(favorite.favorite_id)
     return _build_favorite_response(favorite)
 
 
@@ -116,8 +116,8 @@ async def list_favorites(
     Supports filtering by role type and keyword search.
     """
     user_id = current_user["user_id"]
-    repo = FavoriteRepository(session)
-    favorites, total = await repo.list_user_favorites(
+    service = FavoriteService(session)
+    favorites, total = await service.list_user_favorites(
         user_id=user_id,
         page=page,
         page_size=page_size,
@@ -151,8 +151,8 @@ async def get_favorite_ids(
     Useful for front-end to mark favorite status in lists.
     """
     user_id = current_user["user_id"]
-    repo = FavoriteRepository(session)
-    return await repo.get_user_favorite_ids(user_id)
+    service = FavoriteService(session)
+    return await service.get_user_favorite_ids(user_id)
 
 
 @router.get(
@@ -170,8 +170,8 @@ async def check_favorite(
     Check if a specific talent is favorited by the current user.
     """
     user_id = current_user["user_id"]
-    repo = FavoriteRepository(session)
-    favorite = await repo.get_by_user_and_talent(user_id, talent_id)
+    service = FavoriteService(session)
+    favorite = await service.get_by_user_and_talent(user_id, talent_id)
 
     if favorite:
         return CheckFavoriteResponse(
@@ -198,16 +198,16 @@ async def update_favorite(
     Update notes for a favorited talent.
     """
     user_id = current_user["user_id"]
-    repo = FavoriteRepository(session)
-    favorite = await repo.get_by_user_and_talent(user_id, talent_id)
+    service = FavoriteService(session)
+    favorite = await service.get_by_user_and_talent(user_id, talent_id)
 
     if not favorite:
         raise HTTPException(status_code=404, detail="未找到该收藏记录")
 
-    await repo.update_favorite_and_commit(favorite.favorite_id, request.notes)
+    await service.update_favorite_and_commit(favorite.favorite_id, request.notes)
 
     # Reload with relationships for response
-    updated = await repo.get_with_relationships(favorite.favorite_id)
+    updated = await service.get_with_relationships(favorite.favorite_id)
     return _build_favorite_response(updated)
 
 
@@ -226,8 +226,8 @@ async def remove_favorite(
     Remove a talent from user's favorites.
     """
     user_id = current_user["user_id"]
-    repo = FavoriteRepository(session)
-    removed = await repo.remove_favorite_and_commit(user_id, talent_id)
+    service = FavoriteService(session)
+    removed = await service.remove_favorite_and_commit(user_id, talent_id)
 
     if not removed:
         raise HTTPException(status_code=404, detail="未找到该收藏记录")

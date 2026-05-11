@@ -15,7 +15,7 @@ import {
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useDomainStore } from '../stores/domainStore'
-import { domainThemes, type Domain } from '../theme'
+import { domainThemes, semanticColors, type Domain } from '../theme'
 
 const { Text } = Typography
 
@@ -147,7 +147,7 @@ const MainLayout: React.FC = () => {
             style={{
               width: 1.5,
               height: 20,
-              background: '#CBD5E0',
+              background: semanticColors.divider,
               borderRadius: 1,
               flexShrink: 0,
             }}

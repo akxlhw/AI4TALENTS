@@ -3,7 +3,7 @@ Raw data layer models for OpenAlex entities.
 原始数据层模型 - 支持数据回溯、重试和审计
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
@@ -45,7 +45,7 @@ class RawWork(Base, TimestampMixin):
     error_info = Column(Text, nullable=True)
 
     # Collection metadata
-    fetched_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    fetched_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     fetch_task_id = Column(Integer, ForeignKey("sync_collect_task.task_id"), nullable=True)
 
     # Sub-task reference
@@ -94,7 +94,7 @@ class RawAuthor(Base, TimestampMixin):
     error_info = Column(Text, nullable=True)
 
     # Collection metadata
-    fetched_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    fetched_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     fetch_task_id = Column(Integer, ForeignKey("sync_collect_task.task_id"), nullable=True)
 
     # Normalized reference (after standardization)
@@ -130,7 +130,7 @@ class RawInstitution(Base, TimestampMixin):
     error_info = Column(Text, nullable=True)
 
     # Collection metadata
-    fetched_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    fetched_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     fetch_task_id = Column(Integer, ForeignKey("sync_collect_task.task_id"), nullable=True)
 
     # Normalized reference

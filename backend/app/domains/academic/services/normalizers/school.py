@@ -5,7 +5,7 @@ School normalizer for the standardized layer.
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -134,7 +134,7 @@ class SchoolNormalizer:
             inst_type=raw_inst.type,
             confirm_status="auto_identified",
             source_task_id=task_id,
-            normalized_at=datetime.utcnow(),
+            normalized_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         self.session.add(std_school)
         await self.session.flush()
@@ -168,7 +168,7 @@ class SchoolNormalizer:
                 matched.ror = raw_inst.ror
                 matched.inst_type = raw_inst.type
                 matched.source_task_id = task_id
-                matched.normalized_at = datetime.utcnow()
+                matched.normalized_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 await self.session.flush()
                 return matched
             # Matched but not safe to update: create a new record to prevent

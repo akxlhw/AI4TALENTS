@@ -5,7 +5,7 @@ Shared models for request/response handling.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Generic, TypeVar
 
 from pydantic import BaseModel, Field
@@ -53,7 +53,7 @@ class ErrorResponse(BaseModel):
     error: str = Field(description="Error type")
     message: str = Field(description="Error message")
     detail: str | None = Field(default=None, description="Detailed error info")
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None).isoformat())
 
 
 class SuccessResponse(BaseModel):

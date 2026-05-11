@@ -15,6 +15,7 @@ import {
   Statistic,
   Descriptions,
   Tooltip,
+  message,
 } from 'antd'
 import {
   ArrowLeftOutlined,
@@ -29,23 +30,24 @@ import {
   MedicineBoxOutlined,
 } from '@ant-design/icons'
 import { api } from '../../services/api'
+import { getErrorMessage } from '../../utils'
+import { domainThemes, semanticColors } from '../../theme'
 import type { OSRepositoryDetail, OSRepositoryContributor } from '../../types'
 
 const { Title, Text, Paragraph, Link } = Typography
 
 const TECH_ELEMENT_MAP: Record<string, { label: string; color: string }> = {
-  ai: { label: '人工智能', color: '#1890ff' },
-  robotics: { label: '机器人', color: '#fa8c16' },
-  data_science: { label: '数据科学', color: '#52c41a' },
-  networks: { label: '网络与通信', color: '#722ed1' },
-  systems: { label: '系统与软件', color: '#13c2c2' },
-  security: { label: '信息安全', color: '#eb2f96' },
+  ai: { label: '人工智能', color: semanticColors.blue },
+  robotics: { label: '机器人', color: semanticColors.orange },
+  data_science: { label: '数据科学', color: semanticColors.green },
+  networks: { label: '网络与通信', color: semanticColors.purple },
+  systems: { label: '系统与软件', color: semanticColors.cyan },
+  security: { label: '信息安全', color: semanticColors.magenta },
 }
 
 const RepoDetailPage: React.FC = () => {
   const navigate = useNavigate()
   const { owner, name } = useParams<{ owner: string; name: string }>()
-  const repoFullName = owner && name ? `${owner}/${name}` : ''
 
   const [detail, setDetail] = useState<OSRepositoryDetail | null>(null)
   const [contributors, setContributors] = useState<OSRepositoryContributor[]>([])
@@ -65,6 +67,7 @@ const RepoDetailPage: React.FC = () => {
         setDetail(res.data)
       } catch (e) {
         console.error('Failed to load repository detail', e)
+        message.error(getErrorMessage(e, '加载仓库详情失败'))
       } finally {
         setLoading(false)
       }
@@ -85,6 +88,7 @@ const RepoDetailPage: React.FC = () => {
         setContributorTotal(res.data.total || 0)
       } catch (e) {
         console.error('Failed to load contributors', e)
+        message.error(getErrorMessage(e, '加载贡献者失败'))
       } finally {
         setContribLoading(false)
       }
@@ -92,8 +96,8 @@ const RepoDetailPage: React.FC = () => {
     fetchContributors()
   }, [owner, name, contribPage, contribPageSize])
 
-  const primary = '#2D3748'
-  const secondary = '#48BB78'
+  const primary = domainThemes.opensource.primary
+  const secondary = domainThemes.opensource.secondary
 
   if (loading) {
     return (
@@ -124,14 +128,14 @@ const RepoDetailPage: React.FC = () => {
     return roles.map((role) => {
       if (role === 'Owner') {
         return (
-          <Tag key={role} icon={<CrownOutlined />} color="#faad14" style={{ fontSize: 11, marginRight: 4 }}>
+          <Tag key={role} icon={<CrownOutlined />} color={semanticColors.gold} style={{ fontSize: 11, marginRight: 4 }}>
             Owner
           </Tag>
         )
       }
       if (role === 'Committer') {
         return (
-          <Tag key={role} icon={<SafetyCertificateOutlined />} color="#1890ff" style={{ fontSize: 11, marginRight: 4 }}>
+          <Tag key={role} icon={<SafetyCertificateOutlined />} color={semanticColors.blue} style={{ fontSize: 11, marginRight: 4 }}>
             Committer
           </Tag>
         )
@@ -156,8 +160,8 @@ const RepoDetailPage: React.FC = () => {
             <Card
               hoverable
               className="domain-card"
-              style={{ borderLeft: '3px solid #48BB78' }}
-              bodyStyle={{ padding: '14px 16px' }}
+              style={{ borderLeft: `3px solid ${semanticColors.osGreenLight}` }}
+              styles={{ body: { padding: '14px 16px' } }}
               onClick={() => navigate(`/opensource/developers/${c.developer_id}`)}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -214,9 +218,9 @@ const RepoDetailPage: React.FC = () => {
   )
 
   const rankMedal = (index: number) => {
-    if (index === 0) return <TrophyOutlined style={{ color: '#faad14', fontSize: 16 }} />
-    if (index === 1) return <MedicineBoxOutlined style={{ color: '#bfbfbf', fontSize: 16 }} />
-    if (index === 2) return <MedicineBoxOutlined style={{ color: '#d48806', fontSize: 16 }} />
+    if (index === 0) return <TrophyOutlined style={{ color: semanticColors.gold, fontSize: 16 }} />
+    if (index === 1) return <MedicineBoxOutlined style={{ color: semanticColors.borderGray, fontSize: 16 }} />
+    if (index === 2) return <MedicineBoxOutlined style={{ color: semanticColors.orange, fontSize: 16 }} />
     return <Text type="secondary" style={{ fontSize: 12 }}>{index + 1}</Text>
   }
 
@@ -303,7 +307,7 @@ const RepoDetailPage: React.FC = () => {
   )
 
   const projectInfo = (
-    <Card className="domain-card" style={{ borderLeft: '3px solid #48BB78' }}>
+    <Card className="domain-card" style={{ borderLeft: `3px solid ${semanticColors.osGreenLight}` }}>
       <Descriptions column={1} labelStyle={{ fontWeight: 600, width: 120 }}>
         <Descriptions.Item label="仓库全名">{detail.full_name}</Descriptions.Item>
         <Descriptions.Item label="技术领域">
@@ -346,7 +350,7 @@ const RepoDetailPage: React.FC = () => {
       </Button>
 
       {/* Header Card */}
-      <Card className="domain-card" style={{ borderLeft: '3px solid #48BB78', marginBottom: 16 }}>
+      <Card className="domain-card" style={{ borderLeft: `3px solid ${semanticColors.osGreenLight}`, marginBottom: 16 }}>
         <Row gutter={24} align="middle">
           <Col>
             <div
@@ -409,7 +413,7 @@ const RepoDetailPage: React.FC = () => {
             <Statistic
               title="Stars"
               value={detail.stars_count}
-              prefix={<StarOutlined style={{ color: '#faad14' }} />}
+              prefix={<StarOutlined style={{ color: semanticColors.gold }} />}
             />
           </Card>
         </Col>
@@ -418,7 +422,7 @@ const RepoDetailPage: React.FC = () => {
             <Statistic
               title="Forks"
               value={detail.forks_count}
-              prefix={<ForkOutlined style={{ color: '#722ed1' }} />}
+              prefix={<ForkOutlined style={{ color: semanticColors.purple }} />}
             />
           </Card>
         </Col>
@@ -427,7 +431,7 @@ const RepoDetailPage: React.FC = () => {
             <Statistic
               title="贡献者"
               value={detail.contributor_count}
-              prefix={<TeamOutlined style={{ color: '#13c2c2' }} />}
+              prefix={<TeamOutlined style={{ color: semanticColors.cyan }} />}
             />
           </Card>
         </Col>
@@ -436,7 +440,7 @@ const RepoDetailPage: React.FC = () => {
             <Statistic
               title="主语言"
               value={detail.language || 'Unknown'}
-              prefix={<CodeOutlined style={{ color: '#1890ff' }} />}
+              prefix={<CodeOutlined style={{ color: semanticColors.blue }} />}
             />
           </Card>
         </Col>

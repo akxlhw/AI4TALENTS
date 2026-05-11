@@ -89,6 +89,7 @@ const GitHubConfigTab: React.FC = () => {
 
   useEffect(() => {
     loadGitHubConfig()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

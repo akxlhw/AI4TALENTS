@@ -106,6 +106,32 @@ class RecommendService:
         self.embed_service = embed_service
         self.talent_repo = talent_repository or TalentRepository(session)
 
+    @classmethod
+    async def create_from_session(cls, session: AsyncSession) -> RecommendService:
+        """
+        从数据库配置创建 RecommendService 实例。
+
+        内部处理 EmbeddingService 的构建，
+        使 API 层无需直接接触 EmbeddingService。
+
+        Args:
+            session: 数据库会话
+
+        Returns:
+            RecommendService: 配置好的服务实例
+        """
+        from app.domains.academic.services.embedding.embedding_service import EmbeddingService
+        from app.domains.shared.services.config_service import ConfigService
+
+        config_service = ConfigService(session)
+        llm_config = await config_service.get_llm_config()
+        embed_service = EmbeddingService(
+            session=session,
+            dimension=llm_config.embedding_dimension,
+        )
+
+        return cls(session=session, embed_service=embed_service)
+
     async def get_similar(
         self,
         reference_talent_ids: list[int],

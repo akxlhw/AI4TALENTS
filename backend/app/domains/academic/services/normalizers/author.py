@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -168,7 +168,7 @@ class AuthorNormalizer:
             openalex_topics=topics,
             cs_concepts_score=cs_score,
             source_task_id=task_id,
-            normalized_at=datetime.utcnow(),
+            normalized_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         self.session.add(std_author)
         await self.session.flush()
@@ -208,7 +208,7 @@ class AuthorNormalizer:
             existing.openalex_topics = topics
             existing.cs_concepts_score = cs_score
             existing.source_task_id = task_id
-            existing.normalized_at = datetime.utcnow()
+            existing.normalized_at = datetime.now(timezone.utc).replace(tzinfo=None)
             await self.session.flush()
             return existing
 
@@ -267,7 +267,7 @@ class AuthorNormalizer:
             "openalex_topics": topics,
             "cs_concepts_score": cs_score,
             "source_task_id": task_id,
-            "normalized_at": datetime.utcnow(),
+            "normalized_at": datetime.now(timezone.utc).replace(tzinfo=None),
         }
 
     async def _batch_upsert_std_authors(
@@ -333,7 +333,7 @@ class AuthorNormalizer:
 
             # 2. Batch preload existing StdAuthors and StdSchools
             author_ids = [r.openalex_author_id for r in pending]
-            existing_map = await self._batch_find_std_authors(author_ids)
+            await self._batch_find_std_authors(author_ids)
 
             inst_ids = list({r.last_known_institution_id for r in pending if r.last_known_institution_id})
             school_map = await self._batch_find_std_schools(inst_ids)

@@ -79,7 +79,7 @@ class SearchService:
     @classmethod
     async def create_with_embedding(
         cls, session: AsyncSession, mode: SearchMode | str | None = None
-    ) -> "SearchService":
+    ) -> SearchService:
         """Factory that creates a SearchService with embedding service configured from DB."""
         from app.domains.academic.services.embedding.embedding_service import EmbeddingService
         from app.domains.shared.services.config_service import ConfigService

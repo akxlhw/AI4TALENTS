@@ -13,6 +13,7 @@ import {
   Tooltip,
   List,
   InputNumber,
+  message,
   Badge,
 } from 'antd'
 import {
@@ -21,6 +22,7 @@ import {
   PlusOutlined,
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
+import { semanticColors } from '../../../theme'
 import type { SearchTalent, RecommendResultItem } from '../../../types'
 
 const { Text } = Typography
@@ -98,7 +100,7 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
       key: 'rank',
       width: 60,
       render: (_: unknown, __: RecommendResultItem, index: number) => (
-        <Badge count={index + 1} style={{ backgroundColor: index < 3 ? 'var(--domain-secondary)' : '#d9d9d9', color: '#fff' }} />
+        <Badge count={index + 1} style={{ backgroundColor: index < 3 ? 'var(--domain-secondary)' : semanticColors.borderGray, color: '#fff' }} />
       ),
     },
     {

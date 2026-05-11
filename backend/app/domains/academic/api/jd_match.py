@@ -11,7 +11,6 @@ import time
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.database import get_async_session
 from app.domains.academic.schemas.v1_4 import (
     JDFeaturesResponse,
@@ -23,43 +22,9 @@ from app.domains.academic.schemas.v1_4 import (
 )
 from app.domains.academic.services.jd_match.jd_match_service import JDMatchService, MatchConfig
 from app.domains.shared.api.auth import get_current_user
-from app.domains.shared.services.config_service import ConfigService
-from app.domains.shared.services.llm import LLMGateway
 from app.domains.shared.services.llm.errors import EmptyJDError, LLMError
 
 router = APIRouter(prefix="/jd-match", tags=["JD Match"])
-
-
-async def get_llm_gateway(session: AsyncSession) -> LLMGateway:
-    """
-    Get LLM gateway instance from database configuration.
-
-    Raises:
-        HTTPException: If LLM is disabled or not configured
-    """
-    config_service = ConfigService(session)
-    llm_config = await config_service.get_llm_config()
-
-    if not llm_config.enabled:
-        raise HTTPException(
-            status_code=503, detail="LLM 功能未启用。请在系统配置中启用 LLM 并配置 API Key。"
-        )
-
-    if not llm_config.api_key:
-        raise HTTPException(
-            status_code=503, detail="LLM API Key 未配置。请在系统配置中设置 API Key。"
-        )
-
-    return LLMGateway(
-        api_key=llm_config.api_key,
-        api_base=llm_config.api_base,
-        model=llm_config.model,
-        embedding_model=llm_config.embedding_model,
-        timeout=llm_config.timeout or 60,
-        enable_fallback=settings.LLM_ENABLE_FALLBACK,
-        api_format=llm_config.api_format,
-        embedding_api_format=llm_config.embedding_api_format,
-    )
 
 
 @router.post(
@@ -83,12 +48,7 @@ async def parse_jd(
     **Note:** This endpoint requires LLM to be enabled.
     """
     try:
-        llm_gateway = await get_llm_gateway(session)
-
-        service = JDMatchService(
-            session=session,
-            llm_gateway=llm_gateway,
-        )
+        service = await JDMatchService.create_from_session(session)
 
         features = await service.parse_jd(request.jd_text)
 
@@ -96,8 +56,8 @@ async def parse_jd(
             research_areas=features.research_areas,
         )
 
-    except HTTPException:
-        raise
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except EmptyJDError:
         raise HTTPException(status_code=400, detail="JD 文本不能为空") from None
     except LLMError as e:
@@ -140,7 +100,7 @@ async def match_talents(
     time.time()
 
     try:
-        llm_gateway = await get_llm_gateway(session)
+        service = await JDMatchService.create_from_session(session)
 
         # Build config
         config_dict = request.config or MatchConfigRequest()
@@ -156,12 +116,6 @@ async def match_talents(
                 status_code=401, detail="用户未认证，无法创建 JD 匹配会话"
             )
         user_id = current_user["user_id"]
-
-        # Create service
-        service = JDMatchService(
-            session=session,
-            llm_gateway=llm_gateway,
-        )
 
         # Execute match
         result = await service.match(
@@ -191,6 +145,8 @@ async def match_talents(
             took_ms=result.took_ms,
         )
 
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except HTTPException:
         raise
     except EmptyJDError:
@@ -216,5 +172,8 @@ async def get_match_session(
 
     Returns the JD text, parsed features, and match results for a previous session.
     """
-    # TODO: Implement session retrieval from database
-    raise HTTPException(status_code=404, detail="Session not found")
+    service = await JDMatchService.create_from_session(db_session)
+    result = await service.get_session(session_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return result

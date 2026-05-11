@@ -16,9 +16,10 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import delete, select, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.embedding import TalentEmbedding
@@ -41,7 +42,7 @@ def _is_postgres(session: AsyncSession) -> bool:
         bind = session.get_bind()
         _is_postgres_cache = bind.dialect.name == "postgresql"
         return _is_postgres_cache
-    except Exception:
+    except SQLAlchemyError:
         # 如果无法获取 bind，默认为 PostgreSQL（生产环境）
         return True
 
@@ -152,7 +153,7 @@ class EmbeddingRepository:
         Returns:
             TalentEmbedding: 创建的记录
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if _is_postgres(self.session):
             # PostgreSQL: 使用原生 SQL 插入向量
@@ -180,7 +181,7 @@ class EmbeddingRepository:
             # 返回记录（需要重新查询）
             return await self.get_by_talent_id(talent_id, vector_type)
         else:
-            # SQLite: 使用 JSON 存储
+            # Fallback: 使用 JSON 存储 (non-PostgreSQL)
             embedding_str = json.dumps(embedding)
             record = TalentEmbedding(
                 talent_id=talent_id,
@@ -218,7 +219,7 @@ class EmbeddingRepository:
         if not items:
             return 0
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if _is_postgres(self.session):
             # PostgreSQL: 使用原生 SQL 批量 UPSERT
@@ -256,7 +257,7 @@ class EmbeddingRepository:
             await self.session.flush()
             return len(items)
         else:
-            # SQLite: 逐个处理（SQLite 不支持多行 ON CONFLICT）
+            # Fallback: 逐个处理（non-PostgreSQL）
             for item in items:
                 await self.upsert(
                     talent_id=item["talent_id"],
@@ -288,7 +289,7 @@ class EmbeddingRepository:
         Returns:
             TalentEmbedding: 记录
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if _is_postgres(self.session):
             # PostgreSQL: 使用原生 SQL UPSERT
@@ -320,7 +321,7 @@ class EmbeddingRepository:
             await self.session.flush()
             return await self.get_by_talent_id(talent_id, vector_type)
         else:
-            # SQLite: 使用 JSON 存储
+            # Fallback: 使用 JSON 存储 (non-PostgreSQL)
             existing = await self.get_by_talent_id(talent_id, vector_type)
 
             if existing:
@@ -514,7 +515,7 @@ class EmbeddingRepository:
             return []
 
         # PostgreSQL vector 格式: '[0.1,0.2,...]'
-        # SQLite JSON 格式: '[0.1, 0.2, ...]'
+        # JSON 格式: '[0.1, 0.2, ...]'
         try:
             return json.loads(embedding_str)
         except json.JSONDecodeError:

@@ -17,6 +17,7 @@ import {
   Form,
   Tooltip,
   Checkbox,
+  message,
 } from 'antd'
 import {
   SearchOutlined,
@@ -26,6 +27,8 @@ import {
   HeartFilled,
 } from '@ant-design/icons'
 import { api } from '../../services/api'
+import { getErrorMessage } from '../../utils'
+import { semanticColors, domainThemes } from '../../theme'
 import type { OSDeveloper, OSSearchQuery } from '../../types'
 
 const { Title, Text, Paragraph } = Typography
@@ -86,7 +89,7 @@ const OpenSourceSearchPage: React.FC = () => {
       })
       setDevelopers(res.data.items || [])
       setTotal(res.data.total || 0)
-    } catch (e) {
+    } catch {
       console.error('Search failed')
     } finally {
       setLoading(false)
@@ -97,7 +100,7 @@ const OpenSourceSearchPage: React.FC = () => {
     try {
       const res = await api.openSource.getFavoriteIds()
       setFavoriteIds(new Set(res.data.developer_ids || []))
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, [])
@@ -149,10 +152,11 @@ const OpenSourceSearchPage: React.FC = () => {
       }
     } catch (e) {
       console.error('Favorite toggle failed', e)
+      message.error(getErrorMessage(e, '收藏操作失败'))
     }
   }
 
-  const primary = '#2D3748'
+  const primary = domainThemes.opensource.primary
   
 
   return (
@@ -160,7 +164,7 @@ const OpenSourceSearchPage: React.FC = () => {
       <Title level={3} style={{ marginBottom: 16 }}>开源人才搜索</Title>
 
       {/* Search & Filter */}
-      <Card className="domain-card" style={{ marginBottom: 16 }} bodyStyle={{ padding: 20 }}>
+      <Card className="domain-card" style={{ marginBottom: 16 }} styles={{ body: { padding: 20 } }}>
         <Space.Compact style={{ width: '100%', marginBottom: 16 }}>
           <Input
             size="large"
@@ -274,8 +278,8 @@ const OpenSourceSearchPage: React.FC = () => {
                 <Card
                   hoverable
                   className="domain-card"
-                  style={{ borderLeft: '3px solid #48BB78', transition: 'all 0.2s ease' }}
-                  bodyStyle={{ padding: '14px 16px' }}
+                  style={{ borderLeft: `3px solid ${domainThemes.opensource.secondary}`, transition: 'all 0.2s ease' }}
+                  styles={{ body: { padding: '14px 16px' } }}
                   onClick={() => navigate(`/opensource/developers/${dev.developer_id}`)}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
@@ -298,12 +302,12 @@ const OpenSourceSearchPage: React.FC = () => {
                             {dev.name || dev.github_login}
                           </Text>
                           {dev.roles?.includes('Owner') && (
-                            <Tag style={{ fontSize: 10, lineHeight: '16px', padding: '0 6px', borderRadius: 4, margin: 0, background: '#D69E2E', color: '#fff', border: 'none', fontWeight: 600 }}>
+                            <Tag style={{ fontSize: 10, lineHeight: '16px', padding: '0 6px', borderRadius: 4, margin: 0, background: semanticColors.osYellow, color: '#fff', border: 'none', fontWeight: 600 }}>
                               Owner
                             </Tag>
                           )}
                           {dev.roles?.includes('Committer') && (
-                            <Tag style={{ fontSize: 10, lineHeight: '16px', padding: '0 6px', borderRadius: 4, margin: 0, background: '#3182CE', color: '#fff', border: 'none', fontWeight: 600 }}>
+                            <Tag style={{ fontSize: 10, lineHeight: '16px', padding: '0 6px', borderRadius: 4, margin: 0, background: semanticColors.osBlue, color: '#fff', border: 'none', fontWeight: 600 }}>
                               Committer
                             </Tag>
                           )}
@@ -317,7 +321,7 @@ const OpenSourceSearchPage: React.FC = () => {
                       type="text"
                       size="small"
                       style={{ padding: '0 4px', margin: 0, flexShrink: 0 }}
-                      icon={favoriteIds.has(dev.developer_id) ? <HeartFilled style={{ color: '#F56565' }} /> : <HeartOutlined />}
+                      icon={favoriteIds.has(dev.developer_id) ? <HeartFilled style={{ color: semanticColors.red }} /> : <HeartOutlined />}
                       onClick={(e) => {
                         e.stopPropagation()
                         handleToggleFavorite(dev.developer_id)

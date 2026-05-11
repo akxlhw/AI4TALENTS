@@ -535,8 +535,8 @@ class TestEmbeddings:
     async def test_cancel_embedding_no_task(self, admin_client: AsyncClient):
         """Cancel returns error when no task is running."""
         # Reset global progress state to avoid interference from other tests
-        from app.domains.open_source.api.open_source import _os_embedding_progress
-        _os_embedding_progress["status"] = "idle"
+        from app.domains.open_source.services.background_state import embedding_progress
+        embedding_progress["status"] = "idle"
 
         response = await admin_client.post("/api/v1/open-source/embeddings/cancel")
         assert response.status_code == 400

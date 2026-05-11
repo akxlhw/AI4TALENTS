@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import get_cache_connection
 from app.core.database import get_async_session
-from app.domains.academic.repositories.homepage_repository import HomepageRepository
 from app.domains.academic.schemas.homepage import (
     HomepageHighlightsResponse,
     HotResearchTopicItem,
@@ -18,6 +17,7 @@ from app.domains.academic.schemas.homepage import (
     TopCountryItem,
     TopSchoolItem,
 )
+from app.domains.academic.services.homepage_service import HomepageService
 from app.domains.shared.services.cache_keys import CacheKeys, CacheTTL
 from app.domains.shared.services.cache_service import CacheService
 
@@ -49,16 +49,16 @@ async def get_highlights(
 
     async def fetch_highlights():
         """Fetch highlights data from database."""
-        repo = HomepageRepository(session)
+        service = HomepageService(session)
 
         # Fetch all data in parallel
-        hot_tech_domains = await repo.get_hot_tech_domains(limit=6)
-        top_countries = await repo.get_top_countries(limit=5)
-        top_domestic_schools = await repo.get_top_schools(limit=5, country_code="CN")
-        top_overseas_schools = await repo.get_top_schools(
+        hot_tech_domains = await service.get_hot_tech_domains(limit=6)
+        top_countries = await service.get_top_countries(limit=5)
+        top_domestic_schools = await service.get_top_schools(limit=5, country_code="CN")
+        top_overseas_schools = await service.get_top_schools(
             limit=5, country_code="__OVERSEAS__"
         )
-        hot_research_topics = await repo.get_hot_research_topics(limit=10)
+        hot_research_topics = await service.get_hot_research_topics(limit=10)
 
         return {
             "hot_tech_domains": hot_tech_domains,
@@ -83,14 +83,14 @@ async def get_highlights(
         hot_research_topics = cached_data.get("hot_research_topics", [])
     else:
         # Fallback to direct database query
-        repo = HomepageRepository(session)
-        hot_tech_domains = await repo.get_hot_tech_domains(limit=6)
-        top_countries = await repo.get_top_countries(limit=5)
-        top_domestic_schools = await repo.get_top_schools(limit=5, country_code="CN")
-        top_overseas_schools = await repo.get_top_schools(
+        service = HomepageService(session)
+        hot_tech_domains = await service.get_hot_tech_domains(limit=6)
+        top_countries = await service.get_top_countries(limit=5)
+        top_domestic_schools = await service.get_top_schools(limit=5, country_code="CN")
+        top_overseas_schools = await service.get_top_schools(
             limit=5, country_code="__OVERSEAS__"
         )
-        hot_research_topics = await repo.get_hot_research_topics(limit=10)
+        hot_research_topics = await service.get_hot_research_topics(limit=10)
 
     now = datetime.now()
     version = now.strftime("%Y%m%d-%H%M%S")

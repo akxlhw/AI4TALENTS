@@ -67,6 +67,7 @@ const LLMConfigTab: React.FC = () => {
 
   useEffect(() => {
     loadLLMConfig()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleSaveLLMConfig = async () => {

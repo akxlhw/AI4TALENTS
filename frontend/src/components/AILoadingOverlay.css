@@ -59,11 +59,11 @@
 }
 
 .brand-ai {
-  color: #1890ff;
+  color: var(--color-blue);
 }
 
 .brand-connector {
-  color: #722ed1;
+  color: var(--color-purple);
   font-size: 26px;
   font-weight: 600;
 }
@@ -75,7 +75,7 @@
 .brand-tagline {
   margin-top: 8px;
   font-size: 13px;
-  color: #8c8c8c;
+  color: var(--color-text-gray);
   letter-spacing: 1px;
 }
 
@@ -92,7 +92,7 @@
   position: absolute;
   width: 100%;
   height: 100%;
-  border: 1.5px solid #f0f0f0;
+  border: 1.5px solid var(--color-border-gray-light);
   border-radius: 50%;
   animation: orbitRotate 8s linear infinite;
 }
@@ -107,7 +107,7 @@
   position: absolute;
   width: 8px;
   height: 8px;
-  background: #1890ff;
+  background: var(--color-blue);
   border-radius: 50%;
   top: 50%;
   left: 50%;
@@ -124,7 +124,7 @@
 /* 点2: 右下 (120°) */
 .orbit-dot.dot-2 {
   transform: translate(-50%, -50%) rotate(120deg) translateY(-60px);
-  background: #722ed1;
+  background: var(--color-purple);
   box-shadow: 0 0 12px rgba(114, 46, 209, 0.4);
   animation-delay: 0.5s;
 }
@@ -132,7 +132,7 @@
 /* 点3: 左下 (240°) */
 .orbit-dot.dot-3 {
   transform: translate(-50%, -50%) rotate(240deg) translateY(-60px);
-  background: #52c41a;
+  background: var(--color-green);
   box-shadow: 0 0 12px rgba(82, 196, 26, 0.4);
   animation-delay: 1s;
 }
@@ -163,7 +163,7 @@
 }
 
 .brain-path {
-  stroke: #1890ff;
+  stroke: var(--color-blue);
   stroke-linecap: round;
   stroke-dasharray: 200;
   stroke-dashoffset: 200;
@@ -175,7 +175,7 @@
 }
 
 .neural-line {
-  stroke: #722ed1;
+  stroke: var(--color-purple);
   stroke-linecap: round;
   opacity: 0;
   animation: fadeInLine 0.5s ease-out forwards;
@@ -189,14 +189,14 @@
 }
 
 .node {
-  fill: #1890ff;
+  fill: var(--color-blue);
   opacity: 0;
   animation: nodeAppear 0.3s ease-out forwards;
 }
 
 .node-1 { animation-delay: 1.2s; }
 .node-2 { animation-delay: 1.3s; }
-.node-3 { fill: #722ed1; animation-delay: 1.1s; }
+.node-3 { fill: var(--color-purple); animation-delay: 1.1s; }
 .node-4 { animation-delay: 1.4s; }
 .node-5 { animation-delay: 1.5s; }
 
@@ -226,14 +226,14 @@
 
 .progress-track {
   height: 4px;
-  background: #f0f0f0;
+  background: var(--color-border-gray-light);
   border-radius: 2px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #1890ff, #722ed1);
+  background: linear-gradient(90deg, var(--color-blue), var(--color-purple));
   border-radius: 2px;
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -246,7 +246,7 @@
 }
 
 .step-number {
-  color: #1890ff;
+  color: var(--color-blue);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -293,7 +293,7 @@
   }
 
   .brand-tagline {
-    color: #8c8c8c;
+    color: var(--color-text-gray);
   }
 
   .orbit-ring {

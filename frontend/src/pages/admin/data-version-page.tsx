@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { semanticColors } from '../../theme'
 import {
   Card,
   Table,
@@ -173,10 +174,10 @@ const DataVersionPage: React.FC = () => {
   const handleSaveVersion = async (values: Record<string, unknown>) => {
     try {
       await api.dataVersion.createVersion({
-        version_code: values.version_code,
-        version_name: values.version_name,
-        version_type: values.version_type || 'snapshot',
-        description: values.description,
+        version_code: values.version_code as string,
+        version_name: values.version_name as string,
+        version_type: (values.version_type as string) || 'snapshot',
+        description: values.description as string | undefined,
       })
       message.success('版本创建成功')
       setVersionModalVisible(false)
@@ -423,7 +424,7 @@ const DataVersionPage: React.FC = () => {
                   <Statistic
                     title="待确认标签"
                     value={qualityMetrics.tech_tag_pending}
-                    valueStyle={{ color: qualityMetrics.tech_tag_pending > 0 ? '#faad14' : '#52c41a' }}
+                    valueStyle={{ color: qualityMetrics.tech_tag_pending > 0 ? semanticColors.gold : semanticColors.green }}
                   />
                 </Col>
               </Row>

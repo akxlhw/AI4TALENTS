@@ -103,8 +103,6 @@ export const academicApi = {
   collect: {
     listTechDomains: () =>
       apiClient.get('/collect/tech-domains'),
-    updateTechDomainSources: (techDomainId: number, data: { collect_sources: Array<{ id: string; name: string; type: string }> }) =>
-      apiClient.put(`/collect/tech-domains/${techDomainId}/sources`, data),
     listTasks: (params?: { status?: string; tech_domain_id?: number; page?: number; page_size?: number }) =>
       apiClient.get('/collect/tasks', { params }),
     getTask: (taskId: number) =>

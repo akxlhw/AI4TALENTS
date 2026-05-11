@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import func, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -54,7 +54,7 @@ class RawWorkRepository:
             existing.source_name = work.source_name
             existing.author_count = work.author_count
             existing.author_ids = work.author_ids
-            existing.fetched_at = datetime.utcnow()
+            existing.fetched_at = datetime.now(timezone.utc).replace(tzinfo=None)
             existing.fetch_task_id = work.fetch_task_id
             existing.sub_task_id = work.sub_task_id
             await self.session.flush()
@@ -155,7 +155,7 @@ class RawWorkRepository:
         self, work_id: int, status: str = "processed", error: str | None = None
     ) -> None:
         """Mark work as processed"""
-        values = {"processed_status": status, "processed_at": datetime.utcnow()}
+        values = {"processed_status": status, "processed_at": datetime.now(timezone.utc).replace(tzinfo=None)}
         if error:
             values["error_info"] = error
         await self.session.execute(
@@ -244,7 +244,7 @@ class RawAuthorRepository:
             existing.i10_index = author.i10_index
             existing.last_known_institution_id = author.last_known_institution_id
             existing.last_known_institution_name = author.last_known_institution_name
-            existing.fetched_at = datetime.utcnow()
+            existing.fetched_at = datetime.now(timezone.utc).replace(tzinfo=None)
             existing.fetch_task_id = author.fetch_task_id
             await self.session.flush()
             return existing
@@ -290,7 +290,7 @@ class RawAuthorRepository:
                     "primary_company_id": author.primary_company_id,
                     "primary_company_name": author.primary_company_name,
                     "fetch_task_id": author.fetch_task_id,
-                    "fetched_at": datetime.utcnow(),
+                    "fetched_at": datetime.now(timezone.utc).replace(tzinfo=None),
                 }
             )
 
@@ -394,7 +394,7 @@ class RawAuthorRepository:
         self, author_id: int, status: str = "processed", std_author_id: int | None = None
     ) -> None:
         """Mark author as processed"""
-        values = {"processed_status": status, "processed_at": datetime.utcnow()}
+        values = {"processed_status": status, "processed_at": datetime.now(timezone.utc).replace(tzinfo=None)}
         if std_author_id:
             values["std_author_id"] = std_author_id
         await self.session.execute(
@@ -431,7 +431,7 @@ class RawAuthorRepository:
                 .where(RawAuthor.raw_author_id.in_(author_ids))
                 .values(
                     processed_status=status,
-                    processed_at=datetime.utcnow(),
+                    processed_at=datetime.now(timezone.utc).replace(tzinfo=None),
                     std_author_id=text(case_stmt),
                 )
             )
@@ -443,7 +443,7 @@ class RawAuthorRepository:
                 .where(RawAuthor.raw_author_id.in_(author_ids))
                 .values(
                     processed_status=status,
-                    processed_at=datetime.utcnow(),
+                    processed_at=datetime.now(timezone.utc).replace(tzinfo=None),
                     std_author_id=std_author_id,
                 )
             )
@@ -453,7 +453,7 @@ class RawAuthorRepository:
                 .where(RawAuthor.raw_author_id.in_(author_ids))
                 .values(
                     processed_status=status,
-                    processed_at=datetime.utcnow(),
+                    processed_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
             )
 
@@ -496,7 +496,7 @@ class RawInstitutionRepository:
             existing.country_name = institution.country_name
             existing.ror = institution.ror
             existing.type = institution.type
-            existing.fetched_at = datetime.utcnow()
+            existing.fetched_at = datetime.now(timezone.utc).replace(tzinfo=None)
             existing.fetch_task_id = institution.fetch_task_id
             await self.session.flush()
             return existing
@@ -574,7 +574,7 @@ class RawInstitutionRepository:
         self, inst_id: int, status: str = "processed", std_school_id: int | None = None
     ) -> None:
         """Mark institution as processed"""
-        values = {"processed_status": status, "processed_at": datetime.utcnow()}
+        values = {"processed_status": status, "processed_at": datetime.now(timezone.utc).replace(tzinfo=None)}
         if std_school_id:
             values["std_school_id"] = std_school_id
         await self.session.execute(

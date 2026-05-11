@@ -13,6 +13,7 @@ import {
   Empty,
   Button,
   Tooltip,
+  message,
 } from 'antd'
 import {
   CodeOutlined,
@@ -24,6 +25,8 @@ import {
   SearchOutlined,
 } from '@ant-design/icons'
 import { api } from '../../services/api'
+import { getErrorMessage } from '../../utils'
+import { semanticColors, domainThemes } from '../../theme'
 import type { OSStats, OSDeveloper, OSRepoConfig } from '../../types'
 
 const { Title, Text, Paragraph } = Typography
@@ -37,8 +40,8 @@ const OpenSourcePage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const primary = '#2D3748'
-  const secondary = '#48BB78'
+  const primary = domainThemes.opensource.primary
+  const secondary = domainThemes.opensource.secondary
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,6 +58,7 @@ const OpenSourcePage: React.FC = () => {
         setTrendingRepos(repoRes.data.items || [])
       } catch (e) {
         console.error('Failed to load open source overview', e)
+        message.error(getErrorMessage(e, '加载开源概览失败'))
       } finally {
         setLoading(false)
       }
@@ -173,14 +177,14 @@ const OpenSourcePage: React.FC = () => {
         {[
           { title: '收录开发者', value: stats?.total_developers || 0, icon: <CodeOutlined />, color: primary, link: '/opensource/search' },
           { title: '覆盖仓库', value: stats?.total_repositories || 0, icon: <GithubOutlined />, color: secondary },
-          { title: '活跃组织', value: stats?.total_organizations || 0, icon: <ForkOutlined />, color: '#38A169' },
-          { title: '技术栈', value: Object.keys(stats?.language_distribution || {}).length || 0, icon: <BranchesOutlined />, color: '#2F855A' },
+          { title: '活跃组织', value: stats?.total_organizations || 0, icon: <ForkOutlined />, color: domainThemes.opensource.badgeBg },
+          { title: '技术栈', value: Object.keys(stats?.language_distribution || {}).length || 0, icon: <BranchesOutlined />, color: semanticColors.osGreen },
         ].map((s) => (
           <Col span={6} key={s.title}>
             <Card
               className="domain-card"
               size="small"
-              bodyStyle={{ padding: '16px 20px' }}
+              styles={{ body: { padding: '16px 20px' } }}
               hoverable={!!s.link}
               onClick={s.link ? () => navigate(s.link!) : undefined}
               style={s.link ? { cursor: 'pointer' } : undefined}
@@ -202,7 +206,7 @@ const OpenSourcePage: React.FC = () => {
         <Col span={12}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Title level={4} style={{ margin: 0 }}>
-              <FireOutlined style={{ marginRight: 8, color: '#F6AD55' }} />
+              <FireOutlined style={{ marginRight: 8, color: semanticColors.osOrange }} />
               Trending 仓库
             </Title>
             <Button
@@ -222,9 +226,9 @@ const OpenSourcePage: React.FC = () => {
                   <Card
                     className="domain-card"
                     hoverable
-                    bodyStyle={{ padding: '14px 16px' }}
+                    styles={{ body: { padding: '14px 16px' } }}
                     style={{
-                      borderLeft: '3px solid #F6AD55',
+                      borderLeft: `3px solid ${semanticColors.osOrange}`,
                       transition: 'all 0.2s ease',
                       cursor: 'pointer',
                     }}
@@ -249,7 +253,7 @@ const OpenSourcePage: React.FC = () => {
                     </Paragraph>
                     <Space size={12}>
                       <Text style={{ fontSize: 12 }}>
-                        <StarOutlined style={{ color: '#F6AD55', marginRight: 4 }} />
+                        <StarOutlined style={{ color: semanticColors.osOrange, marginRight: 4 }} />
                         {repo.stars_count || 0}
                       </Text>
                       <Tag
@@ -298,7 +302,7 @@ const OpenSourcePage: React.FC = () => {
                       transition: 'all 0.2s ease',
                       cursor: 'pointer',
                     }}
-                    bodyStyle={{ padding: '14px 16px' }}
+                    styles={{ body: { padding: '14px 16px' } }}
                     onClick={() => navigate(`/opensource/developers/${dev.developer_id}`)}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
@@ -346,7 +350,7 @@ const OpenSourcePage: React.FC = () => {
                                   padding: '0 6px',
                                   borderRadius: 4,
                                   margin: 0,
-                                  background: '#D69E2E',
+                                  background: semanticColors.osYellow,
                                   color: '#fff',
                                   border: 'none',
                                   fontWeight: 600,
@@ -363,7 +367,7 @@ const OpenSourcePage: React.FC = () => {
                                   padding: '0 6px',
                                   borderRadius: 4,
                                   margin: 0,
-                                  background: '#3182CE',
+                                  background: semanticColors.osBlue,
                                   color: '#fff',
                                   border: 'none',
                                   fontWeight: 600,

@@ -9,7 +9,7 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import aiohttp
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +21,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from app.core.config import settings
 from app.domains.academic.models.raw_data import RawAuthor, RawInstitution, RawWork
 from app.domains.academic.models.venue import Venue
 from app.domains.academic.repositories.raw_data_repository import (
@@ -230,7 +231,7 @@ class WorkFetcher:
         async with self.client.create_session(timeout=DEFAULT_TIMEOUT) as http_session:
             cursor = "*"
             total_fetched = 0
-            batch_size = 100  # Commit every 100 records
+            batch_size = settings.SYNC_COMMIT_BATCH_SIZE
             batch_works: list[RawWork] = []
 
             while cursor:
@@ -296,7 +297,7 @@ class WorkFetcher:
                             author_ids=json.dumps(author_ids),
                             fetch_task_id=task_id,
                             sub_task_id=sub_task_id,
-                            fetched_at=datetime.utcnow(),
+                            fetched_at=datetime.now(timezone.utc).replace(tzinfo=None),
                         )
                         batch_works.append(raw_work)
                         total_fetched += 1
@@ -566,7 +567,7 @@ class AuthorFetcher:
         stale_ids: list[str] = []
         if refresh_days > 0:
             existing_authors = await self.repo.get_by_openalex_ids(author_ids)
-            stale_threshold = datetime.utcnow() - timedelta(days=refresh_days)
+            stale_threshold = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=refresh_days)
             for author in existing_authors:
                 if author.fetched_at is None or author.fetched_at < stale_threshold:
                     stale_ids.append(author.openalex_author_id)
@@ -589,7 +590,7 @@ class AuthorFetcher:
         openalex_url = f"{OPENALEX_API_BASE}/authors"
         proxy = self.client.get_proxy_for_request(openalex_url)
         async with self.client.create_session() as http_session:
-            batch_size = 50
+            batch_size = settings.EMBEDDING_BATCH_SIZE
             total_batches = (len(ids_to_fetch) + batch_size - 1) // batch_size
 
             for i in range(0, len(ids_to_fetch), batch_size):
@@ -648,7 +649,7 @@ class AuthorFetcher:
                                 primary_company_id=primary_comp.get("id"),
                                 primary_company_name=primary_comp.get("name"),
                                 fetch_task_id=task_id,
-                                fetched_at=datetime.utcnow(),
+                                fetched_at=datetime.now(timezone.utc).replace(tzinfo=None),
                             )
                             batch_authors.append(raw_author)
                             progress.fetched += 1
@@ -713,7 +714,7 @@ class InstitutionFetcher:
         openalex_url = f"{OPENALEX_API_BASE}/institutions"
         proxy = self.client.get_proxy_for_request(openalex_url)
         async with self.client.create_session() as http_session:
-            batch_size = 50
+            batch_size = settings.EMBEDDING_BATCH_SIZE
             total_batches = (len(missing_ids) + batch_size - 1) // batch_size
 
             for i in range(0, len(missing_ids), batch_size):
@@ -753,7 +754,7 @@ class InstitutionFetcher:
                                 ror=inst_data.get("ror"),
                                 type=inst_data.get("type"),
                                 fetch_task_id=task_id,
-                                fetched_at=datetime.utcnow(),
+                                fetched_at=datetime.now(timezone.utc).replace(tzinfo=None),
                             )
                             batch_insts.append(raw_inst)
                             progress.fetched += 1

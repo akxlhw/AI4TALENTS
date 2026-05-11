@@ -1,5 +1,5 @@
 """
-Audit service for logging user operations.
+Audit service for logging user operations and querying audit logs.
 Uses an independent async session to avoid coupling with the main business transaction.
 """
 
@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import async_session_factory
 from app.core.logging_config import get_logger
@@ -16,7 +18,9 @@ logger = get_logger(__name__)
 
 
 class AuditService:
-    """Service for writing audit logs using an independent session."""
+    """Service for writing and reading audit logs."""
+
+    # ---- Write operations (use independent session) ----
 
     @staticmethod
     async def _write_log(**kwargs: Any) -> None:
@@ -115,3 +119,38 @@ class AuditService:
             request_id=request_id,
             user_agent=None,
         )
+
+    # ---- Read operations (use caller's session) ----
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+        self.repo = AuditRepository(session)
+
+    async def list_logs(
+        self,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        user_id: int | None = None,
+        event_type: str | None = None,
+        resource_type: str | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ):
+        """Get paginated audit logs with filters."""
+        return await self.repo.list_logs(
+            start_time=start_time,
+            end_time=end_time,
+            user_id=user_id,
+            event_type=event_type,
+            resource_type=resource_type,
+            page=page,
+            page_size=page_size,
+        )
+
+    async def get_event_types(self) -> list[str]:
+        """Get distinct event types."""
+        return await self.repo.get_event_types()
+
+    async def get_resource_types(self) -> list[str]:
+        """Get distinct resource types."""
+        return await self.repo.get_resource_types()

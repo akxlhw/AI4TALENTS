@@ -5,7 +5,7 @@ Progress tracking for collection tasks.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,7 +53,7 @@ class ProgressTracker:
         level_value = level.value if isinstance(level, LogLevel) else level
 
         entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             "level": level_value,
             "message": message,
         }
@@ -93,13 +93,13 @@ class ProgressTracker:
         """Update task status"""
         task.status = status
         if status == "running":
-            task.started_at = datetime.utcnow()
+            task.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
             task.progress_percent = 0
         elif status == "completed":
-            task.completed_at = datetime.utcnow()
+            task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             task.progress_percent = 100
         elif status == "failed":
-            task.completed_at = datetime.utcnow()
+            task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if error_message:
             task.error_message = error_message
         await self.session.flush()

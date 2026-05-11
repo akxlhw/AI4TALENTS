@@ -7,10 +7,10 @@ Aggregated from core_school table using country_code.
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.academic.constants.countries import COUNTRY_NAMES_CN, COUNTRY_NAMES_EN
 from app.core.database import get_async_session
-from app.domains.academic.repositories.school_repository import SchoolRepository
+from app.domains.academic.constants.countries import COUNTRY_NAMES_CN, COUNTRY_NAMES_EN
 from app.domains.academic.schemas.overview import CountryListResponse, CountrySummary
+from app.domains.academic.services.school_service import SchoolService
 
 router = APIRouter(prefix="/countries", tags=["Countries"])
 
@@ -34,8 +34,8 @@ async def list_countries(
     - Number of schools in each country
     - Number of professors in each country
     """
-    repo = SchoolRepository(session)
-    rows = await repo.get_country_stats()
+    service = SchoolService(session)
+    rows = await service.get_country_stats()
 
     # Build response with country names from constants
     items = []

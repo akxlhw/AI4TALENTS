@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.domains.shared.api.auth import require_admin
-from app.domains.shared.repositories.audit_repository import AuditRepository
+from app.domains.shared.services.audit_service import AuditService
 
 router = APIRouter(prefix="/audit", tags=["Audit Logs"])
 
@@ -81,8 +81,8 @@ async def get_audit_logs(
     - event_type: Filter by event type (authentication, authorization, data_operation)
     - resource_type: Filter by resource type (user, talent, school)
     """
-    repo = AuditRepository(session)
-    logs, total = await repo.list_logs(
+    service = AuditService(session)
+    logs, total = await service.list_logs(
         start_time=start_time,
         end_time=end_time,
         user_id=user_id,
@@ -128,8 +128,8 @@ async def get_event_types(
     current_user: dict = Depends(require_admin),
 ):
     """Get distinct event types."""
-    repo = AuditRepository(session)
-    types = await repo.get_event_types()
+    service = AuditService(session)
+    types = await service.get_event_types()
     return EventTypesResponse(event_types=types)
 
 
@@ -144,6 +144,6 @@ async def get_resource_types(
     current_user: dict = Depends(require_admin),
 ):
     """Get distinct resource types."""
-    repo = AuditRepository(session)
-    types = await repo.get_resource_types()
+    service = AuditService(session)
+    types = await service.get_resource_types()
     return ResourceTypesResponse(resource_types=types)

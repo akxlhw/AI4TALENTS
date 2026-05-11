@@ -27,7 +27,7 @@ dev: ## Start all services with docker-compose
 
 # Testing
 test-backend: ## Run backend tests
-	cd backend && uv run pytest
+	cd backend && uv run pytest --cov=app --cov-report=term-missing
 
 test-frontend: ## Run frontend tests
 	cd frontend && npm run test

@@ -7,10 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.academic.repositories.talent_pool_repository import (
-    FavoriteRepository,
-    TalentPoolRepository,
-)
 from app.domains.academic.schemas.talent_pool import (
     FOLLOWUP_STATUS_OPTIONS,
     AddMemberRequest,
@@ -21,10 +17,15 @@ from app.domains.academic.schemas.talent_pool import (
     UpdateFollowupRequest,
     UpdatePoolRequest,
 )
+from app.domains.academic.services.favorite_service import FavoriteService
+from app.domains.academic.services.talent_pool_service import TalentPoolService
 from app.domains.shared.api.auth import require_user
 from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
 
 router = APIRouter(prefix="/talent-pools", tags=["Talent Pools"])
+
+# Preview pagination: single member for existence check
+_PREVIEW_PAGE_SIZE = 1
 
 
 @router.post(
@@ -36,8 +37,8 @@ async def create_pool(
     current_user: dict = Depends(require_user),
 ):
     """Create a new talent pool."""
-    repo = TalentPoolRepository(session)
-    pool = await repo.create_pool_and_commit(
+    service = TalentPoolService(session)
+    pool = await service.create_pool_and_commit(
         user_id=current_user["user_id"],
         name=request.pool_name,
         pool_type=request.pool_type,
@@ -67,13 +68,13 @@ async def list_pools(
     current_user: dict = Depends(require_user),
 ):
     """List all talent pools for current user."""
-    repo = TalentPoolRepository(session)
-    pools = await repo.list_user_pools(current_user["user_id"])
+    service = TalentPoolService(session)
+    pools = await service.list_user_pools(current_user["user_id"])
 
     items = []
     for pool in pools:
         # Get member count
-        members, _ = await repo.get_pool_members(pool.pool_id, page=1, page_size=1)
+        members, _ = await service.get_pool_members(pool.pool_id, page=1, page_size=_PREVIEW_PAGE_SIZE)
         items.append(
             TalentPoolResponse(
                 pool_id=pool.pool_id,
@@ -102,8 +103,8 @@ async def get_pool(
     current_user: dict = Depends(require_user),
 ):
     """Get talent pool details."""
-    repo = TalentPoolRepository(session)
-    pool = await repo.get_pool_by_id(pool_id)
+    service = TalentPoolService(session)
+    pool = await service.get_pool_by_id(pool_id)
 
     if not pool:
         raise HTTPException(status_code=404, detail="Talent pool not found")
@@ -111,7 +112,7 @@ async def get_pool(
     if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    members, total = await repo.get_pool_members(pool_id, page=1, page_size=1)
+    members, total = await service.get_pool_members(pool_id, page=1, page_size=_PREVIEW_PAGE_SIZE)
 
     return TalentPoolResponse(
         pool_id=pool.pool_id,
@@ -138,8 +139,8 @@ async def update_pool(
     current_user: dict = Depends(require_user),
 ):
     """Update talent pool."""
-    repo = TalentPoolRepository(session)
-    pool = await repo.get_pool_by_id(pool_id)
+    service = TalentPoolService(session)
+    pool = await service.get_pool_by_id(pool_id)
 
     if not pool:
         raise HTTPException(status_code=404, detail="Talent pool not found")
@@ -147,14 +148,14 @@ async def update_pool(
     if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    updated_pool = await repo.update_pool_and_commit(
+    updated_pool = await service.update_pool_and_commit(
         pool_id,
         name=request.pool_name,
         desc=request.scope_desc,
         status=request.pool_status,
     )
 
-    members, total = await repo.get_pool_members(pool_id, page=1, page_size=1)
+    members, total = await service.get_pool_members(pool_id, page=1, page_size=_PREVIEW_PAGE_SIZE)
 
     return TalentPoolResponse(
         pool_id=updated_pool.pool_id,
@@ -180,8 +181,8 @@ async def delete_pool(
     current_user: dict = Depends(require_user),
 ):
     """Delete talent pool (archive)."""
-    repo = TalentPoolRepository(session)
-    pool = await repo.get_pool_by_id(pool_id)
+    service = TalentPoolService(session)
+    pool = await service.get_pool_by_id(pool_id)
 
     if not pool:
         raise HTTPException(status_code=404, detail="Talent pool not found")
@@ -189,7 +190,7 @@ async def delete_pool(
     if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    await repo.delete_pool_and_commit(pool_id)
+    await service.delete_pool_and_commit(pool_id)
 
     return SuccessResponse(message="Talent pool archived")
 
@@ -207,8 +208,8 @@ async def add_member(
     current_user: dict = Depends(require_user),
 ):
     """Add talent to pool."""
-    repo = TalentPoolRepository(session)
-    pool = await repo.get_pool_by_id(pool_id)
+    service = TalentPoolService(session)
+    pool = await service.get_pool_by_id(pool_id)
 
     if not pool:
         raise HTTPException(status_code=404, detail="Talent pool not found")
@@ -217,10 +218,10 @@ async def add_member(
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Check if already a member
-    if await repo.is_member(pool_id, request.talent_id):
+    if await service.is_member(pool_id, request.talent_id):
         raise HTTPException(status_code=400, detail="Talent already in pool")
 
-    await repo.add_member_and_commit(
+    await service.add_member_and_commit(
         pool_id=pool_id,
         talent_id=request.talent_id,
         added_by=current_user["user_id"],
@@ -243,8 +244,8 @@ async def remove_member(
     current_user: dict = Depends(require_user),
 ):
     """Remove talent from pool."""
-    repo = TalentPoolRepository(session)
-    pool = await repo.get_pool_by_id(pool_id)
+    service = TalentPoolService(session)
+    pool = await service.get_pool_by_id(pool_id)
 
     if not pool:
         raise HTTPException(status_code=404, detail="Talent pool not found")
@@ -252,7 +253,7 @@ async def remove_member(
     if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    removed = await repo.remove_member_and_commit(pool_id, talent_id)
+    removed = await service.remove_member_and_commit(pool_id, talent_id)
 
     if not removed:
         raise HTTPException(status_code=404, detail="Talent not in pool")
@@ -274,8 +275,8 @@ async def list_members(
     current_user: dict = Depends(require_user),
 ):
     """List members of a talent pool."""
-    repo = TalentPoolRepository(session)
-    pool = await repo.get_pool_by_id(pool_id)
+    service = TalentPoolService(session)
+    pool = await service.get_pool_by_id(pool_id)
 
     if not pool:
         raise HTTPException(status_code=404, detail="Talent pool not found")
@@ -283,7 +284,7 @@ async def list_members(
     if pool.owner_user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    items, total = await repo.get_pool_members(pool_id, page, page_size)
+    items, total = await service.get_pool_members(pool_id, page, page_size)
 
     return PaginatedResponse.create(
         items=[PoolMemberResponse(**item) for item in items],
@@ -313,8 +314,8 @@ async def update_followup_status(
             status_code=400, detail=f"Invalid status. Valid options: {valid_statuses}"
         )
 
-    repo = FavoriteRepository(session)
-    favorite = await repo.update_followup_status_and_commit(
+    service = FavoriteService(session)
+    favorite = await service.update_followup_status_and_commit(
         user_id=current_user["user_id"],
         talent_id=talent_id,
         status=request.followup_status,

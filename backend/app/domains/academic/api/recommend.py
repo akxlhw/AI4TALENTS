@@ -17,7 +17,6 @@ from app.domains.academic.schemas.v1_4 import (
     RecommendResponse,
     RecommendResultItem,
 )
-from app.domains.academic.services.embedding.embedding_service import EmbeddingService
 from app.domains.academic.services.recommend.recommend_service import RecommendService
 from app.domains.shared.services.llm.errors import RecommendError
 
@@ -61,19 +60,8 @@ async def recommend_talents(
         raise HTTPException(status_code=400, detail="Reference talent IDs cannot be empty")
 
     try:
-        # Create services
-        from app.domains.shared.services.config_service import ConfigService
-
-        config_service = ConfigService(session)
-        llm_config = await config_service.get_llm_config()
-        embed_service = EmbeddingService(
-            session=session,
-            dimension=llm_config.embedding_dimension,
-        )
-        recommend_service = RecommendService(
-            session=session,
-            embed_service=embed_service,
-        )
+        # Create service (internally handles EmbeddingService)
+        recommend_service = await RecommendService.create_from_session(session)
 
         # Execute recommendation
         result = await recommend_service.get_similar(
@@ -128,18 +116,8 @@ async def find_similar_talents(
     time.time()
 
     try:
-        from app.domains.shared.services.config_service import ConfigService
-
-        config_service = ConfigService(session)
-        llm_config = await config_service.get_llm_config()
-        embed_service = EmbeddingService(
-            session=session,
-            dimension=llm_config.embedding_dimension,
-        )
-        recommend_service = RecommendService(
-            session=session,
-            embed_service=embed_service,
-        )
+        # Create service (internally handles EmbeddingService)
+        recommend_service = await RecommendService.create_from_session(session)
 
         result = await recommend_service.get_similar(
             reference_talent_ids=[talent_id],

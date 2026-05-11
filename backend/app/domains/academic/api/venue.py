@@ -10,10 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.domains.academic.repositories.venue_repository import (
-    VenueRepository,
-    VenueTechBindingRepository,
-)
 from app.domains.academic.schemas.venue import (
     BatchUpdateBindingsResponse,
     MigrateCollectSourcesRequest,
@@ -83,8 +79,8 @@ async def list_venues(
     session: AsyncSession = Depends(get_async_session),
 ):
     """获取Venue列表"""
-    repo = VenueRepository(session)
-    venues, total = await repo.get_list(
+    service = VenueService(session)
+    venues, total = await service.get_venue_list(
         venue_type=venue_type,
         is_enabled=is_enabled,
         keyword=keyword,
@@ -118,8 +114,8 @@ async def create_venue(data: VenueCreate, session: AsyncSession = Depends(get_as
 )
 async def get_venue(venue_id: int, session: AsyncSession = Depends(get_async_session)):
     """获取Venue详情"""
-    repo = VenueRepository(session)
-    venue = await repo.get_by_id(venue_id)
+    service = VenueService(session)
+    venue = await service.get_venue_by_id(venue_id)
     if not venue:
         raise NotFoundError("Venue not found")
     return VenueResponse.model_validate(venue)
@@ -180,8 +176,8 @@ async def get_venue_bindings(
     session: AsyncSession = Depends(get_async_session),
 ):
     """获取Venue的所有技术领域绑定"""
-    repo = VenueTechBindingRepository(session)
-    bindings = await repo.get_by_venue(venue_id, is_enabled)
+    service = VenueService(session)
+    bindings = await service.get_venue_bindings(venue_id, is_enabled)
 
     return VenueTechBindingListResponse(
         total=len(bindings), items=[VenueTechBindingResponse.model_validate(b) for b in bindings]
@@ -266,8 +262,8 @@ async def get_tech_domain_bindings(
     session: AsyncSession = Depends(get_async_session),
 ):
     """获取技术领域的所有Venue绑定"""
-    repo = VenueTechBindingRepository(session)
-    bindings = await repo.get_list_with_venue(tech_domain_id, is_enabled)
+    service = VenueService(session)
+    bindings = await service.get_tech_domain_bindings_with_venue(tech_domain_id, is_enabled)
 
     return VenueTechBindingListResponse(
         total=len(bindings), items=[VenueTechBindingResponse.model_validate(b) for b in bindings]

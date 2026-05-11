@@ -122,7 +122,7 @@ class OSEmbedding(Base, TimestampMixin):
     embedding_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     developer_id = Column(Integer, ForeignKey("os_developer.developer_id"), nullable=False)
     vector_type = Column(String(20), nullable=False, default="profile")
-    embedding = Column(Text, nullable=False)  # pgvector vector(N) in PostgreSQL; TEXT fallback for SQLite
+    embedding = Column(Text, nullable=False)  # pgvector vector(N) in PostgreSQL
     model_name = Column(String(50), nullable=True)
     source_text_hash = Column(String(64), nullable=True, index=True)
 

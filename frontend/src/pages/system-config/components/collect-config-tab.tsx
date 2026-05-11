@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { semanticColors } from '../../../theme'
 import {
   Card,
   Table,
@@ -636,17 +637,17 @@ const CollectConfigTab: React.FC = () => {
                 <Spin spinning={collabSyncLoading}>
                   <Row gutter={16} style={{ marginBottom: 24 }}>
                     <Col span={8}>
-                      <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                      <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
                         <Statistic title="已同步学者数" value={collabDataStatus?.talents_with_collaborations || 0} prefix={<TeamOutlined />} />
                       </Card>
                     </Col>
                     <Col span={8}>
-                      <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                      <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
                         <Statistic title="合作关系数" value={collabDataStatus?.total_collaborations || 0} prefix={<TeamOutlined />} />
                       </Card>
                     </Col>
                     <Col span={8}>
-                      <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                      <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
                         <Statistic title="最后同步时间" value={formatUTCToLocal(collabDataStatus?.last_sync)} valueStyle={{ fontSize: 16 }} />
                       </Card>
                     </Col>
@@ -707,22 +708,22 @@ const CollectConfigTab: React.FC = () => {
                           />
                           <Row gutter={16} style={{ marginBottom: 24 }}>
                             <Col span={6}>
-                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                              <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
                                 <Statistic title="人才总数" value={embeddingStatus?.total_talents || 0} />
                               </Card>
                             </Col>
                             <Col span={6}>
-                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
-                                <Statistic title="已生成向量" value={embeddingStatus?.embedded_talents || 0} valueStyle={{ color: '#52c41a' }} />
+                              <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
+                                <Statistic title="已生成向量" value={embeddingStatus?.embedded_talents || 0} valueStyle={{ color: semanticColors.green }} />
                               </Card>
                             </Col>
                             <Col span={6}>
-                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
-                                <Statistic title="待生成" value={embeddingStatus?.pending_talents || 0} valueStyle={{ color: '#faad14' }} />
+                              <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
+                                <Statistic title="待生成" value={embeddingStatus?.pending_talents || 0} valueStyle={{ color: semanticColors.gold }} />
                               </Card>
                             </Col>
                             <Col span={6}>
-                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                              <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
                                 <Statistic title="覆盖率" value={embeddingStatus?.progress_percent || 0} suffix="%" />
                               </Card>
                             </Col>
@@ -795,22 +796,22 @@ const CollectConfigTab: React.FC = () => {
                           />
                           <Row gutter={16} style={{ marginBottom: 24 }}>
                             <Col span={6}>
-                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                              <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
                                 <Statistic title="开发者总数" value={osEmbeddingStatus?.total_developers || 0} />
                               </Card>
                             </Col>
                             <Col span={6}>
-                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
-                                <Statistic title="已生成向量" value={osEmbeddingStatus?.embedded_count || 0} valueStyle={{ color: '#52c41a' }} />
+                              <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
+                                <Statistic title="已生成向量" value={osEmbeddingStatus?.embedded_count || 0} valueStyle={{ color: semanticColors.green }} />
                               </Card>
                             </Col>
                             <Col span={6}>
-                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
-                                <Statistic title="待生成" value={osEmbeddingStatus?.pending_count || 0} valueStyle={{ color: '#faad14' }} />
+                              <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
+                                <Statistic title="待生成" value={osEmbeddingStatus?.pending_count || 0} valueStyle={{ color: semanticColors.gold }} />
                               </Card>
                             </Col>
                             <Col span={6}>
-                              <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                              <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
                                 <Statistic title="覆盖率" value={osEmbeddingStatus?.progress_percent || 0} suffix="%" />
                               </Card>
                             </Col>
@@ -972,12 +973,12 @@ const CollectConfigTab: React.FC = () => {
                 <Col span={4}><Statistic title="获取作者" value={selectedTask.result_summary?.total_authors || selectedTask.processed_records || 0} /></Col>
                 <Col span={4}><Statistic title="标准化作者" value={selectedTask.processed_records || 0} /></Col>
                 <Col span={4}><Statistic title="标准化院校" value={selectedTask.skipped_records || 0} /></Col>
-                <Col span={4}><Statistic title="入库人才" value={selectedTask.success_records || 0} valueStyle={{ color: '#52c41a' }} /></Col>
+                <Col span={4}><Statistic title="入库人才" value={selectedTask.success_records || 0} valueStyle={{ color: semanticColors.green }} /></Col>
                 <Col span={4}><Statistic title="更新人才" value={selectedTask.result_summary?.updated_talents || 0} /></Col>
               </Row>
               {selectedTask.result_summary && (
                 <Row gutter={16} style={{ marginTop: 16 }}>
-                  <Col span={4}><Statistic title="新建人才" value={selectedTask.result_summary.created_talents || 0} valueStyle={{ color: '#1890ff' }} /></Col>
+                  <Col span={4}><Statistic title="新建人才" value={selectedTask.result_summary.created_talents || 0} valueStyle={{ color: semanticColors.blue }} /></Col>
                   <Col span={4}><Statistic title="技术标签" value={selectedTask.result_summary.created_tech_tags || 0} /></Col>
                 </Row>
               )}

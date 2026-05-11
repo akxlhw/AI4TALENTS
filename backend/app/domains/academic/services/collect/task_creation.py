@@ -5,7 +5,7 @@ Task creation service for collection tasks.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,7 +37,7 @@ class TaskCreationService:
         self, mode: str, last_collect_at: datetime | None = None
     ) -> tuple[datetime, datetime]:
         """Calculate time window for collection"""
-        end_date = datetime.utcnow()
+        end_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if mode == "full" or not last_collect_at:
             start_date = datetime(self.FULL_COLLECTION_START_YEAR, 1, 1)
@@ -53,7 +53,7 @@ class TaskCreationService:
     ) -> CollectTask:
         """Create a new collection task"""
         # Generate task code
-        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        timestamp = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y%m%d%H%M%S")
         task_code = f"COL-{tech_domain_id}-{timestamp}"
 
         # Get time window
@@ -73,7 +73,7 @@ class TaskCreationService:
             time_window_start=start_date,
             time_window_end=end_date,
             triggered_by=triggered_by,
-            triggered_at=datetime.utcnow(),
+            triggered_at=datetime.now(timezone.utc).replace(tzinfo=None),
             status="pending",
         )
         self.session.add(task)

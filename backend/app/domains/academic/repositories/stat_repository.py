@@ -5,6 +5,7 @@ Repository for statistics operations.
 from __future__ import annotations
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.school import School
@@ -137,5 +138,5 @@ class StatisticsRepository:
         try:
             result = await self.session.execute(text("SELECT 1"))
             return result.scalar() == 1
-        except Exception:
+        except SQLAlchemyError:
             return False

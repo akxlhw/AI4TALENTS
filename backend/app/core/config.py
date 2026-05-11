@@ -95,6 +95,21 @@ class Settings(BaseSettings):
     EMBEDDING_DIMENSION: int = 1536  # Vector dimension
     EMBEDDING_BATCH_SIZE: int = 100  # Batch size for embedding generation
 
+    # LLM Gateway
+    LLM_MAX_BATCH_SIZE: int = 16  # Max requests per batch to LLM API
+
+    # HTTP Client Timeouts
+    HTTP_TIMEOUT_SHORT: float = 10.0  # For internal/health checks
+    HTTP_TIMEOUT_DEFAULT: float = 30.0  # For external API calls
+
+    # Data Sync
+    SYNC_COMMIT_BATCH_SIZE: int = 100  # Commit interval for raw data insertion
+
+    # GitHub API
+    GITHUB_PER_PAGE: int = 100  # Items per page for GitHub API
+    GITHUB_BATCH_SIZE: int = 5  # Concurrent repo requests (reduced to avoid burst detection)
+    GITHUB_RATE_LIMIT: int = 5000  # Requests per hour per token
+
     # Search Configuration (v1.4)
     SEARCH_DEFAULT_MODE: str = "keyword"  # keyword, fulltext, semantic, hybrid
     SEARCH_ENABLE_SEMANTIC: bool = True  # Enable semantic search

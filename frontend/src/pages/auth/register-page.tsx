@@ -3,6 +3,7 @@ import { Form, Input, Button, Card, Typography, Space, message } from 'antd'
 import { UserOutlined, LockOutlined, IdcardOutlined, MailOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../services/api'
+import { domainThemes } from '../../theme'
 
 const { Text } = Typography
 
@@ -66,7 +67,7 @@ const RegisterPage: React.FC = () => {
           WebkitBackdropFilter: 'blur(20px) saturate(130%)',
           boxShadow: '0 12px 48px rgba(30,58,95,0.08), 0 2px 8px rgba(30,58,95,0.04), inset 0 1px 0 rgba(255,255,255,0.8)',
         }}
-        bodyStyle={{ padding: '44px 36px' }}
+        styles={{ body: { padding: '44px 36px' } }}
       >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div style={{ textAlign: 'center', marginBottom: 8 }}>
@@ -74,7 +75,7 @@ const RegisterPage: React.FC = () => {
               style={{
                 fontSize: 22,
                 fontWeight: 700,
-                color: '#1a1a2e',
+                color: domainThemes.academic.primary,
                 letterSpacing: '2px',
               }}
             >

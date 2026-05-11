@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { semanticColors } from '../../../theme'
 import {
   Card,
   Space,
@@ -64,6 +65,7 @@ const ProxyConfigTab: React.FC = () => {
 
   useEffect(() => {
     loadProxyConfig()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleSaveProxyConfig = async () => {
@@ -182,7 +184,7 @@ const ProxyConfigTab: React.FC = () => {
               style={{ marginBottom: 12 }}
             />
             {testProxyResult.results && testProxyResult.results.length > 0 && (
-              <Card size="small" title="测试详情" style={{ background: '#fafafa' }}>
+              <Card size="small" title="测试详情" style={{ background: semanticColors.bgGrayLight }}>
                 {testProxyResult.results.map((result, index) => (
                   <div
                     key={index}
@@ -190,13 +192,13 @@ const ProxyConfigTab: React.FC = () => {
                       display: 'flex',
                       alignItems: 'flex-start',
                       padding: '8px 0',
-                      borderBottom: index < testProxyResult.results!.length - 1 ? '1px solid #f0f0f0' : 'none'
+                      borderBottom: index < testProxyResult.results!.length - 1 ? `1px solid ${semanticColors.borderGrayLight}` : 'none'
                     }}
                   >
                     {result.success ? (
-                      <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8, marginTop: 4 }} />
+                      <CheckCircleOutlined style={{ color: semanticColors.green, marginRight: 8, marginTop: 4 }} />
                     ) : (
-                      <CloseCircleOutlined style={{ color: '#ff4d4f', marginRight: 8, marginTop: 4 }} />
+                      <CloseCircleOutlined style={{ color: semanticColors.red, marginRight: 8, marginTop: 4 }} />
                     )}
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 500 }}>
@@ -211,7 +213,7 @@ const ProxyConfigTab: React.FC = () => {
                       <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
                         {result.url}
                       </div>
-                      <div style={{ fontSize: 12, color: result.success ? '#52c41a' : '#ff4d4f', marginTop: 2 }}>
+                      <div style={{ fontSize: 12, color: result.success ? semanticColors.green : semanticColors.red, marginTop: 2 }}>
                         {result.message}
                       </div>
                     </div>

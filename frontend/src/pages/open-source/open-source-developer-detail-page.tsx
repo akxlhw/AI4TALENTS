@@ -13,6 +13,7 @@ import {
   Empty,
   Table,
   Statistic,
+  message,
   } from 'antd'
 import {
   ArrowLeftOutlined,
@@ -28,6 +29,8 @@ import {
   CodeOutlined,
 } from '@ant-design/icons'
 import { api } from '../../services/api'
+import { getErrorMessage } from '../../utils'
+import { semanticColors, domainThemes } from '../../theme'
 import type { OSDeveloperDetail, OSRepository, OSContribution } from '../../types'
 
 const { Title, Text, Paragraph } = Typography
@@ -54,6 +57,7 @@ const DeveloperDetailPage: React.FC = () => {
         setIsFavorite((favoriteRes.data.developer_ids || []).includes(developerId))
       } catch (e) {
         console.error('Failed to load developer detail', e)
+        message.error(getErrorMessage(e, '加载开发者详情失败'))
       } finally {
         setLoading(false)
       }
@@ -72,11 +76,12 @@ const DeveloperDetailPage: React.FC = () => {
       }
     } catch (e) {
       console.error('Favorite toggle failed', e)
+      message.error(getErrorMessage(e, '收藏操作失败'))
     }
   }
 
-  const primary = '#2D3748'
-  const secondary = '#48BB78'
+  const primary = domainThemes.opensource.primary
+  const secondary = domainThemes.opensource.secondary
 
   if (loading) {
     return (
@@ -123,7 +128,7 @@ const DeveloperDetailPage: React.FC = () => {
       dataIndex: 'stars_count',
       key: 'stars_count',
       render: (stars: number) => (
-        <Space><StarOutlined style={{ color: '#F6AD55' }} />{stars}</Space>
+        <Space><StarOutlined style={{ color: semanticColors.osOrange }} />{stars}</Space>
       ),
       width: 120,
       sorter: (a: OSRepository, b: OSRepository) => a.stars_count - b.stars_count,
@@ -201,7 +206,7 @@ const DeveloperDetailPage: React.FC = () => {
       width: 200,
       render: (score: number) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ flex: 1, height: 8, background: '#E2E8F0', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ flex: 1, height: 8, background: semanticColors.divider, borderRadius: 4, overflow: 'hidden' }}>
             <div style={{ width: `${Math.min(score * 10, 100)}%`, height: '100%', background: secondary, borderRadius: 4 }} />
           </div>
           <Text style={{ fontSize: 12, minWidth: 32 }}>{score.toFixed(1)}</Text>
@@ -311,7 +316,7 @@ const DeveloperDetailPage: React.FC = () => {
       </Button>
 
       {/* Profile Header */}
-      <Card className="domain-card" style={{ marginBottom: 24 }} bodyStyle={{ padding: 32 }}>
+      <Card className="domain-card" style={{ marginBottom: 24 }} styles={{ body: { padding: 32 } }}>
         <Row gutter={32} align="middle">
           <Col>
             {detail.avatar_url ? (
@@ -353,7 +358,7 @@ const DeveloperDetailPage: React.FC = () => {
                   type={isFavorite ? 'primary' : 'default'}
                   icon={isFavorite ? <HeartFilled /> : <HeartOutlined />}
                   onClick={handleToggleFavorite}
-                  style={isFavorite ? { background: '#F56565', borderColor: '#F56565' } : {}}
+                  style={isFavorite ? { background: semanticColors.red, borderColor: semanticColors.red } : {}}
                 >
                   {isFavorite ? '已收藏' : '收藏'}
                 </Button>
@@ -366,13 +371,13 @@ const DeveloperDetailPage: React.FC = () => {
       {/* Stats Cards */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         {[
-          { title: 'Total Stars', value: detail.total_stars_received, icon: <StarOutlined />, color: '#F6AD55' },
-          { title: 'Total Forks', value: detail.total_forks_received, icon: <ForkOutlined />, color: '#38A169' },
+          { title: 'Total Stars', value: detail.total_stars_received, icon: <StarOutlined />, color: semanticColors.osOrange },
+          { title: 'Total Forks', value: detail.total_forks_received, icon: <ForkOutlined />, color: domainThemes.opensource.badgeBg },
           { title: 'Public Repos', value: detail.public_repos_count, icon: <GithubOutlined />, color: primary },
-          { title: 'Followers', value: detail.followers_count, icon: <UserOutlined />, color: '#3182CE' },
+          { title: 'Followers', value: detail.followers_count, icon: <UserOutlined />, color: semanticColors.osBlue },
         ].map((s) => (
           <Col span={6} key={s.title}>
-            <Card className="domain-card" size="small" bodyStyle={{ padding: '16px 20px' }}>
+            <Card className="domain-card" size="small" styles={{ body: { padding: '16px 20px' } }}>
               <Statistic
                 title={<Text style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{s.title}</Text>}
                 value={s.value}
@@ -385,7 +390,7 @@ const DeveloperDetailPage: React.FC = () => {
       </Row>
 
       {/* Language Tags */}
-      <Card className="domain-card" style={{ marginBottom: 24 }} size="small" bodyStyle={{ padding: 16 }}>
+      <Card className="domain-card" style={{ marginBottom: 24 }} size="small" styles={{ body: { padding: 16 } }}>
         <Text strong style={{ marginRight: 12 }}>技术栈:</Text>
         <Space wrap>
           {(detail.primary_languages || []).map((lang) => (

@@ -3,6 +3,7 @@ import { Form, Input, Button, Card, Typography, Space, message } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { domainThemes } from '../../theme'
 
 const { Text } = Typography
 
@@ -70,7 +71,7 @@ const LoginPage: React.FC = () => {
           WebkitBackdropFilter: 'blur(20px) saturate(130%)',
           boxShadow: '0 12px 48px rgba(30,58,95,0.08), 0 2px 8px rgba(30,58,95,0.04), inset 0 1px 0 rgba(255,255,255,0.8)',
         }}
-        bodyStyle={{ padding: '44px 36px', position: 'relative' }}
+        styles={{ body: { padding: '44px 36px', position: 'relative' } }}
       >
         {/* Register link — absolute top-right of card */}
         <a
@@ -86,7 +87,7 @@ const LoginPage: React.FC = () => {
             transition: 'color 0.2s',
             zIndex: 1,
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#1a1a2e' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = domainThemes.academic.primary }}
           onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
         >
           注册账号 →
@@ -122,7 +123,7 @@ const LoginPage: React.FC = () => {
                 style={{
                   fontSize: 24,
                   fontWeight: 600,
-                  color: '#1a1a2e',
+                  color: domainThemes.academic.primary,
                   letterSpacing: '2px',
                 }}
               >

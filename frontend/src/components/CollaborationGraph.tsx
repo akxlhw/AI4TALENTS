@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { Empty, Spin, Typography, Space } from 'antd'
+import { semanticColors } from '../theme'
 
 const { Text } = Typography
 
@@ -40,7 +41,7 @@ const CollaborationGraph: React.FC<CollaborationGraphProps> = ({
       symbolSize: Math.min(50, 20 + node.collaborationCount * 5),
       category: index === 0 ? 0 : 1,
       itemStyle: {
-        color: index === 0 ? '#1890ff' : '#91d5ff',
+        color: index === 0 ? semanticColors.blue : '#91d5ff',
       },
       label: {
         show: true,

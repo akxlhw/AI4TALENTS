@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { semanticColors } from '../../../theme'
 import {
   Card,
   Table,
@@ -37,13 +38,13 @@ const { Text } = Typography
 
 const getTaskStatusConfig = (status: string) => {
   const map: Record<string, { label: string; status: 'success' | 'processing' | 'error' | 'warning' | 'default'; color: string; icon: React.ReactNode }> = {
-    pending: { label: '等待中', status: 'default', color: '#999', icon: <ClockCircleOutlined /> },
-    running: { label: '运行中', status: 'processing', color: '#1890ff', icon: <ThunderboltOutlined /> },
-    completed: { label: '已完成', status: 'success', color: '#52c41a', icon: <CheckCircleOutlined /> },
-    failed: { label: '失败', status: 'error', color: '#ff4d4f', icon: <CloseCircleOutlined /> },
-    cancelled: { label: '已取消', status: 'warning', color: '#faad14', icon: <CloseCircleOutlined /> },
+    pending: { label: '等待中', status: 'default', color: semanticColors.textGray, icon: <ClockCircleOutlined /> },
+    running: { label: '运行中', status: 'processing', color: semanticColors.blue, icon: <ThunderboltOutlined /> },
+    completed: { label: '已完成', status: 'success', color: semanticColors.green, icon: <CheckCircleOutlined /> },
+    failed: { label: '失败', status: 'error', color: semanticColors.red, icon: <CloseCircleOutlined /> },
+    cancelled: { label: '已取消', status: 'warning', color: semanticColors.gold, icon: <CloseCircleOutlined /> },
   }
-  return map[status] || { label: status, status: 'default', color: '#999', icon: null }
+  return map[status] || { label: status, status: 'default', color: semanticColors.textGray, icon: null }
 }
 
 const OSCollectTaskSubTab: React.FC = () => {
@@ -262,17 +263,17 @@ const OSCollectTaskSubTab: React.FC = () => {
 
             <Row gutter={16} style={{ marginTop: 16 }}>
               <Col span={8}>
-                <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
                   <Statistic title="总记录数" value={selectedTask.total_records} />
                 </Card>
               </Col>
               <Col span={8}>
-                <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
                   <Statistic title="已处理" value={selectedTask.processed_records} />
                 </Card>
               </Col>
               <Col span={8}>
-                <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
+                <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
                   <Statistic
                     title="成功率"
                     value={

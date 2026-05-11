@@ -30,6 +30,39 @@ class VenueService:
         self.binding_repo = VenueTechBindingRepository(session)
         self.tech_domain_repo = TechDomainRepository(session)
 
+    async def get_venue_list(
+        self,
+        venue_type: str | None = None,
+        is_enabled: bool | None = None,
+        keyword: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Venue], int]:
+        """Get venue list with filters and pagination."""
+        return await self.venue_repo.get_list(
+            venue_type=venue_type,
+            is_enabled=is_enabled,
+            keyword=keyword,
+            page=page,
+            page_size=page_size,
+        )
+
+    async def get_venue_by_id(self, venue_id: int) -> Venue | None:
+        """Get venue by ID."""
+        return await self.venue_repo.get_by_id(venue_id)
+
+    async def get_venue_bindings(
+        self, venue_id: int, is_enabled: bool | None = None
+    ) -> list[VenueTechBinding]:
+        """Get all bindings for a venue."""
+        return await self.binding_repo.get_by_venue(venue_id, is_enabled)
+
+    async def get_tech_domain_bindings_with_venue(
+        self, tech_domain_id: int, is_enabled: bool | None = None
+    ) -> list[VenueTechBinding]:
+        """Get bindings with venue info for a tech domain."""
+        return await self.binding_repo.get_list_with_venue(tech_domain_id, is_enabled)
+
     async def create_venue(self, data: VenueCreate) -> Venue:
         """Create a new venue with validation."""
         # Check if code exists

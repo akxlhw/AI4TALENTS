@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import get_cache_connection
 from app.core.database import get_async_session
-from app.domains.academic.repositories.tech_domain_repository import TechDomainRepository
 from app.domains.academic.schemas.tech_domain import (
     CountryDistributionItem,
     CountryDistributionResponse,
@@ -23,6 +22,7 @@ from app.domains.academic.schemas.tech_domain import (
     TechDomainStatsResponse,
     TechDomainSummary,
 )
+from app.domains.academic.services.tech_domain_service import TechDomainService
 from app.domains.shared.schemas.common import PaginatedResponse
 from app.domains.shared.services.cache_keys import CacheKeys, CacheTTL
 from app.domains.shared.services.cache_service import CacheService
@@ -40,8 +40,8 @@ async def list_tech_domains(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get all tech domains with their directions."""
-    repo = TechDomainRepository(session)
-    domains = await repo.get_all_domains()
+    service = TechDomainService(session)
+    domains = await service.get_all_domains()
 
     items = [
         TechDomainResponse(
@@ -80,8 +80,8 @@ async def get_tech_domain_summary(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get tech domain summary statistics."""
-    repo = TechDomainRepository(session)
-    stats = await repo.get_domain_stats()
+    service = TechDomainService(session)
+    stats = await service.get_domain_stats()
     return TechDomainSummary(**stats)
 
 
@@ -95,12 +95,12 @@ async def get_overall_stats(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get overall statistics for user's permission scope."""
+    service = TechDomainService(session)
     cache_conn = await get_cache_connection()
     cache = CacheService(cache_conn)
 
     async def fetch_stats():
-        repo = TechDomainRepository(session)
-        return await repo.get_overall_stats()
+        return await service.get_overall_stats()
 
     stats = await cache.get_or_set(
         CacheKeys.STATS_OVERALL,
@@ -110,8 +110,7 @@ async def get_overall_stats(
 
     if not stats:
         # Fallback to direct query
-        repo = TechDomainRepository(session)
-        stats = await repo.get_overall_stats()
+        stats = await service.get_overall_stats()
 
     return OverallStatsResponse(**stats)
 
@@ -126,8 +125,8 @@ async def get_overall_country_distribution(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get overall country distribution."""
-    repo = TechDomainRepository(session)
-    items = await repo.get_country_distribution()
+    service = TechDomainService(session)
+    items = await service.get_country_distribution()
     return CountryDistributionResponse(items=[CountryDistributionItem(**item) for item in items])
 
 
@@ -143,8 +142,8 @@ async def get_overall_school_distribution(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get overall school distribution."""
-    repo = TechDomainRepository(session)
-    items, total = await repo.get_school_distribution(page=page, page_size=page_size)
+    service = TechDomainService(session)
+    items, total = await service.get_school_distribution(page=page, page_size=page_size)
     return SchoolDistributionResponse(
         items=[SchoolDistributionItem(**item) for item in items],
         total=total,
@@ -167,8 +166,8 @@ async def get_overall_talents(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get overall talent list."""
-    repo = TechDomainRepository(session)
-    talents, total = await repo.get_talent_list(
+    service = TechDomainService(session)
+    talents, total = await service.get_talent_list(
         country_code=country_code,
         school_id=school_id,
         role_type=role_type,
@@ -212,8 +211,8 @@ async def get_tech_domain(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get a specific tech domain by ID."""
-    repo = TechDomainRepository(session)
-    domain = await repo.get_domain_by_id(domain_id)
+    service = TechDomainService(session)
+    domain = await service.get_domain_by_id(domain_id)
 
     if not domain:
         raise HTTPException(status_code=404, detail="Tech domain not found")
@@ -251,10 +250,10 @@ async def get_domain_stats(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get statistics for a specific tech domain."""
-    repo = TechDomainRepository(session)
+    service = TechDomainService(session)
 
     # Verify domain exists
-    domain = await repo.get_domain_by_id(domain_id)
+    domain = await service.get_domain_by_id(domain_id)
     if not domain:
         raise HTTPException(status_code=404, detail="Tech domain not found")
 
@@ -263,7 +262,7 @@ async def get_domain_stats(
     cache_key = CacheKeys.STATS_TECH_DOMAIN.format(domain_id=domain_id)
 
     async def fetch_stats():
-        return await repo.get_domain_stats(domain_id)
+        return await service.get_domain_stats(domain_id)
 
     stats = await cache.get_or_set(
         cache_key,
@@ -273,7 +272,7 @@ async def get_domain_stats(
 
     if not stats:
         # Fallback to direct query
-        stats = await repo.get_domain_stats(domain_id)
+        stats = await service.get_domain_stats(domain_id)
 
     return TechDomainStatsResponse(**stats)
 
@@ -290,14 +289,14 @@ async def get_domain_country_distribution(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get country distribution for a tech domain."""
-    repo = TechDomainRepository(session)
+    service = TechDomainService(session)
 
     # Verify domain exists
-    domain = await repo.get_domain_by_id(domain_id)
+    domain = await service.get_domain_by_id(domain_id)
     if not domain:
         raise HTTPException(status_code=404, detail="Tech domain not found")
 
-    items = await repo.get_country_distribution(domain_id, direction_id)
+    items = await service.get_country_distribution(domain_id, direction_id)
     return CountryDistributionResponse(items=[CountryDistributionItem(**item) for item in items])
 
 
@@ -316,14 +315,14 @@ async def get_domain_school_distribution(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get school distribution for a tech domain."""
-    repo = TechDomainRepository(session)
+    service = TechDomainService(session)
 
     # Verify domain exists
-    domain = await repo.get_domain_by_id(domain_id)
+    domain = await service.get_domain_by_id(domain_id)
     if not domain:
         raise HTTPException(status_code=404, detail="Tech domain not found")
 
-    items, total = await repo.get_school_distribution(
+    items, total = await service.get_school_distribution(
         domain_id=domain_id,
         direction_id=direction_id,
         country_code=country_code,
@@ -354,14 +353,14 @@ async def get_domain_talents(
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get talent list for a tech domain."""
-    repo = TechDomainRepository(session)
+    service = TechDomainService(session)
 
     # Verify domain exists
-    domain = await repo.get_domain_by_id(domain_id)
+    domain = await service.get_domain_by_id(domain_id)
     if not domain:
         raise HTTPException(status_code=404, detail="Tech domain not found")
 
-    talents, total = await repo.get_talent_list(
+    talents, total = await service.get_talent_list(
         domain_id=domain_id,
         direction_id=direction_id,
         country_code=country_code,

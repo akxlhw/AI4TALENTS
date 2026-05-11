@@ -13,6 +13,7 @@ import {
   Button,
   Empty,
   Badge,
+  message,
 } from 'antd'
 import {
   BankOutlined,
@@ -22,9 +23,11 @@ import {
   TrophyOutlined,
 } from '@ant-design/icons'
 import { api } from '../../services/api'
+import { semanticColors } from '../../theme'
 import { getRoleTypeConfig, ROLE_TYPE_MAP } from '../../constants/roleType'
 import TopicTags from '../../components/TopicTags'
 import { formatNumber } from '../../utils/format'
+import { getErrorMessage } from '../../utils'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -86,6 +89,7 @@ const SchoolDetailPage: React.FC = () => {
       setSchool(response.data)
     } catch (error) {
       console.error('Failed to fetch school detail:', error)
+      message.error(getErrorMessage(error, '加载院校详情失败'))
     } finally {
       setLoading(false)
     }
@@ -106,6 +110,7 @@ const SchoolDetailPage: React.FC = () => {
       setPage(pageNum)
     } catch (error) {
       console.error('Failed to fetch talents:', error)
+      message.error(getErrorMessage(error, '加载人才列表失败'))
     } finally {
       setTalentsLoading(false)
     }
@@ -212,7 +217,7 @@ const SchoolDetailPage: React.FC = () => {
           <Col flex="auto">
             <Space direction="vertical" size={8}>
               <Title level={2} style={{ margin: 0 }}>
-                <BankOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                <BankOutlined style={{ marginRight: 8, color: semanticColors.blue }} />
                 {school.school_name}
                 {school.school_alias && (
                   <Text type="secondary" style={{ fontSize: 18, marginLeft: 8 }}>
@@ -250,7 +255,7 @@ const SchoolDetailPage: React.FC = () => {
               title="总人才数"
               value={school.talent_count}
               prefix={<TeamOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              valueStyle={{ color: semanticColors.blue }}
             />
           </Col>
           <Col xs={12} sm={6}>
@@ -258,7 +263,7 @@ const SchoolDetailPage: React.FC = () => {
               title="教授/研究员"
               value={school.professor_count}
               prefix={<TrophyOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: semanticColors.green }}
             />
           </Col>
           <Col xs={12} sm={6}>
@@ -266,14 +271,14 @@ const SchoolDetailPage: React.FC = () => {
               title="学生"
               value={school.student_count}
               prefix={<UserOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              valueStyle={{ color: semanticColors.gold }}
             />
           </Col>
           <Col xs={12} sm={6}>
             <Statistic
               title="毕业生"
               value={school.graduate_count}
-              valueStyle={{ color: '#722ed1' }}
+              valueStyle={{ color: semanticColors.purple }}
             />
           </Col>
         </Row>
@@ -285,7 +290,7 @@ const SchoolDetailPage: React.FC = () => {
           <Space>
             <TeamOutlined />
             <span>人才列表</span>
-            <Badge count={talentsTotal} showZero style={{ backgroundColor: '#1890ff' }} />
+            <Badge count={talentsTotal} showZero style={{ backgroundColor: semanticColors.blue }} />
           </Space>
         }
         extra={

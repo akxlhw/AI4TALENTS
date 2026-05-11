@@ -7,7 +7,7 @@ Talent Service - 统一的人才服务入口
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -173,8 +173,42 @@ class TalentService:
         Returns:
             List[dict]: 合作者列表
         """
-        # TODO: 实现合作者查询
-        return []
+        from app.domains.academic.models.collaboration import Collaboration
+
+        # Find collaborations where this talent is either side
+        stmt = (
+            select(Collaboration, Talent)
+            .join(Talent, Talent.talent_id == Collaboration.talent_id_2)
+            .where(Collaboration.talent_id_1 == talent_id)
+        )
+        result = await self.session.execute(stmt)
+        rows_1 = result.all()
+
+        stmt = (
+            select(Collaboration, Talent)
+            .join(Talent, Talent.talent_id == Collaboration.talent_id_1)
+            .where(Collaboration.talent_id_2 == talent_id)
+        )
+        result = await self.session.execute(stmt)
+        rows_2 = result.all()
+
+        collaborators = []
+        seen_ids: set[int] = set()
+        for collab, talent in rows_1 + rows_2:
+            if talent.talent_id in seen_ids:
+                continue
+            seen_ids.add(talent.talent_id)
+            collaborators.append({
+                "talent_id": talent.talent_id,
+                "name": talent.name,
+                "title": talent.title,
+                "school_name": talent.school_name,
+                "collaboration_count": collab.collaboration_count,
+                "last_collaboration_year": collab.last_collaboration_year,
+            })
+
+        collaborators.sort(key=lambda x: x["collaboration_count"], reverse=True)
+        return collaborators[:limit]
 
     async def get_statistics(self) -> dict:
         """
@@ -245,6 +279,18 @@ class TalentService:
         total = await self.talent_repo.search_count(keyword=keyword, role_type=role_type)
         return results, total
 
+    async def get_talent_tech_tags(self, talent_id: int) -> list[tuple]:
+        """
+        获取人才的技术标签（含领域和方向信息）
+
+        Args:
+            talent_id: 人才ID
+
+        Returns:
+            List[Tuple[TalentTechTag, TechDomain, TechDirection]]
+        """
+        return await self.talent_repo.get_talent_tech_tags(talent_id)
+
     async def update_talent(self, talent_id: int, updates: dict) -> Talent | None:
         """
         更新人才信息
@@ -264,6 +310,6 @@ class TalentService:
             if hasattr(talent, key):
                 setattr(talent, key, value)
 
-        talent.updated_at = datetime.utcnow()
+        talent.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         await self.session.flush()
         return talent

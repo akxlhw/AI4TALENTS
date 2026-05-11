@@ -8,6 +8,7 @@
  */
 import React from 'react'
 import { Tag, Tooltip } from 'antd'
+import { semanticColors } from '../theme'
 
 interface TopicTagsProps {
   tags: string[]
@@ -94,8 +95,8 @@ const TopicTags: React.FC<TopicTagsProps> = ({
           <Tag
             style={{
               ...tagStyle,
-              background: '#f5f5f5',
-              border: '1px dashed #d9d9d9',
+              background: semanticColors.bgGray,
+              border: `1px dashed ${semanticColors.borderGray}`,
               color: '#666',
               flexShrink: 0,
             }}

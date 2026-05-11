@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15
+        image: pgvector/pgvector:pg15
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -42,6 +42,12 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
         run: uv run pytest tests/ -v --tb=short
+
+      - name: Run slow tests
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+        run: uv run pytest tests/ -v --tb=short -m slow
 
   # Backend linting (mypy)
   backend-lint:

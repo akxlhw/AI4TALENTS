@@ -1,5 +1,7 @@
 -- 智能人才库 - 数据库初始化脚本
--- 可在PostgreSQL中手动执行
+-- ⚠️ 注意：本文件可能不完全同步于最新模型定义。
+-- 生产环境请优先使用 Alembic migrations (`make migrate`)。
+-- 本文件仅作为参考和快速预览用途。
 
 -- 启用扩展
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

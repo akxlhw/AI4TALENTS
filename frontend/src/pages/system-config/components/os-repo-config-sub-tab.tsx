@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { semanticColors } from '../../../theme'
 import {
   Card,
   Table,
@@ -35,12 +36,12 @@ import { getErrorMessage } from './utils'
 const { Text } = Typography
 
 const TECH_ELEMENTS = [
-  { value: 'ai', label: '人工智能', color: '#2D3748' },
-  { value: 'robotics', label: '机器人', color: '#38A169' },
-  { value: 'data_science', label: '数据科学', color: '#3182CE' },
-  { value: 'networks', label: '网络与通信', color: '#DD6B20' },
-  { value: 'systems', label: '系统与软件', color: '#805AD5' },
-  { value: 'security', label: '信息安全', color: '#E53E3E' },
+  { value: 'ai', label: '人工智能', color: semanticColors.osPurple },
+  { value: 'robotics', label: '机器人', color: semanticColors.osGreen },
+  { value: 'data_science', label: '数据科学', color: semanticColors.osBlue },
+  { value: 'networks', label: '网络与通信', color: semanticColors.osOrangeDark },
+  { value: 'systems', label: '系统与软件', color: semanticColors.osPurple },
+  { value: 'security', label: '信息安全', color: semanticColors.osRed },
 ]
 
 const getTechElementLabel = (code: string) => {
@@ -318,7 +319,7 @@ const OSRepoConfigSubTab: React.FC = () => {
         {selectedRowKeys.length > 0 && (
           <div
             style={{
-              background: '#fafafa',
+              background: semanticColors.bgGrayLight,
               padding: '8px 16px',
               marginBottom: 16,
               borderRadius: 4,

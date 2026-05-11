@@ -16,7 +16,6 @@ import {
   Col,
   Button,
   Dropdown,
-  Menu,
   message,
   Modal,
   Tooltip,
@@ -32,6 +31,7 @@ import {
   UserAddOutlined,
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
+import { semanticColors } from '../../../theme'
 import FavoriteButton from '../../../components/FavoriteButton'
 import TalentCompareModal from '../../../components/TalentCompareModal'
 import TopicTags from '../../../components/TopicTags'
@@ -287,9 +287,10 @@ const SearchTab: React.FC<SearchTabProps> = ({
     }
   }
 
-  const exportMenu = (
-    <Menu items={[{ key: 'csv', label: '导出 CSV' }, { key: 'xlsx', label: '导出 Excel' }]} onClick={(e) => handleExport(e.key as 'csv' | 'xlsx')} />
-  )
+  const exportMenu = {
+    items: [{ key: 'csv', label: '导出 CSV' }, { key: 'xlsx', label: '导出 Excel' }],
+    onClick: (e: { key: string }) => handleExport(e.key as 'csv' | 'xlsx'),
+  }
 
   const handleCompare = () => {
     if (selectedRowKeys.length < 2 || selectedRowKeys.length > 4) {
@@ -299,17 +300,15 @@ const SearchTab: React.FC<SearchTabProps> = ({
     setCompareModalVisible(true)
   }
 
-  const sortMenu = (
-    <Menu
-      onClick={(e) => { const [field, order] = e.key.split('-'); setSortBy(field); setSortOrder(order as 'desc' | 'asc'); performSearch(query, 1) }}
-      items={[
-        { key: 'cited_by_count-desc', label: '引用数 (高到低)' },
-        { key: 'cited_by_count-asc', label: '引用数 (低到高)' },
-        { key: 'works_count-desc', label: '论文数 (高到低)' },
-        { key: 'works_count-asc', label: '论文数 (低到高)' },
-      ]}
-    />
-  )
+  const sortMenu = {
+    onClick: (e: { key: string }) => { const [field, order] = e.key.split('-'); setSortBy(field); setSortOrder(order as 'desc' | 'asc'); performSearch(query, 1) },
+    items: [
+      { key: 'cited_by_count-desc', label: '引用数 (高到低)' },
+      { key: 'cited_by_count-asc', label: '引用数 (低到高)' },
+      { key: 'works_count-desc', label: '论文数 (高到低)' },
+      { key: 'works_count-asc', label: '论文数 (低到高)' },
+    ],
+  }
 
   const hasActiveFilters = roleFilter || schoolFilter || minCitations || countryFilter || techDomainFilter
 
@@ -329,7 +328,7 @@ const SearchTab: React.FC<SearchTabProps> = ({
       render: (name: string, record: SearchTalent) => {
         const similarity = record.similarity_score
         const isSimilarRecommend = similarity !== undefined && similarity >= 0.7 && similarity < 0.9
-        const nameStyle = isSimilarRecommend ? { fontWeight: 500, color: '#fa8c16' } : { fontWeight: 500 }
+        const nameStyle = isSimilarRecommend ? { fontWeight: 500, color: semanticColors.orange } : { fontWeight: 500 }
 
         const nameContent = (
           <a onClick={() => navigate(`/talents/${record.talent_id}`)} style={nameStyle}>
@@ -422,7 +421,7 @@ const SearchTab: React.FC<SearchTabProps> = ({
             />
           </Col>
           <Col>
-            <Dropdown overlay={sortMenu} trigger={['click']}>
+            <Dropdown menu={sortMenu} trigger={['click']}>
               <Button size="large" icon={sortOrder === 'desc' ? <SortDescendingOutlined /> : <SortAscendingOutlined />}>
                 排序 <DownOutlined />
               </Button>
@@ -435,7 +434,7 @@ const SearchTab: React.FC<SearchTabProps> = ({
       {query.trim() && tookMs && (
         <Alert
           message={
-            <Space split={<span style={{ color: '#d9d9d9' }}>|</span>}>
+            <Space split={<span style={{ color: semanticColors.borderGray }}>|</span>}>
               <Space>
                 <ThunderboltOutlined style={{ color: 'var(--domain-primary)' }} />
                 <span>
@@ -450,7 +449,7 @@ const SearchTab: React.FC<SearchTabProps> = ({
               {(fulltextMatchCount > 0 || semanticMatchCount > 0) && (
                 <>
                   {fulltextMatchCount > 0 && (
-                    <span style={{ color: '#fa8c16' }}>
+                    <span style={{ color: semanticColors.orange }}>
                       关键词匹配 {fulltextMatchCount} 人
                     </span>
                   )}
@@ -471,7 +470,7 @@ const SearchTab: React.FC<SearchTabProps> = ({
       )}
 
       {/* Filters */}
-      <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 24px' }}>
+      <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 24px' } }}>
         <Row gutter={[16, 8]}>
           <Col span={24}>
             <Space size={8} wrap>
@@ -488,14 +487,14 @@ const SearchTab: React.FC<SearchTabProps> = ({
       </Card>
 
       {/* Results */}
-      <Card bodyStyle={{ padding: 0 }}>
+      <Card styles={{ body: { padding: 0 } }}>
         {selectedRowKeys.length > 0 && (
-          <div style={{ padding: '12px 16px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
+          <div style={{ padding: '12px 16px', background: semanticColors.bgGrayLight, borderBottom: `1px solid ${semanticColors.borderGrayLight}` }}>
             <Space>
               <Text>已选择 <strong>{selectedRowKeys.length}</strong> 项</Text>
               <Button size="small" onClick={() => setSelectedRowKeys([])}>取消选择</Button>
               <Button size="small" onClick={handleCompare} disabled={selectedRowKeys.length < 2 || selectedRowKeys.length > 4}>对比 ({selectedRowKeys.length}/4)</Button>
-              <Dropdown overlay={exportMenu} trigger={['click']}>
+              <Dropdown menu={exportMenu} trigger={['click']}>
                 <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>导出 <DownOutlined /></Button>
               </Dropdown>
             </Space>

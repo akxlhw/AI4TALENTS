@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.open_source.models.open_source import OSDeveloper
-from app.domains.open_source.repositories.open_source_repository import (
+from app.domains.open_source.repositories.open_source import (
     OpenSourceRepository,
 )
 from app.domains.shared.services.llm.errors import EmbeddingError

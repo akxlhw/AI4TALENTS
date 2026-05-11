@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import select
@@ -127,6 +127,49 @@ class JDMatchService:
         self._session_counter = 0  # 简化的会话计数器
         self.talent_repo = talent_repository or TalentRepository(session)
 
+    @classmethod
+    async def create_from_session(cls, session: AsyncSession) -> JDMatchService:
+        """
+        从数据库配置创建 JDMatchService 实例。
+
+        内部处理 LLM 配置读取和 LLMGateway 构建，
+        使 API 层无需直接接触 LLMGateway。
+
+        Args:
+            session: 数据库会话
+
+        Returns:
+            JDMatchService: 配置好的服务实例
+
+        Raises:
+            ValueError: 如果 LLM 未启用或未配置 API Key
+        """
+        from app.core.config import settings
+        from app.domains.shared.services.config_service import ConfigService
+        from app.domains.shared.services.llm import LLMGateway
+
+        config_service = ConfigService(session)
+        llm_config = await config_service.get_llm_config()
+
+        if not llm_config.enabled:
+            raise ValueError("LLM 功能未启用。请在系统配置中启用 LLM 并配置 API Key。")
+
+        if not llm_config.api_key:
+            raise ValueError("LLM API Key 未配置。请在系统配置中设置 API Key。")
+
+        llm_gateway = LLMGateway(
+            api_key=llm_config.api_key,
+            api_base=llm_config.api_base,
+            model=llm_config.model,
+            embedding_model=llm_config.embedding_model,
+            timeout=llm_config.timeout or 60,
+            enable_fallback=settings.LLM_ENABLE_FALLBACK,
+            api_format=llm_config.api_format,
+            embedding_api_format=llm_config.embedding_api_format,
+        )
+
+        return cls(session=session, llm_gateway=llm_gateway)
+
     async def parse_jd(self, jd_text: str) -> JDFeatures:
         """
         解析 JD 文本
@@ -183,7 +226,7 @@ class JDMatchService:
             user_id=user_id,
             jd_text=jd_text,
             status="pending",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         self.session.add(db_session)
         await self.session.flush()  # 获取 session_id
@@ -223,13 +266,13 @@ class JDMatchService:
                     experience_score=None,
                     match_reasons=item.match_reasons,
                     highlight_skills=[],
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
                 self.session.add(result)
 
             # 更新会话状态
             db_session.status = "completed"
-            db_session.completed_at = datetime.utcnow()
+            db_session.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
             took_ms = (time.time() - start_time) * 1000
 
@@ -247,7 +290,7 @@ class JDMatchService:
             logger.error(f"JD match failed: {e}")
             # 更新会话状态为失败
             db_session.status = "failed"
-            db_session.completed_at = datetime.utcnow()
+            db_session.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             await self.session.commit()  # 保存失败状态
             raise
 

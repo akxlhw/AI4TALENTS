@@ -40,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **安全修复**：移除 `jd_match.py` 中硬编码的 `user_id = 15`，未认证用户现在将收到 401 错误
 - **架构一致性**：清理 `database.py` 中残留的 SQLite 降级代码，与文档声明保持一致
 - **Makefile 修复**：`make test` 现在同时运行后端和前端测试
+- **测试性能优化**：`conftest.py` 重构为全局 `_TABLES_INITIALIZED` 标记，首次建表后续 TRUNCATE，全量测试耗时从 ~25min 降至 ~9min
+- **pgvector 测试支持**：修复测试数据库 pgvector 扩展检测逻辑，`requires_pgvector` 改为动态检测，10 个向量相关测试全部启用
+- **测试稳定性**：修复 `test_cancel_embedding_no_task` 全局状态污染问题
 
 ## [1.4.2] - 2026-04-26
 

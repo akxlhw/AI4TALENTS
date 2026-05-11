@@ -20,7 +20,7 @@ class SearchContext:
     talent_repo: TalentRepository
     embedding_service: Any
     config: SearchConfig
-    strategies: dict[str, "SearchStrategy"] = field(default_factory=dict)
+    strategies: dict[str, SearchStrategy] = field(default_factory=dict)
 
 
 class SearchStrategy(ABC):

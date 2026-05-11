@@ -18,7 +18,6 @@ import {
   message,
   Tooltip,
   Dropdown,
-  Menu,
   Tabs,
 } from 'antd'
 import {
@@ -34,6 +33,7 @@ import {
 } from '@ant-design/icons'
 import { api } from '../../services/api'
 import TalentCompareModal from '../../components/TalentCompareModal'
+import { semanticColors } from '../../theme'
 import { getRoleTypeConfig, getFollowupStatusConfig } from '../../constants'
 import type { FavoriteTalent, TalentPool, FollowupStatus } from '../../types'
 
@@ -280,15 +280,13 @@ const FavoritesPage: React.FC = () => {
     }
   }
 
-  const exportMenu = (
-    <Menu
-      items={[
-        { key: 'csv', label: '导出 CSV' },
-        { key: 'xlsx', label: '导出 Excel' },
-      ]}
-      onClick={(e) => handleExport(e.key as 'csv' | 'xlsx')}
-    />
-  )
+  const exportMenu = {
+    items: [
+      { key: 'csv', label: '导出 CSV' },
+      { key: 'xlsx', label: '导出 Excel' },
+    ],
+    onClick: (e: { key: string }) => handleExport(e.key as 'csv' | 'xlsx'),
+  }
 
   const handleCompare = () => {
     if (selectedRowKeys.length < 2 || selectedRowKeys.length > 4) {
@@ -308,7 +306,7 @@ const FavoritesPage: React.FC = () => {
         <a onClick={() => navigate(`/talents/${record.talent_id}`)} style={{ fontWeight: 500 }}>
           <Space direction="vertical" size={0}>
             <span>
-              <StarFilled style={{ color: '#faad14', marginRight: 6 }} />
+              <StarFilled style={{ color: semanticColors.gold, marginRight: 6 }} />
               {name}
             </span>
             {record.name_en && (
@@ -433,178 +431,181 @@ const FavoritesPage: React.FC = () => {
   return (
     <div style={{ padding: '88px 32px 80px' }}>
       <Title level={3}>
-        <StarFilled style={{ marginRight: 8, color: '#faad14' }} />
+        <StarFilled style={{ marginRight: 8, color: semanticColors.gold }} />
         我的收藏
       </Title>
 
-      <Tabs activeKey={activeTab} onChange={setActiveTab}>
-        <Tabs.TabPane
-          tab={<><StarFilled /> 收藏列表</>}
-          key="favorites"
-        >
-          {/* Filters */}
-          <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 24px' }}>
-            <Row gutter={16} align="middle">
-              <Col>
-                <Space size={8}>
-                  <Text type="secondary">筛选:</Text>
+      <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
+        {
+          key: 'favorites',
+          label: <><StarFilled /> 收藏列表</>,
+          children: (
+            <>
+              {/* Filters */}
+              <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 24px' } }}>
+                <Row gutter={16} align="middle">
+                  <Col>
+                    <Space size={8}>
+                      <Text type="secondary">筛选:</Text>
 
-                  <Select
-                    placeholder="角色"
-                    value={roleFilter}
-                    onChange={(val) => { setRoleFilter(val); setPage(1); }}
-                    allowClear
-                    style={{ width: 140 }}
-                    options={[
-                      { value: 'professor', label: '教授/研究员' },
-                      { value: 'student', label: '学生' },
-                      { value: 'graduated', label: '毕业生' },
-                    ]}
-                  />
+                      <Select
+                        placeholder="角色"
+                        value={roleFilter}
+                        onChange={(val) => { setRoleFilter(val); setPage(1); }}
+                        allowClear
+                        style={{ width: 140 }}
+                        options={[
+                          { value: 'professor', label: '教授/研究员' },
+                          { value: 'student', label: '学生' },
+                          { value: 'graduated', label: '毕业生' },
+                        ]}
+                      />
 
-                  <Select
-                    placeholder="跟进状态"
-                    value={followupFilter}
-                    onChange={(val) => { setFollowupFilter(val); setPage(1); }}
-                    allowClear
-                    style={{ width: 120 }}
-                    options={followupStatuses}
-                  />
+                      <Select
+                        placeholder="跟进状态"
+                        value={followupFilter}
+                        onChange={(val) => { setFollowupFilter(val); setPage(1); }}
+                        allowClear
+                        style={{ width: 120 }}
+                        options={followupStatuses}
+                      />
 
-                  <Input.Search
-                    placeholder="搜索姓名..."
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                    onSearch={handleSearch}
-                    allowClear
-                    style={{ width: 200 }}
-                    enterButton={<SearchOutlined />}
-                  />
+                      <Input.Search
+                        placeholder="搜索姓名..."
+                        value={keyword}
+                        onChange={(e) => setKeyword(e.target.value)}
+                        onSearch={handleSearch}
+                        allowClear
+                        style={{ width: 200 }}
+                        enterButton={<SearchOutlined />}
+                      />
 
-                  {(roleFilter || keyword || followupFilter) && (
-                    <Button type="link" onClick={handleResetFilters}>
-                      重置筛选
-                    </Button>
-                  )}
-                </Space>
-              </Col>
-            </Row>
-          </Card>
-
-          {/* Table */}
-          <Card bodyStyle={{ padding: 0 }}>
-            {selectedRowKeys.length > 0 && (
-              <div style={{ padding: '12px 16px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
-                <Space>
-                  <Text>已选择 <strong>{selectedRowKeys.length}</strong> 项</Text>
-                  <Button size="small" onClick={() => setSelectedRowKeys([])}>取消选择</Button>
-                  <Button
-                    size="small"
-                    onClick={handleCompare}
-                    disabled={selectedRowKeys.length < 2 || selectedRowKeys.length > 4}
-                  >
-                    对比 ({selectedRowKeys.length}/4)
-                  </Button>
-                  <Dropdown overlay={exportMenu} trigger={['click']}>
-                    <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>
-                      导出 <DownOutlined />
-                    </Button>
-                  </Dropdown>
-                </Space>
-              </div>
-            )}
-            <Spin spinning={loading}>
-              <Table
-                dataSource={favorites}
-                columns={columns}
-                rowKey="favorite_id"
-                rowSelection={{
-                  selectedRowKeys,
-                  onChange: setSelectedRowKeys,
-                }}
-                scroll={{ x: 1000 }}
-                pagination={{
-                  current: page,
-                  pageSize,
-                  total: total,
-                  showSizeChanger: false,
-                  showTotal: (total) => `共 ${total} 位收藏`,
-                }}
-                onChange={handleTableChange}
-                locale={{
-                  emptyText: (
-                    <Empty
-                      description="暂无收藏"
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    >
-                      <Button type="primary" onClick={() => navigate('/search')}>
-                        去搜索人才
-                      </Button>
-                    </Empty>
-                  ),
-                }}
-              />
-            </Spin>
-          </Card>
-        </Tabs.TabPane>
-
-        <Tabs.TabPane
-          tab={<><FolderOutlined /> 人才池</>}
-          key="pools"
-        >
-          <Card>
-            <div style={{ marginBottom: 16 }}>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => setCreatePoolModalVisible(true)}
-              >
-                创建人才池
-              </Button>
-            </div>
-
-            <Spin spinning={poolsLoading}>
-              {pools.length > 0 ? (
-                <Row gutter={[16, 16]}>
-                  {pools.map(pool => (
-                    <Col span={8} key={pool.pool_id}>
-                      <Card
-                        hoverable
-                        onClick={() => navigate(`/pools/${pool.pool_id}`)}
-                      >
-                        <Space direction="vertical" style={{ width: '100%' }}>
-                          <Text strong style={{ fontSize: 16 }}>
-                            <FolderOutlined style={{ marginRight: 8 }} />
-                            {pool.pool_name}
-                          </Text>
-                          {pool.scope_desc && (
-                            <Text type="secondary" ellipsis>
-                              {pool.scope_desc}
-                            </Text>
-                          )}
-                          <div>
-                            <Tag color="blue">
-                              <TeamOutlined style={{ marginRight: 4 }} />
-                              {pool.member_count} 人
-                            </Tag>
-                            <Tag>{pool.pool_type === 'custom' ? '自定义' : pool.pool_type}</Tag>
-                          </div>
-                        </Space>
-                      </Card>
-                    </Col>
-                  ))}
+                      {(roleFilter || keyword || followupFilter) && (
+                        <Button type="link" onClick={handleResetFilters}>
+                          重置筛选
+                        </Button>
+                      )}
+                    </Space>
+                  </Col>
                 </Row>
-              ) : (
-                <Empty description="暂无人才池">
-                  <Button type="primary" onClick={() => setCreatePoolModalVisible(true)}>
-                    创建人才池
-                  </Button>
-                </Empty>
-              )}
-            </Spin>
-          </Card>
-        </Tabs.TabPane>
-      </Tabs>
+              </Card>
+
+              {/* Table */}
+              <Card styles={{ body: { padding: 0 } }}>
+                {selectedRowKeys.length > 0 && (
+                  <div style={{ padding: '12px 16px', background: semanticColors.bgGrayLight, borderBottom: `1px solid ${semanticColors.borderGrayLight}` }}>
+                    <Space>
+                      <Text>已选择 <strong>{selectedRowKeys.length}</strong> 项</Text>
+                      <Button size="small" onClick={() => setSelectedRowKeys([])}>取消选择</Button>
+                      <Button
+                        size="small"
+                        onClick={handleCompare}
+                        disabled={selectedRowKeys.length < 2 || selectedRowKeys.length > 4}
+                      >
+                        对比 ({selectedRowKeys.length}/4)
+                      </Button>
+                      <Dropdown menu={exportMenu} trigger={['click']}>
+                        <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>
+                          导出 <DownOutlined />
+                        </Button>
+                      </Dropdown>
+                    </Space>
+                  </div>
+                )}
+                <Spin spinning={loading}>
+                  <Table
+                    dataSource={favorites}
+                    columns={columns}
+                    rowKey="favorite_id"
+                    rowSelection={{
+                      selectedRowKeys,
+                      onChange: setSelectedRowKeys,
+                    }}
+                    scroll={{ x: 1000 }}
+                    pagination={{
+                      current: page,
+                      pageSize,
+                      total: total,
+                      showSizeChanger: false,
+                      showTotal: (total) => `共 ${total} 位收藏`,
+                    }}
+                    onChange={handleTableChange}
+                    locale={{
+                      emptyText: (
+                        <Empty
+                          description="暂无收藏"
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        >
+                          <Button type="primary" onClick={() => navigate('/search')}>
+                            去搜索人才
+                          </Button>
+                        </Empty>
+                      ),
+                    }}
+                  />
+                </Spin>
+              </Card>
+            </>
+          ),
+        },
+        {
+          key: 'pools',
+          label: <><FolderOutlined /> 人才池</>,
+          children: (
+            <Card>
+              <div style={{ marginBottom: 16 }}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => setCreatePoolModalVisible(true)}
+                >
+                  创建人才池
+                </Button>
+              </div>
+
+              <Spin spinning={poolsLoading}>
+                {pools.length > 0 ? (
+                  <Row gutter={[16, 16]}>
+                    {pools.map(pool => (
+                      <Col span={8} key={pool.pool_id}>
+                        <Card
+                          hoverable
+                          onClick={() => navigate(`/pools/${pool.pool_id}`)}
+                        >
+                          <Space direction="vertical" style={{ width: '100%' }}>
+                            <Text strong style={{ fontSize: 16 }}>
+                              <FolderOutlined style={{ marginRight: 8 }} />
+                              {pool.pool_name}
+                            </Text>
+                            {pool.scope_desc && (
+                              <Text type="secondary" ellipsis>
+                                {pool.scope_desc}
+                              </Text>
+                            )}
+                            <div>
+                              <Tag color="blue">
+                                <TeamOutlined style={{ marginRight: 4 }} />
+                                {pool.member_count} 人
+                              </Tag>
+                              <Tag>{pool.pool_type === 'custom' ? '自定义' : pool.pool_type}</Tag>
+                            </div>
+                          </Space>
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                ) : (
+                  <Empty description="暂无人才池">
+                    <Button type="primary" onClick={() => setCreatePoolModalVisible(true)}>
+                      创建人才池
+                    </Button>
+                  </Empty>
+                )}
+              </Spin>
+            </Card>
+          ),
+        },
+      ]} />
 
       {/* Compare Modal */}
       <TalentCompareModal

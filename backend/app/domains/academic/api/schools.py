@@ -9,14 +9,14 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.academic.repositories.school_repository import SchoolRepository
-from app.domains.academic.repositories.talent_repository import TalentRepository
 from app.domains.academic.schemas.overview import (
     SchoolDetail,
     SchoolStats,
     SchoolSummary,
     TalentSummary,
 )
+from app.domains.academic.services.school_service import SchoolService
+from app.domains.academic.services.talent_service import TalentService
 from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
 
 router = APIRouter(prefix="/schools", tags=["Schools"])
@@ -44,8 +44,8 @@ async def list_schools(
     - keyword: Search in school name and alias
     - is_top_school: Filter by top school status
     """
-    repo = SchoolRepository(session)
-    schools, total = await repo.get_list(
+    service = SchoolService(session)
+    schools, total = await service.get_list(
         country_code=country_code,
         keyword=keyword,
         is_top_school=is_top_school,
@@ -95,10 +95,10 @@ async def list_top_schools(
     session: AsyncSession = Depends(get_async_session),
 ):
     """获取Top院校列表"""
-    repo = SchoolRepository(session)
+    service = SchoolService(session)
 
     # Query with is_top_school filter
-    schools, total = await repo.get_list(
+    schools, total = await service.get_list(
         country_code=country_code,
         keyword=keyword,
         is_top_school=True,
@@ -150,15 +150,15 @@ async def get_school_talents(
     Supports filtering by:
     - role_type: Filter by role type
     """
-    school_repo = SchoolRepository(session)
-    talent_repo = TalentRepository(session)
+    school_service = SchoolService(session)
+    talent_service = TalentService(session)
 
     # Verify school exists
-    school = await school_repo.get_by_id(school_id)
+    school = await school_service.get_by_id(school_id)
     if not school:
         raise HTTPException(status_code=404, detail="School not found")
 
-    talents, total = await talent_repo.get_list(
+    talents, total = await talent_service.get_talent_list(
         school_id=school_id,
         role_type=role_type,
         page=page,
@@ -208,14 +208,14 @@ async def get_school_stats(
 
     Returns talent counts by role type.
     """
-    school_repo = SchoolRepository(session)
+    school_service = SchoolService(session)
 
     # Verify school exists
-    school = await school_repo.get_by_id(school_id)
+    school = await school_service.get_by_id(school_id)
     if not school:
         raise HTTPException(status_code=404, detail="School not found")
 
-    talent_counts = await school_repo.get_talent_counts(school_id)
+    talent_counts = await school_service.get_talent_counts(school_id)
 
     return SchoolStats(
         professor_count=talent_counts["professor"],
@@ -244,14 +244,14 @@ async def get_school(
     - Country information
     - Talent statistics by role
     """
-    school_repo = SchoolRepository(session)
+    school_service = SchoolService(session)
 
-    school = await school_repo.get_by_id(school_id)
+    school = await school_service.get_by_id(school_id)
     if not school:
         raise HTTPException(status_code=404, detail="School not found")
 
     # Get talent counts
-    talent_counts = await school_repo.get_talent_counts(school_id)
+    talent_counts = await school_service.get_talent_counts(school_id)
 
     return SchoolDetail(
         school_id=school.school_id,
@@ -286,8 +286,8 @@ async def set_top_school(
     session: AsyncSession = Depends(get_async_session),
 ):
     """设置学校为Top院校"""
-    repo = SchoolRepository(session)
-    success = await repo.set_top_school_and_commit(school_id)
+    service = SchoolService(session)
+    success = await service.set_top_school_and_commit(school_id)
     if not success:
         raise HTTPException(status_code=404, detail="School not found")
 
@@ -305,8 +305,8 @@ async def unset_top_school(
     session: AsyncSession = Depends(get_async_session),
 ):
     """取消学校的Top院校标记"""
-    repo = SchoolRepository(session)
-    success = await repo.unset_top_school_and_commit(school_id)
+    service = SchoolService(session)
+    success = await service.unset_top_school_and_commit(school_id)
     if not success:
         raise HTTPException(status_code=404, detail="School not found")
 
@@ -327,8 +327,8 @@ async def batch_set_top_schools(
     if not school_ids:
         raise HTTPException(status_code=400, detail="school_ids cannot be empty")
 
-    repo = SchoolRepository(session)
-    count = await repo.batch_set_top_schools_and_commit(school_ids)
+    service = SchoolService(session)
+    count = await service.batch_set_top_schools_and_commit(school_ids)
 
     return SuccessResponse(message=f"Set {count} schools as top schools")
 
@@ -347,7 +347,7 @@ async def batch_unset_top_schools(
     if not school_ids:
         raise HTTPException(status_code=400, detail="school_ids cannot be empty")
 
-    repo = SchoolRepository(session)
-    count = await repo.batch_unset_top_schools_and_commit(school_ids)
+    service = SchoolService(session)
+    count = await service.batch_unset_top_schools_and_commit(school_ids)
 
     return SuccessResponse(message=f"Unset {count} schools as top schools")

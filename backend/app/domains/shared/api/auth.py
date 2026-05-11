@@ -20,10 +20,10 @@ from app.core.auth import (
     verify_refresh_token,
 )
 from app.core.database import get_async_session
-from app.domains.shared.repositories.user_repository import UserRepository
+from app.domains.shared.models.enums import UserRoleType
 from app.domains.shared.schemas.common import SuccessResponse
 from app.domains.shared.services.audit_service import AuditService
-from app.domains.shared.models.enums import UserRoleType
+from app.domains.shared.services.user_service import UserService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer(auto_error=False)
@@ -114,8 +114,8 @@ async def get_current_user(
     user_id = int(payload.get("sub", 0))
 
     # Verify user exists and is active
-    repo = UserRepository(session)
-    user = await repo.get_by_id(user_id)
+    service = UserService(session)
+    user = await service.get_by_id(user_id)
 
     if not user or not user.is_active:
         return None
@@ -190,12 +190,12 @@ async def register(
     Register a new user account.
     The account will be in 'pending_approval' status until an admin approves it.
     """
-    repo = UserRepository(session)
+    service = UserService(session)
     client_ip = request.client.host if request.client else None
     request_id = getattr(request.state, "request_id", None)
 
     # Check username uniqueness
-    if await repo.get_by_username(data.username):
+    if await service.get_by_username(data.username):
         await AuditService.log_auth_event(
             user_id=None,
             operation="register",
@@ -207,7 +207,7 @@ async def register(
         raise HTTPException(status_code=400, detail="用户名已存在")
 
     # Check email uniqueness
-    if await repo.get_by_email(data.email):
+    if await service.get_by_email(data.email):
         await AuditService.log_auth_event(
             user_id=None,
             operation="register",
@@ -219,7 +219,7 @@ async def register(
         raise HTTPException(status_code=400, detail="邮箱已存在")
 
     # Check employee_id uniqueness
-    if await repo.get_by_employee_id(data.employee_id):
+    if await service.get_by_employee_id(data.employee_id):
         await AuditService.log_auth_event(
             user_id=None,
             operation="register",
@@ -232,7 +232,7 @@ async def register(
 
     # Create user with pending approval status
     password_hash = hash_password(data.password)
-    user = await repo.create_user_and_commit(
+    user = await service.create_user_and_commit(
         username=data.username,
         email=data.email,
         password_hash=password_hash,
@@ -271,14 +271,14 @@ async def login(
 
     Returns access token and refresh token.
     """
-    repo = UserRepository(session)
+    service = UserService(session)
     client_ip = request.client.host if request.client else None
     request_id = getattr(request.state, "request_id", None)
 
     # Find user by username or email
-    user = await repo.get_by_username(data.username)
+    user = await service.get_by_username(data.username)
     if not user:
-        user = await repo.get_by_email(data.username)
+        user = await service.get_by_email(data.username)
 
     if not user:
         await AuditService.log_auth_event(
@@ -353,7 +353,7 @@ async def login(
         )
 
     # Update last login
-    await repo.update_last_login_and_commit(user.user_id, client_ip)
+    await service.update_last_login_and_commit(user.user_id, client_ip)
 
     await AuditService.log_auth_event(
         user_id=user.user_id,
@@ -438,8 +438,8 @@ async def refresh_token(
     user_id = int(payload.get("sub", 0))
 
     # Verify user exists and is active
-    repo = UserRepository(session)
-    user = await repo.get_by_id(user_id)
+    service = UserService(session)
+    user = await service.get_by_id(user_id)
 
     if not user or not user.is_active:
         raise HTTPException(
@@ -482,8 +482,8 @@ async def get_current_user_info(
     """
     Get current user information.
     """
-    repo = UserRepository(session)
-    user = await repo.get_by_id(current_user["user_id"])
+    service = UserService(session)
+    user = await service.get_by_id(current_user["user_id"])
 
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
@@ -515,8 +515,8 @@ async def change_password(
     """
     Change current user's password.
     """
-    repo = UserRepository(session)
-    user = await repo.get_by_id(current_user["user_id"])
+    service = UserService(session)
+    user = await service.get_by_id(current_user["user_id"])
     client_ip = request.client.host if request.client else None
     request_id = getattr(request.state, "request_id", None)
 
@@ -548,7 +548,7 @@ async def change_password(
 
     # Update password
     new_hash = hash_password(data.new_password)
-    await repo.update_password_and_commit(user.user_id, new_hash)
+    await service.update_password_and_commit(user.user_id, new_hash)
 
     await AuditService.log_auth_event(
         user_id=current_user["user_id"],

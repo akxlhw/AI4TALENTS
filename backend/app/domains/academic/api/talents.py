@@ -133,8 +133,6 @@ async def get_talent(
     - Selected works
     - Tech tags
     """
-    from app.domains.academic.repositories.talent_repository import TalentRepository
-
     service = TalentService(session)
     talent = await service.get_talent_by_id(talent_id)
 
@@ -155,8 +153,7 @@ async def get_talent(
     ]
 
     # Fetch tech tags
-    talent_repo = TalentRepository(session)
-    tech_tag_rows = await talent_repo.get_talent_tech_tags(talent_id)
+    tech_tag_rows = await service.get_talent_tech_tags(talent_id)
     tech_tags = [
         TechTagItem(
             tech_domain_id=domain.tech_domain_id,
@@ -316,7 +313,7 @@ async def export_talents(
                 try:
                     if len(str(cell.value)) > max_length:
                         max_length = len(str(cell.value))
-                except Exception:
+                except (TypeError, ValueError, AttributeError):
                     pass
             ws.column_dimensions[column].width = min(max_length + 2, 50)
 

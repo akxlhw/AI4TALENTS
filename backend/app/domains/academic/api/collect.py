@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +30,6 @@ from app.domains.academic.schemas.collect import (
     TechDomainCollectListResponse,
     TechDomainCollectResponse,
     TriggerCollectTaskRequest,
-    UpdateCollectSourcesRequest,
     YearOptionsResponse,
     get_current_year,
     get_year_options,
@@ -61,7 +60,7 @@ async def run_collect_task_background(task_id: int):
     """
     Fire-and-forget background task execution.
     Runs the collection task in-process using async/await.
-    This avoids SQLite database locking issues with separate processes.
+    This avoids database connection issues with separate processes.
     """
     bg_service = CollectBackgroundService()
 
@@ -115,26 +114,6 @@ async def list_tech_domains_collect(
     )
 
 
-@router.put(
-    "/tech-domains/{tech_domain_id}/sources",
-    response_model=TechDomainCollectResponse,
-    summary="更新技术领域的采集源配置",
-    description="[已废弃] 请使用 /venues/bindings API 管理绑定关系",
-    deprecated=True,
-)
-async def update_tech_domain_sources(
-    tech_domain_id: int,
-    request: UpdateCollectSourcesRequest,
-    session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
-):
-    """Update collect sources for a tech domain - DEPRECATED, use venue bindings API instead."""
-    raise HTTPException(
-        status_code=400,
-        detail="This API is deprecated. Please use /venues/bindings API to manage venue-tech domain bindings.",
-    )
-
-
 # ============ Collect Task Endpoints ============
 
 
@@ -172,7 +151,7 @@ async def list_tasks(
             # 检查是否是"至今"（接近当前时间）
             from datetime import timedelta
 
-            if datetime.utcnow() - t.time_window_end < timedelta(days=1):
+            if datetime.now(timezone.utc).replace(tzinfo=None) - t.time_window_end < timedelta(days=1):
                 end_year = None
 
         items.append(
@@ -276,7 +255,7 @@ async def trigger_task(
     # Calculate time window (naive datetime for WITHOUT TIME ZONE columns)
     time_start = datetime(start_year, 1, 1)
     if end_year is None:
-        time_end = datetime.utcnow()  # 至今
+        time_end = datetime.now(timezone.utc).replace(tzinfo=None)  # 至今
     else:
         time_end = datetime(end_year, 12, 31, 23, 59, 59)
 
@@ -350,7 +329,7 @@ async def get_task(
     if end_year == current_year and task.time_window_end:
         from datetime import timedelta
 
-        if datetime.utcnow() - task.time_window_end < timedelta(days=1):
+        if datetime.now(timezone.utc).replace(tzinfo=None) - task.time_window_end < timedelta(days=1):
             end_year = None
 
     return CollectTaskResponse(
@@ -609,6 +588,12 @@ async def retry_sub_task(
 
     await service.retry_sub_task(task_id, sub_task_id)
 
-    # TODO: Trigger retry execution
+    # Trigger background re-execution of the sub-task
+    async def _run_retry():
+        bg_service = CollectBackgroundService()
+        await bg_service.run_single_sub_task(task_id, sub_task_id)
 
-    return SubTaskActionResponse(message="Sub-task reset for retry", sub_task_id=sub_task_id)
+    asyncio.create_task(_run_retry())
+    logger.info(f"Sub-task #{sub_task_id} retry triggered in background")
+
+    return SubTaskActionResponse(message="Sub-task retry started", sub_task_id=sub_task_id)

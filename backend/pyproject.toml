@@ -91,6 +91,7 @@ ignore = [
     "E501",  # line too long (handled by black)
     "B008",  # do not perform function calls in argument defaults
     "UP017", # Use datetime.UTC (Python 3.11+ only)
+    "UP038", # isinstance X | Y not equivalent in Python 3.11
 ]
 
 [tool.mypy]

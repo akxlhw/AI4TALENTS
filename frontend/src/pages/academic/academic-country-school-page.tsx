@@ -19,6 +19,7 @@ import {
   Space,
   Typography,
   Tabs,
+  message,
 } from 'antd'
 import {
   ReloadOutlined,
@@ -29,6 +30,7 @@ import {
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { api } from '../../services/api'
+import { getErrorMessage } from '../../utils'
 
 const { Title, Text } = Typography
 
@@ -169,18 +171,28 @@ const CountrySchoolPage: React.FC = () => {
       setCountries(response.data.items || [])
     } catch (error) {
       console.error('Failed to fetch countries:', error)
+      message.error(getErrorMessage(error, '加载国家列表失败'))
     }
   }, [])
 
-  // 加载学校列表
+  // 加载学校列表（分页加载全量数据用于客户端区域筛选）
   const fetchSchools = useCallback(async () => {
     setLoading(true)
     try {
-      // 获取所有学校数据（page_size=2000 足够覆盖当前数据量）
-      const response = await api.schools.list({ page_size: 2000 })
-      setSchools(response.data.items || [])
+      let allItems: NonNullable<typeof schools> = []
+      let page = 1
+      let hasMore = true
+      while (hasMore) {
+        const response = await api.schools.list({ page, page_size: 200 })
+        const items = response.data.items || []
+        allItems = allItems.concat(items)
+        hasMore = items.length >= 200
+        page++
+      }
+      setSchools(allItems)
     } catch (error) {
       console.error('Failed to fetch schools:', error)
+      message.error(getErrorMessage(error, '加载院校列表失败'))
     } finally {
       setLoading(false)
     }
@@ -199,6 +211,7 @@ const CountrySchoolPage: React.FC = () => {
       })
     } catch (error) {
       console.error('Failed to fetch summary:', error)
+      message.error(getErrorMessage(error, '加载统计数据失败'))
     } finally {
       setSummaryLoading(false)
     }

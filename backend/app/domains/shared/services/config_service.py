@@ -382,7 +382,7 @@ class ConfigService:
         )
         await self.session.execute(
             text(
-                f"""
+                """
             CREATE INDEX ix_os_embedding_vector
             ON os_embedding
             USING ivfflat (embedding vector_cosine_ops)

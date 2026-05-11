@@ -15,7 +15,7 @@ from typing import Any, cast
 import httpx
 from tenacity import (
     retry,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential,
 )
@@ -24,6 +24,21 @@ from app.core.config import settings
 from app.domains.shared.services.common.http_client import HttpClientFactory
 
 logger = logging.getLogger(__name__)
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """Determine if an exception is worth retrying.
+
+    - Network/timeout errors: always retry
+    - 429 (rate limit): retry (token may refresh or reset window passes)
+    - 5xx (server error): retry (transient)
+    - 4xx client errors (401, 403, 404, etc.): do NOT retry
+    """
+    if isinstance(exc, (httpx.NetworkError, httpx.TimeoutException)):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code == 429 or exc.response.status_code >= 500
+    return False
 
 
 class GitHubClient:
@@ -122,7 +137,7 @@ class GitHubClient:
         self._update_auth_header()
         self._client = HttpClientFactory.create_client_for_url(
             target_url=self.base_url,
-            timeout=30.0,
+            timeout=settings.HTTP_TIMEOUT_DEFAULT,
             headers=self.headers,
             follow_redirects=True,
         )
@@ -167,7 +182,7 @@ class GitHubClient:
         return response
 
     @retry(
-        retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.NetworkError, httpx.TimeoutException)),
+        retry=retry_if_exception(_is_retryable),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=30),
         reraise=True,
@@ -262,7 +277,7 @@ class GitHubClient:
         """
         count = 0
         page = 1
-        per_page = 100
+        per_page = settings.GITHUB_PER_PAGE
         while True:
             batch = cast(
                 list[dict[str, Any]],
@@ -341,9 +356,9 @@ class GitHubClient:
         """
         commit_counts: dict[str, int] = {}
         committers: set[str] = set()  # Track who has committed (not just authored)
-        per_page = 100
+        per_page = settings.GITHUB_PER_PAGE
         max_pages = 2500  # Safety cap: 2500 * 100 = 250k commits
-        batch_size = 5  # Reduced from 10 to avoid burst-triggered abuse detection
+        batch_size = settings.GITHUB_BATCH_SIZE
         current_page = 1
 
         while current_page <= max_pages:

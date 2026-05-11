@@ -164,10 +164,50 @@ export function buildAntTheme(domain: Domain = 'academic'): ThemeConfig {
   }
 }
 
+/** Semantic color palette — used across all domains */
+export const semanticColors = {
+  // Status / result colors (Ant Design convention)
+  blue: '#1890ff',
+  green: '#52c41a',
+  gold: '#faad14',
+  purple: '#722ed1',
+  red: '#ff4d4f',
+  cyan: '#13c2c2',
+  magenta: '#eb2f96',
+  orange: '#fa8c16',
+
+  // Domain-specific accents (opensource domain)
+  osGreen: '#38A169',
+  osGreenLight: '#48BB78',
+  osOrange: '#F6AD55',
+  osOrangeDark: '#DD6B20',
+  osBlue: '#3182CE',
+  osRed: '#E53E3E',
+  osPurple: '#805AD5',
+  osYellow: '#D69E2E',
+
+  // Neutral / UI chrome
+  bgGray: '#f5f5f5',
+  bgGrayLight: '#fafafa',
+  borderGray: '#d9d9d9',
+  borderGrayLight: '#f0f0f0',
+  textGray: '#8c8c8c',
+  divider: '#E2E8F0',
+  hoverBg: '#F7FAFC',
+
+  // Specialty backgrounds
+  greenBg: '#f6ffed',
+  goldBg: '#fffbe6',
+  redBg: '#fff2f0',
+  purpleBg: '#f9f0ff',
+  blueBg: '#e6f7ff',
+} as const
+
 /** CSS variable map for runtime switching without JS re-render */
 export function applyDomainCssVars(domain: Domain): void {
   const dt = domainThemes[domain]
   const root = document.documentElement
+  // Domain tokens
   root.style.setProperty('--domain-primary', dt.primary)
   root.style.setProperty('--domain-secondary', dt.secondary)
   root.style.setProperty('--domain-gradient', dt.gradient)
@@ -175,5 +215,20 @@ export function applyDomainCssVars(domain: Domain): void {
   root.style.setProperty('--domain-hover-bg', dt.hoverBg)
   root.style.setProperty('--domain-badge-bg', dt.badgeBg)
   root.style.setProperty('--domain-icon-color', dt.iconColor)
+  // Semantic color tokens (for CSS files)
+  root.style.setProperty('--color-blue', semanticColors.blue)
+  root.style.setProperty('--color-green', semanticColors.green)
+  root.style.setProperty('--color-gold', semanticColors.gold)
+  root.style.setProperty('--color-purple', semanticColors.purple)
+  root.style.setProperty('--color-red', semanticColors.red)
+  root.style.setProperty('--color-cyan', semanticColors.cyan)
+  root.style.setProperty('--color-magenta', semanticColors.magenta)
+  root.style.setProperty('--color-orange', semanticColors.orange)
+  root.style.setProperty('--color-bg-gray', semanticColors.bgGray)
+  root.style.setProperty('--color-bg-gray-light', semanticColors.bgGrayLight)
+  root.style.setProperty('--color-border-gray', semanticColors.borderGray)
+  root.style.setProperty('--color-border-gray-light', semanticColors.borderGrayLight)
+  root.style.setProperty('--color-text-gray', semanticColors.textGray)
+  root.style.setProperty('--color-divider', semanticColors.divider)
   root.setAttribute('data-domain', domain)
 }

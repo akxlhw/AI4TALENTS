@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -254,7 +254,7 @@ class CollectionOrchestrator:
                 "error": str(e),
                 "type": type(e).__name__,
                 "traceback": traceback.format_exc(),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             }
             await self.progress_tracker.update_task_status(task, "failed", str(e))
             progress.status = "failed"

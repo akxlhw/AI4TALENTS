@@ -6,11 +6,12 @@ Collect service layer.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.sync import CollectTask
+from app.domains.academic.models.tech_domain import TechDomain
 from app.domains.academic.models.venue import VenueSubTask
 from app.domains.academic.repositories.collect_repository import (
     CollectTaskRepository,
@@ -109,7 +110,7 @@ class CollectService:
             return False
 
         task.status = "cancelled"
-        task.completed_at = datetime.utcnow()
+        task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         task.current_step = "已取消"
 
         await self.session.commit()

@@ -17,6 +17,7 @@ import {
   Tooltip,
   Alert,
   Progress,
+  message,
 } from 'antd'
 import {
   UserOutlined,
@@ -30,10 +31,12 @@ import {
   BulbOutlined,
 } from '@ant-design/icons'
 import { api } from '../../services/api'
+import { semanticColors } from '../../theme'
 import FavoriteButton from '../../components/FavoriteButton'
 import CollaborationGraph, { CollaborationNode, CollaborationLink } from '../../components/CollaborationGraph'
 import { getRoleTypeConfig } from '../../constants/roleType'
 import { formatNumber } from '../../utils/format'
+import { getErrorMessage } from '../../utils'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -103,6 +106,7 @@ const TalentDetailPage: React.FC = () => {
       setTalent(response.data)
     } catch (error) {
       console.error('Failed to fetch talent detail:', error)
+      message.error(getErrorMessage(error, '加载人才详情失败'))
     } finally {
       setLoading(false)
     }
@@ -116,6 +120,7 @@ const TalentDetailPage: React.FC = () => {
       setCollabLinks(response.data.links || [])
     } catch (error) {
       console.error('Failed to fetch collaborations:', error)
+      message.error(getErrorMessage(error, '加载合作信息失败'))
     } finally {
       setCollabLoading(false)
     }
@@ -228,7 +233,7 @@ const TalentDetailPage: React.FC = () => {
           <Col flex="auto">
             <Space direction="vertical" size={8}>
               <Title level={2} style={{ margin: 0 }}>
-                <UserOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                <UserOutlined style={{ marginRight: 8, color: semanticColors.blue }} />
                 {talent.name}
                 {talent.name_en && (
                   <Text type="secondary" style={{ fontSize: 18, marginLeft: 8 }}>
@@ -298,7 +303,7 @@ const TalentDetailPage: React.FC = () => {
                   percent={completeness}
                   size="small"
                   style={{ width: 120 }}
-                  strokeColor={completeness >= 80 ? '#52c41a' : completeness >= 50 ? '#faad14' : '#ff4d4f'}
+                  strokeColor={completeness >= 80 ? semanticColors.green : completeness >= 50 ? semanticColors.gold : semanticColors.red}
                 />
               </div>
               {talent.orcid && (
@@ -334,28 +339,28 @@ const TalentDetailPage: React.FC = () => {
                   title="发表论文"
                   value={talent.works_count}
                   prefix={<FileTextOutlined />}
-                  valueStyle={{ color: '#1890ff' }}
+                  valueStyle={{ color: semanticColors.blue }}
                 />
               </Col>
               <Col span={12}>
                 <Statistic
                   title="总引用数"
                   value={talent.cited_by_count}
-                  valueStyle={{ color: '#52c41a' }}
+                  valueStyle={{ color: semanticColors.green }}
                 />
               </Col>
               <Col span={12}>
                 <Statistic
                   title="H指数"
                   value={talent.h_index}
-                  valueStyle={{ color: '#722ed1' }}
+                  valueStyle={{ color: semanticColors.purple }}
                 />
               </Col>
               <Col span={12}>
                 <Statistic
                   title="最近活跃年份"
                   value={talent.latest_active_year || '-'}
-                  valueStyle={{ color: '#faad14' }}
+                  valueStyle={{ color: semanticColors.gold }}
                 />
               </Col>
               {talent.academic_age && (
@@ -375,7 +380,7 @@ const TalentDetailPage: React.FC = () => {
             <Card
               title={<><BulbOutlined style={{ marginRight: 8 }} />招聘判断摘要</>}
               style={{ marginBottom: 16 }}
-              bodyStyle={{ backgroundColor: '#f6ffed' }}
+              styles={{ body: { backgroundColor: semanticColors.greenBg } }}
             >
               <Paragraph style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
                 {talent.recruitment_summary}

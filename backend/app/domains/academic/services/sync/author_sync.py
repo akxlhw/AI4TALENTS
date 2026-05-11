@@ -5,7 +5,7 @@ Author sync service for synchronizing StdAuthor to Talent.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -229,7 +229,7 @@ class AuthorSyncService:
             role_confidence=role_result.confidence,
             role_reason=role_result.reason,
             identification_method="heuristic",
-            identified_at=datetime.utcnow().isoformat(),
+            identified_at=datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         )
         self.session.add(profile)
         await self.session.flush()
@@ -247,7 +247,7 @@ class AuthorSyncService:
             profile.role_confidence = role_result.confidence
             profile.role_reason = role_result.reason
             profile.identification_method = "heuristic"
-            profile.identified_at = datetime.utcnow().isoformat()
+            profile.identified_at = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         else:
             profile = await self._create_role_profile(talent, role_result)
 
@@ -330,7 +330,7 @@ class AuthorSyncService:
         )
 
         # Prepare bulk data
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         talent_data = []
         profile_data = []
 

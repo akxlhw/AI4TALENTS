@@ -90,7 +90,7 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
       case 'cited_by_count':
         return talent[key]?.toLocaleString() || '-'
       default:
-        const value = (talent as Record<string, unknown>)[key]
+        const value = (talent as unknown as Record<string, unknown>)[key]
         return value ?? '-'
     }
   }
@@ -113,9 +113,9 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
   ]
 
   const tableData = (data?.comparison_fields || []).map(field => {
-    const row: Record<string, unknown> = { key: field.key, label: field.label }
+    const row: { key: string; label: string; [k: string]: unknown } = { key: field.key, label: field.label }
     data?.talents.forEach(t => {
-      row[`talent_${t.talent_id}`] = (t as Record<string, unknown>)[field.key]
+      row[`talent_${t.talent_id}`] = (t as unknown as Record<string, unknown>)[field.key]
     })
     return row
   })

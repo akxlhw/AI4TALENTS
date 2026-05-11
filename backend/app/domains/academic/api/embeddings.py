@@ -5,7 +5,7 @@ Embedding generation API endpoints.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -178,13 +178,13 @@ async def trigger_generation(
 
     # Start background task
     import asyncio
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     _embedding_progress["status"] = "running"
     _embedding_progress["processed"] = 0
     _embedding_progress["total"] = total_talents * len(types_list)
     _embedding_progress["failed"] = 0
-    _embedding_progress["started_at"] = datetime.utcnow().isoformat()
+    _embedding_progress["started_at"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     _embedding_progress["completed_at"] = None
     _embedding_progress["error_message"] = None
 
@@ -217,7 +217,7 @@ async def cancel_generation(
         raise HTTPException(status_code=400, detail="No generation task is running")
 
     _embedding_progress["status"] = "cancelled"
-    _embedding_progress["completed_at"] = datetime.utcnow().isoformat()
+    _embedding_progress["completed_at"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
     return SuccessResponse(message="Generation task cancelled")
 

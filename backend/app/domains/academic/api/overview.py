@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.academic.repositories.stat_repository import StatisticsRepository
 from app.domains.academic.schemas.overview import OverviewResponse, OverviewStats
+from app.domains.academic.services.statistics_service import StatisticsService
 
 router = APIRouter(tags=["Overview"])
 
@@ -34,8 +34,8 @@ async def get_overview(
     - Total number of tech domains
     - Total number of tech directions
     """
-    repo = StatisticsRepository(session)
-    stats = await repo.get_active_overview_stats()
+    service = StatisticsService(session)
+    stats = await service.get_active_overview_stats()
 
     if not stats:
         raise HTTPException(
@@ -44,9 +44,9 @@ async def get_overview(
         )
 
     # 实时计算统计数据
-    country_count = await repo.get_country_count()
-    tech_domain_count = await repo.get_tech_domain_count()
-    tech_direction_count = await repo.get_tech_direction_count()
+    country_count = await service.get_country_count()
+    tech_domain_count = await service.get_tech_domain_count()
+    tech_direction_count = await service.get_tech_direction_count()
 
     return OverviewResponse(
         stats=OverviewStats(

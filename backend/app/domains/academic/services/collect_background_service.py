@@ -11,6 +11,7 @@ import logging
 
 from app.core.database import AsyncSessionLocal
 from app.domains.academic.repositories.collect_repository import CollectTaskRepository
+from app.domains.academic.repositories.venue_repository import VenueSubTaskRepository
 from app.domains.academic.services.collect.orchestrator import CollectionOrchestrator
 from app.domains.academic.services.data_fetchers import (
     AuthorFetcher,
@@ -56,3 +57,39 @@ class CollectBackgroundService:
                 institution_fetcher=institution_fetcher,
             )
             return await orchestrator.execute_task(task_id)
+
+    async def run_single_sub_task(self, task_id: int, sub_task_id: int) -> None:
+        """Re-execute a single venue sub-task (e.g. after a failure retry)."""
+        from app.domains.academic.models.sync import CollectTask
+        from app.domains.academic.services.collect.venue_executor import VenueSubTaskExecutor
+
+        async with AsyncSessionLocal() as session:
+            from sqlalchemy import select
+
+            task_result = await session.execute(
+                select(CollectTask).where(CollectTask.task_id == task_id)
+            )
+            task = task_result.scalar_one_or_none()
+            if not task:
+                logger.error(f"Task {task_id} not found for sub-task retry")
+                return
+
+            work_fetcher = WorkFetcher(session)
+            executor = VenueSubTaskExecutor(session, work_fetcher)
+
+            sub_task_repo = VenueSubTaskRepository(session)
+            sub_task = await sub_task_repo.get_by_id(sub_task_id)
+            if not sub_task:
+                logger.error(f"Sub-task {sub_task_id} not found")
+                return
+
+            try:
+                works_fetched = await executor.execute(task, sub_task, type("P", (), {})())
+                logger.info(
+                    f"Sub-task {sub_task_id} retry completed: {works_fetched} works fetched"
+                )
+                await session.commit()
+            except Exception as e:
+                logger.error(f"Sub-task {sub_task_id} retry failed: {e}")
+                await sub_task_repo.update_status(sub_task_id, "failed", error_message=str(e))
+                await session.commit()

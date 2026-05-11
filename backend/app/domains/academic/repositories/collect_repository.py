@@ -11,7 +11,7 @@ Repository for collect configuration operations
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,7 +90,7 @@ class CollectTaskRepository(BaseRepository[CollectTask]):
             collect_mode=collect_mode,
             task_type="manual",  # 兼容旧字段
             triggered_by=triggered_by,
-            triggered_at=datetime.utcnow(),
+            triggered_at=datetime.now(timezone.utc).replace(tzinfo=None),
             status="pending",
             time_window_start=time_window_start,
             time_window_end=time_window_end,
@@ -162,7 +162,7 @@ class CollectTaskRepository(BaseRepository[CollectTask]):
         return await self.update_task_status_and_commit(
             task_id=task_id,
             status="running",
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc).replace(tzinfo=None),
             current_step="正在初始化...",
         )
 
@@ -171,7 +171,7 @@ class CollectTaskRepository(BaseRepository[CollectTask]):
         return await self.update_task_status_and_commit(
             task_id=task_id,
             status="failed",
-            completed_at=datetime.utcnow(),
+            completed_at=datetime.now(timezone.utc).replace(tzinfo=None),
             error_message=error_message,
             current_step="执行失败",
         )
@@ -216,7 +216,7 @@ class CollectTaskRepository(BaseRepository[CollectTask]):
             return None
 
         task.status = "completed" if success else "failed"
-        task.completed_at = datetime.utcnow()
+        task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         task.progress_percent = 100
 
         if result_summary:
@@ -340,5 +340,5 @@ class TechDomainCollectRepository:
         if not domain:
             return None
 
-        domain.last_collect_at = collect_at or datetime.utcnow()
+        domain.last_collect_at = collect_at or datetime.now(timezone.utc).replace(tzinfo=None)
         return domain
