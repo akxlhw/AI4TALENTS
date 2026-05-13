@@ -18,6 +18,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import BadRequestError, NotFoundError
+
 from app.domains.open_source.models.open_source import (
     OSDeveloper,
     OSRepoConfig,
@@ -137,7 +139,7 @@ class OSDeveloperService:
         """
         dev = await self.repo.get_developer(developer_id)
         if not dev or not dev.is_visible:
-            raise ValueError("Developer not found")
+            raise NotFoundError("Developer")
 
         # 并行加载关联数据
         repos_task = self.repo.get_developer_repositories(developer_id)
@@ -195,7 +197,7 @@ class OSDeveloperService:
         """
         repo = await self.repo.get_repository_by_full_name(repo_full_name)
         if not repo:
-            raise ValueError("Repository not found")
+            raise NotFoundError("Repository")
 
         contributor_count = await self.repo.count_repository_contributors(repo.repo_id)
 
@@ -238,7 +240,7 @@ class OSDeveloperService:
         """
         repo = await self.repo.get_repository_by_full_name(repo_full_name)
         if not repo:
-            raise ValueError("Repository not found")
+            raise NotFoundError("Repository")
         items, total = await self.repo.get_repository_contributors(repo.repo_id, page, page_size)
         contributors: list[OSRepositoryContributor] = []
         for dev, contrib in items:
@@ -392,11 +394,11 @@ class OSDeveloperService:
             ValueError: 开发者数量不合法或部分开发者不存在
         """
         if len(developer_ids) < 2 or len(developer_ids) > 5:
-            raise ValueError("developer_ids must contain 2 to 5 items")
+            raise BadRequestError("developer_ids must contain 2 to 5 items")
 
         developers = await self.repo.get_developers_by_ids(developer_ids)
         if len(developers) != len(developer_ids):
-            raise ValueError("Some developers not found")
+            raise NotFoundError("Some developers")
 
         dimensions = {
             "stars": "Total Stars Received",

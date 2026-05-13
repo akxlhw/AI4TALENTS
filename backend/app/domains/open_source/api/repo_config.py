@@ -57,19 +57,16 @@ async def create_repo_config(
     user: dict = Depends(require_admin),
 ):
     service = OpenSourceService(session)
-    try:
-        config = await service.create_repo_config(
-            repo_full_name=data.repo_full_name,
-            tech_element=data.tech_element,
-            display_name=data.display_name,
-            description=data.description,
-            tech_direction_id=data.tech_direction_id,
-            language=data.language,
-            notes=data.notes,
-            created_by=int(user.get("sub")) if user.get("sub") else None,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400 if "format" in str(e) or "tech_element" in str(e) else 409, detail=str(e)) from e
+    config = await service.create_repo_config(
+        repo_full_name=data.repo_full_name,
+        tech_element=data.tech_element,
+        display_name=data.display_name,
+        description=data.description,
+        tech_direction_id=data.tech_direction_id,
+        language=data.language,
+        notes=data.notes,
+        created_by=int(user.get("sub")) if user.get("sub") else None,
+    )
     return OSRepoConfigResponse.model_validate(config)
 
 
@@ -94,10 +91,7 @@ async def update_repo_config(
     _user: dict = Depends(require_admin),
 ):
     service = OpenSourceService(session)
-    try:
-        config = await service.update_repo_config(repo_config_id, data.model_dump(exclude_unset=True))
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+    config = await service.update_repo_config(repo_config_id, data.model_dump(exclude_unset=True))
     if not config:
         raise HTTPException(status_code=404, detail="Repo config not found")
     return OSRepoConfigResponse.model_validate(config)

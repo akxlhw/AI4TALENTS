@@ -15,6 +15,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import BadRequestError
+
 from app.core.database import AsyncSessionLocal
 from app.domains.open_source.repositories.open_source import OpenSourceRepository
 
@@ -77,15 +79,15 @@ class OSEmbeddingService:
         llm_config = await config_service.get_llm_config()
 
         if not llm_config.embedding_enabled:
-            raise ValueError("嵌入模型未启用")
+            raise BadRequestError("嵌入模型未启用")
         if not llm_config.embedding_model:
-            raise ValueError("嵌入模型未配置")
+            raise BadRequestError("嵌入模型未配置")
         if not llm_config.embedding_api_base:
-            raise ValueError("嵌入 API 地址未配置")
+            raise BadRequestError("嵌入 API 地址未配置")
 
         dev_ids = await self.repo.get_visible_developer_ids()
         if not dev_ids:
-            raise ValueError("No developers to process")
+            raise BadRequestError("No developers to process")
         return len(dev_ids)
 
     async def generate_single_embedding(self, developer_id: int) -> None:
@@ -104,7 +106,7 @@ class OSEmbeddingService:
         llm_config = await config_service.get_llm_config()
 
         if not llm_config.embedding_enabled:
-            raise ValueError("嵌入模型未启用")
+            raise BadRequestError("嵌入模型未启用")
 
         llm_gateway = LLMGateway(
             api_key=llm_config.api_key,

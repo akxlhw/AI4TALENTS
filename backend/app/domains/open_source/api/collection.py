@@ -38,15 +38,11 @@ async def collect_single_repo(
 ):
     """Start a background collection task for a single repository."""
     service = OpenSourceService(session)
-    try:
-        task, repo_full_name, tech_element = await service.collect_single_repo(
-            repo_config_id=repo_config_id,
-            contributors_per_repo=contributors_per_repo,
-            created_by=int(user.get("sub", 0)),
-        )
-    except ValueError as e:
-        status_code = 404 if "not found" in str(e).lower() else 400 if "disabled" in str(e).lower() else 409
-        raise HTTPException(status_code=status_code, detail=str(e)) from e
+    task, repo_full_name, tech_element = await service.collect_single_repo(
+        repo_config_id=repo_config_id,
+        contributors_per_repo=contributors_per_repo,
+        created_by=int(user.get("sub", 0)),
+    )
 
     # Start background collection
     asyncio.create_task(
@@ -158,10 +154,7 @@ async def cancel_collect_task(
     _user: dict = Depends(require_admin),
 ):
     service = OpenSourceService(session)
-    try:
-        task = await service.cancel_collect_task(task_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+    task = await service.cancel_collect_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -176,10 +169,7 @@ async def delete_collect_task(
     _user: dict = Depends(require_admin),
 ):
     service = OpenSourceService(session)
-    try:
-        success = await service.delete_collect_task(task_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+    success = await service.delete_collect_task(task_id)
     if not success:
         raise HTTPException(status_code=404, detail="Task not found")
     return SuccessResponse(message="Task deleted")

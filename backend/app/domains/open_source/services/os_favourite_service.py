@@ -12,6 +12,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import ConflictError
+
 from app.domains.open_source.models.open_source import (
     OSFavourite,
     OSPoolMember,
@@ -94,7 +96,7 @@ class OSFavouriteService:
         """
         existing = await self.repo.get_favourite(user_id, developer_id)
         if existing:
-            raise ValueError("Already favorited")
+            raise ConflictError("Already favorited")
 
         return await self.repo.create_favourite(
             user_id=user_id,
@@ -234,7 +236,7 @@ class OSFavouriteService:
         """
         existing = await self.repo.get_pool_member(pool_id, developer_id)
         if existing:
-            raise ValueError("Already in pool")
+            raise ConflictError("Already in pool")
 
         return await self.repo.add_pool_member(pool_id, developer_id)
 

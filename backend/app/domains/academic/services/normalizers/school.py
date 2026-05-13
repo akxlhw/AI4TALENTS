@@ -222,5 +222,6 @@ class SchoolNormalizer:
 
             except Exception:
                 result.failed += 1
+                await raw_repo.mark_processed(raw_inst.raw_institution_id, "failed")
 
         return result

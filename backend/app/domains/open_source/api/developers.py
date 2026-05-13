@@ -88,10 +88,7 @@ async def get_developer(
     current_user: dict = Depends(get_current_user),
 ):
     service = OpenSourceService(session)
-    try:
-        return await service.get_developer_detail(developer_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    return await service.get_developer_detail(developer_id)
 
 
 @router.get("/developers/{developer_id}/repositories", response_model=PaginatedResponse[OSRepositoryItem])
@@ -167,11 +164,7 @@ async def compare_developers(
     session: AsyncSession = Depends(get_async_session),
 ):
     service = OpenSourceService(session)
-    try:
-        result = await service.compare_developers(data.developer_ids)
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    return await service.compare_developers(data.developer_ids)
 
 
 @router.get("/developers/{developer_id}/recommend", response_model=list[OSDeveloperSummary])
@@ -230,10 +223,7 @@ async def get_repository(
 ):
     """Get repository detail with contributor count by full name."""
     service = OpenSourceService(session)
-    try:
-        return await service.get_repository_detail(f"{owner}/{name}")
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    return await service.get_repository_detail(f"{owner}/{name}")
 
 
 @router.get("/repositories/{owner}/{name}/contributors", response_model=PaginatedResponse[OSRepositoryContributor])

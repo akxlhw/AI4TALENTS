@@ -37,10 +37,7 @@ async def add_favorite(
 ):
     user_id = int(user.get("sub", 0))
     service = OpenSourceService(session)
-    try:
-        favorite = await service.add_favourite(user_id, data.developer_id, notes=data.notes)
-    except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e)) from e
+    favorite = await service.add_favourite(user_id, data.developer_id, notes=data.notes)
     dev = await service.get_developer(data.developer_id)
     resp = OSFavoriteResponse.model_validate(favorite)
     resp.developer = OSDeveloperSummary.model_validate(dev) if dev else None
@@ -202,10 +199,7 @@ async def add_pool_member(
     if not pool or pool.owner_user_id != user_id:
         raise HTTPException(status_code=404, detail="Pool not found")
 
-    try:
-        await service.add_pool_member(pool_id, developer_id)
-    except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e)) from e
+    await service.add_pool_member(pool_id, developer_id)
     return SuccessResponse(message="Added to pool")
 
 

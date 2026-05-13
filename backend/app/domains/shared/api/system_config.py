@@ -34,6 +34,8 @@ from app.domains.shared.services.config_service import ConfigService
 from app.domains.shared.services.system_config_test_service import (
     _test_chat_model,
     _test_embedding_model,
+    _test_github_connection,
+    _test_proxy_connection,
 )
 
 logger = logging.getLogger(__name__)
@@ -301,8 +303,6 @@ async def update_proxy_config(
     current_user: dict = Depends(require_admin_user),
 ):
     """Update proxy configuration."""
-    from app.domains.shared.services.common.http_client import HttpClientFactory
-
     config_service = ConfigService(session)
 
     # Only update provided fields
@@ -312,25 +312,9 @@ async def update_proxy_config(
 
     await config_service.update_proxy_config(update_data)
 
-    # Clear cache to force refresh
+    # Clear cache and refresh HttpClientFactory
     ConfigService.clear_cache()
-
-    # Reload proxy config and refresh HttpClientFactory
-    proxy_config = await config_service.get_proxy_config(use_cache=False)
-    if proxy_config.enabled and proxy_config.url:
-        HttpClientFactory.configure(
-            proxy_url=proxy_config.url,
-            proxy_username=proxy_config.username or None,
-            proxy_password=proxy_config.password or None,
-            no_proxy=proxy_config.no_proxy or None,
-            ssl_verify=proxy_config.ssl_verify,
-        )
-        logger.info(
-            f"HttpClientFactory refreshed with proxy: {proxy_config.url}, no_proxy: {proxy_config.no_proxy}"
-        )
-    else:
-        HttpClientFactory.configure()  # Reset to no proxy
-        logger.info("HttpClientFactory reset to direct connection")
+    await config_service.refresh_http_client_factory()
 
     logger.info(f"Proxy configuration updated by user {current_user.get('user_id')}")
 
@@ -354,10 +338,6 @@ async def test_proxy_connection(
     1. External API access through proxy
     2. Internal URL direct connection (if no_proxy configured)
     """
-    import httpx
-
-    from app.domains.shared.services.common.http_client import HttpClientFactory
-
     config_service = ConfigService(session)
 
     # Get saved config or use provided values
@@ -386,171 +366,13 @@ async def test_proxy_connection(
             message="Proxy URL is required",
         )
 
-    # Configure Factory early so both external and internal tests use it
-    HttpClientFactory.configure(
+    return await _test_proxy_connection(
         proxy_url=proxy_url,
-        proxy_username=username,
-        proxy_password=password,
+        username=username,
+        password=password,
         no_proxy=no_proxy,
         ssl_verify=ssl_verify,
-    )
-
-    results = []
-
-    # Test 1: External API through proxy
-    from app.core.config import settings
-    openalex_base = settings.OPENALEX_BASE_URL or "https://api.openalex.org"
-    external_url = f"{openalex_base}/works?per_page=1"
-    try:
-        async with HttpClientFactory.create_client_for_url(
-            external_url, timeout=30.0
-        ) as client:
-            response = await client.get(external_url)
-
-            if response.status_code == 200:
-                results.append(
-                    {
-                        "url": external_url,
-                        "success": True,
-                        "message": "External API accessible through proxy",
-                        "used_proxy": True,
-                    }
-                )
-            else:
-                results.append(
-                    {
-                        "url": external_url,
-                        "success": False,
-                        "message": f"Proxy returned status {response.status_code}",
-                        "used_proxy": True,
-                    }
-                )
-    except httpx.ConnectError as e:
-        results.append(
-            {
-                "url": external_url,
-                "success": False,
-                "message": f"Failed to connect to proxy: {str(e)}",
-                "used_proxy": True,
-            }
-        )
-    except httpx.ProxyError as e:
-        results.append(
-            {
-                "url": external_url,
-                "success": False,
-                "message": f"Proxy error: {str(e)}",
-                "used_proxy": True,
-            }
-        )
-    except Exception as e:
-        logger.error(f"External proxy test failed: {e}")
-        results.append(
-            {
-                "url": external_url,
-                "success": False,
-                "message": f"Connection failed: {str(e)}",
-                "used_proxy": True,
-            }
-        )
-
-    # Test 2: Internal URL direct connection (if no_proxy configured)
-    if no_proxy:
-        # Try to extract an internal URL from no_proxy patterns
-        # Or use the provided test_internal_url
-        internal_url = request.test_internal_url if request else None
-
-        # If no specific URL provided, try to infer from no_proxy patterns
-        if not internal_url:
-            # Parse no_proxy to find a testable URL
-            patterns = [p.strip() for p in no_proxy.split(",") if p.strip()]
-            for pattern in patterns:
-                # Skip wildcards, look for concrete hostnames/IPs
-                if "*" not in pattern and not pattern.startswith("."):
-                    if pattern == "localhost":
-                        internal_url = "http://localhost:8003/health"
-                        break
-                    elif pattern == "127.0.0.1":
-                        internal_url = "http://127.0.0.1:8003/health"
-                        break
-                    # For IP patterns like 10.x.x.x, construct a test URL
-                    elif pattern.replace(".", "").isdigit():
-                        # This is an IP, try to use it
-                        internal_url = f"http://{pattern}:8003/health"
-                        break
-
-        if internal_url:
-            HttpClientFactory.should_use_proxy(internal_url)
-
-            try:
-                # Test direct connection (no proxy for internal URLs)
-                async with HttpClientFactory.create_client_for_url(
-                    internal_url, timeout=10.0
-                ) as client:
-                    response = await client.get(internal_url)
-
-                    if response.status_code in [200, 401, 403, 404]:
-                        # Any valid HTTP response counts as success
-                        results.append(
-                            {
-                                "url": internal_url,
-                                "success": True,
-                                "message": "Internal URL accessible directly (no_proxy matched)",
-                                "used_proxy": False,
-                            }
-                        )
-                    else:
-                        results.append(
-                            {
-                                "url": internal_url,
-                                "success": False,
-                                "message": f"Internal URL returned status {response.status_code}",
-                                "used_proxy": False,
-                            }
-                        )
-            except httpx.ConnectError:
-                # Connection refused is expected if service not running
-                # Still counts as "no_proxy working" because we tried direct
-                results.append(
-                    {
-                        "url": internal_url,
-                        "success": True,
-                        "message": "Direct connection attempted (no_proxy matched, service may not be running)",
-                        "used_proxy": False,
-                    }
-                )
-            except Exception as e:
-                results.append(
-                    {
-                        "url": internal_url,
-                        "success": True,
-                        "message": f"Direct connection attempted: {str(e)[:50]}",
-                        "used_proxy": False,
-                    }
-                )
-
-    # Determine overall success
-    external_success = results[0]["success"] if results else False
-    internal_tests = [r for r in results if not r["used_proxy"]]
-    internal_success = all(r["success"] for r in internal_tests) if internal_tests else True
-
-    overall_success = external_success and internal_success
-
-    # Build message
-    if overall_success:
-        if internal_tests:
-            message = "Proxy and no_proxy configuration working correctly"
-        else:
-            message = "Proxy connection successful"
-    else:
-        failed_tests = [r for r in results if not r["success"]]
-        message = f"{len(failed_tests)} test(s) failed"
-
-    return TestProxyResponse(
-        success=overall_success,
-        message=message,
-        details={"proxy_url": proxy_url, "no_proxy": no_proxy},
-        results=results,
+        test_internal_url=request.test_internal_url if request else None,
     )
 
 
@@ -612,72 +434,13 @@ async def test_github_connection(
     current_user: dict = Depends(require_admin_user),
 ):
     """Test GitHub API connection using configured tokens."""
-    from app.domains.shared.services.common.http_client import HttpClientFactory
-
     config_service = ConfigService(session)
     config = await config_service.get_github_config()
 
-    if not config.tokens:
-        return TestGitHubResponse(success=False, message="未配置 GitHub Token")
-
-    tokens = [t.strip() for t in config.tokens.split(",") if t.strip()]
-    if not tokens:
-        return TestGitHubResponse(success=False, message="Token 格式无效")
-
-    results = []
-    for token in tokens:
-        try:
-            async with HttpClientFactory.create_client_for_url(
-                config.base_url, timeout=10, headers={"Authorization": f"Bearer {token}"}
-            ) as client:
-                response = await client.get(f"{config.base_url}/rate_limit")
-                if response.status_code == 200:
-                    data = response.json()
-                    rate = data.get("rate", {})
-                    results.append({
-                        "token_prefix": token[:8] + "****",
-                        "success": True,
-                        "limit": rate.get("limit", 0),
-                        "remaining": rate.get("remaining", 0),
-                    })
-                elif response.status_code == 401:
-                    results.append({
-                        "token_prefix": token[:8] + "****",
-                        "success": False,
-                        "error": "Token 无效或已过期",
-                    })
-                else:
-                    results.append({
-                        "token_prefix": token[:8] + "****",
-                        "success": False,
-                        "error": f"HTTP {response.status_code}",
-                    })
-        except Exception as e:
-            results.append({
-                "token_prefix": token[:8] + "****",
-                "success": False,
-                "error": str(e),
-            })
-
-    success_count = sum(1 for r in results if r["success"])
-    if success_count == len(tokens):
-        return TestGitHubResponse(
-            success=True,
-            message=f"全部 {len(tokens)} 个 Token 测试通过",
-            details={"results": results},
-        )
-    elif success_count > 0:
-        return TestGitHubResponse(
-            success=True,
-            message=f"{success_count}/{len(tokens)} 个 Token 可用",
-            details={"results": results},
-        )
-    else:
-        return TestGitHubResponse(
-            success=False,
-            message="所有 Token 均无法连接 GitHub API",
-            details={"results": results},
-        )
+    return await _test_github_connection(
+        tokens=config.tokens,
+        base_url=config.base_url,
+    )
 
 
 # ========== Generic Configuration Endpoints ==========

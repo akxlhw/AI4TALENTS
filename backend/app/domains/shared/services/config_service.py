@@ -495,6 +495,30 @@ class ConfigService:
 
         await self.session.commit()
 
+    async def refresh_http_client_factory(self) -> None:
+        """Reload proxy config and refresh HttpClientFactory.
+
+        Must be called after updating proxy config so that new settings
+        take effect immediately for subsequent HTTP requests.
+        """
+        from app.domains.shared.services.common.http_client import HttpClientFactory
+
+        proxy_config = await self.get_proxy_config(use_cache=False)
+        if proxy_config.enabled and proxy_config.url:
+            HttpClientFactory.configure(
+                proxy_url=proxy_config.url,
+                proxy_username=proxy_config.username or None,
+                proxy_password=proxy_config.password or None,
+                no_proxy=proxy_config.no_proxy or None,
+                ssl_verify=proxy_config.ssl_verify,
+            )
+            logger.info(
+                f"HttpClientFactory refreshed with proxy: {proxy_config.url}, no_proxy: {proxy_config.no_proxy}"
+            )
+        else:
+            HttpClientFactory.configure()  # Reset to no proxy
+            logger.info("HttpClientFactory reset to direct connection")
+
     def _coerce_value(self, value: str | None, config_type: str) -> Any:
         """Coerce string value to appropriate type."""
         if value is None:

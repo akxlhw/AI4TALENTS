@@ -21,6 +21,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
+from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.domains.open_source.models.open_source import (
     OSCollectTask,
     OSRepoConfig,
@@ -143,15 +144,15 @@ class OSCollectionService:
             ValueError: 参数校验失败
         """
         if not REPO_FULL_NAME_PATTERN.match(repo_full_name):
-            raise ValueError("Invalid repo_full_name format. Expected 'owner/repo'")
+            raise BadRequestError("Invalid repo_full_name format. Expected 'owner/repo'")
         if tech_element not in VALID_TECH_ELEMENTS:
-            raise ValueError(
+            raise BadRequestError(
                 f"Invalid tech_element: {tech_element}. Must be one of: {', '.join(sorted(VALID_TECH_ELEMENTS))}"
             )
 
         existing = await self.repo.get_repo_config_by_full_name(repo_full_name)
         if existing:
-            raise ValueError(f"Repository '{repo_full_name}' already exists")
+            raise ConflictError(f"Repository '{repo_full_name}' already exists")
 
         # Fetch stars from GitHub API
         stars_count = 0
@@ -198,7 +199,7 @@ class OSCollectionService:
             ValueError: tech_element 不合法
         """
         if "tech_element" in update_data and update_data["tech_element"] not in VALID_TECH_ELEMENTS:
-            raise ValueError("Invalid tech_element")
+            raise BadRequestError("Invalid tech_element")
 
         return await self.repo.update_repo_config(repo_config_id, update_data)
 
@@ -283,7 +284,7 @@ class OSCollectionService:
         if not task:
             return None
         if task.status not in ("pending", "running"):
-            raise ValueError(f"Cannot cancel task in status: {task.status}")
+            raise BadRequestError(f"Cannot cancel task in status: {task.status}")
 
         return await self.repo.cancel_collect_task(task_id)
 
@@ -297,7 +298,7 @@ class OSCollectionService:
             return False
 
         if task.status in ("pending", "running"):
-            raise ValueError("Cannot delete running or pending task")
+            raise BadRequestError("Cannot delete running or pending task")
 
         return await self.repo.delete_collect_task(task_id)
 
@@ -323,13 +324,13 @@ class OSCollectionService:
         """
         config = await self.repo.get_repo_config(repo_config_id)
         if not config:
-            raise ValueError("Repo config not found")
+            raise NotFoundError("Repo config")
         if not config.collect_enabled:
-            raise ValueError("Repository collection is disabled")
+            raise BadRequestError("Repository collection is disabled")
 
         existing = await self.repo.get_active_collect_task(config.repo_full_name)
         if existing:
-            raise ValueError("A collection task is already running for this repository")
+            raise ConflictError("A collection task is already running for this repository")
 
         task = await self.repo.create_collect_task({
             "task_name": config.repo_full_name,

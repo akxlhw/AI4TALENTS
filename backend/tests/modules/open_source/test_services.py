@@ -8,6 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
+
 from app.domains.open_source.models.open_source import (
     OSCollectTask,
     OSDeveloper,
@@ -64,21 +66,21 @@ class TestRepoConfigService:
     @pytest.mark.unit
     async def test_create_repo_config_invalid_format(self, service: OpenSourceService):
         """Test creating repo config with invalid format raises ValueError."""
-        with pytest.raises(ValueError, match="Invalid repo_full_name"):
+        with pytest.raises(BadRequestError, match="Invalid repo_full_name"):
             await service.create_repo_config("invalid", "ai")
 
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_create_repo_config_invalid_tech_element(self, service: OpenSourceService):
         """Test creating repo config with invalid tech_element raises ValueError."""
-        with pytest.raises(ValueError, match="Invalid tech_element"):
+        with pytest.raises(BadRequestError, match="Invalid tech_element"):
             await service.create_repo_config("owner/repo", "invalid")
 
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_create_repo_config_duplicate(self, service: OpenSourceService, sample_config):
         """Test creating duplicate repo config raises ValueError."""
-        with pytest.raises(ValueError, match="already exists"):
+        with pytest.raises(ConflictError, match="already exists"):
             await service.create_repo_config("test-org/test-repo", "ai")
 
     @pytest.mark.asyncio
@@ -95,7 +97,7 @@ class TestRepoConfigService:
     @pytest.mark.unit
     async def test_update_repo_config_invalid_tech(self, service: OpenSourceService, sample_config):
         """Test updating with invalid tech_element raises ValueError."""
-        with pytest.raises(ValueError, match="Invalid tech_element"):
+        with pytest.raises(BadRequestError, match="Invalid tech_element"):
             await service.update_repo_config(
                 sample_config.repo_config_id, {"tech_element": "invalid"}
             )
@@ -175,7 +177,7 @@ class TestCollectTaskService:
         """Test cancelling a completed task raises ValueError."""
         sample_task.status = "completed"
         await service.session.commit()
-        with pytest.raises(ValueError, match="Cannot cancel"):
+        with pytest.raises(BadRequestError, match="Cannot cancel"):
             await service.cancel_collect_task(sample_task.task_id)
 
     @pytest.mark.asyncio
@@ -184,14 +186,14 @@ class TestCollectTaskService:
         """Test deleting running task raises ValueError."""
         sample_task.status = "running"
         await service.session.commit()
-        with pytest.raises(ValueError, match="Cannot delete"):
+        with pytest.raises(BadRequestError, match="Cannot delete"):
             await service.delete_collect_task(sample_task.task_id)
 
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_collect_single_repo_not_found(self, service: OpenSourceService):
         """Test collect single repo with invalid config raises ValueError."""
-        with pytest.raises(ValueError, match="Repo config not found"):
+        with pytest.raises(NotFoundError, match="Repo config"):
             await service.collect_single_repo(99999, 30, 1)
 
     @pytest.mark.asyncio
@@ -207,7 +209,7 @@ class TestCollectTaskService:
         await test_session.commit()
         await test_session.refresh(config)
 
-        with pytest.raises(ValueError, match="disabled"):
+        with pytest.raises(BadRequestError, match="disabled"):
             await service.collect_single_repo(config.repo_config_id, 30, 1)
 
     @pytest.mark.asyncio
@@ -308,7 +310,7 @@ class TestDeveloperService:
     @pytest.mark.unit
     async def test_get_developer_detail_not_found(self, service: OpenSourceService):
         """Test getting detail for non-existent developer raises ValueError."""
-        with pytest.raises(ValueError, match="Developer not found"):
+        with pytest.raises(NotFoundError, match="Developer"):
             await service.get_developer_detail(99999)
 
     @pytest.mark.asyncio
@@ -330,7 +332,7 @@ class TestDeveloperService:
     @pytest.mark.unit
     async def test_compare_developers_invalid_count(self, service: OpenSourceService):
         """Test comparing with invalid developer count raises ValueError."""
-        with pytest.raises(ValueError, match="2 to 5"):
+        with pytest.raises(BadRequestError, match="2 to 5"):
             await service.compare_developers([1])
 
     @pytest.mark.asyncio
@@ -445,7 +447,7 @@ class TestFavouriteService:
     @pytest.mark.unit
     async def test_add_duplicate_favourite(self, service: OpenSourceService, sample_favourite):
         """Test adding duplicate favourite raises ValueError."""
-        with pytest.raises(ValueError, match="Already favorited"):
+        with pytest.raises(ConflictError, match="Already favorited"):
             await service.add_favourite(user_id=sample_favourite.user_id, developer_id=sample_favourite.developer_id)
 
     @pytest.mark.asyncio
@@ -550,7 +552,7 @@ class TestTalentPoolService:
         await test_session.flush()
 
         await service.add_pool_member(sample_pool.pool_id, dev.developer_id)
-        with pytest.raises(ValueError, match="Already in pool"):
+        with pytest.raises(ConflictError, match="Already in pool"):
             await service.add_pool_member(sample_pool.pool_id, dev.developer_id)
 
     @pytest.mark.asyncio

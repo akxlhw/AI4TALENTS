@@ -543,6 +543,25 @@ class AuthorFetcher:
         self.client = client or OpenAlexClient()
         self.repo = RawAuthorRepository(session)
 
+    @with_retry(max_attempts=3, max_wait=30.0)
+    async def _fetch_batch_with_retry(
+        self,
+        http_session: aiohttp.ClientSession,
+        url: str,
+        params: dict,
+        headers: dict,
+        proxy: str | None = None,
+    ) -> dict:
+        """带重试的批量获取"""
+        async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
+            if response.status == 429:
+                raise RetryableError("Rate limited (HTTP 429)")
+            if response.status >= 500:
+                raise RetryableError(f"Server error (HTTP {response.status})")
+            if response.status != 200:
+                raise Exception(f"HTTP {response.status}")
+            return await response.json()
+
     async def fetch_authors_by_ids(
         self,
         author_ids: list[str],
@@ -605,17 +624,9 @@ class AuthorFetcher:
                     if self.client.email:
                         headers["mailto"] = self.client.email
 
-                    async with http_session.get(
-                        url, params=params, headers=headers, proxy=proxy
-                    ) as response:
-                        if response.status != 200:
-                            logger.warning(
-                                f"批次 {batch_num}/{total_batches} 请求失败: HTTP {response.status}"
-                            )
-                            progress.failed += len(batch)
-                            continue
-
-                        data = await response.json()
+                    data = await self._fetch_batch_with_retry(
+                        http_session, url, params, headers, proxy
+                    )
 
                     authors = data.get("results", [])
                     batch_authors: list[RawAuthor] = []
@@ -689,6 +700,25 @@ class InstitutionFetcher:
         self.client = client or OpenAlexClient()
         self.repo = RawInstitutionRepository(session)
 
+    @with_retry(max_attempts=3, max_wait=30.0)
+    async def _fetch_batch_with_retry(
+        self,
+        http_session: aiohttp.ClientSession,
+        url: str,
+        params: dict,
+        headers: dict,
+        proxy: str | None = None,
+    ) -> dict:
+        """带重试的批量获取"""
+        async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
+            if response.status == 429:
+                raise RetryableError("Rate limited (HTTP 429)")
+            if response.status >= 500:
+                raise RetryableError(f"Server error (HTTP {response.status})")
+            if response.status != 200:
+                raise Exception(f"HTTP {response.status}")
+            return await response.json()
+
     async def fetch_institutions_by_ids(
         self,
         institution_ids: list[str],
@@ -729,17 +759,9 @@ class InstitutionFetcher:
                     if self.client.email:
                         headers["mailto"] = self.client.email
 
-                    async with http_session.get(
-                        url, params=params, headers=headers, proxy=proxy
-                    ) as response:
-                        if response.status != 200:
-                            logger.warning(
-                                f"批次 {batch_num}/{total_batches} 请求失败: HTTP {response.status}"
-                            )
-                            progress.failed += len(batch)
-                            continue
-
-                        data = await response.json()
+                    data = await self._fetch_batch_with_retry(
+                        http_session, url, params, headers, proxy
+                    )
 
                     institutions = data.get("results", [])
                     batch_insts: list[RawInstitution] = []

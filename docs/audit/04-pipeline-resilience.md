@@ -1,226 +1,98 @@
-# 阶段4：数据采集链路单点故障分析 (v2.0.0 更新)
+# Phase 4: 数据采集链路单点故障分析 (v2.0.1 更新)
 
-> 扫描时间：2026-05-09
-> 扫描范围：GitHub API → OpenAlex API → 数据清洗 → 本地存储
-> 方法：深度代码阅读 + SRE 检查清单
+> 扫描时间：2026-05-12
 
----
-
-## 一、GitHub API 采集链路
-
-### 1.1 链路概览
+## 采集链路总览
 
 ```
-open_source/api/open_source.py (trigger collect)
-    ↓
-open_source/services/collectors/github_collector.py
-    ↓
-open_source/services/github_client.py  ←→  GitHub REST API
-    ↓
-open_source/services/collectors/sync_service.py (upsert)
-    ↓
-PostgreSQL (os_developer, os_repository, os_contribution)
+GitHub API / OpenAlex API
+    ↓ (retry + rate limit)
+Data Fetching (data_fetchers.py / github_collector.py)
+    ↓ (batch upsert + error catch)
+Normalization (normalizers/author.py, school.py)
+    ↓ (per-record isolation)
+Sync (sync/author_sync.py, school_sync.py)
+    ↓ (phase commit + checkpoint)
+Serving (core_talent)
 ```
 
-### 1.2 重试机制
+---
 
-| 检查项 | 当前状态 | 风险等级 | 详情 |
-|--------|---------|---------|------|
-| 指数退避重试 | ✅ 有 | — | `tenacity.wait_exponential(multiplier=1, min=2, max=30)` |
-| 最大重试次数 | ✅ 有 | — | `stop_after_attempt(3)` |
-| 重试异常范围 | ⚠️ 部分 | P1 | 仅重试 `HTTPStatusError` + `NetworkError`，**不覆盖 `httpx.TimeoutException`** |
-| 降级策略 | ❌ 无 | P1 | 除 404 返回空 dict 外无降级 |
+## 1. 重试机制
 
-**关键代码**: `open_source/services/github_client.py` L120-158
+| 组件 | 指数退避 | 最大重试 | 重试谓词 | 失败后 | 评级 |
+|------|---------|---------|---------|--------|------|
+| OpenAlex Client | ✅ `wait_exponential(1,1,10)` + Retry-After | ✅ 5次 | ✅ 仅 Timeout/Network/429 | 异常上抛 | B |
+| OpenAlex Works Fetcher | ✅ `wait_exponential(1,1,60)` | ✅ 5次 | ✅ 429/5xx→RetryableError | 标记failed继续 | A |
+| OpenAlex Author/Inst Fetcher | ❌ 无 | ❌ 无 | ❌ 无 | 整批丢失 | **D** |
+| GitHub Client | ✅ `wait_exponential(1,2,30)` | ✅ 3次 | ✅ Network/Timeout/429/5xx | 异常上抛 | A |
+| HTTP Client Factory | ❌ 无 | ❌ 无 | ❌ 无 | N/A | C |
 
-```python
-@retry(
-    retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.NetworkError)),
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=30),
-    reraise=True,
-)
-async def _get(self, path: str, ...) -> Any:
-    ...
-    if response.status_code == 404:
-        return {}  # ← 唯一降级
-```
+### 🔴 P1: Author/Institution 批量获取无重试
 
-> **P1 风险**: `httpx.TimeoutException` 不在重试范围，GitHub API 超时会直接抛异常中断采集。
+`data_fetchers.py:600-673` (authors) 和 `717-778` (institutions) 的 fetcher 循环中：
+- Works fetcher 有 `_fetch_page_with_retry` 封装
+- Author/Institution fetcher **没有**，仅在 batch 级别 catch 异常 → `progress.failed += len(batch)` → 静默跳过
 
-### 1.3 熔断与限流
-
-| 检查项 | 当前状态 | 风险等级 | 详情 |
-|--------|---------|---------|------|
-| 主动限流（请求间隔） | ✅ 有 | — | `_min_interval = 0.2`（200ms），`_throttle()` |
-| Rate Limit 响应头读取 | ✅ 有 | — | 读取 `X-RateLimit-Remaining` 和 `X-RateLimit-Reset` |
-| 多 Token 轮换 | ✅ 有 | — | 支持多个 GitHub Token 自动切换 |
-| Token 耗尽等待 | ✅ 有 | — | 所有 Token 耗尽后等待至 Reset（上限 1 小时）|
-| 熔断机制 | ❌ 无 | P1 | 连续失败不会触发熔断 |
-
-> **P1 风险**: 无熔断器。GitHub API 区域性故障时，系统会持续尝试所有 Token。
-
-### 1.4 事务与一致性
-
-| 检查项 | 当前状态 | 风险等级 | 详情 |
-|--------|---------|---------|------|
-| 单条 contributor 事务 | ❌ 无 | P0 | 整个仓库 contributor 处理在一个 session 中 |
-| 失败隔离 | ⚠️ 部分 | P1 | 单个 contributor 失败被 `try/except` 吞掉，但**不标记失败记录** |
-| Stars 独立更新 | ⚠️ 有 | P1 | `os_repo_config.stars_count` 在独立 session 中更新 |
-| 幂等性 | ❌ 无 | P1 | 重复执行同一采集任务会重复处理 |
-| 部分字段缺失 | ✅ 容错 | — | `user.get("email") or ""` 能处理空值 |
-
-> **P0 风险**: 如果 contributor 采集过程中失败，`stars_count` 已更新但数据不完整。
-
-### 1.5 可观测性
-
-| 检查项 | 当前状态 | 风险等级 | 详情 |
-|--------|---------|---------|------|
-| 结构化日志 | ⚠️ 部分 | P1 | 有 `logger.info/warning/error`，但**无 traceId** |
-| 请求耗时记录 | ❌ 无 | P2 | 未记录单次 API 调用耗时 |
-| 任务进度追踪 | ✅ 有 | — | `OSCollectTask` 表有 `progress_percent`、`current_step` |
-| 失败上下文 | ⚠️ 部分 | P1 | contributor 失败只记录 `logger.warning(f"Failed...{login}: {e}")` |
-| 监控指标 | ❌ 无 | P2 | 无 Prometheus 指标暴露采集成功率 |
+**影响**: 一次瞬时 429 或 5xx 错误会丢失整个批次 (25个 author/institution)。
 
 ---
 
-## 二、OpenAlex API 采集链路
+## 2. 限流与并发控制
 
-### 2.1 链路概览
+| 组件 | 限流方式 | 并发控制 | 评级 |
+|------|---------|---------|------|
+| GitHub Client | ✅ 多 Token 轮换 + X-RateLimit-Remaining 追踪 | ✅ 全局 Semaphore(1) | A |
+| OpenAlex Client | ✅ min_interval 节流 + Retry-After 遵从 | ❌ 无 Semaphore | B |
+| 全局熔断器 | ❌ 无 | N/A | **D** |
 
-```
-academic/api/collect.py (trigger)
-    ↓
-academic/services/collect/orchestrator.py (CollectionOrchestrator)
-    ↓
-academic/services/collect/phases/phase_1_collect.py (WorkFetcher)
-academic/services/collect/phases/phase_2_fetch_authors.py (AuthorFetcher)
-academic/services/collect/phases/phase_3_fetch_institutions.py (InstitutionFetcher)
-    ↓
-academic/services/openalex_client.py / data_fetchers.py  ←→  OpenAlex API
-    ↓
-raw_work / raw_author / raw_institution
-    ↓
-academic/services/normalizers/ (author.py, school.py, tech_belong.py)
-    ↓
-std_author / std_school
-    ↓
-academic/services/sync/ (author_sync.py, school_sync.py)
-    ↓
-core_talent / core_school (Serving Layer)
-```
+### 🟡 P1: 无熔断器
 
-### 2.2 重试机制
-
-#### OpenAlexClient (`academic/services/openalex_client.py`)
-
-| 检查项 | 当前状态 | 风险等级 | 详情 |
-|--------|---------|---------|------|
-| 指数退避重试 | ✅ 有 | — | `tenacity.wait_exponential(multiplier=1, min=1, max=10)` |
-| 最大重试次数 | ✅ 有 | — | `stop_after_attempt(3)` |
-| 重试异常范围 | ⚠️ 部分 | P1 | 仅重试 `TimeoutException` + `NetworkError`，**不覆盖 HTTP 5xx** |
-| 429 处理 | ❌ 无重试 | **P0** | 429 抛 `OpenAlexRateLimitError`，**不自动等待/重试** |
-| 降级策略 | ❌ 无 | P1 | 无降级 |
-
-> **P0 风险**: OpenAlex 返回 429 时任务直接失败，不会等待 Retry-After 后重试。
-
-#### DataFetchers (`academic/services/data_fetchers.py`)
-
-| 检查项 | 当前状态 | 风险等级 | 详情 |
-|--------|---------|---------|------|
-| 自定义重试装饰器 | ✅ 有 | — | `with_retry(max_attempts=5, max_wait=60.0)` |
-| 429 处理 | ✅ 有 | — | 抛 `RetryableError`，触发重试 |
-| 5xx 处理 | ✅ 有 | — | 抛 `RetryableError`，触发重试 |
-| 4xx 处理 | ❌ 无重试 | P1 | 非 200/429/5xx 直接 `raise Exception` |
-
-### 2.3 熔断与限流
-
-| 检查项 | 当前状态 | 风险等级 | 详情 |
-|--------|---------|---------|------|
-| 请求速率限制 | ✅ 有 | — | `rate_limit = 10` req/s |
-| 熔断机制 | ❌ 无 | P1 | 无 |
-| 并发控制 | ❌ 无 | P1 | 无 semaphore/队列限制 |
-
-### 2.4 事务与一致性
-
-| 检查项 | 当前状态 | 风险等级 | 详情 |
-|--------|---------|---------|------|
-| 单 Phase 事务 | ⚠️ 部分 | P1 | 每个 PhaseHandler 内部有 session，Orchestrator 不统一管理 |
-| 跨 Phase 一致性 | ❌ 无 | **P0** | Phase 1-11 各自独立，**无全局事务** |
-| 失败回滚 | ❌ 无 | **P0** | 某 Phase 失败后，前面 Phase 的数据已写入，不会回滚 |
-| 幂等性 | ❌ 无 | P1 | 重复执行同一任务会重复处理数据 |
-| 中途 commit | ⚠️ 有 | P1 | Phase 1 中途更新 `task.total_records` 并 commit |
-
-> **P0 风险**: Phase 1 提交后，如果 Phase 2 失败，Phase 1 的脏数据留在数据库中。
-
-### 2.5 可观测性
-
-| 检查项 | 当前状态 | 风险等级 | 详情 |
-|--------|---------|---------|------|
-| 结构化日志 | ⚠️ 部分 | P1 | ProgressTracker 有日志，但**无 traceId** |
-| 请求耗时记录 | ❌ 无 | P2 | 未记录单次 API 调用耗时 |
-| 任务进度 | ✅ 有 | — | 11 个 Phase 均有进度百分比 |
-| 错误详情 | ✅ 有 | — | `traceback.format_exc()` 记录到 `progress.errors` |
-| Prometheus 指标 | ⚠️ 部分 | P2 | `core/metrics.py` 存在但采集链路指标未暴露 |
+当 GitHub/OpenAlex 持续故障时，所有采集任务会反复重试直到超时，没有 fail-fast 机制。应在连续 N 次失败后触发熔断，暂停一段时间再尝试。
 
 ---
 
-## 三、HTTP 客户端层统一性
+## 3. 事务与一致性
 
-| 检查项 | GitHub 客户端 | OpenAlex 客户端 | 评估 |
-|--------|--------------|-----------------|------|
-| 统一工厂创建 | ✅ `HttpClientFactory` | ❌ 直接 `httpx.AsyncClient` | OpenAlex 未复用 |
-| 代理支持 | ✅ 有 | ⚠️ 部分 | openalex_client.py 导入了但未使用 |
-| 连接池复用 | ✅ 有 | ❌ 无 | 每次请求新建 client |
+| 组件 | 事务策略 | 一致性 | 评级 |
+|------|---------|--------|------|
+| Orchestrator | ✅ Phase 级 commit + checkpoint | ✅ 关键/非关键 Phase 分离 | A |
+| Author Normalizer | ✅ per-record 隔离 + failed 标记 | ✅ 坏记录不污染批次 | A |
+| School Normalizer | ⚠️ per-record 隔离 | ❌ 失败记录未标记为 failed | **C** |
+| Sync Services | ✅ flush only, Orchestrator commit | ✅ 无独立 commit | A |
 
-> **资源风险**: `openalex_client.py` 每次 `_make_request` 都新建 `httpx.AsyncClient`，高并发时 TCP 连接开销大。
+### 🔴 P1: School Normalizer 失败记录无限重试
 
----
+`school.py:223-224`: 失败的 raw_institution 仅 `result.failed += 1`，不调用 `batch_mark_processed(failed_ids, "failed")`。结果：失败记录永远留在 "pending"，每次管道运行都会重新尝试处理同一条永久损坏的记录。
 
-## 四、API 网关层可观测性
+### 🟡 P1: Venue 子任务无游标级断点
 
-### Request Logging Middleware (`middleware/request_logging.py`)
-
-| 检查项 | 当前状态 | 风险等级 | 详情 |
-|--------|---------|---------|------|
-| Request ID | ✅ 有 | — | 每个请求生成 8 位 UUID，存入 `request.state` |
-| 耗时记录 | ✅ 有 | — | 记录处理时间（毫秒） |
-| 状态码记录 | ✅ 有 | — | 记录响应状态码 |
-| traceId 传递 | ❌ 无 | P1 | Request ID **未传递**到采集链路 |
-| 采集链路关联 | ❌ 无 | P2 | 采集任务日志与 HTTP 请求日志无关联 |
+Orchestrator 有 Phase 级 checkpoint，但 venue 子任务内部无游标级断点。如果一个有 10,000 篇论文的 venue 在第 8,000 篇时崩溃，下次重试从头开始。
 
 ---
 
-## 五、风险汇总
+## 4. 可观测性
 
-### P0 级（发版前必须修复）
+| 能力 | 状态 | 详情 |
+|------|------|------|
+| HTTP 请求 ID | ✅ | `RequestLoggingMiddleware` 生成 UUID |
+| 后台任务关联 | ❌ | `request_id` 不传播到 `asyncio.create_task` |
+| Prometheus HTTP 指标 | ✅ | counter/histogram/gauge 齐全 |
+| 管道专属指标 | ⚠️ | 仅有粗粒度 `collection_tasks_*` |
+| Phase 级日志 | ✅ | `ProgressTracker` 结构化存储 |
 
-| # | 风险 | 影响 | 修复建议 |
-|---|------|------|---------|
-| 1 | OpenAlex 429 不自动重试 | 采集任务因限流频繁失败 | 在 `_make_request` 中捕获 429，读取 `Retry-After`，等待后重试 |
-| 2 | 跨 Phase 无全局事务 | 某 Phase 失败后数据不一致 | 引入 Saga/补偿事务，失败时标记脏数据并清理 |
-| 3 | GitHub 采集单 session 处理全部 contributor | 单 contributor 失败影响全量 | 每个 contributor 使用独立事务或 savepoint |
+### 🟡 P1: 后台任务无关联 ID
 
-### P1 级（v2.0.1 修复）
-
-| # | 风险 | 修复建议 |
-|---|------|---------|
-| 1 | 无熔断机制 | 引入 `pybreaker`，连续失败 N 次后快速失败 |
-| 2 | `openalex_client.py` 每次新建 client | 复用 `HttpClientFactory` 或 session 级 client |
-| 3 | GitHub 超时不重试 | 将 `httpx.TimeoutException` 加入重试范围 |
-| 4 | 采集链路无 traceId | 将 `request.state.request_id` 传递到采集日志 |
-| 5 | 无幂等性保证 | 采集任务增加幂等键 |
-| 6 | `os_repo_config.stars_count` 独立更新 | 移入同一事务 |
-
-### P2 级（季度优化）
-
-| # | 风险 | 修复建议 |
-|---|------|---------|
-| 1 | 无采集成功率 Prometheus 指标 | 暴露 `collection_success_rate` 等指标 |
-| 2 | 无采集队列堆积监控 | 暴露 `collect_queue_size` 指标 |
-| 3 | 单次 API 调用无耗时记录 | 在 `_get`/`_make_request` 中记录耗时 |
-| 4 | 无并发控制 | 引入 `asyncio.Semaphore` 限制并发数 |
+采集任务通过 `BackgroundTasks` / `asyncio.create_task` 运行，`request_id` 无法从 HTTP 请求传播到后台任务。日志中无法将采集错误关联到触发请求或用户。
 
 ---
 
-> 关联报告：[01-dependency-graph.md](01-dependency-graph.md) | [02-code-smell-heatmap.md](02-code-smell-heatmap.md) | [03-ai-style-markers.md](03-ai-style-markers.md)
+## P1 风险清单
+
+| # | 风险 | 当前状态 | 位置 | 修复建议 |
+|---|------|---------|------|---------|
+| 1 | Author/Inst 批量获取无重试 | 无 | `data_fetchers.py:600-778` | 复用 `_fetch_page_with_retry` 模式 |
+| 2 | 无熔断器 | 无 | 全局 | 引入 circuit breaker 装饰器 |
+| 3 | School 正常化器失败记录未标记 | 部分 | `school.py:223` | 添加 `batch_mark_processed(failed, "failed")` |
+| 4 | 子任务无游标级断点 | 无 | `venue_executor.py` | 记录 cursor position 到 sub_task |
+| 5 | 后台任务无关联 ID | 无 | `collect.py` | 传递 request_id 到 create_task |

@@ -119,10 +119,7 @@ async def generate_embeddings(
         raise HTTPException(status_code=400, detail="Embedding generation is already running")
 
     service = OpenSourceService(session)
-    try:
-        total = await service.trigger_batch_embedding(batch_size=req.batch_size, force=req.force)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+    total = await service.trigger_batch_embedding(batch_size=req.batch_size, force=req.force)
 
     dev_ids = await service.get_visible_developer_ids()
     embedding_progress["status"] = "running"
@@ -188,12 +185,6 @@ async def generate_single_embedding(
     if not dev:
         raise HTTPException(status_code=404, detail="Developer not found")
 
-    try:
-        await service.generate_single_embedding(developer_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
-        logger.error(f"Single embedding generation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    await service.generate_single_embedding(developer_id)
 
     return SuccessResponse(message=f"Embedding generated for developer {developer_id}")
