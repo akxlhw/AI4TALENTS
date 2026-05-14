@@ -201,7 +201,7 @@ class TestRegistration:
             json={
                 "username": "newregister",
                 "email": "newregister@example.com",
-                "password": "password123",
+                "password": "Str0ng!Pw",
                 "employee_id": "h00111111",
             },
         )
@@ -217,7 +217,7 @@ class TestRegistration:
             json={
                 "username": "testuser",
                 "email": "unique@example.com",
-                "password": "password123",
+                "password": "Str0ng!Pw",
                 "employee_id": "h00222222",
             },
         )
@@ -233,7 +233,7 @@ class TestRegistration:
             json={
                 "username": "uniqueuser",
                 "email": "test@example.com",
-                "password": "password123",
+                "password": "Str0ng!Pw",
                 "employee_id": "h00333333",
             },
         )
@@ -249,7 +249,7 @@ class TestRegistration:
             json={
                 "username": "uniqueuser2",
                 "email": "unique2@example.com",
-                "password": "password123",
+                "password": "Str0ng!Pw",
                 "employee_id": "h00123456",
             },
         )
@@ -265,7 +265,7 @@ class TestRegistration:
             json={
                 "username": "badiduser",
                 "email": "badid@example.com",
-                "password": "password123",
+                "password": "Str0ng!Pw",
                 "employee_id": "123456789",  # missing letter prefix
             },
         )
@@ -280,7 +280,7 @@ class TestRegistration:
             json={
                 "username": "shortiduser",
                 "email": "shortid@example.com",
-                "password": "password123",
+                "password": "Str0ng!Pw",
                 "employee_id": "h1234567",  # 7 digits instead of 8
             },
         )
@@ -408,7 +408,7 @@ class TestChangePassword:
             headers={"Authorization": f"Bearer {token}"},
             json={
                 "current_password": "testpassword123",
-                "new_password": "newpassword123",
+                "new_password": "N3wP@ssw0rd",
             },
         )
 
@@ -431,7 +431,7 @@ class TestChangePassword:
             headers={"Authorization": f"Bearer {token}"},
             json={
                 "current_password": "wrongpassword",
-                "new_password": "newpassword123",
+                "new_password": "N3wP@ssw0rd",
             },
         )
 
@@ -458,10 +458,7 @@ class TestChangePassword:
             },
         )
 
-        assert response.status_code == 422  # Validation error
-
-
-class TestAuthUtilities:
+        assert response.status_code == 422  # Pydantic min_length validation
     """Tests for authentication utility functions."""
 
     def test_hash_password(self):

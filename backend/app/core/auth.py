@@ -5,6 +5,7 @@ Password hashing and JWT token handling.
 
 from __future__ import annotations
 
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -15,10 +16,62 @@ import jwt
 from app.core.config import settings
 
 # JWT Configuration
-JWT_SECRET_KEY = settings.SECRET_KEY or "your-secret-key-change-in-production"
-JWT_ALGORITHM = "HS256"
-JWT_ACCESS_TOKEN_EXPIRE_HOURS = 8
-JWT_REFRESH_TOKEN_EXPIRE_DAYS = 7
+JWT_SECRET_KEY = settings.SECRET_KEY
+JWT_ALGORITHM = settings.ALGORITHM
+JWT_ACCESS_TOKEN_EXPIRE_HOURS = settings.ACCESS_TOKEN_EXPIRE_HOURS
+JWT_REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
+
+
+# Password policy constants
+MIN_PASSWORD_LENGTH = 8
+PASSWORD_PATTERN = re.compile(
+    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$"
+)
+
+
+def validate_password_strength(password: str) -> tuple[bool, str]:
+    """
+    Validate password strength against security policy.
+
+    Requirements:
+    - Minimum 8 characters (recommended 12+)
+    - At least one uppercase letter
+    - At least one lowercase letter
+    - At least one digit
+    - At least one special character (@$!%*?&_-)
+
+    Args:
+        password: Plain text password to validate
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return False, f"Password must be at least {MIN_PASSWORD_LENGTH} characters long"
+
+    if len(password) < 12:
+        # Allow but warn for 8-11 chars
+        pass
+
+    if not PASSWORD_PATTERN.match(password):
+        return (
+            False,
+            "Password must contain at least one uppercase letter, one lowercase letter, "
+            "one digit, and one special character",
+        )
+
+    # Check against common weak passwords (exact match only)
+    COMMON_WEAK_PASSWORDS = {
+        "password", "password1", "password123",
+        "admin123", "admin1234",
+        "qwerty123", "qwertyui",
+        "12345678", "123456789", "1234567890",
+        "abcd1234", "a1b2c3d4",
+    }
+    if password.lower() in COMMON_WEAK_PASSWORDS:
+        return False, "Password is too common or easily guessable"
+
+    return True, ""
 
 
 def hash_password(password: str) -> str:
@@ -31,7 +84,7 @@ def hash_password(password: str) -> str:
     Returns:
         Hashed password string
     """
-    salt = bcrypt.gensalt()
+    salt = bcrypt.gensalt(rounds=12)
     hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
     return hashed.decode("utf-8")
 
@@ -71,10 +124,11 @@ def create_access_token(
     Returns:
         JWT token string
     """
+    now = datetime.now(timezone.utc)
     if expires_delta:
-        expire = datetime.now(timezone.utc).replace(tzinfo=None) + expires_delta
+        expire = now + expires_delta
     else:
-        expire = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=JWT_ACCESS_TOKEN_EXPIRE_HOURS)
+        expire = now + timedelta(hours=JWT_ACCESS_TOKEN_EXPIRE_HOURS)
 
     payload = {
         "sub": str(user_id),
@@ -82,7 +136,8 @@ def create_access_token(
         "role": role,
         "type": "access",
         "exp": expire,
-        "iat": datetime.now(timezone.utc).replace(tzinfo=None),
+        "iat": now,
+        "jti": secrets.token_hex(16),  # Unique token ID for revocation support
     }
 
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
@@ -98,13 +153,14 @@ def create_refresh_token(user_id: int) -> str:
     Returns:
         JWT refresh token string
     """
-    expire = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(days=JWT_REFRESH_TOKEN_EXPIRE_DAYS)
 
     payload = {
         "sub": str(user_id),
         "type": "refresh",
         "exp": expire,
-        "iat": datetime.now(timezone.utc).replace(tzinfo=None),
+        "iat": now,
         "jti": secrets.token_hex(16),  # Unique token ID
     }
 
@@ -122,7 +178,9 @@ def decode_token(token: str) -> dict[str, Any] | None:
         Decoded payload or None if invalid
     """
     try:
-        payload: dict[str, Any] = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        payload: dict[str, Any] = jwt.decode(
+            token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM]
+        )
         return payload
     except jwt.ExpiredSignatureError:
         return None

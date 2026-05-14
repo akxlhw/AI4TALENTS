@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
@@ -55,6 +55,16 @@ class UserCreateRequest(BaseModel):
     role: str = Field(default="user")
     display_name: str | None = None
     employee_id: str | None = Field(default=None, pattern=r"^[a-zA-Z]\d{8}$")
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        from app.core.auth import validate_password_strength
+
+        is_valid, error_msg = validate_password_strength(v)
+        if not is_valid:
+            raise ValueError(error_msg)
+        return v
 
 
 class UserUpdateRequest(BaseModel):

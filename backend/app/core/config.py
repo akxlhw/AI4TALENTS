@@ -5,10 +5,17 @@ Loads settings from environment variables.
 
 from __future__ import annotations
 
+import secrets
+import warnings
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings
+
+
+def _generate_secret_key() -> str:
+    """Generate a secure random secret key for development."""
+    return secrets.token_urlsafe(32)
 
 
 class Settings(BaseSettings):
@@ -24,8 +31,8 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://talent_user:talent_password@localhost:5432/talent_db"
-    DATABASE_SYNC_URL: str = "postgresql://talent_user:talent_password@localhost:5432/talent_db"
+    DATABASE_URL: str = ""
+    DATABASE_SYNC_URL: str = ""
 
     # OpenAlex API
     OPENALEX_BASE_URL: str = "https://api.openalex.org"
@@ -38,14 +45,15 @@ class Settings(BaseSettings):
     GITHUB_RATE_LIMIT: int = 5000  # Requests per hour per token
 
     # JWT Authentication
-    SECRET_KEY: str = "your-secret-key-change-in-production"
+    SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_HOURS: int = 8
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # CORS - 自动检测前端来源
-    # 生产环境：允许同 IP 的前端端口访问（如 http://192.168.1.x:2012）
-    # 开发环境：允许所有来源
-    CORS_ORIGINS: list[str] = ["*"]  # 简化配置，允许所有来源
+    # CORS - 生产环境必须限制为具体域名
+    # 开发环境: ["http://localhost:2012", "http://localhost:3000"]
+    # 生产环境: ["https://your-domain.com"]
+    CORS_ORIGINS: list[str] = ["http://localhost:2012"]
 
     # Rate Limiting (disabled in development)
     RATE_LIMIT_ENABLED: bool = False  # Enable in production
@@ -61,7 +69,7 @@ class Settings(BaseSettings):
 
     # Redis / Cache
     REDIS_URL: str = "redis://localhost:6379/0"
-    REDIS_ENABLED: bool = False  # Default disabled for development
+    REDIS_ENABLED: bool = False
     REDIS_PASSWORD: str | None = None
     REDIS_MAX_CONNECTIONS: int = 10
     CACHE_DEFAULT_TTL: int = 300  # 5 minutes
@@ -108,7 +116,6 @@ class Settings(BaseSettings):
     # GitHub API
     GITHUB_PER_PAGE: int = 100  # Items per page for GitHub API
     GITHUB_BATCH_SIZE: int = 5  # Concurrent repo requests (reduced to avoid burst detection)
-    GITHUB_RATE_LIMIT: int = 5000  # Requests per hour per token
 
     # Search Configuration (v1.4)
     SEARCH_DEFAULT_MODE: str = "keyword"  # keyword, fulltext, semantic, hybrid
@@ -132,6 +139,65 @@ class Settings(BaseSettings):
         env_file = str(Path(__file__).resolve().parent.parent.parent / ".env")
         env_file_encoding = "utf-8"
         case_sensitive = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._validate_security_settings()
+
+    def _validate_security_settings(self) -> None:
+        """Validate critical security settings and warn if unsafe."""
+        # Validate SECRET_KEY
+        if not self.SECRET_KEY:
+            if self.ENVIRONMENT == "production":
+                raise ValueError(
+                    "SECRET_KEY must be set in production environment. "
+                    "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+                )
+            # Development: auto-generate but warn
+            object.__setattr__(self, "SECRET_KEY", _generate_secret_key())
+            warnings.warn(
+                "SECRET_KEY not set. Using auto-generated key for development only. "
+                "Set a persistent SECRET_KEY in your .env file.",
+                RuntimeWarning,
+                stacklevel=3,
+            )
+        elif len(self.SECRET_KEY) < 32:
+            warnings.warn(
+                f"SECRET_KEY is too short ({len(self.SECRET_KEY)} chars). "
+                "Recommended: at least 32 characters for security.",
+                RuntimeWarning,
+                stacklevel=3,
+            )
+
+        # Validate DATABASE_URL
+        if not self.DATABASE_URL:
+            raise ValueError(
+                "DATABASE_URL must be set. "
+                "Example: postgresql+asyncpg://user:password@localhost:5432/db_name"
+            )
+
+        # Validate CORS in production
+        if self.ENVIRONMENT == "production":
+            if not self.CORS_ORIGINS or self.CORS_ORIGINS == ["*"]:
+                raise ValueError(
+                    "CORS_ORIGINS must be explicitly set to specific domains in production. "
+                    "Wildcard '*' is not allowed for security reasons."
+                )
+            if any("localhost" in origin for origin in self.CORS_ORIGINS):
+                raise ValueError(
+                    "CORS_ORIGINS must not contain localhost in production. "
+                    "Set specific production domains instead."
+                )
+
+        # Warn about default/weak database credentials in non-dev environments
+        if self.ENVIRONMENT in ("staging", "production"):
+            if "talent_password" in self.DATABASE_URL or "ai4recruit" in self.DATABASE_URL:
+                warnings.warn(
+                    "DATABASE_URL appears to use default or weak credentials. "
+                    "Please use strong, unique passwords in staging/production.",
+                    RuntimeWarning,
+                    stacklevel=3,
+                )
 
 
 @lru_cache

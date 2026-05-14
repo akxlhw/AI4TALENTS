@@ -50,7 +50,7 @@ class TestAuditLogWriting:
             json={
                 "username": "auditregister",
                 "email": "auditregister@example.com",
-                "password": "password123",
+                "password": "Str0ng!Pw",
                 "employee_id": "h00999999",
             },
         )

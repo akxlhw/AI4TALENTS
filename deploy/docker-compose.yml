@@ -1,20 +1,25 @@
 version: '3.8'
 
+# 安全提示：
+# 1. 复制此文件为 docker-compose.override.yml 并设置实际密码
+# 2. 永远不要将真实密码提交到 git
+# 3. 生产环境使用 docker secrets 或外部密钥管理
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: talent-postgres
     environment:
-      POSTGRES_DB: talent_db
-      POSTGRES_USER: talent_user
-      POSTGRES_PASSWORD: talent_password
+      POSTGRES_DB: ${POSTGRES_DB:-talent_db}
+      POSTGRES_USER: ${POSTGRES_USER:-talent_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U talent_user -d talent_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-talent_user} -d ${POSTGRES_DB:-talent_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,6 +30,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: talent-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-}
     ports:
       - "6379:6379"
     volumes:
@@ -45,18 +51,21 @@ services:
       dockerfile: Dockerfile
     container_name: talent-backend
     environment:
-      - DATABASE_URL=postgresql+asyncpg://talent_user:talent_password@postgres:5432/talent_db
-      - DATABASE_SYNC_URL=postgresql://talent_user:talent_password@postgres:5432/talent_db
-      - REDIS_URL=redis://redis:6379/0
-      - REDIS_ENABLED=false
-      - LLM_ENABLED=false
-      - LLM_PROVIDER=deepseek
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-talent_user}:${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}@postgres:5432/${POSTGRES_DB:-talent_db}
+      - DATABASE_SYNC_URL=postgresql://${POSTGRES_USER:-talent_user}:${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}@postgres:5432/${POSTGRES_DB:-talent_db}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      - REDIS_ENABLED=${REDIS_ENABLED:-false}
+      - LLM_ENABLED=${LLM_ENABLED:-false}
+      - LLM_PROVIDER=${LLM_PROVIDER:-deepseek}
       - LLM_API_KEY=${LLM_API_KEY:-}
       - GITHUB_TOKENS=${GITHUB_TOKENS:-}
       - GITHUB_BASE_URL=${GITHUB_BASE_URL:-https://api.github.com}
       - GITHUB_RATE_LIMIT=${GITHUB_RATE_LIMIT:-5000}
-      - ENVIRONMENT=development
-      - DEBUG=true
+      - SECRET_KEY=${SECRET_KEY:-}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DEBUG=${DEBUG:-false}
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:2012"]}
+      - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-false}
     ports:
       - "8000:8000"
     volumes:
@@ -75,7 +84,7 @@ services:
       target: development
     container_name: talent-frontend
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
     ports:
       - "2012:2012"
     volumes:

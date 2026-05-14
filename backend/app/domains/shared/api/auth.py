@@ -15,6 +15,7 @@ from app.core.auth import (
     create_access_token,
     create_refresh_token,
     hash_password,
+    validate_password_strength,
     verify_access_token,
     verify_password,
     verify_refresh_token,
@@ -229,6 +230,19 @@ async def register(
             error_message="该工号已注册",
         )
         raise HTTPException(status_code=400, detail="该工号已注册")
+
+    # Validate password strength
+    is_valid, error_msg = validate_password_strength(data.password)
+    if not is_valid:
+        await AuditService.log_auth_event(
+            user_id=None,
+            operation="register",
+            status="failure",
+            user_ip=client_ip,
+            request_id=request_id,
+            error_message=f"密码强度不足: {error_msg}",
+        )
+        raise HTTPException(status_code=400, detail=f"密码强度不足: {error_msg}")
 
     # Create user with pending approval status
     password_hash = hash_password(data.password)
@@ -545,6 +559,19 @@ async def change_password(
             status_code=400,
             detail="当前密码错误",
         )
+
+    # Validate new password strength
+    is_valid, error_msg = validate_password_strength(data.new_password)
+    if not is_valid:
+        await AuditService.log_auth_event(
+            user_id=current_user["user_id"],
+            operation="change_password",
+            status="failure",
+            user_ip=client_ip,
+            request_id=request_id,
+            error_message=f"新密码强度不足: {error_msg}",
+        )
+        raise HTTPException(status_code=400, detail=f"新密码强度不足: {error_msg}")
 
     # Update password
     new_hash = hash_password(data.new_password)

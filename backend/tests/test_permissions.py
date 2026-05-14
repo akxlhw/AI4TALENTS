@@ -145,7 +145,7 @@ class TestRoleBasedAccess:
             json={
                 "username": "newuser",
                 "email": "newuser@example.com",
-                "password": "newpassword123",
+                "password": "N3wP@ssw0rd",
                 "role": "user",
                 "display_name": "New User",
             },
@@ -378,7 +378,7 @@ class TestSuperAdminPrivileges:
             json={
                 "username": "newadmin",
                 "email": "newadmin@example.com",
-                "password": "adminpassword123",
+                "password": "Adm1n!Pw",
                 "role": "admin",
             },
         )
@@ -396,7 +396,7 @@ class TestSuperAdminPrivileges:
             json={
                 "username": "newsuperadmin",
                 "email": "newsuperadmin@example.com",
-                "password": "superpassword123",
+                "password": "SuP3r!Pw",
                 "role": "super_admin",
             },
         )
