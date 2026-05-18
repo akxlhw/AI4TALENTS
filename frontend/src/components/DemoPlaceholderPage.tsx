@@ -22,7 +22,7 @@ export function DemoPlaceholderPage({
   const navigate = useNavigate()
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: '88px 24px 24px', maxWidth: 1200, margin: '0 auto' }}>
       <Button
         icon={<ArrowLeftOutlined />}
         onClick={() => navigate(-1)}

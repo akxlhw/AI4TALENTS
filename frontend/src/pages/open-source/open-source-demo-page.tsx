@@ -1,13 +1,10 @@
-import { Tag, Statistic, Avatar, Badge } from 'antd'
+import { Tag, Statistic, Avatar } from 'antd'
 import {
-  CodeOutlined,
   GithubOutlined,
   StarOutlined,
-  ForkOutlined,
   FireOutlined,
   PullRequestOutlined,
   BranchesOutlined,
-  LockOutlined,
 } from '@ant-design/icons'
 import { DemoPlaceholderPage } from '../../components/DemoPlaceholderPage'
 
