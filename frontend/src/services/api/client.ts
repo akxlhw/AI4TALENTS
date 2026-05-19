@@ -27,12 +27,25 @@ function getApiBaseUrl(): string {
 
 const API_BASE_URL = getApiBaseUrl()
 
+function serializeParams(params: Record<string, unknown>): string {
+  const searchParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (Array.isArray(value)) {
+      value.forEach((v) => searchParams.append(key, String(v)))
+    } else if (value !== undefined && value !== null) {
+      searchParams.append(key, String(value))
+    }
+  }
+  return searchParams.toString()
+}
+
 export const apiClient: AxiosInstance = axios.create({
   baseURL: `${API_BASE_URL}/api/v1`,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
+  paramsSerializer: serializeParams,
 })
 
 apiClient.interceptors.request.use(
