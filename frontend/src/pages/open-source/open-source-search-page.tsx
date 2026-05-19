@@ -42,6 +42,29 @@ const TECH_ELEMENT_OPTIONS = [
   { value: 'security', label: '信息安全' },
 ]
 
+const LANGUAGE_OPTIONS = [
+  { value: 'Python', label: 'Python' },
+  { value: 'JavaScript', label: 'JavaScript' },
+  { value: 'TypeScript', label: 'TypeScript' },
+  { value: 'Go', label: 'Go' },
+  { value: 'Rust', label: 'Rust' },
+  { value: 'C++', label: 'C++' },
+  { value: 'C', label: 'C' },
+  { value: 'Java', label: 'Java' },
+  { value: 'C#', label: 'C#' },
+  { value: 'Shell', label: 'Shell' },
+  { value: 'Ruby', label: 'Ruby' },
+  { value: 'PHP', label: 'PHP' },
+  { value: 'Swift', label: 'Swift' },
+  { value: 'Kotlin', label: 'Kotlin' },
+  { value: 'Scala', label: 'Scala' },
+  { value: 'R', label: 'R' },
+  { value: 'Julia', label: 'Julia' },
+  { value: 'CUDA', label: 'CUDA' },
+  { value: 'Lua', label: 'Lua' },
+  { value: 'Haskell', label: 'Haskell' },
+]
+
 const SORT_OPTIONS = [
   { value: 'stars_desc', label: 'Stars 降序' },
   { value: 'stars_asc', label: 'Stars 升序' },
@@ -64,7 +87,7 @@ const OpenSourceSearchPage: React.FC = () => {
     languages: searchParams.get('languages')?.split(',').filter(Boolean) || [],
     location: searchParams.get('location') || '',
     company: searchParams.get('company') || '',
-    min_stars: searchParams.get('min_stars') ? parseInt(searchParams.get('min_stars')!) : undefined,
+
     is_committer: searchParams.get('is_committer') === 'true',
     sort_by: searchParams.get('sort_by') || 'stars_desc',
     mode: (searchParams.get('mode') as OSSearchQuery['mode']) || 'keyword',
@@ -81,7 +104,7 @@ const OpenSourceSearchPage: React.FC = () => {
         languages: query.languages,
         location: query.location,
         company: query.company,
-        min_stars: query.min_stars,
+        mode: query.mode,
         is_committer: query.is_committer,
         sort_by: query.sort_by,
         page: query.page,
@@ -117,7 +140,7 @@ const OpenSourceSearchPage: React.FC = () => {
     if (newQuery.languages?.length) params.set('languages', newQuery.languages.join(','))
     if (newQuery.location) params.set('location', newQuery.location)
     if (newQuery.company) params.set('company', newQuery.company)
-    if (newQuery.min_stars) params.set('min_stars', String(newQuery.min_stars))
+
     if (newQuery.is_committer) params.set('is_committer', 'true')
     if (newQuery.sort_by && newQuery.sort_by !== 'stars_desc') params.set('sort_by', newQuery.sort_by)
     if (newQuery.mode && newQuery.mode !== 'keyword') params.set('mode', newQuery.mode)
@@ -236,12 +259,14 @@ const OpenSourceSearchPage: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label="最小 Stars" style={{ marginBottom: 8 }}>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  value={query.min_stars}
-                  onChange={(e) => setQuery({ ...query, min_stars: e.target.value ? parseInt(e.target.value) : undefined })}
+              <Form.Item label="编程语言" style={{ marginBottom: 8 }}>
+                <Select
+                  mode="multiple"
+                  placeholder="选择编程语言"
+                  value={query.languages}
+                  onChange={(v) => setQuery({ ...query, languages: v })}
+                  style={{ width: '100%' }}
+                  options={LANGUAGE_OPTIONS}
                 />
               </Form.Item>
             </Col>
