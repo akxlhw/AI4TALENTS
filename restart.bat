@@ -18,7 +18,7 @@ for /d /r %%i in (__pycache__) do @rmdir /s /q "%%i" 2>nul
 echo   缓存已清理
 
 echo [3/5] 启动后端服务 (端口 8003)...
-start "Talent Backend" cmd /k "cd /d %~dp0backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8003"
+start "Talent Backend" cmd /k "cd /d %~dp0backend && .venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8003"
 timeout /t 3 /nobreak >nul
 
 echo [4/5] 启动前端服务 (端口 2012)...
