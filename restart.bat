@@ -1,40 +1,36 @@
 @echo off
 chcp 65001 >nul
 echo ============================================
-echo ÖÇÄÜÈË²Å¿â - ÖØÆôÇ°ºó¶Ë·þÎñ
+echo æ™ºèƒ½äººæ‰åº“ - é‡å¯å‰åŽç«¯æœåŠ¡
 echo ============================================
 echo.
 
-echo [1/5] Í£Ö¹ÏÖÓÐ·þÎñ...
+echo [1/5] åœæ­¢çŽ°æœ‰æœåŠ¡...
 taskkill /F /FI "WINDOWTITLE eq *Talent*" 2>nul
 taskkill /F /FI "WINDOWTITLE eq *uvicorn*" 2>nul
 taskkill /F /FI "WINDOWTITLE eq *npm*" 2>nul
 timeout /t 2 /nobreak >nul
 
-echo [2/5] ÇåÀí Python »º´æ...
+echo [2/5] æ¸…ç† Python ç¼“å­˜...
 cd /d %~dp0backend
 del /s /q *.pyc 2>nul
-for /d /r %%%%i in (__pycache__) do @rmdir /s /q "%%%%i" 2>nul
-echo   »º´æÒÑÇåÀí
+for /d /r %%i in (__pycache__) do @rmdir /s /q "%%i" 2>nul
+echo   ç¼“å­˜å·²æ¸…ç†
 
-echo [3/5] Æô¶¯ºó¶Ë·þÎñ (¶Ë¿Ú 8003)...
-cd /d %~dp0backend
-start "Talent Backend" cmd /k ".venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8003"
-cd /d %~dp0
+echo [3/5] å¯åŠ¨åŽç«¯æœåŠ¡ (ç«¯å£ 8003)...
+start "Talent Backend" cmd /k "cd /d %~dp0backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8003"
 timeout /t 3 /nobreak >nul
 
-echo [4/5] Æô¶¯Ç°¶Ë·þÎñ (¶Ë¿Ú 2012)...
-cd /d %~dp0frontend
-start "Talent Frontend" cmd /k "npm run dev"
-cd /d %~dp0
+echo [4/5] å¯åŠ¨å‰ç«¯æœåŠ¡ (ç«¯å£ 2012)...
+start "Talent Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
 timeout /t 3 /nobreak >nul
 
 echo.
 echo ============================================
-echo ·þÎñÒÑÆô¶¯:
-echo   ºó¶Ë API: http://localhost:8003
-echo   Ç°¶ËÒ³Ãæ: http://localhost:2012
-echo   ¾ÖÓòÍø·ÃÎÊ: http://YOUR_IP:2012
+echo æœåŠ¡å·²å¯åŠ¨:
+echo   åŽç«¯ API: http://localhost:8003
+echo   å‰ç«¯é¡µé¢: http://localhost:2012
+echo   å±€åŸŸç½‘è®¿é—®: http://YOUR_IP:2012
 echo ============================================
 echo.
 pause
