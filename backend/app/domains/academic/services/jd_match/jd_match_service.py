@@ -1,11 +1,11 @@
 """
 JD Match Service implementation.
-岗位匹配服务实现 - v1.4.1
+岗位匹配服务实现
 
 Features:
-- JD parsing via LLM (simplified to research_areas only)
+- JD parsing via LLM (research_areas extraction)
 - Candidate matching (research direction + paper titles)
-- Score calculation (simplified to research score only)
+- Score calculation (research + h-index blended)
 - Match reasons generation
 - Session persistence to database
 """
@@ -35,9 +35,7 @@ logger = logging.getLogger(__name__)
 class MatchConfig:
     """匹配配置
 
-    v1.4.1: Simplified to research matching only
-
-    权重配置统一在 settings.JD_MATCH_WEIGHTS 中管理
+    权重配置统一在 settings.JD_MATCH_WEIGHTS 中管理。
     """
 
     weights: dict[str, float] = field(default_factory=lambda: settings.JD_MATCH_WEIGHTS.copy())
@@ -57,6 +55,8 @@ class MatchResultItem:
     company_school_name: str | None = None
     overall_score: float = 0.0
     research_score: float = 0.0
+    impact_score: float = 0.0
+    h_index: int = 0
     match_reasons: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -69,6 +69,8 @@ class MatchResultItem:
             "company_school_name": self.company_school_name,
             "overall_score": self.overall_score,
             "research_score": self.research_score,
+            "impact_score": self.impact_score,
+            "h_index": self.h_index,
             "match_reasons": self.match_reasons,
         }
 
@@ -96,9 +98,10 @@ class JDMatchService:
 
     负责解析职位描述(JD)并匹配候选人。
 
-    v1.4.1: Simplified to research direction matching only
-    - Matches research_areas against openalex_topics (research direction)
-    - Matches research_areas against paper titles (RawWork.title)
+    匹配逻辑：
+    - JD 关键词与候选人 openalex_topics（研究方向）做子串匹配
+    - JD 关键词与候选人论文标题（RawWork.title）做子串匹配
+    - h-index 经对数归一化后作为学术影响力分加权融合
     """
 
     def __init__(
@@ -255,14 +258,14 @@ class JDMatchService:
             items.sort(key=lambda x: x.overall_score, reverse=True)
             items = items[: config.limit]
 
-            # 持久化匹配结果
+            # 持久化匹配结果 (impact_score → experience_score)
             for item in items:
                 result = JDMatchResult(
                     session_id=session_id,
                     talent_id=item.talent_id,
                     overall_score=item.overall_score,
                     research_score=item.research_score,
-                    skill_score=None,
+                    skill_score=item.impact_score,       # h-index 影响力分
                     experience_score=None,
                     match_reasons=item.match_reasons,
                     highlight_skills=[],
@@ -333,9 +336,8 @@ class JDMatchService:
     ) -> list[MatchResultItem]:
         """计算匹配分数
 
-        v1.4.1: Only calculate research score
-        - Match against openalex_topics (research direction)
-        - Match against paper_titles (paper titles)
+        研究方向关键词匹配 + h-index 影响力加权融合：
+        overall = research_score × w_research + impact_score × w_impact
         """
         items = []
 
@@ -345,7 +347,6 @@ class JDMatchService:
             openalex_topics = candidate["openalex_topics"]
 
             # 合并研究方向和论文标题作为匹配范围
-            # openalex_topics 是研究方向，paper_titles 是论文标题
             all_matchable = openalex_topics + paper_titles
 
             logger.debug(
@@ -359,15 +360,18 @@ class JDMatchService:
                 jd_features.research_areas, all_matchable
             )
 
+            # 计算综合分数（研究方向 + h-index 影响力加权）
+            overall_score, impact_score = self._scorer.calculate_overall_score(
+                research_score, h_index=talent.h_index or 0
+            )
+
             # 调试日志
             logger.info(
                 f"JD research_areas: {jd_features.research_areas}, "
-                f"candidate matchable: {len(all_matchable)} items, "
-                f"research_score: {research_score:.1f}"
+                f"candidate={talent.name}, h_index={talent.h_index}, "
+                f"research={research_score:.1f}, impact={impact_score:.1f}, "
+                f"overall={overall_score:.1f}"
             )
-
-            # 综合分数 = 研究方向分数（v1.4.1 简化）
-            overall_score = research_score
 
             # 生成匹配原因
             match_reasons = self._scorer.generate_match_reasons(
@@ -388,6 +392,8 @@ class JDMatchService:
                 company_school_name=talent.company_school.school_name if talent.company_school else None,
                 overall_score=overall_score,
                 research_score=research_score,
+                impact_score=impact_score,
+                h_index=talent.h_index or 0,
                 match_reasons=match_reasons,
             )
             items.append(item)

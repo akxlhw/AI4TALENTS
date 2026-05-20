@@ -302,8 +302,8 @@ class OpenSourceAdvancedRepository:
                 filter_clauses.append("d.tech_tags @> :tech_elements::jsonb")
                 filter_params["tech_elements"] = json.dumps(filters["tech_elements"])
             if "languages" in filters:
-                filter_clauses.append("d.primary_languages @> :languages::jsonb")
-                filter_params["languages"] = json.dumps(filters["languages"])
+                filter_clauses.append("d.primary_languages ?| :languages")
+                filter_params["languages"] = filters["languages"]
             if "location" in filters:
                 filter_clauses.append("d.location ILIKE :location")
                 filter_params["location"] = f"%{filters['location']}%"

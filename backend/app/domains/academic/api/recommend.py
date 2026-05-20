@@ -1,7 +1,6 @@
 """
 Recommend API endpoint.
 Provides talent recommendation functionality.
-v1.4 Feature.
 """
 
 from __future__ import annotations

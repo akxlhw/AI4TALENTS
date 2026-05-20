@@ -1,6 +1,6 @@
 """
 JD Match models.
-岗位匹配模型 - v1.4
+岗位匹配模型
 """
 
 from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text

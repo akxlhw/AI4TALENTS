@@ -1,7 +1,6 @@
 """
 JD Match API endpoint.
 Provides JD parsing and talent matching functionality.
-v1.4 Feature.
 """
 
 from __future__ import annotations
@@ -39,8 +38,6 @@ async def parse_jd(
 ):
     """
     Parse JD text and extract features.
-
-    v1.4.1: Simplified to only extract research_areas (English keywords).
 
     **Extracted Features:**
     - `research_areas`: Research area requirements (English keywords)
@@ -81,19 +78,19 @@ async def match_talents(
     """
     Match talents based on JD.
 
-    v1.4.1: Simplified to only calculate research direction matching.
-
     **Process:**
     1. Parse JD text using LLM
     2. Extract research_areas (English keywords)
     3. Search for matching talents by:
        - Research topics (openalex_topics)
        - Paper titles (raw_work.title)
-    4. Calculate match score (denominator limit: 5)
+    4. Calculate match score (research keyword match + h-index impact)
     5. Return sorted results with match reasons
 
     **Match Score:**
-    - Research score: Based on keyword matching against topics and paper titles
+    - Research score: Based on keyword matching against topics and paper titles (max 3 keywords)
+    - Impact score: Log-normalized h-index academic influence
+    - Overall = research × w_research + impact × w_impact
 
     **Note:** This endpoint requires LLM to be enabled.
     """
@@ -131,8 +128,12 @@ async def match_talents(
                 name=item.name,
                 title=item.title,
                 school_name=item.school_name,
+                education_school_name=item.education_school_name,
+                company_school_name=item.company_school_name,
                 overall_score=item.overall_score,
                 research_score=item.research_score,
+                impact_score=item.impact_score,
+                h_index=item.h_index,
                 match_reasons=item.match_reasons,
             )
             for item in result.items

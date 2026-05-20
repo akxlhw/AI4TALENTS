@@ -12,7 +12,7 @@ import re
 from typing import Any
 
 from sqlalchemy import and_, cast, exists, func, or_, select, text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, array as pg_array
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -257,7 +257,7 @@ class OpenSourceCoreRepository:
             )
         if languages:
             conditions.append(
-                OSDeveloper.primary_languages.cast(JSONB).op("@>")(cast(languages, JSONB))
+                OSDeveloper.primary_languages.cast(JSONB).op("?|")(pg_array(languages))
             )
         if location:
             conditions.append(OSDeveloper.location.ilike(f"%{location}%"))

@@ -106,11 +106,7 @@ class MatchConfigRequest(BaseModel):
 
 
 class MatchResultItemResponse(BaseModel):
-    """Match result item.
-
-    v1.4.1: Simplified to only return research_score and overall_score.
-    v1.5.0: Added education_school_name and company_school_name for consistency with talent detail.
-    """
+    """Match result item."""
 
     talent_id: int = Field(description="Talent ID")
     name: str = Field(description="Name")
@@ -120,6 +116,8 @@ class MatchResultItemResponse(BaseModel):
     company_school_name: str | None = Field(default=None, description="Company institution name")
     overall_score: float = Field(description="Overall match score (0-100)")
     research_score: float = Field(description="Research match score")
+    impact_score: float = Field(default=0.0, description="Academic impact score from h-index")
+    h_index: int = Field(default=0, description="Candidate h-index")
     match_reasons: list[str] = Field(default_factory=list, description="Match reasons")
 
 

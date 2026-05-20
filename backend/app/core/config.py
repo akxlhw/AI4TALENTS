@@ -88,15 +88,18 @@ class Settings(BaseSettings):
     LLM_MAX_RETRIES: int = 3  # Max retry attempts
     LLM_ENABLE_FALLBACK: bool = False  # Disable fallback, require LLM for JD parsing
 
-    # JD Match Score Weights (v1.4.1)
-    # Simplified to only research weight
-    JD_MATCH_WEIGHT_RESEARCH: float = 1.0  # 研究方向匹配权重
+    # JD Match Score Weights
+    # research + impact (h-index) blended scoring
+    JD_MATCH_WEIGHT_RESEARCH: float = 0.8  # 研究方向匹配权重
+    JD_MATCH_WEIGHT_IMPACT: float = 0.2  # 学术影响力权重 (h-index)
+    JD_MATCH_H_REF: float = 100.0  # h-index 对数归一化参考上限
 
     @property
     def JD_MATCH_WEIGHTS(self) -> dict:
         """获取 JD 匹配权重字典"""
         return {
             "research": self.JD_MATCH_WEIGHT_RESEARCH,
+            "impact": self.JD_MATCH_WEIGHT_IMPACT,
         }
 
     # Embedding Configuration

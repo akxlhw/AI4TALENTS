@@ -1,7 +1,6 @@
 """
 Search API endpoint.
 Provides talent search functionality with multiple modes.
-v1.4 Enhanced with fulltext, semantic, and hybrid search.
 """
 
 from __future__ import annotations
@@ -86,7 +85,7 @@ async def search_talents(
 @router.get(
     "/v2/talents",
     response_model=EnhancedSearchResponse,
-    summary="增强搜索 (v1.4)",
+    summary="增强搜索",
     description="支持多种搜索模式：关键词、全文、语义、混合",
 )
 async def enhanced_search_talents(

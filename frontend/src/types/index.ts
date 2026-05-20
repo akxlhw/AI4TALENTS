@@ -117,10 +117,6 @@ export interface UserPermission {
   accessible_schools: string[]
 }
 
-// ============================================
-// v1.1 新增类型定义
-// ============================================
-
 // Tech Domain - 技术领域
 export interface TechDomain {
   tech_domain_id: number
@@ -152,7 +148,7 @@ export interface SearchTalent {
   role_type: string
   school_id: number | null
   school_name: string | null
-  // Primary institutions (v1.5)
+  // Primary institutions
   education_school_id: number | null
   education_school_name: string | null
   company_school_id: number | null
@@ -326,10 +322,6 @@ export interface VenueTypeConfig {
   color: string
 }
 
-// ============================================
-// v1.4 新增类型定义 - 智能推荐与岗位匹配
-// ============================================
-
 // Search Mode - 搜索模式
 export type SearchMode = 'keyword' | 'fulltext' | 'semantic' | 'hybrid'
 
@@ -338,7 +330,7 @@ export interface EnhancedSearchResult extends SearchTalent {
   similarity_score?: number
 }
 
-// JD Features - JD解析特征 (v1.4.1: 简化为只有 research_areas)
+// JD Features - JD解析特征
 export interface JDFeatures {
   research_areas: string[]
 }
@@ -347,12 +339,13 @@ export interface JDFeatures {
 export interface MatchConfig {
   weights?: {
     research?: number
+    impact?: number
   }
   filters?: Record<string, unknown>
   limit?: number
 }
 
-// Match Result Item - 匹配结果项 (v1.4.1: 简化, v1.5.0: 添加院校机构字段)
+// Match Result Item - 匹配结果项
 export interface MatchResultItem {
   talent_id: number
   name: string
@@ -362,6 +355,8 @@ export interface MatchResultItem {
   company_school_name: string | null
   overall_score: number
   research_score: number
+  impact_score: number
+  h_index: number
   match_reasons: string[]
 }
 
@@ -376,7 +371,7 @@ export interface MatchResponse {
 // Recommend Mode - 推荐模式 (仅支持相似推荐)
 export type RecommendMode = 'similar'
 
-// Recommend Result Item - 推荐结果项 (v1.5.0: 添加院校机构字段)
+// Recommend Result Item - 推荐结果项
 export interface RecommendResultItem {
   talent_id: number
   name: string
@@ -509,7 +504,6 @@ export interface OSSearchQuery {
   languages?: string[]
   location?: string
   company?: string
-  min_stars?: number
   is_committer?: boolean
   sort_by?: string
   mode?: 'keyword' | 'semantic' | 'hybrid'

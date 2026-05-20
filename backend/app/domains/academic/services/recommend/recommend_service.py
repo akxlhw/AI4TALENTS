@@ -1,6 +1,6 @@
 """
 Recommend Service implementation.
-推荐服务实现 - v1.4
+推荐服务实现
 
 Features:
 - Similar talent recommendation
@@ -206,8 +206,9 @@ class RecommendService:
             "exclude_ids": exclude_ids,
         }
         if filters:
-            if "school_ids" in filters:
-                search_filters["school_ids"] = filters["school_ids"]
+            for key in ("school_ids", "role_type", "min_citations", "country_code", "tech_domain_id"):
+                if key in filters:
+                    search_filters[key] = filters[key]
 
         # 优先使用向量相似度搜索
         if self.embed_service is not None:
@@ -336,21 +337,54 @@ class RecommendService:
         # 使用 GIN 索引在数据库层面预筛选候选人
         exclude_ids = filters.get("exclude_ids", [])
 
-        # 构建参数字典
+        # 构建参数字典与筛选条件
         params: dict[str, Any] = {}
-        param_idx = 0
+        extra_where: list[str] = []
+        extra_joins: list[str] = []
 
-        # 排除参考人才 - 使用 ANY 数组语法
-        exclude_clause = ""
+        # 排除参考人才
         if exclude_ids:
-            exclude_clause = "AND t.talent_id != ALL(:exclude_ids)"
+            extra_where.append("t.talent_id != ALL(:exclude_ids)")
             params["exclude_ids"] = list(exclude_ids)
 
-        # 学校筛选
-        school_clause = ""
+        # 学校筛选 - OR 跨 3 个院校字段
         if "school_ids" in filters:
-            school_clause = "AND t.school_id = ANY(:school_ids)"
+            extra_where.append(
+                "(t.school_id = ANY(:school_ids) OR t.education_school_id = ANY(:school_ids) "
+                "OR t.company_school_id = ANY(:school_ids))"
+            )
             params["school_ids"] = list(filters["school_ids"])
+
+        # 角色筛选
+        if "role_type" in filters:
+            extra_where.append("t.role_type = :role_type")
+            params["role_type"] = filters["role_type"]
+
+        # 最低引用
+        if "min_citations" in filters:
+            extra_where.append("t.cited_by_count >= :min_citations")
+            params["min_citations"] = filters["min_citations"]
+
+        # 国家筛选（需要 JOIN core_school 别名 s/es/cs，已在主查询中定义）
+        if "country_code" in filters:
+            extra_where.append(
+                "(s.country_code = :country_code OR es.country_code = :country_code "
+                "OR cs.country_code = :country_code)"
+            )
+            params["country_code"] = filters["country_code"].upper()
+
+        # 技术领域筛选
+        if "tech_domain_id" in filters:
+            extra_joins.append(
+                "INNER JOIN core_talent_tech_tag tt ON t.talent_id = tt.talent_id "
+                "AND tt.tech_domain_id = :tech_domain_id AND tt.is_enabled = TRUE"
+            )
+            params["tech_domain_id"] = filters["tech_domain_id"]
+
+        extra_where_sql = " AND " + " AND ".join(extra_where) if extra_where else ""
+        extra_joins_sql = "\n".join(extra_joins)
+
+        param_idx = 0
 
         # 研究方向匹配条件（使用 pg_trgm GIN 索引）
         topic_conditions = []
@@ -365,7 +399,7 @@ class RecommendService:
 
         topics_sql = " OR ".join(topic_conditions)
 
-        # Safe: topics_sql uses parameterized placeholders, exclude/school_clauses use whitelisted fields
+        # Safe: topics_sql uses parameterized placeholders, extra_where/extra_joins use whitelisted fields
         query_str = f"""
             SELECT DISTINCT ON (t.talent_id) t.talent_id, t.name, t.current_title,
                    t.openalex_topics, t.topic_tags, t.cited_by_count,
@@ -373,12 +407,12 @@ class RecommendService:
                    es.school_name AS education_school_name,
                    cs.school_name AS company_school_name
             FROM core_talent t
+            {extra_joins_sql}
             LEFT JOIN core_school s ON t.school_id = s.school_id
             LEFT JOIN core_school es ON t.education_school_id = es.school_id
             LEFT JOIN core_school cs ON t.company_school_id = cs.school_id
             WHERE t.is_visible = TRUE
-            {exclude_clause}
-            {school_clause}
+            {extra_where_sql}
             AND ({topics_sql})
             ORDER BY t.talent_id, t.cited_by_count DESC
             LIMIT :limit

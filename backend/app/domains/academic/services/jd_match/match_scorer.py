@@ -1,14 +1,17 @@
 """
 Match Scorer implementation.
-匹配评分器实现 - v1.4.1
+匹配评分器实现
 
-Simplified to only calculate research direction matching score.
-- Matches research_areas against openalex_topics and paper titles
-- Denominator limit changed from 3 to 5
+- Research score: keyword match against openalex_topics + paper titles (max_required=3)
+- Impact score: log-normalized h-index
+- Overall = research × w_research + impact × w_impact
 """
 
 import logging
+import math
 from typing import Any
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +19,7 @@ logger = logging.getLogger(__name__)
 class MatchScorer:
     """匹配评分器
 
-    v1.4.1: Simplified to only calculate research score.
+    研究方向匹配 + h-index 学术影响力加权融合评分。
     """
 
     def calculate_research_score(
@@ -54,8 +57,8 @@ class MatchScorer:
                     logger.debug(f"Research matched: JD '{jd_kw}' <-> Candidate '{cand_item}'")
                     break
 
-        # v1.4.1: 按5个计要求数，超过计顶格
-        max_required = 5
+        # 按3个计要求数，超过封顶
+        max_required = 3
         required_count = min(len(jd_keywords), max_required)
         matched_count = min(len(matched), max_required)
 
@@ -69,22 +72,45 @@ class MatchScorer:
 
         return min(100.0, score)
 
+    def calculate_h_index_score(self, h_index: int) -> float:
+        """
+        计算学术影响力分数（对数归一化）
+
+        h_index 经对数变换映射到 0-100：
+        score = min(ln(h + 1) / ln(H_REF + 1), 1.0) × 100
+
+        Args:
+            h_index: 候选人的 h-index 值
+
+        Returns:
+            float: 0-100 的分数
+        """
+        if h_index <= 0:
+            return 0.0
+
+        h_ref = settings.JD_MATCH_H_REF
+        score = math.log(h_index + 1) / math.log(h_ref + 1) * 100
+        return min(100.0, score)
+
     def calculate_overall_score(
         self,
         research_score: float,
-    ) -> float:
+        h_index: int = 0,
+    ) -> tuple[float, float]:
         """
-        计算综合分数
-
-        v1.4.1: Simplified to only use research score
+        计算综合分数（研究方向 + 学术影响力加权求和）
 
         Args:
-            research_score: 研究方向分数
+            research_score: 研究方向分数 (0-100)
+            h_index: 候选人的 h-index 值
 
         Returns:
-            float: 0-100 的综合分数
+            tuple[float, float]: (overall_score, impact_score)
         """
-        return min(100.0, max(0.0, research_score))
+        impact_score = self.calculate_h_index_score(h_index)
+        weights = settings.JD_MATCH_WEIGHTS
+        overall = research_score * weights["research"] + impact_score * weights["impact"]
+        return min(100.0, max(0.0, overall)), impact_score
 
     def generate_match_reasons(
         self,
