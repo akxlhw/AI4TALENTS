@@ -166,25 +166,69 @@ make docker-down
 
 ### 本地开发
 
-```bash
-# 1. 安装依赖
-make install
+> **Windows 用户注意**：Windows 默认没有 `make` 命令，请使用下方 **Windows (PowerShell)** 步骤；Linux/macOS 可直接使用 **Linux/macOS** 步骤或 `make` 命令。
 
-# 2. 配置环境变量
+#### 环境准备
+
+```bash
+# 配置环境变量
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 
-# 3. 启动数据库
+# 启动 PostgreSQL（Docker 方式，跨平台通用）
 cd deploy && docker-compose up -d postgres
+```
 
-# 4. 运行数据库迁移
+#### Windows (PowerShell)
+
+```powershell
+# 1. 安装后端依赖
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 2. 安装前端依赖
+cd ..\frontend
+npm install
+
+# 3. 运行数据库迁移
+cd ..\backend
+.\.venv\Scripts\Activate
+alembic upgrade head
+
+# 4. 初始化系统数据（首次部署必需）
+python scripts/init_system.py --full --force
+
+# 5. 启动后端（终端1）
+cd backend
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8003
+
+# 6. 启动前端（终端2）
+cd frontend
+npm run dev
+```
+
+> 或者使用项目根目录的 `restart.bat` 一键启动前后端。
+
+#### Linux / macOS
+
+```bash
+# 1. 安装依赖
+make install              # uv sync + npm install
+
+# 2. 运行数据库迁移
 make migrate
 
-# 5. 启动后端 (终端1)
-make dev-backend
+# 3. 初始化系统数据（首次部署必需）
+cd backend
+uv run python scripts/init_system.py --full --force
 
-# 6. 启动前端 (终端2)
-make dev-frontend
+# 4. 启动后端 (终端1)
+make dev-backend          # uvicorn --reload --port 8003
+
+# 5. 启动前端 (终端2)
+make dev-frontend         # npm run dev
 ```
 
 ### 访问地址
@@ -201,6 +245,8 @@ make dev-frontend
 
 ## 开发命令
 
+### Linux / macOS（使用 make）
+
 ```bash
 make help           # 查看所有可用命令
 make test           # 运行测试
@@ -208,6 +254,29 @@ make lint           # 代码检查
 make migrate        # 运行数据库迁移
 make seed           # 初始化数据
 make sync           # 同步 OpenAlex 数据
+```
+
+### Windows（手动命令）
+
+```powershell
+# 后端测试
+cd backend
+.\.venv\Scripts\Activate
+pytest -m "not slow"
+
+# 代码检查
+cd backend
+ruff check app
+black --check app
+
+# 数据库迁移
+cd backend
+.\.venv\Scripts\Activate
+alembic upgrade head
+
+# 初始化数据
+cd backend
+python scripts/init_system.py --full --force
 ```
 
 ### 后端测试
