@@ -81,6 +81,9 @@ outputs/exports/*.xlsx
 # Documentation build
 docs/_build/
 
+# Audit docs (not managed in repo)
+docs/audit/
+
 # Playwright test results
 frontend/test-results/
 
