@@ -58,7 +58,7 @@ class GitHubClient:
         self.current_token_idx = 0
         self.headers = {
             "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "AI4TALENTS/2.0.3",
+            "User-Agent": "AI4TALENTS/2.0.4",
         }
         self._client: httpx.AsyncClient | None = None
         self._last_request_time: float = 0.0
