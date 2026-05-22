@@ -20,7 +20,15 @@ from tenacity import (
 )
 
 from app.core.config import settings
+from app.domains.shared.services.common.circuit_breaker import CircuitBreaker
 from app.domains.shared.services.common.http_client import HttpClientFactory
+
+_openalex_breaker = CircuitBreaker(
+    name="openalex",
+    failure_threshold=settings.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
+    recovery_timeout=settings.CIRCUIT_BREAKER_RECOVERY_TIMEOUT,
+    window_size=settings.CIRCUIT_BREAKER_WINDOW_SIZE,
+)
 
 
 class OpenAlexAPIError(Exception):
@@ -120,26 +128,12 @@ class OpenAlexClient:
         ),
         reraise=True,
     )
-    async def _make_request(
+    async def _do_request(
         self,
         endpoint: str,
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """
-        Make a rate-limited request to OpenAlex API.
-
-        Args:
-            client: HTTP client instance
-            endpoint: API endpoint (e.g., /authors)
-            params: Query parameters
-
-        Returns:
-            JSON response as dictionary
-
-        Raises:
-            OpenAlexAPIError: On API errors
-            OpenAlexRateLimitError: On rate limit exceeded
-        """
+        """Core request logic with retry."""
         await self._async_wait_for_rate_limit()
 
         url = f"{self.base_url}{endpoint}"
@@ -168,6 +162,29 @@ class OpenAlexClient:
 
         # Let TimeoutException and NetworkError propagate directly
         # so that the @retry decorator can catch and retry them.
+
+    async def _make_request(
+        self,
+        endpoint: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Make a rate-limited request to OpenAlex API with circuit breaker.
+
+        Args:
+            endpoint: API endpoint (e.g., /authors)
+            params: Query parameters
+
+        Returns:
+            JSON response as dictionary
+
+        Raises:
+            OpenAlexAPIError: On API errors
+            OpenAlexRateLimitError: On rate limit exceeded
+        """
+        if not settings.CIRCUIT_BREAKER_ENABLED:
+            return await self._do_request(endpoint, params)
+        return await _openalex_breaker.call(self._do_request, endpoint, params)
 
     async def get_institutions(
         self,

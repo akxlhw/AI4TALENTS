@@ -18,6 +18,9 @@ from app.domains.academic.models.talent import Talent
 
 logger = logging.getLogger(__name__)
 
+# Global state for tracking sync progress (managed here to avoid cross-module globals)
+_sync_progress = {"status": "idle", "processed": 0, "total": 0, "collaborations": 0}
+
 
 class CollaborationService:
     """Service for managing collaboration data.
@@ -31,6 +34,48 @@ class CollaborationService:
     async def close(self):
         """No-op for compatibility with old code."""
         pass
+
+    @staticmethod
+    async def run_background_sync(talent_id: int | None = None) -> None:
+        """Run collaboration sync as a background task.
+
+        Manages its own AsyncSession lifecycle so that API routes do not
+        need to create sessions directly.
+        """
+        from app.core.database import AsyncSessionLocal
+        from app.domains.academic.services.talent_service import TalentService
+
+        global _sync_progress
+        _sync_progress["status"] = "running"
+        _sync_progress["processed"] = 0
+        _sync_progress["total"] = 0
+        _sync_progress["collaborations"] = 0
+
+        async with AsyncSessionLocal() as session:
+            service = CollaborationService(session)
+            try:
+                if talent_id:
+                    talent_service = TalentService(session)
+                    talent = await talent_service.get_talent_by_id(talent_id)
+                    if talent:
+                        count = await service.sync_collaborations_for_talent(talent)
+                        _sync_progress["processed"] = 1
+                        _sync_progress["total"] = 1
+                        _sync_progress["collaborations"] = count
+                else:
+                    result = await service.sync_all_collaborations(
+                        progress_callback=lambda p, t, c: _sync_progress.update(
+                            {"processed": p, "total": t, "collaborations": c}
+                        )
+                    )
+                    _sync_progress.update(result)
+
+                _sync_progress["status"] = "completed"
+            except Exception as e:
+                import traceback
+
+                traceback.print_exc()
+                _sync_progress["status"] = f"error: {str(e)}"
 
     def _extract_author_ids_from_raw_json(self, raw_json: str) -> list[str]:
         """从 RawWork.raw_json 提取作者 ID 列表。

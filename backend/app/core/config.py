@@ -59,6 +59,12 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = False  # Enable in production
     RATE_LIMIT_PER_MINUTE: int = 100  # Requests per minute per user/IP
 
+    # Circuit Breaker (P0 fix)
+    CIRCUIT_BREAKER_ENABLED: bool = True
+    CIRCUIT_BREAKER_FAILURE_THRESHOLD: int = 5
+    CIRCUIT_BREAKER_RECOVERY_TIMEOUT: float = 30.0
+    CIRCUIT_BREAKER_WINDOW_SIZE: int = 10
+
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import get_cache_connection
 from app.core.config import settings
 from app.core.database import async_engine, get_async_session
+from app.domains.shared.services.system_service import SystemService
 
 logger = logging.getLogger(__name__)
 
@@ -76,10 +77,9 @@ async def health_check(
     }
 
     # Check database connection
-    from sqlalchemy import text
     try:
-        result = await session.execute(text("SELECT 1"))
-        if result.scalar() == 1:
+        db_ok = await SystemService.health_check_db(session)
+        if db_ok:
             health_status["database"]["status"] = "connected"
         else:
             health_status["database"]["status"] = "error"
@@ -142,10 +142,8 @@ async def readiness_check(
     }
 
     # Check database
-    from sqlalchemy import text
     try:
-        result = await session.execute(text("SELECT 1"))
-        checks["database"] = result.scalar() == 1
+        checks["database"] = await SystemService.health_check_db(session)
     except Exception:
         checks["database"] = False
 

@@ -21,7 +21,15 @@ from tenacity import (
 )
 
 from app.core.config import settings
+from app.domains.shared.services.common.circuit_breaker import CircuitBreaker
 from app.domains.shared.services.common.http_client import HttpClientFactory
+
+_github_breaker = CircuitBreaker(
+    name="github",
+    failure_threshold=settings.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
+    recovery_timeout=settings.CIRCUIT_BREAKER_RECOVERY_TIMEOUT,
+    window_size=settings.CIRCUIT_BREAKER_WINDOW_SIZE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -169,10 +177,10 @@ class GitHubClient:
             follow_redirects=True,
         )
 
-    async def _do_get(
+    async def _do_get_request(
         self, path: str, params: dict[str, Any] | None = None
     ) -> httpx.Response:
-        """Execute GET request with throttling."""
+        """Execute raw GET request with throttling."""
         await self._throttle()
         if not self._client:
             raise RuntimeError("Client not initialized. Use async with.")
@@ -181,18 +189,14 @@ class GitHubClient:
         self._last_request_time = time.time()
         return response
 
-    @retry(
-        retry=retry_if_exception(_is_retryable),
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=30),
-        reraise=True,
-    )
-    async def _get(self, path: str, params: dict[str, Any] | None = None) -> Any:
-        """Generic GET with rate-limit handling, token rotation, and retry."""
+    async def _do_get(
+        self, path: str, params: dict[str, Any] | None = None
+    ) -> Any:
+        """Core GET logic with rate-limit handling and token rotation."""
         # Proactively pick the healthiest token before each request
         self._pick_best_token()
 
-        response = await self._do_get(path, params)
+        response = await self._do_get_request(path, params)
 
         # Record rate limit state from every response (not just errors)
         self._record_rate_limit(response.headers)
@@ -216,7 +220,7 @@ class GitHubClient:
                     f"(remaining={self._token_remaining.get(self.current_token_idx, '?')})"
                 )
                 await self._rebuild_client()
-                response = await self._do_get(path, params)
+                response = await self._do_get_request(path, params)
             elif reset_at:
                 # No more tokens; wait until rate limit resets
                 wait_seconds = max(0, int(reset_at) - int(time.time()) + 1)
@@ -225,10 +229,26 @@ class GitHubClient:
                     f"All tokens exhausted. Waiting {wait_seconds}s for rate limit reset."
                 )
                 await asyncio.sleep(wait_seconds)
-                response = await self._do_get(path, params)
+                response = await self._do_get_request(path, params)
 
         response.raise_for_status()
         return response.json()
+
+    @retry(
+        retry=retry_if_exception(_is_retryable),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        reraise=True,
+    )
+    async def _get_with_retry(self, path: str, params: dict[str, Any] | None = None) -> Any:
+        """Retry wrapper around the core request logic."""
+        return await self._do_get(path, params)
+
+    async def _get(self, path: str, params: dict[str, Any] | None = None) -> Any:
+        """Generic GET with circuit breaker, rate-limit handling, token rotation, and retry."""
+        if not settings.CIRCUIT_BREAKER_ENABLED:
+            return await self._get_with_retry(path, params)
+        return await _github_breaker.call(self._get_with_retry, path, params)
 
     async def get_repo(self, owner: str, repo: str) -> dict[str, Any]:
         """Fetch repository details."""

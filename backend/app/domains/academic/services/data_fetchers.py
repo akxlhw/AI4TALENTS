@@ -154,6 +154,28 @@ class WorkFetcher:
                 raise Exception(f"HTTP {response.status}")
             return await response.json()
 
+    @with_retry(max_attempts=3, max_wait=30.0)
+    async def _fetch_work_count(
+        self,
+        url: str,
+        params: dict,
+        headers: dict,
+        proxy: str | None,
+    ) -> int:
+        """Fetch work count with retry support."""
+        async with self.client.create_session(timeout=DEFAULT_TIMEOUT) as http_session:
+            async with http_session.get(
+                url, params=params, headers=headers, proxy=proxy
+            ) as response:
+                if response.status == 429:
+                    raise RetryableError("Rate limited (HTTP 429)")
+                if response.status >= 500:
+                    raise RetryableError(f"Server error (HTTP {response.status})")
+                if response.status != 200:
+                    raise Exception(f"HTTP {response.status}")
+                data = await response.json()
+                return data.get("meta", {}).get("count", 0)
+
     async def get_work_count_from_venue(
         self, venue: Venue, year_from: int | None = None, year_to: int | None = None
     ) -> int:
@@ -198,14 +220,13 @@ class WorkFetcher:
         openalex_url = f"{OPENALEX_API_BASE}/works"
         proxy = self.client.get_proxy_for_request(openalex_url)
 
-        async with self.client.create_session(timeout=DEFAULT_TIMEOUT) as http_session:
-            async with http_session.get(
-                url, params=params, headers=headers, proxy=proxy
-            ) as response:
-                if response.status != 200:
-                    return 0
-                data = await response.json()
-                return data.get("meta", {}).get("count", 0)
+        try:
+            return await self._fetch_work_count(url, params, headers, proxy)
+        except Exception as e:
+            logger.warning(
+                f"Failed to get work count for venue {venue.venue_name}: {e}"
+            )
+            return 0
 
     async def fetch_works_from_venue(
         self,

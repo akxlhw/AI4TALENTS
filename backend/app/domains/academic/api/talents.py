@@ -466,10 +466,6 @@ async def get_talent_collaborations(
         await collab_service.close()
 
 
-# Global state for tracking sync progress
-_sync_progress = {"status": "idle", "processed": 0, "total": 0, "collaborations": 0}
-
-
 @router.post(
     "/collaborations/sync",
     response_model=TaskStartResponse,
@@ -484,58 +480,24 @@ async def sync_collaborations(
     """
     Trigger collaboration data sync from local RawWork data.
     """
-    global _sync_progress
+    from app.domains.academic.services.collaboration_service import (
+        CollaborationService,
+        _sync_progress,
+    )
 
     if _sync_progress["status"] == "running":
         raise HTTPException(status_code=409, detail="同步任务正在进行中，请稍后再试")
 
     # Reset progress
-    _sync_progress = {"status": "pending", "processed": 0, "total": 0, "collaborations": 0}
+    _sync_progress.update({"status": "pending", "processed": 0, "total": 0, "collaborations": 0})
 
     # Use FastAPI BackgroundTasks instead of manual threading
     # This keeps the task in the same event loop, avoiding "Future attached to a different loop" errors
-    background_tasks.add_task(run_sync_background, talent_id)
+    background_tasks.add_task(CollaborationService.run_background_sync, talent_id)
 
     return TaskStartResponse(
         message="同步任务已启动", talent_id=talent_id, sync_all=talent_id is None
     )
-
-
-async def run_sync_background(talent_id: int | None = None):
-    """Run sync as a background task within the main event loop."""
-    global _sync_progress
-    from app.core.database import AsyncSessionLocal
-    from app.domains.academic.services.collaboration_service import CollaborationService
-
-    _sync_progress = {"status": "running", "processed": 0, "total": 0, "collaborations": 0}
-
-    async with AsyncSessionLocal() as session:
-        service = CollaborationService(session)
-        try:
-            if talent_id:
-                from app.domains.academic.services.talent_service import TalentService
-
-                talent_service = TalentService(session)
-                talent = await talent_service.get_talent_by_id(talent_id)
-                if talent:
-                    count = await service.sync_collaborations_for_talent(talent)
-                    _sync_progress["processed"] = 1
-                    _sync_progress["total"] = 1
-                    _sync_progress["collaborations"] = count
-            else:
-                result = await service.sync_all_collaborations(
-                    progress_callback=lambda p, t, c: _sync_progress.update(
-                        {"processed": p, "total": t, "collaborations": c}
-                    )
-                )
-                _sync_progress.update(result)
-
-            _sync_progress["status"] = "completed"
-        except Exception as e:
-            import traceback
-
-            traceback.print_exc()
-            _sync_progress["status"] = f"error: {str(e)}"
 
 
 @router.get(
@@ -550,8 +512,10 @@ async def get_sync_status(
     """
     Get collaboration sync status.
     """
-    global _sync_progress
-    from app.domains.academic.services.collaboration_service import CollaborationService
+    from app.domains.academic.services.collaboration_service import (
+        CollaborationService,
+        _sync_progress,
+    )
 
     # Get current data status
     service = CollaborationService(session)
