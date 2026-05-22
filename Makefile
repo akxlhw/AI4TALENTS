@@ -59,17 +59,17 @@ lint-full: lint-backend-full lint-frontend-full ## Run all linting + gates (matc
 
 # Database
 migrate: ## Run database migrations
-	cd backend && uv run alembic upgrade head
+	cd backend && uv run python -m alembic upgrade head
 
 migrate-create: ## Create a new migration
-	cd backend && uv run alembic revision --autogenerate -m "$(msg)"
+	cd backend && uv run python -m alembic revision --autogenerate -m "$(msg)"
 
 migrate-rollback: ## Rollback last migration
-	cd backend && uv run alembic downgrade -1
+	cd backend && uv run python -m alembic downgrade -1
 
 # Data Pipeline
 seed: ## Seed database with initial data
-	cd backend && uv run python scripts/seed.py
+	cd backend && uv run python scripts/data/init_system.py --force
 
 sync: ## Run OpenAlex sync task
 	cd backend && uv run python scripts/sync.py

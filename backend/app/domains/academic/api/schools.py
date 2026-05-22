@@ -53,6 +53,10 @@ async def list_schools(
         page_size=page_size,
     )
 
+    # Fetch affiliation-based stats from materialized view for consistency
+    school_ids = [s.school_id for s in schools]
+    mv_stats = await service.get_mv_stats_for_schools(school_ids)
+
     items = [
         SchoolSummary(
             school_id=school.school_id,
@@ -60,8 +64,8 @@ async def list_schools(
             school_alias=school.school_alias,
             country_code=school.country_code,
             country_name=school.country_name,
-            professor_count=school.professor_count,
-            student_count=school.student_count,
+            professor_count=mv_stats.get(school.school_id, {}).get("professor_count", 0),
+            student_count=mv_stats.get(school.school_id, {}).get("student_count", 0),
             homepage_url=school.homepage_url,
             is_top_school=getattr(school, "is_top_school", False),
         )
@@ -106,6 +110,10 @@ async def list_top_schools(
         page_size=page_size,
     )
 
+    # Fetch affiliation-based stats from materialized view for consistency
+    school_ids = [s.school_id for s in schools]
+    mv_stats = await service.get_mv_stats_for_schools(school_ids)
+
     items = [
         SchoolSummary(
             school_id=school.school_id,
@@ -113,8 +121,8 @@ async def list_top_schools(
             school_alias=school.school_alias,
             country_code=school.country_code,
             country_name=school.country_name,
-            professor_count=school.professor_count,
-            student_count=school.student_count,
+            professor_count=mv_stats.get(school.school_id, {}).get("professor_count", 0),
+            student_count=mv_stats.get(school.school_id, {}).get("student_count", 0),
             homepage_url=school.homepage_url,
             is_top_school=True,
         )

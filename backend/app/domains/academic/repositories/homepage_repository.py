@@ -3,12 +3,24 @@ Repository for homepage data operations.
 首页数据查询Repository
 """
 
-from sqlalchemy import func, select
+from sqlalchemy import BigInteger, Column, Integer, MetaData, Table, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.school import School
 from app.domains.academic.models.statistics import ResearchTopicStats
 from app.domains.academic.models.tech_domain import TalentTechTag, TechDomain
+
+# Materialized view: mv_school_talent_count
+# Refreshed by Phase 10 (phase_10_school_stats.py) after each collection.
+# Counts talents via ANY affiliation: school_id, education_school_id, or company_school_id.
+mv_school_talent_count = Table(
+    "mv_school_talent_count",
+    MetaData(),
+    Column("school_id", Integer, primary_key=True),
+    Column("talent_count", BigInteger),
+    Column("professor_count", BigInteger),
+    Column("student_count", BigInteger),
+)
 
 
 class HomepageRepository:
@@ -68,22 +80,23 @@ class HomepageRepository:
         Returns:
             List of dictionaries with country info and talent count
         """
-        # Sum talent counts from schools grouped by country_code
+        # Sum talent counts from materialized view grouped by country_code
         query = (
             select(
                 School.country_code,
                 School.country_name,
-                func.sum(School.professor_count + School.student_count).label("talent_count"),
+                func.sum(mv_school_talent_count.c.talent_count).label("talent_count"),
             )
             .select_from(School)
+            .join(mv_school_talent_count, School.school_id == mv_school_talent_count.c.school_id)
             .where(
                 School.is_visible.is_(True),
                 School.country_code != "XX",  # 排除"未知"国家
                 School.country_code.isnot(None),
             )
             .group_by(School.country_code, School.country_name)
-            .having(func.sum(School.professor_count + School.student_count) > 0)
-            .order_by(func.sum(School.professor_count + School.student_count).desc())
+            .having(func.sum(mv_school_talent_count.c.talent_count) > 0)
+            .order_by(func.sum(mv_school_talent_count.c.talent_count).desc())
             .limit(limit)
         )
 
@@ -134,6 +147,9 @@ class HomepageRepository:
         Get top schools by talent count.
         按人才数获取Top院校
 
+        Uses mv_school_talent_count materialized view for consistent
+        affiliation-based counting (school_id OR education_school_id OR company_school_id).
+
         Args:
             limit: Maximum number of results
             country_code: Filter by country code (e.g. "CN" for domestic,
@@ -148,9 +164,10 @@ class HomepageRepository:
                 School.school_name,
                 School.country_name,
                 School.country_code,
-                (School.professor_count + School.student_count).label("talent_count"),
+                mv_school_talent_count.c.talent_count,
             )
             .select_from(School)
+            .join(mv_school_talent_count, School.school_id == mv_school_talent_count.c.school_id)
             .where(School.is_visible.is_(True))
         )
 
@@ -162,7 +179,7 @@ class HomepageRepository:
             query = query.where(School.country_code == country_code)
 
         query = query.order_by(
-            (School.professor_count + School.student_count).desc()
+            mv_school_talent_count.c.talent_count.desc()
         ).limit(limit)
 
         result = await self.session.execute(query)

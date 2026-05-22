@@ -93,6 +93,18 @@ class SchoolService:
         """
         return await self.repo.get_country_stats()
 
+    async def get_mv_stats_for_schools(self, school_ids: list[int]) -> dict[int, dict]:
+        """
+        批量获取院校的物化视图统计（affiliation口径）
+
+        Args:
+            school_ids: 院校ID列表
+
+        Returns:
+            Dict[int, dict]: school_id -> {"talent_count", "professor_count", "student_count"}
+        """
+        return await self.repo.get_mv_stats_batch(school_ids)
+
     async def set_top_school_and_commit(self, school_id: int) -> bool:
         """
         设置院校为Top院校

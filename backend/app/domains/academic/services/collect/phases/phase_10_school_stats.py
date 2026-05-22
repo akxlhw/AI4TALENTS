@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, select, text
 
 from app.domains.academic.models.school import School
 from app.domains.academic.models.talent import Talent
@@ -86,6 +86,7 @@ class PhaseSchoolStatsHandler(PhaseHandler):
                     updated_schools += 1
 
         await self.session.flush()
+        await self._refresh_materialized_view()
         self.progress_tracker.add_log("info", f"更新了 {updated_schools} 所学校的统计")
 
     async def _full_update(self) -> None:
@@ -120,4 +121,12 @@ class PhaseSchoolStatsHandler(PhaseHandler):
                 )
                 updated_schools += 1
         await self.session.flush()
+        await self._refresh_materialized_view()
         self.progress_tracker.add_log("info", f"更新了 {updated_schools} 所学校的统计")
+
+    async def _refresh_materialized_view(self) -> None:
+        """Refresh the materialized view for school talent counts."""
+        await self.session.execute(
+            text("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_school_talent_count")
+        )
+        self.progress_tracker.add_log("info", "已刷新学校人才数物化视图")

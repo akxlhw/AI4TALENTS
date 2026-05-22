@@ -4,11 +4,21 @@ Repository for school operations.
 
 from __future__ import annotations
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import BigInteger, Column, Integer, MetaData, Table, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.school import School, SchoolAlias
 from app.domains.academic.models.talent import Talent
+
+# Materialized view for affiliation-based school talent counts
+mv_school_talent_count = Table(
+    "mv_school_talent_count",
+    MetaData(),
+    Column("school_id", Integer, primary_key=True),
+    Column("talent_count", BigInteger),
+    Column("professor_count", BigInteger),
+    Column("student_count", BigInteger),
+)
 
 
 class SchoolRepository:
@@ -176,6 +186,10 @@ class SchoolRepository:
         """
         Get talent counts by role type for a school.
 
+        Counts talents associated with the school via ANY affiliation field:
+        school_id, education_school_id, or company_school_id.
+        This aligns with the list/search OR filter logic.
+
         Args:
             school_id: School ID
 
@@ -185,7 +199,11 @@ class SchoolRepository:
         result = await self.session.execute(
             select(Talent.role_type, func.count(Talent.talent_id).label("count"))
             .where(
-                Talent.school_id == school_id,
+                or_(
+                    Talent.school_id == school_id,
+                    Talent.education_school_id == school_id,
+                    Talent.company_school_id == school_id,
+                ),
                 Talent.is_visible.is_(True),
             )
             .group_by(Talent.role_type)
@@ -273,9 +291,43 @@ class SchoolRepository:
         await self.session.commit()
         return result.rowcount
 
+    async def get_mv_stats_batch(self, school_ids: list[int]) -> dict[int, dict]:
+        """
+        Get affiliation-based talent counts from materialized view for a batch of schools.
+
+        Args:
+            school_ids: List of school IDs
+
+        Returns:
+            Dictionary mapping school_id to {"talent_count", "professor_count", "student_count"}
+        """
+        if not school_ids:
+            return {}
+
+        result = await self.session.execute(
+            select(
+                mv_school_talent_count.c.school_id,
+                mv_school_talent_count.c.talent_count,
+                mv_school_talent_count.c.professor_count,
+                mv_school_talent_count.c.student_count,
+            )
+            .where(mv_school_talent_count.c.school_id.in_(school_ids))
+        )
+
+        return {
+            row.school_id: {
+                "talent_count": int(row.talent_count or 0),
+                "professor_count": int(row.professor_count or 0),
+                "student_count": int(row.student_count or 0),
+            }
+            for row in result.all()
+        }
+
     async def get_country_stats(self) -> list[tuple]:
         """
         Get school and professor counts grouped by country.
+
+        Uses mv_school_talent_count for consistent affiliation-based counting.
 
         Returns:
             List of tuples (country_code, school_count, professor_count)
@@ -284,13 +336,18 @@ class SchoolRepository:
             select(
                 School.country_code,
                 func.count(School.school_id).label("school_count"),
-                func.sum(School.professor_count).label("professor_count"),
+                func.sum(mv_school_talent_count.c.professor_count).label("professor_count"),
+            )
+            .select_from(School)
+            .join(
+                mv_school_talent_count,
+                School.school_id == mv_school_talent_count.c.school_id,
             )
             .where(
                 School.is_visible.is_(True),
                 School.country_code.isnot(None),
             )
             .group_by(School.country_code)
-            .order_by(func.sum(School.professor_count).desc())
+            .order_by(func.sum(mv_school_talent_count.c.professor_count).desc())
         )
         return result.all()
