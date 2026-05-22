@@ -74,7 +74,7 @@ def create_application() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
         version=settings.APP_VERSION,
-        description="智能人才库 V2.0.0 API",
+        description="智能人才库 V2.0.3 API",
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",

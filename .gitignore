@@ -104,5 +104,6 @@ backend/test_db.py
 .claude/
 
 outputs/*.log
+outputs/screenshots/
 
 AGENTS.md

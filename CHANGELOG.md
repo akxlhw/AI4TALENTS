@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-05-22
+
+### Added
+
+- **滑动窗口熔断器** (`circuit_breaker.py`) — 纯 Python 实现，无外部依赖
+  - 三态: CLOSED → OPEN (连续 5 次失败 / 窗口 10 次中 5 次失败) → HALF_OPEN (冷却 30s)
+  - 集成到 OpenAlex Client (`_make_request`) 和 GitHub Client (`_get`)
+  - 4 项配置化: `CIRCUIT_BREAKER_ENABLED`, `FAILURE_THRESHOLD`, `RECOVERY_TIMEOUT`, `WINDOW_SIZE`
+- **SystemRepository** (`system_repository.py`) + **SystemService** (`system_service.py`)
+  - 封装 `SELECT 1` 健康检查，消除 API 层直接 SQL
+
+### Fixed
+
+- **P0: API 层跨层穿透** (`talents.py`)
+  - `run_sync_background()` 直接创建 `AsyncSessionLocal` → 移至 `CollaborationService.run_background_sync()`
+- **P0: API 层跨层穿透** (`health.py`)
+  - 直接 `session.execute(text("SELECT 1"))` → 通过 `SystemService.health_check_db(session)`
+- **Phase 0 estimation 0 重试** (`data_fetchers.py`)
+  - `get_work_count_from_venue()` 添加 `@with_retry(max_attempts=3)`，失败静默返回 0
+
 ## [2.0.1] - TBD
 
 ### Planned — 技术债务偿还
@@ -486,6 +506,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frontend: React 18 + TypeScript + Vite + Ant Design v5
 - Database: SQLite (dev) / PostgreSQL (prod)
 
+[2.0.3]: https://github.com/akxlhw/AI4TALENTS/compare/v2.0.2...v2.0.3
+[2.0.2]: https://github.com/akxlhw/AI4TALENTS/compare/v2.0.1...v2.0.2
+[2.0.1]: https://github.com/akxlhw/AI4TALENTS/compare/v2.0.0...v2.0.1
+[2.0.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.4.2...v2.0.0
 [1.4.2]: https://github.com/akxlhw/AI4TALENTS/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/akxlhw/AI4TALENTS/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/akxlhw/AI4TALENTS/compare/v1.3.2...v1.4.0
