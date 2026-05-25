@@ -9,7 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.1.0] - TBD
 
-### Planned
+### Planned Features
+
+1. **隐私合规声明**
+   - 用户隐私协议与数据使用声明页面
+   - Cookie / 本地存储使用提示与同意管理
+   - 符合《个人信息保护法》及 GDPR 基础要求的数据处理说明
+
+2. **新增"我的建议"模块**
+   - 用户可向平台提交功能建议、数据纠错、体验反馈
+   - 后端：建议表设计 + 分类标签 + 处理状态流转
+   - 前端：建议入口 + 表单提交 + 历史建议列表
+
+3. **开源人才库支持人才数据导出**
+   - 开源域（`domains/open_source/`）开发者列表/详情页增加导出按钮
+   - 支持 Excel / CSV 格式导出（复用学术域导出能力）
+   - 导出字段：开发者基本信息、仓库统计、技术标签、活跃度评分
+
+4. **用户管理模块优化**
+   - 管理员后台用户列表增强：支持按角色/状态/注册时间筛选与排序
+   - 用户详情页：操作日志、权限变更记录、登录历史
+   - 批量操作：批量启用/禁用/重置密码/分配角色
+
+### Technical Debt
 
 - 物化视图 Table 重复定义提取至 `models/materialized_views.py`
 - Phase 10 DDL 越界修复：`REFRESH MATERIALIZED VIEW` 下沉至 `SchoolRepository`
