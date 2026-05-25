@@ -35,11 +35,11 @@ def upgrade() -> None:
             SELECT talent_id, role_type, school_id
             FROM core_talent
             WHERE school_id IS NOT NULL AND is_visible = true
-            UNION ALL
+            UNION
             SELECT talent_id, role_type, education_school_id AS school_id
             FROM core_talent
             WHERE education_school_id IS NOT NULL AND is_visible = true
-            UNION ALL
+            UNION
             SELECT talent_id, role_type, company_school_id AS school_id
             FROM core_talent
             WHERE company_school_id IS NOT NULL AND is_visible = true

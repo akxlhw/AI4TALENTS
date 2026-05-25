@@ -361,7 +361,7 @@ class BaseTalentRepository:
         query = query.group_by(Talent.role_type)
 
         result = await self.session.execute(query)
-        counts = {"professor": 0, "student": 0, "graduated": 0, "unknown": 0, "total": 0}
+        counts = {"professor": 0, "student": 0, "graduate": 0, "unknown": 0, "total": 0}
 
         for row in result.all():
             counts[row.role_type] = row.count

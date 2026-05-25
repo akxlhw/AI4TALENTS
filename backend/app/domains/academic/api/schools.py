@@ -229,7 +229,7 @@ async def get_school_stats(
         professor_count=talent_counts["professor"],
         student_count=talent_counts["student"],
         talent_count=talent_counts["total"],
-        graduate_count=talent_counts["graduated"],
+        graduate_count=talent_counts["graduate"],
         unknown_count=talent_counts["unknown"],
     )
 
@@ -272,7 +272,7 @@ async def get_school(
         professor_count=talent_counts["professor"],
         student_count=talent_counts["student"],
         talent_count=talent_counts["total"],
-        graduate_count=talent_counts["graduated"],
+        graduate_count=talent_counts["graduate"],
         unknown_count=talent_counts["unknown"],
         is_top_school=getattr(school, "is_top_school", False),
     )

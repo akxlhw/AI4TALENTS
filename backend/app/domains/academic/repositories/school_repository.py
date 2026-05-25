@@ -212,7 +212,7 @@ class SchoolRepository:
         counts = {
             "professor": 0,
             "student": 0,
-            "graduated": 0,
+            "graduate": 0,
             "unknown": 0,
             "total": 0,
         }
