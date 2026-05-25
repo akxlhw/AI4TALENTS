@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import { useDomainStore } from '../stores/domainStore'
 import { domainThemes, semanticColors, type Domain } from '../theme'
+import Footer from '../components/Footer'
 
 const { Text } = Typography
 
@@ -249,9 +250,11 @@ const MainLayout: React.FC = () => {
       </nav>
 
       {/* ========== Content Area ========== */}
-      <main className="discovery-content" style={{ paddingTop: 0 }}>
+      <main className="discovery-content" style={{ paddingTop: 0, minHeight: 'calc(100vh - 64px)' }}>
         <Outlet />
       </main>
+
+      <Footer />
     </div>
   )
 }

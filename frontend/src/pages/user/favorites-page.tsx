@@ -33,6 +33,7 @@ import {
 } from '@ant-design/icons'
 import { api } from '../../services/api'
 import TalentCompareModal from '../../components/TalentCompareModal'
+import ExportConfirmModal from '../../components/ExportConfirmModal'
 import { semanticColors } from '../../theme'
 import { getRoleTypeConfig, getFollowupStatusConfig } from '../../constants'
 import type { FavoriteTalent, TalentPool, FollowupStatus } from '../../types'
@@ -77,6 +78,8 @@ const FavoritesPage: React.FC = () => {
   // Selection state
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [exporting, setExporting] = useState(false)
+  const [exportConfirmVisible, setExportConfirmVisible] = useState(false)
+  const [pendingExportFormat, setPendingExportFormat] = useState<'csv' | 'xlsx' | null>(null)
 
   // Compare state
   const [compareModalVisible, setCompareModalVisible] = useState(false)
@@ -246,28 +249,33 @@ const FavoritesPage: React.FC = () => {
     }
   }
 
-  const handleExport = async (format: 'csv' | 'xlsx') => {
+  const handleExportRequest = (format: 'csv' | 'xlsx') => {
     if (selectedRowKeys.length === 0) {
       message.warning('请先选择要导出的候选人')
       return
     }
+    setPendingExportFormat(format)
+    setExportConfirmVisible(true)
+  }
 
+  const handleExportConfirm = async () => {
+    if (!pendingExportFormat) return
     setExporting(true)
     try {
       const talentIds = favorites
         .filter(f => selectedRowKeys.includes(f.favorite_id))
         .map(f => f.talent_id)
 
-      const response = await api.talents.export(talentIds, format)
+      const response = await api.talents.export(talentIds, pendingExportFormat)
       const blob = new Blob([response.data], {
-        type: format === 'xlsx'
+        type: pendingExportFormat === 'xlsx'
           ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
           : 'text/csv'
       })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `favorites_export.${format}`
+      a.download = `favorites_export.${pendingExportFormat}`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -277,6 +285,8 @@ const FavoritesPage: React.FC = () => {
       message.error('导出失败')
     } finally {
       setExporting(false)
+      setExportConfirmVisible(false)
+      setPendingExportFormat(null)
     }
   }
 
@@ -285,7 +295,7 @@ const FavoritesPage: React.FC = () => {
       { key: 'csv', label: '导出 CSV' },
       { key: 'xlsx', label: '导出 Excel' },
     ],
-    onClick: (e: { key: string }) => handleExport(e.key as 'csv' | 'xlsx'),
+    onClick: (e: { key: string }) => handleExportRequest(e.key as 'csv' | 'xlsx'),
   }
 
   const handleCompare = () => {
@@ -606,6 +616,13 @@ const FavoritesPage: React.FC = () => {
           ),
         },
       ]} />
+
+      {/* Export Confirm Modal */}
+      <ExportConfirmModal
+        open={exportConfirmVisible}
+        onConfirm={handleExportConfirm}
+        onCancel={() => { setExportConfirmVisible(false); setPendingExportFormat(null) }}
+      />
 
       {/* Compare Modal */}
       <TalentCompareModal

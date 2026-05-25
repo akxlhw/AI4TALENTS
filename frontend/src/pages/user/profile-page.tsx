@@ -8,15 +8,18 @@ import {
   Typography,
   Descriptions,
   Avatar,
+  Space,
 } from 'antd'
 import {
   UserOutlined,
   LockOutlined,
   MailOutlined,
   SafetyOutlined,
+  SecurityScanOutlined,
 } from '@ant-design/icons'
 import { api } from '../../services/api'
 import { semanticColors } from '../../theme'
+import { useNavigate } from 'react-router-dom'
 
 const { Title, Text } = Typography
 
@@ -29,6 +32,11 @@ interface UserInfo {
   department: string | null
   is_active: boolean
   last_login_at: string | null
+  privacy_policy_accepted_at: string | null
+  privacy_policy_version: string | null
+  terms_of_use_accepted_at: string | null
+  terms_of_use_version: string | null
+  storage_consent_level: string
 }
 
 const roleMap: Record<string, string> = {
@@ -38,6 +46,7 @@ const roleMap: Record<string, string> = {
 }
 
 const ProfilePage: React.FC = () => {
+  const navigate = useNavigate()
   const [user, setUser] = useState<UserInfo | null>(null)
   const [loading, setLoading] = useState(false)
   const [passwordLoading, setPasswordLoading] = useState(false)
@@ -128,7 +137,7 @@ const ProfilePage: React.FC = () => {
       </Card>
 
       {/* Change Password Card */}
-      <Card title={<><LockOutlined style={{ marginRight: 8 }} />修改密码</>}>
+      <Card title={<><LockOutlined style={{ marginRight: 8 }} />修改密码</>} style={{ marginBottom: 24 }}>
         <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
           为保障账户安全，建议定期更换密码（密码长度至少8位）
         </Text>
@@ -182,6 +191,58 @@ const ProfilePage: React.FC = () => {
             </Button>
           </Form.Item>
         </Form>
+      </Card>
+
+      {/* Privacy & Data Card */}
+      <Card title={<><SecurityScanOutlined style={{ marginRight: 8 }} />隐私与数据</>}>
+        <Descriptions column={2} bordered size="small" style={{ marginBottom: 16 }}>
+          <Descriptions.Item label="隐私政策">
+            {user?.privacy_policy_accepted_at ? (
+              <Text type="success">
+                已同意（版本 {user.privacy_policy_version || '-'}）
+              </Text>
+            ) : (
+              <Text type="warning">未同意</Text>
+            )}
+          </Descriptions.Item>
+          <Descriptions.Item label="同意时间">
+            {user?.privacy_policy_accepted_at
+              ? new Date(user.privacy_policy_accepted_at).toLocaleString('zh-CN')
+              : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="用户协议">
+            {user?.terms_of_use_accepted_at ? (
+              <Text type="success">
+                已同意（版本 {user.terms_of_use_version || '-'}）
+              </Text>
+            ) : (
+              <Text type="warning">未同意</Text>
+            )}
+          </Descriptions.Item>
+          <Descriptions.Item label="同意时间">
+            {user?.terms_of_use_accepted_at
+              ? new Date(user.terms_of_use_accepted_at).toLocaleString('zh-CN')
+              : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="数据存储偏好">
+            {user?.storage_consent_level === 'necessary' && '必要'}
+            {user?.storage_consent_level === 'functional' && '功能偏好'}
+            {user?.storage_consent_level === 'analytics' && '分析统计'}
+            {!user?.storage_consent_level && '必要'}
+          </Descriptions.Item>
+          <Descriptions.Item label="状态">
+            {user?.privacy_policy_accepted_at && user?.terms_of_use_accepted_at ? (
+              <Text type="success">合规</Text>
+            ) : (
+              <Text type="danger">待补录</Text>
+            )}
+          </Descriptions.Item>
+        </Descriptions>
+
+        <Space>
+          <Button onClick={() => navigate('/privacy-policy')}>查看隐私政策</Button>
+          <Button onClick={() => navigate('/terms-of-use')}>查看用户协议</Button>
+        </Space>
       </Card>
     </div>
   )

@@ -182,3 +182,28 @@ class UserService:
     async def update_default_view_and_commit(self, user_id: int, default_view: str) -> bool:
         """更新用户默认视角并提交"""
         return await self.scope_repo.update_default_view_and_commit(user_id, default_view)
+
+    # ---- Privacy consent operations ----
+
+    async def update_privacy_consent_and_commit(
+        self,
+        user_id: int,
+        privacy_policy_accepted_at: datetime | None = None,
+        privacy_policy_version: str | None = None,
+        terms_of_use_accepted_at: datetime | None = None,
+        terms_of_use_version: str | None = None,
+        storage_consent_level: str | None = None,
+    ) -> bool:
+        """更新用户隐私同意记录并提交"""
+        return await self.user_repo.update_privacy_consent_and_commit(
+            user_id=user_id,
+            privacy_policy_accepted_at=privacy_policy_accepted_at,
+            privacy_policy_version=privacy_policy_version,
+            terms_of_use_accepted_at=terms_of_use_accepted_at,
+            terms_of_use_version=terms_of_use_version,
+            storage_consent_level=storage_consent_level,
+        )
+
+    async def get_privacy_consent_status(self, user_id: int) -> dict | None:
+        """获取用户隐私同意状态"""
+        return await self.user_repo.get_privacy_consent_status(user_id)

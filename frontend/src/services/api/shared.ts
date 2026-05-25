@@ -11,7 +11,7 @@ export const sharedApi = {
     login: (username: string, password: string) =>
       apiClient.post('/auth/login', { username, password }),
     logout: () => apiClient.post('/auth/logout'),
-    register: (data: { username: string; email: string; password: string; employee_id: string; display_name?: string }) =>
+    register: (data: { username: string; email: string; password: string; employee_id: string; display_name?: string; privacy_policy_accepted: boolean; terms_of_use_accepted: boolean; storage_consent_level?: string }) =>
       apiClient.post('/auth/register', data),
     refresh: (refreshToken: string) =>
       apiClient.post('/auth/refresh', { refresh_token: refreshToken }),
@@ -29,6 +29,18 @@ export const sharedApi = {
 
   countries: {
     list: () => apiClient.get('/countries'),
+  },
+
+  privacy: {
+    getPolicy: () => apiClient.get('/privacy/policy'),
+    getTerms: () => apiClient.get('/privacy/terms'),
+    getConsentStatus: () => apiClient.get('/privacy/consent-status'),
+    updateConsent: (data: {
+      policy_version: string
+      terms_version: string
+      storage_consent_level: string
+      accepted: boolean
+    }) => apiClient.post('/privacy/consent', data),
   },
 
   admin: {

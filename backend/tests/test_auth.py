@@ -203,6 +203,8 @@ class TestRegistration:
                 "email": "newregister@example.com",
                 "password": "Str0ng!Pw",
                 "employee_id": "h00111111",
+                "privacy_policy_accepted": True,
+                "terms_of_use_accepted": True,
             },
         )
 
@@ -219,6 +221,8 @@ class TestRegistration:
                 "email": "unique@example.com",
                 "password": "Str0ng!Pw",
                 "employee_id": "h00222222",
+                "privacy_policy_accepted": True,
+                "terms_of_use_accepted": True,
             },
         )
 
@@ -235,6 +239,8 @@ class TestRegistration:
                 "email": "test@example.com",
                 "password": "Str0ng!Pw",
                 "employee_id": "h00333333",
+                "privacy_policy_accepted": True,
+                "terms_of_use_accepted": True,
             },
         )
 
@@ -251,6 +257,8 @@ class TestRegistration:
                 "email": "unique2@example.com",
                 "password": "Str0ng!Pw",
                 "employee_id": "h00123456",
+                "privacy_policy_accepted": True,
+                "terms_of_use_accepted": True,
             },
         )
 
@@ -267,6 +275,8 @@ class TestRegistration:
                 "email": "badid@example.com",
                 "password": "Str0ng!Pw",
                 "employee_id": "123456789",  # missing letter prefix
+                "privacy_policy_accepted": True,
+                "terms_of_use_accepted": True,
             },
         )
 
@@ -282,6 +292,8 @@ class TestRegistration:
                 "email": "shortid@example.com",
                 "password": "Str0ng!Pw",
                 "employee_id": "h1234567",  # 7 digits instead of 8
+                "privacy_policy_accepted": True,
+                "terms_of_use_accepted": True,
             },
         )
 

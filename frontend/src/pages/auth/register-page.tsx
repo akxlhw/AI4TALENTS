@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Form, Input, Button, Card, Typography, Space, message } from 'antd'
+import { Form, Input, Button, Card, Typography, Space, message, Checkbox } from 'antd'
 import { UserOutlined, LockOutlined, IdcardOutlined, MailOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../services/api'
@@ -14,6 +14,8 @@ interface RegisterForm {
   password: string
   confirm_password: string
   display_name?: string
+  privacy_policy_accepted: boolean
+  terms_of_use_accepted: boolean
 }
 
 const RegisterPage: React.FC = () => {
@@ -30,6 +32,9 @@ const RegisterPage: React.FC = () => {
         password: values.password,
         employee_id: values.employee_id,
         display_name: values.display_name || undefined,
+        privacy_policy_accepted: values.privacy_policy_accepted,
+        terms_of_use_accepted: values.terms_of_use_accepted,
+        storage_consent_level: 'necessary',
       })
       message.success('注册成功，请等待管理员审核')
       setTimeout(() => navigate('/login'), 1500)
@@ -188,6 +193,49 @@ const RegisterPage: React.FC = () => {
                 placeholder="确认密码"
                 style={{ borderRadius: 10, height: 44 }}
               />
+            </Form.Item>
+
+            <Form.Item
+              name="privacy_policy_accepted"
+              valuePropName="checked"
+              rules={[
+                {
+                  validator: (_, value) =>
+                    value ? Promise.resolve() : Promise.reject(new Error('必须同意隐私政策')),
+                },
+              ]}
+              style={{ marginBottom: 8 }}
+            >
+              <Checkbox>
+                <Text style={{ fontSize: 13, color: '#555' }}>
+                  我已阅读并同意{' '}
+                  <a onClick={(e) => { e.preventDefault(); navigate('/privacy-policy') }} style={{ color: domainThemes.academic.primary }}>
+                    《隐私政策》
+                  </a>
+                </Text>
+              </Checkbox>
+            </Form.Item>
+
+            <Form.Item
+              name="terms_of_use_accepted"
+              valuePropName="checked"
+              rules={[
+                {
+                  validator: (_, value) =>
+                    value ? Promise.resolve() : Promise.reject(new Error('必须同意用户协议')),
+                },
+              ]}
+              style={{ marginBottom: 12 }}
+            >
+              <Checkbox>
+                <Text style={{ fontSize: 13, color: '#555' }}>
+                  我已阅读并同意{' '}
+                  <a onClick={(e) => { e.preventDefault(); navigate('/terms-of-use') }} style={{ color: domainThemes.academic.primary }}>
+                    《用户协议》
+                  </a>
+                  （含人才数据使用限制条款）
+                </Text>
+              </Checkbox>
             </Form.Item>
 
             <Form.Item style={{ marginBottom: 12 }}>

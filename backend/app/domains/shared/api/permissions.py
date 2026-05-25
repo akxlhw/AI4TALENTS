@@ -35,6 +35,11 @@ class UserResponse(BaseModel):
     employee_id: str | None = None
     default_view: str = "tech_domain"
     last_login_at: datetime | None = None
+    privacy_policy_accepted_at: datetime | None = None
+    privacy_policy_version: str | None = None
+    terms_of_use_accepted_at: datetime | None = None
+    terms_of_use_version: str | None = None
+    storage_consent_level: str = "necessary"
 
 
 class UserListResponse(BaseModel):

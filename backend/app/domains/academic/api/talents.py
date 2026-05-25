@@ -249,6 +249,7 @@ async def export_talents(
     Export selected talents to CSV or Excel format.
     """
     from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font
 
     service = TalentService(session)
 
@@ -257,6 +258,13 @@ async def export_talents(
 
     if not talents:
         raise HTTPException(status_code=404, detail="未找到要导出的人才")
+
+    # Watermark disclaimer text
+    disclaimer = (
+        "【重要声明】本文件导出的人才数据仅供内部人才发现与学术调研使用。"
+        "严禁通过任何渠道向人才发起招聘邀约，严禁将数据提供给第三方招聘机构，"
+        "严禁用于商业营销或数据贩卖。违规使用将导致账号封禁及法律责任。"
+    )
 
     # Prepare data
     headers = [
@@ -296,12 +304,19 @@ async def export_talents(
         ws = wb.active
         ws.title = "候选人导出"
 
-        # Write headers
+        # Write disclaimer in first row, spanning all columns
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
+        disclaimer_cell = ws.cell(row=1, column=1, value=disclaimer)
+        disclaimer_cell.alignment = Alignment(wrap_text=True, vertical="center")
+        disclaimer_cell.font = Font(color="FF0000", bold=True)
+        ws.row_dimensions[1].height = 45
+
+        # Write headers (row 3, leaving row 2 as blank separator)
         for col, header in enumerate(headers, 1):
-            ws.cell(row=1, column=col, value=header)
+            ws.cell(row=3, column=col, value=header)
 
         # Write data
-        for row_idx, row in enumerate(rows, 2):
+        for row_idx, row in enumerate(rows, 4):
             for col_idx, value in enumerate(row, 1):
                 ws.cell(row=row_idx, column=col_idx, value=value)
 
@@ -331,6 +346,8 @@ async def export_talents(
         # Create CSV
         buffer = io.StringIO()
         writer = csv.writer(buffer)
+        writer.writerow([disclaimer])
+        writer.writerow([])
         writer.writerow(headers)
         writer.writerows(rows)
         buffer.seek(0)

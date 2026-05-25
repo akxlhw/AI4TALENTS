@@ -36,6 +36,7 @@ import FavoriteButton from '../../../components/FavoriteButton'
 import TalentCompareModal from '../../../components/TalentCompareModal'
 import TopicTags from '../../../components/TopicTags'
 import ColumnSettings from '../../../components/ColumnSettings'
+import ExportConfirmModal from '../../../components/ExportConfirmModal'
 import { useKeyboardShortcuts } from '../../../hooks/useKeyboardShortcuts'
 import { useSearchTemplates } from '../../../hooks/useSearchTemplates'
 import { useColumnConfig } from '../../../hooks/useColumnConfig'
@@ -88,6 +89,8 @@ const SearchTab: React.FC<SearchTabProps> = ({
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [exporting, setExporting] = useState(false)
+  const [exportConfirmVisible, setExportConfirmVisible] = useState(false)
+  const [pendingExportFormat, setPendingExportFormat] = useState<'csv' | 'xlsx' | null>(null)
   const [compareModalVisible, setCompareModalVisible] = useState(false)
   const [countryFilter, setCountryFilter] = useState<string | undefined>()
   const [techDomainFilter, setTechDomainFilter] = useState<number | undefined>()
@@ -262,19 +265,25 @@ const SearchTab: React.FC<SearchTabProps> = ({
     performSearch(query, 1)
   }
 
-  const handleExport = async (format: 'csv' | 'xlsx') => {
+  const handleExportRequest = (format: 'csv' | 'xlsx') => {
     if (selectedRowKeys.length === 0) {
       message.warning('请先选择要导出的候选人')
       return
     }
+    setPendingExportFormat(format)
+    setExportConfirmVisible(true)
+  }
+
+  const handleExportConfirm = async () => {
+    if (!pendingExportFormat) return
     setExporting(true)
     try {
-      const response = await api.talents.export(selectedRowKeys as number[], format)
-      const blob = new Blob([response.data], { type: format === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv' })
+      const response = await api.talents.export(selectedRowKeys as number[], pendingExportFormat)
+      const blob = new Blob([response.data], { type: pendingExportFormat === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv' })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `talents_export.${format}`
+      a.download = `talents_export.${pendingExportFormat}`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -284,12 +293,14 @@ const SearchTab: React.FC<SearchTabProps> = ({
       message.error('导出失败')
     } finally {
       setExporting(false)
+      setExportConfirmVisible(false)
+      setPendingExportFormat(null)
     }
   }
 
   const exportMenu = {
     items: [{ key: 'csv', label: '导出 CSV' }, { key: 'xlsx', label: '导出 Excel' }],
-    onClick: (e: { key: string }) => handleExport(e.key as 'csv' | 'xlsx'),
+    onClick: (e: { key: string }) => handleExportRequest(e.key as 'csv' | 'xlsx'),
   }
 
   const handleCompare = () => {
@@ -512,6 +523,13 @@ const SearchTab: React.FC<SearchTabProps> = ({
           />
         </Spin>
       </Card>
+
+      {/* Export Confirm Modal */}
+      <ExportConfirmModal
+        open={exportConfirmVisible}
+        onConfirm={handleExportConfirm}
+        onCancel={() => { setExportConfirmVisible(false); setPendingExportFormat(null) }}
+      />
 
       {/* Compare Modal */}
       <TalentCompareModal visible={compareModalVisible} talentIds={selectedRowKeys as number[]} onClose={() => setCompareModalVisible(false)} />

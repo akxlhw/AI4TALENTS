@@ -7,6 +7,9 @@ import TalentDetailPage from './pages/academic/academic-talent-detail-page'
 import SchoolDetailPage from './pages/academic/academic-school-detail-page'
 import LoginPage from './pages/auth/login-page'
 import RegisterPage from './pages/auth/register-page'
+import PrivacyPolicyPage from './pages/legal/privacy-policy-page'
+import TermsOfUsePage from './pages/legal/terms-of-use-page'
+import StorageConsentBanner from './components/StorageConsentBanner'
 import AdminPage from './pages/admin/admin-page'
 import AuditLogPage from './pages/admin/audit-log-page'
 import FavoritesPage from './pages/user/favorites-page'
@@ -105,6 +108,8 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
+      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms-of-use" element={<TermsOfUsePage />} />
       <Route
         path="/"
         element={
@@ -179,6 +184,7 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
+      <StorageConsentBanner />
       <AppRoutes />
     </BrowserRouter>
   )

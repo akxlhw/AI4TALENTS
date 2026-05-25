@@ -80,6 +80,9 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=100)
     employee_id: str = Field(..., pattern=r"^[a-zA-Z]\d{8}$")
     display_name: str | None = Field(default=None, max_length=100)
+    privacy_policy_accepted: bool = Field(default=False)
+    terms_of_use_accepted: bool = Field(default=False)
+    storage_consent_level: str = Field(default="necessary")
 
 
 class CurrentUser(BaseModel):
@@ -93,6 +96,11 @@ class CurrentUser(BaseModel):
     department: str | None = None
     is_active: bool
     last_login_at: datetime | None = None
+    privacy_policy_accepted_at: datetime | None = None
+    privacy_policy_version: str | None = None
+    terms_of_use_accepted_at: datetime | None = None
+    terms_of_use_version: str | None = None
+    storage_consent_level: str = "necessary"
 
 
 async def get_current_user(
@@ -244,8 +252,22 @@ async def register(
         )
         raise HTTPException(status_code=400, detail=f"密码强度不足: {error_msg}")
 
+    # Validate privacy policy and terms of use acceptance
+    if not data.privacy_policy_accepted:
+        raise HTTPException(
+            status_code=400, detail="必须同意隐私政策才能注册"
+        )
+    if not data.terms_of_use_accepted:
+        raise HTTPException(
+            status_code=400, detail="必须同意用户协议才能注册"
+        )
+
     # Create user with pending approval status
     password_hash = hash_password(data.password)
+    from datetime import datetime
+
+    from app.core.config import settings
+    now = datetime.now()
     user = await service.create_user_and_commit(
         username=data.username,
         email=data.email,
@@ -255,6 +277,15 @@ async def register(
         employee_id=data.employee_id,
         is_active=False,
         status="pending_approval",
+    )
+    # Update consent fields after creation
+    await service.update_privacy_consent_and_commit(
+        user_id=user.user_id,
+        privacy_policy_accepted_at=now,
+        privacy_policy_version=settings.APP_VERSION,
+        terms_of_use_accepted_at=now,
+        terms_of_use_version=settings.APP_VERSION,
+        storage_consent_level=data.storage_consent_level,
     )
 
     await AuditService.log_auth_event(
@@ -511,6 +542,11 @@ async def get_current_user_info(
         department=user.department,
         is_active=user.is_active,
         last_login_at=user.last_login_at,
+        privacy_policy_accepted_at=user.privacy_policy_accepted_at,
+        privacy_policy_version=user.privacy_policy_version,
+        terms_of_use_accepted_at=user.terms_of_use_accepted_at,
+        terms_of_use_version=user.terms_of_use_version,
+        storage_consent_level=user.storage_consent_level,
     )
 
 

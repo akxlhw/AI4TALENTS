@@ -93,16 +93,16 @@ const LoginPage: React.FC = () => {
           注册账号 →
         </a>
 
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           {/* Logo and Title */}
-          <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <div style={{ textAlign: 'center', marginBottom: 16 }}>
             <div
               style={{
                 display: 'flex',
                 alignItems: 'baseline',
                 justifyContent: 'center',
                 gap: 8,
-                marginBottom: 12,
+                marginBottom: 10,
               }}
             >
               <span
@@ -134,11 +134,11 @@ const LoginPage: React.FC = () => {
               style={{
                 fontSize: 14,
                 color: '#666',
-                letterSpacing: '1px',
+                letterSpacing: '3px',
                 display: 'block',
               }}
             >
-              顶尖优秀人才发现平台
+              数聚良才，智选慧才
             </Text>
           </div>
 
@@ -173,7 +173,7 @@ const LoginPage: React.FC = () => {
               />
             </Form.Item>
 
-            <Form.Item style={{ marginBottom: 16 }}>
+            <Form.Item style={{ marginBottom: 8, marginTop: 4 }}>
               <Button
                 type="primary"
                 htmlType="submit"
@@ -194,18 +194,18 @@ const LoginPage: React.FC = () => {
             </Form.Item>
           </Form>
 
-          <div style={{ textAlign: 'center' }}>
-            <Text
-              style={{
-                fontSize: 13,
-                color: '#666',
-                letterSpacing: '2px',
-              }}
-            >
-              数聚良才，智选慧才
+          <div style={{ textAlign: 'center', marginTop: 8 }}>
+            <Text style={{ fontSize: 12, color: '#999' }}>
+              登录即表示您同意{' '}
+              <a onClick={() => navigate('/privacy-policy')} style={{ color: '#888', textDecoration: 'underline' }}>
+                隐私政策
+              </a>
+              {' 和 '}
+              <a onClick={() => navigate('/terms-of-use')} style={{ color: '#888', textDecoration: 'underline' }}>
+                用户协议
+              </a>
             </Text>
           </div>
-
 
         </Space>
       </Card>

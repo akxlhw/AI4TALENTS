@@ -53,6 +53,15 @@ class UserAccount(Base, TimestampMixin):
     last_login_at = Column(DateTime, nullable=True)
     last_login_ip = Column(String(50), nullable=True)
 
+    # Privacy compliance (PIPL/GDPR)
+    privacy_policy_accepted_at = Column(DateTime, nullable=True)
+    privacy_policy_version = Column(String(20), nullable=True)
+    terms_of_use_accepted_at = Column(DateTime, nullable=True)
+    terms_of_use_version = Column(String(20), nullable=True)
+    storage_consent_level = Column(
+        String(20), default="necessary", nullable=False
+    )
+
     # Relationships
     school_scopes = relationship("UserSchoolScope", back_populates="user")
     favorites = relationship("FavoriteTalent", back_populates="user", lazy="dynamic")
