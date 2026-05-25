@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import ConflictError, NotFoundError
 from app.domains.academic.models.venue import Venue, VenueTechBinding
 from app.domains.academic.repositories.tech_domain_repository import TechDomainRepository
 from app.domains.academic.repositories.venue_repository import (
@@ -68,13 +69,13 @@ class VenueService:
         # Check if code exists
         existing = await self.venue_repo.get_by_code(data.venue_code)
         if existing:
-            raise ValueError("Venue code already exists")
+            raise ConflictError("Venue code already exists")
 
         # Check if openalex_source_id exists
         if data.openalex_source_id:
             existing = await self.venue_repo.get_by_openalex_id(data.openalex_source_id)
             if existing:
-                raise ValueError("OpenAlex Source ID already exists")
+                raise ConflictError("OpenAlex Source ID already exists")
 
         venue = Venue(**data.model_dump())
         venue = await self.venue_repo.create(venue)
@@ -85,7 +86,7 @@ class VenueService:
         """Update venue with validation."""
         venue = await self.venue_repo.get_by_id(venue_id)
         if not venue:
-            raise ValueError("Venue not found")
+            raise NotFoundError("Venue", venue_id)
 
         update_data = data.model_dump(exclude_unset=True)
         for key, value in update_data.items():
@@ -100,7 +101,7 @@ class VenueService:
         # Check if has bindings
         bindings = await self.binding_repo.get_by_venue(venue_id)
         if bindings:
-            raise ValueError(
+            raise ConflictError(
                 f"Cannot delete venue with {len(bindings)} bindings. Delete bindings first."
             )
 
@@ -114,17 +115,17 @@ class VenueService:
         # Check venue exists
         venue = await self.venue_repo.get_by_id(data.venue_id)
         if not venue:
-            raise ValueError("Venue not found")
+            raise NotFoundError("Venue", data.venue_id)
 
         # Check tech domain exists
         tech_domain = await self.tech_domain_repo.get_domain_by_id(data.tech_domain_id)
         if not tech_domain:
-            raise ValueError("Tech domain not found")
+            raise NotFoundError("Tech domain", data.tech_domain_id)
 
         # Check if binding already exists
         existing = await self.binding_repo.get_by_venue_and_tech(data.venue_id, data.tech_domain_id)
         if existing:
-            raise ValueError("Binding already exists")
+            raise ConflictError("Binding already exists")
 
         binding = VenueTechBinding(**data.model_dump())
         binding = await self.binding_repo.create(binding)
@@ -135,7 +136,7 @@ class VenueService:
         """Update binding."""
         binding = await self.binding_repo.get_by_id(binding_id)
         if not binding:
-            raise ValueError("Binding not found")
+            raise NotFoundError("Binding", binding_id)
 
         for key, value in data.items():
             setattr(binding, key, value)
@@ -161,7 +162,7 @@ class VenueService:
         # Check tech domain exists
         tech_domain = await self.tech_domain_repo.get_domain_by_id(data.tech_domain_id)
         if not tech_domain:
-            raise ValueError("Tech domain not found")
+            raise NotFoundError("Tech domain", data.tech_domain_id)
 
         # Get all bindings for this tech domain
         all_bindings = await self.binding_repo.get_by_tech_domain(data.tech_domain_id)
@@ -209,7 +210,7 @@ class VenueService:
         """
         tech_domain = await self.tech_domain_repo.get_domain_by_id(tech_domain_id)
         if not tech_domain:
-            raise ValueError("Tech domain not found")
+            raise NotFoundError("Tech domain", tech_domain_id)
 
         collect_sources = tech_domain.collect_sources or []
         if not collect_sources:

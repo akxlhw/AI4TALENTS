@@ -126,6 +126,9 @@ class Settings(BaseSettings):
     GITHUB_PER_PAGE: int = 100  # Items per page for GitHub API
     GITHUB_BATCH_SIZE: int = 5  # Concurrent repo requests (reduced to avoid burst detection)
 
+    # Collection
+    COLLECT_ERROR_MAX_LENGTH: int = 500  # Max length for collection error messages
+
     # Search Configuration (v1.4)
     SEARCH_DEFAULT_MODE: str = "keyword"  # keyword, fulltext, semantic, hybrid
     SEARCH_ENABLE_SEMANTIC: bool = True  # Enable semantic search

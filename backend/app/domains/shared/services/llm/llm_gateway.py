@@ -274,23 +274,6 @@ class LLMGateway(LLMEmbeddingMixin, LLMGatewayProtocol):
                 error_type=LLMErrorType.API_ERROR, message=f"Unexpected error: {e}"
             ) from e
 
-    async def parse_jd_with_fallback(self, jd_text: str) -> JDFeatures:
-        """
-        解析 JD 文本
-
-        v1.4.1: 移除 fallback，如果 LLM 解析失败直接抛出错误给用户
-
-        Args:
-            jd_text: JD 文本内容
-
-        Returns:
-            JDFeatures: 解析出的特征
-
-        Raises:
-            LLMError: LLM API 调用失败
-        """
-        return await self.parse_jd(jd_text)
-
     @with_retry(max_retries=3)
     @with_timeout(timeout_seconds=60.0)
     async def health_check(self) -> bool:

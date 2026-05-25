@@ -23,6 +23,13 @@ from app.domains.shared.services.cache_service import CacheService
 
 router = APIRouter(prefix="/homepage", tags=["Homepage"])
 
+HIGHLIGHT_LIMITS = {
+    "tech_domains": 6,
+    "countries": 5,
+    "schools": 5,
+    "research_topics": 10,
+}
+
 
 @router.get(
     "/highlights",
@@ -52,13 +59,21 @@ async def get_highlights(
         service = HomepageService(session)
 
         # Fetch all data in parallel
-        hot_tech_domains = await service.get_hot_tech_domains(limit=6)
-        top_countries = await service.get_top_countries(limit=5)
-        top_domestic_schools = await service.get_top_schools(limit=5, country_code="CN")
-        top_overseas_schools = await service.get_top_schools(
-            limit=5, country_code="__OVERSEAS__"
+        hot_tech_domains = await service.get_hot_tech_domains(
+            limit=HIGHLIGHT_LIMITS["tech_domains"]
         )
-        hot_research_topics = await service.get_hot_research_topics(limit=10)
+        top_countries = await service.get_top_countries(
+            limit=HIGHLIGHT_LIMITS["countries"]
+        )
+        top_domestic_schools = await service.get_top_schools(
+            limit=HIGHLIGHT_LIMITS["schools"], country_code="CN"
+        )
+        top_overseas_schools = await service.get_top_schools(
+            limit=HIGHLIGHT_LIMITS["schools"], country_code="__OVERSEAS__"
+        )
+        hot_research_topics = await service.get_hot_research_topics(
+            limit=HIGHLIGHT_LIMITS["research_topics"]
+        )
 
         return {
             "hot_tech_domains": hot_tech_domains,
@@ -84,13 +99,21 @@ async def get_highlights(
     else:
         # Fallback to direct database query
         service = HomepageService(session)
-        hot_tech_domains = await service.get_hot_tech_domains(limit=6)
-        top_countries = await service.get_top_countries(limit=5)
-        top_domestic_schools = await service.get_top_schools(limit=5, country_code="CN")
-        top_overseas_schools = await service.get_top_schools(
-            limit=5, country_code="__OVERSEAS__"
+        hot_tech_domains = await service.get_hot_tech_domains(
+            limit=HIGHLIGHT_LIMITS["tech_domains"]
         )
-        hot_research_topics = await service.get_hot_research_topics(limit=10)
+        top_countries = await service.get_top_countries(
+            limit=HIGHLIGHT_LIMITS["countries"]
+        )
+        top_domestic_schools = await service.get_top_schools(
+            limit=HIGHLIGHT_LIMITS["schools"], country_code="CN"
+        )
+        top_overseas_schools = await service.get_top_schools(
+            limit=HIGHLIGHT_LIMITS["schools"], country_code="__OVERSEAS__"
+        )
+        hot_research_topics = await service.get_hot_research_topics(
+            limit=HIGHLIGHT_LIMITS["research_topics"]
+        )
 
     now = datetime.now()
     version = now.strftime("%Y%m%d-%H%M%S")

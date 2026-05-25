@@ -77,22 +77,6 @@ class MockLLMGateway:
 
         return self._jd_features
 
-    async def parse_jd_with_fallback(self, jd_text: str) -> JDFeatures:
-        """解析 JD 文本
-
-        v1.4.1: 移除 fallback，如果解析失败直接抛出错误
-
-        Args:
-            jd_text: JD 文本内容
-
-        Returns:
-            JDFeatures: 解析出的特征
-
-        Raises:
-            Exception: 如果 should_fail=True
-        """
-        return await self.parse_jd(jd_text)
-
     async def generate_embedding(self, text: str) -> EmbeddingResult:
         """生成嵌入向量
 

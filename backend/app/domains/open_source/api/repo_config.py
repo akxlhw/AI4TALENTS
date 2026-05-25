@@ -4,10 +4,11 @@ Open Source — Repo Config endpoints.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
+from app.core.exceptions import NotFoundError
 from app.domains.open_source.api.auth import require_admin
 from app.domains.open_source.schemas.open_source import (
     OSRepoConfigCreate,
@@ -79,7 +80,7 @@ async def get_repo_config(
     service = OpenSourceService(session)
     config = await service.get_repo_config(repo_config_id)
     if not config:
-        raise HTTPException(status_code=404, detail="Repo config not found")
+        raise NotFoundError("Repo config", repo_config_id)
     return OSRepoConfigResponse.model_validate(config)
 
 
@@ -93,7 +94,7 @@ async def update_repo_config(
     service = OpenSourceService(session)
     config = await service.update_repo_config(repo_config_id, data.model_dump(exclude_unset=True))
     if not config:
-        raise HTTPException(status_code=404, detail="Repo config not found")
+        raise NotFoundError("Repo config", repo_config_id)
     return OSRepoConfigResponse.model_validate(config)
 
 
@@ -106,5 +107,5 @@ async def delete_repo_config(
     service = OpenSourceService(session)
     success = await service.delete_repo_config(repo_config_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Repo config not found")
+        raise NotFoundError("Repo config", repo_config_id)
     return SuccessResponse(message="Deleted")

@@ -15,6 +15,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.exceptions import BadRequestError
 
 from app.core.database import AsyncSessionLocal
@@ -115,7 +116,7 @@ class OSEmbeddingService:
             embedding_model=llm_config.embedding_model,
             embedding_api_base=llm_config.embedding_api_base,
             embedding_api_key=llm_config.embedding_api_key,
-            timeout=llm_config.timeout or 60,
+            timeout=llm_config.timeout or settings.LLM_TIMEOUT,
             api_format=llm_config.api_format,
             embedding_api_format=llm_config.embedding_api_format,
         )
@@ -162,7 +163,7 @@ class OSEmbeddingService:
                     embedding_model=llm_config.embedding_model,
                     embedding_api_base=llm_config.embedding_api_base,
                     embedding_api_key=llm_config.embedding_api_key,
-                    timeout=llm_config.timeout or 60,
+                    timeout=llm_config.timeout or settings.LLM_TIMEOUT,
                     api_format=llm_config.api_format,
                     embedding_api_format=llm_config.embedding_api_format,
                 )

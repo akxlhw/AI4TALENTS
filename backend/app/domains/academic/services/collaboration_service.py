@@ -243,6 +243,17 @@ class CollaborationService:
 
         return id_map
 
+    @staticmethod
+    def _update_collaboration_years(collab: Collaboration, year: int | None) -> None:
+        """Update first/last collaboration year range on an existing collaboration."""
+        if year:
+            if collab.first_collaboration_year:
+                collab.first_collaboration_year = min(collab.first_collaboration_year, year)
+                collab.last_collaboration_year = max(collab.last_collaboration_year, year)
+            else:
+                collab.first_collaboration_year = year
+                collab.last_collaboration_year = year
+
     async def _create_collaborations(
         self, talent_ids: list[int], publication_year: int | None
     ) -> int:
@@ -269,17 +280,7 @@ class CollaborationService:
                 if collab:
                     # 更新现有合作关系
                     collab.collaboration_count += 1
-                    if publication_year:
-                        if collab.first_collaboration_year:
-                            collab.first_collaboration_year = min(
-                                collab.first_collaboration_year, publication_year
-                            )
-                            collab.last_collaboration_year = max(
-                                collab.last_collaboration_year, publication_year
-                            )
-                        else:
-                            collab.first_collaboration_year = publication_year
-                            collab.last_collaboration_year = publication_year
+                    self._update_collaboration_years(collab, publication_year)
                 else:
                     # 创建新的合作关系
                     collab = Collaboration(
@@ -321,17 +322,7 @@ class CollaborationService:
                     collab = result.scalar_one_or_none()
                     if collab:
                         collab.collaboration_count += 1
-                        if publication_year:
-                            if collab.first_collaboration_year:
-                                collab.first_collaboration_year = min(
-                                    collab.first_collaboration_year, publication_year
-                                )
-                                collab.last_collaboration_year = max(
-                                    collab.last_collaboration_year, publication_year
-                                )
-                            else:
-                                collab.first_collaboration_year = publication_year
-                                collab.last_collaboration_year = publication_year
+                        self._update_collaboration_years(collab, publication_year)
                 else:
                     # 不在缓存中，检查数据库
                     stmt = select(Collaboration).where(
@@ -343,17 +334,7 @@ class CollaborationService:
                     if collab:
                         # 数据库中已存在，更新
                         collab.collaboration_count += 1
-                        if publication_year:
-                            if collab.first_collaboration_year:
-                                collab.first_collaboration_year = min(
-                                    collab.first_collaboration_year, publication_year
-                                )
-                                collab.last_collaboration_year = max(
-                                    collab.last_collaboration_year, publication_year
-                                )
-                            else:
-                                collab.first_collaboration_year = publication_year
-                                collab.last_collaboration_year = publication_year
+                        self._update_collaboration_years(collab, publication_year)
                     else:
                         # 创建新的合作关系
                         collab = Collaboration(

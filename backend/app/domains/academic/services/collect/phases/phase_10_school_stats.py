@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
+
 from sqlalchemy import case, func, select, text
+from sqlalchemy.exc import DatabaseError, OperationalError
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from app.domains.academic.models.school import School
 from app.domains.academic.models.talent import Talent
 from app.domains.academic.services.collect.phases.base import PhaseContext, PhaseHandler
+from app.domains.shared.services.cache_keys import CacheKeys
+from app.domains.shared.services.cache_service import CacheService
+
+logger = logging.getLogger(__name__)
 
 
 class PhaseSchoolStatsHandler(PhaseHandler):
@@ -125,8 +134,68 @@ class PhaseSchoolStatsHandler(PhaseHandler):
         self.progress_tracker.add_log("info", f"更新了 {updated_schools} 所学校的统计")
 
     async def _refresh_materialized_view(self) -> None:
-        """Refresh the materialized view for school talent counts."""
-        await self.session.execute(
-            text("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_school_talent_count")
+        """Refresh the materialized view for school talent counts.
+
+        Resilience features:
+        - Checks unique index existence before CONCURRENTLY refresh; falls back
+          to blocking refresh if the index is missing.
+        - Retries up to 3 times with exponential backoff on transient DB errors.
+        - Applies a 300-second timeout to prevent indefinite hangs.
+        """
+        # Check whether the unique index required by CONCURRENTLY exists.
+        idx_result = await self.session.execute(
+            text(
+                """
+                SELECT 1 FROM pg_indexes
+                WHERE indexname = 'idx_mv_school_talent_count_school_id'
+                LIMIT 1
+                """
+            )
         )
+        has_index = idx_result.scalar() is not None
+
+        refresh_sql = (
+            "REFRESH MATERIALIZED VIEW CONCURRENTLY mv_school_talent_count"
+            if has_index
+            else "REFRESH MATERIALIZED VIEW mv_school_talent_count"
+        )
+
+        @retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, max=30),
+            retry=retry_if_exception_type((OperationalError, DatabaseError)),
+            reraise=True,
+        )
+        async def _do_refresh() -> None:
+            await asyncio.wait_for(
+                self.session.execute(text(refresh_sql)),
+                timeout=300,
+            )
+
+        try:
+            await _do_refresh()
+        except TimeoutError:
+            self.progress_tracker.add_log(
+                "error", "刷新学校人才数物化视图超时（300s），后续查询可能返回旧数据"
+            )
+            logger.warning("Materialized view refresh timed out after 300s")
+            raise
+        except Exception as exc:
+            self.progress_tracker.add_log(
+                "error", f"刷新物化视图失败（已重试3次）: {exc}"
+            )
+            logger.exception("Materialized view refresh failed after retries")
+            raise
+
         self.progress_tracker.add_log("info", "已刷新学校人才数物化视图")
+
+        # Invalidate homepage cache so the next request sees fresh data.
+        try:
+            from app.core.cache import get_cache_connection
+            cache_conn = await get_cache_connection()
+            cache_service = CacheService(cache_conn)
+            await cache_service.delete(CacheKeys.STATS_HOME_HIGHLIGHTS)
+            self.progress_tracker.add_log("info", "已清除首页统计缓存")
+        except Exception:
+            # Cache invalidation is best-effort; don't fail the phase for it.
+            logger.warning("Failed to invalidate homepage cache after MV refresh", exc_info=True)

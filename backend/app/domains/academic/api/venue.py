@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.exceptions import NotFoundError
 from app.domains.academic.schemas.venue import (
     BatchUpdateBindingsResponse,
     MigrateCollectSourcesRequest,
@@ -50,13 +50,8 @@ async def batch_create_bindings(
     该技术领域的其他绑定会被标记为禁用(is_enabled=False)
     """
     service = VenueService(session)
-    try:
-        result = await service.batch_update_bindings(data)
-        return BatchUpdateBindingsResponse(message="配置更新成功", **result)
-    except ValueError as e:
-        if "not found" in str(e).lower():
-            raise NotFoundError(str(e)) from e
-        raise BadRequestError(str(e)) from e
+    result = await service.batch_update_bindings(data)
+    return BatchUpdateBindingsResponse(message="配置更新成功", **result)
 
 
 # ============================================
@@ -99,11 +94,8 @@ async def list_venues(
 async def create_venue(data: VenueCreate, session: AsyncSession = Depends(get_async_session)):
     """创建Venue"""
     service = VenueService(session)
-    try:
-        venue = await service.create_venue(data)
-        return VenueResponse.model_validate(venue)
-    except ValueError as e:
-        raise BadRequestError(str(e)) from e
+    venue = await service.create_venue(data)
+    return VenueResponse.model_validate(venue)
 
 
 @router.get(
@@ -132,13 +124,8 @@ async def update_venue(
 ):
     """更新Venue"""
     service = VenueService(session)
-    try:
-        venue = await service.update_venue(venue_id, data)
-        return VenueResponse.model_validate(venue)
-    except ValueError as e:
-        if "not found" in str(e).lower():
-            raise NotFoundError(str(e)) from e
-        raise BadRequestError(str(e)) from e
+    venue = await service.update_venue(venue_id, data)
+    return VenueResponse.model_validate(venue)
 
 
 @router.delete(
@@ -150,13 +137,8 @@ async def update_venue(
 async def delete_venue(venue_id: int, session: AsyncSession = Depends(get_async_session)):
     """删除Venue"""
     service = VenueService(session)
-    try:
-        await service.delete_venue(venue_id)
-        return SuccessResponse(message="Venue deleted successfully")
-    except ValueError as e:
-        if "not found" in str(e).lower():
-            raise NotFoundError(str(e)) from e
-        raise BadRequestError(str(e)) from e
+    await service.delete_venue(venue_id)
+    return SuccessResponse(message="Venue deleted successfully")
 
 
 # ============================================
@@ -195,13 +177,8 @@ async def create_binding(
 ):
     """创建Venue-TechDomain绑定"""
     service = VenueService(session)
-    try:
-        binding = await service.create_binding(data)
-        return VenueTechBindingResponse.model_validate(binding)
-    except ValueError as e:
-        if "not found" in str(e).lower():
-            raise NotFoundError(str(e)) from e
-        raise BadRequestError(str(e)) from e
+    binding = await service.create_binding(data)
+    return VenueTechBindingResponse.model_validate(binding)
 
 
 @router.put(
@@ -217,14 +194,9 @@ async def update_binding(
 ):
     """更新绑定"""
     service = VenueService(session)
-    try:
-        update_data = data.model_dump(exclude_unset=True)
-        binding = await service.update_binding(binding_id, update_data)
-        return VenueTechBindingResponse.model_validate(binding)
-    except ValueError as e:
-        if "not found" in str(e).lower():
-            raise NotFoundError(str(e)) from e
-        raise BadRequestError(str(e)) from e
+    update_data = data.model_dump(exclude_unset=True)
+    binding = await service.update_binding(binding_id, update_data)
+    return VenueTechBindingResponse.model_validate(binding)
 
 
 @router.delete(
@@ -236,13 +208,8 @@ async def update_binding(
 async def delete_binding(binding_id: int, session: AsyncSession = Depends(get_async_session)):
     """删除绑定"""
     service = VenueService(session)
-    try:
-        await service.delete_binding(binding_id)
-        return SuccessResponse(message="Binding deleted successfully")
-    except ValueError as e:
-        if "not found" in str(e).lower():
-            raise NotFoundError(str(e)) from e
-        raise BadRequestError(str(e)) from e
+    await service.delete_binding(binding_id)
+    return SuccessResponse(message="Binding deleted successfully")
 
 
 # ============================================
@@ -286,12 +253,7 @@ async def migrate_collect_sources(
 ):
     """迁移 TechDomain.collect_sources JSON 到 Venue 表"""
     service = VenueService(session)
-    try:
-        result = await service.migrate_collect_sources(
-            tech_domain_id=data.tech_domain_id, dry_run=data.dry_run
-        )
-        return MigrateCollectSourcesResponse(**result)
-    except ValueError as e:
-        if "not found" in str(e).lower():
-            raise NotFoundError(str(e)) from e
-        raise BadRequestError(str(e)) from e
+    result = await service.migrate_collect_sources(
+        tech_domain_id=data.tech_domain_id, dry_run=data.dry_run
+    )
+    return MigrateCollectSourcesResponse(**result)

@@ -172,7 +172,7 @@ class GitHubClient:
             await self._client.aclose()
         self._client = HttpClientFactory.create_client_for_url(
             target_url=self.base_url,
-            timeout=30.0,
+            timeout=settings.HTTP_TIMEOUT_DEFAULT,
             headers=self.headers,
             follow_redirects=True,
         )

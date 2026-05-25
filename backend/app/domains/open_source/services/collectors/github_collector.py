@@ -82,8 +82,8 @@ class GitHubCollector:
         if not repo_info:
             raise ValueError(f"Repository not found: {ctx.repo_full_name}")
 
-        stars = repo_info.get("stargazers_count", 0) or 0
-        forks = repo_info.get("forks_count", 0) or 0
+        stars = repo_info.get("stargazers_count") or 0
+        forks = repo_info.get("forks_count") or 0
         logger.info(f"Repo {ctx.repo_full_name}: stars={stars}, forks={forks}")
 
         # Update os_repo_config stars_count so Trending list stays current
@@ -228,8 +228,8 @@ class GitHubCollector:
                 "full_name": target_full_name,
                 "name": target_repo_name,
                 "language": repo_info.get("language"),
-                "stars_count": repo_info.get("stargazers_count", 0) or 0,
-                "forks_count": repo_info.get("forks_count", 0) or 0,
+                "stars_count": repo_info.get("stargazers_count") or 0,
+                "forks_count": repo_info.get("forks_count") or 0,
                 "topics": repo_info.get("topics", []),
                 "is_fork": repo_info.get("fork", False),
             }
@@ -260,8 +260,8 @@ class GitHubCollector:
                         lang_stats[lang] = {"repo_count": 0}
                     lang_stats[lang]["repo_count"] += 1
 
-                total_stars += ur.get("stargazers_count", 0) or 0
-                total_forks += ur.get("forks_count", 0) or 0
+                total_stars += ur.get("stargazers_count") or 0
+                total_forks += ur.get("forks_count") or 0
 
                 owner_name = ur.get("owner", {}).get("login", "")
                 repo_name = ur.get("name", "")
@@ -367,9 +367,9 @@ class GitHubCollector:
             "email": email,
             "avatar_url": user.get("avatar_url", ""),
             "twitter_username": twitter,
-            "followers_count": user.get("followers", 0) or 0,
-            "following_count": user.get("following", 0) or 0,
-            "public_repos_count": user.get("public_repos", 0) or 0,
+            "followers_count": user.get("followers") or 0,
+            "following_count": user.get("following") or 0,
+            "public_repos_count": user.get("public_repos") or 0,
             "total_stars_received": 0,
             "total_forks_received": 0,
             "primary_languages": [],

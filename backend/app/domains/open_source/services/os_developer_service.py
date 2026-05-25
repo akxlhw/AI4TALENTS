@@ -18,6 +18,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
 
 from app.domains.open_source.models.open_source import (
@@ -302,7 +303,7 @@ class OSDeveloperService:
             embedding_model=llm_config.embedding_model,
             embedding_api_base=llm_config.embedding_api_base,
             embedding_api_key=llm_config.embedding_api_key,
-            timeout=llm_config.timeout or 60,
+            timeout=llm_config.timeout or settings.LLM_TIMEOUT,
             api_format=llm_config.api_format,
             embedding_api_format=llm_config.embedding_api_format,
         )
@@ -336,7 +337,7 @@ class OSDeveloperService:
         if req.mode == "semantic":
             semantic_items, total = await self.repo.search_by_vector_similarity(
                 query_embedding=query_embedding,
-                similarity_threshold=0.7,
+                similarity_threshold=settings.SEARCH_SIMILAR_THRESHOLD_MIN,
                 filters=filters,
                 limit=req.page_size,
                 offset=(req.page - 1) * req.page_size,
@@ -357,7 +358,7 @@ class OSDeveloperService:
 
         semantic_items, _semantic_total = await self.repo.search_by_vector_similarity(
             query_embedding=query_embedding,
-            similarity_threshold=0.7,
+            similarity_threshold=settings.SEARCH_SIMILAR_THRESHOLD_MIN,
             filters=filters,
             limit=req.page_size * 2,
             offset=0,

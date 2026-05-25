@@ -4,11 +4,27 @@ Repository for school operations.
 
 from __future__ import annotations
 
-from sqlalchemy import BigInteger, Column, Integer, MetaData, Table, func, or_, select, update
+import logging
+
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    Integer,
+    MetaData,
+    Table,
+    case,
+    func,
+    or_,
+    select,
+    text,
+    update,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.school import School, SchoolAlias
 from app.domains.academic.models.talent import Talent
+
+logger = logging.getLogger(__name__)
 
 # Materialized view for affiliation-based school talent counts
 mv_school_talent_count = Table(
@@ -291,9 +307,25 @@ class SchoolRepository:
         await self.session.commit()
         return result.rowcount
 
+    async def _mv_exists(self) -> bool:
+        """Check whether the materialized view exists in the current database."""
+        result = await self.session.execute(
+            text(
+                """
+                SELECT 1 FROM pg_matviews
+                WHERE matviewname = 'mv_school_talent_count'
+                LIMIT 1
+                """
+            )
+        )
+        return result.scalar() is not None
+
     async def get_mv_stats_batch(self, school_ids: list[int]) -> dict[int, dict]:
         """
         Get affiliation-based talent counts from materialized view for a batch of schools.
+
+        Falls back to a real-time COUNT query when the materialized view
+        is unavailable (e.g. missing or locked).
 
         Args:
             school_ids: List of school IDs
@@ -304,15 +336,43 @@ class SchoolRepository:
         if not school_ids:
             return {}
 
-        result = await self.session.execute(
-            select(
-                mv_school_talent_count.c.school_id,
-                mv_school_talent_count.c.talent_count,
-                mv_school_talent_count.c.professor_count,
-                mv_school_talent_count.c.student_count,
+        if await self._mv_exists():
+            result = await self.session.execute(
+                select(
+                    mv_school_talent_count.c.school_id,
+                    mv_school_talent_count.c.talent_count,
+                    mv_school_talent_count.c.professor_count,
+                    mv_school_talent_count.c.student_count,
+                ).where(mv_school_talent_count.c.school_id.in_(school_ids))
             )
-            .where(mv_school_talent_count.c.school_id.in_(school_ids))
-        )
+            rows = result.all()
+        else:
+            logger.warning(
+                "Materialized view mv_school_talent_count missing; "
+                "falling back to real-time COUNT for get_mv_stats_batch"
+            )
+            # Fallback: real-time affiliation-based counts
+            primary_school = func.coalesce(
+                Talent.education_school_id, Talent.company_school_id, Talent.school_id
+            )
+            result = await self.session.execute(
+                select(
+                    primary_school.label("school_id"),
+                    func.count().label("talent_count"),
+                    func.count(case((Talent.role_type == "professor", 1))).label(
+                        "professor_count"
+                    ),
+                    func.count(
+                        case((Talent.role_type.in_(["student", "graduate"]), 1))
+                    ).label("student_count"),
+                )
+                .where(
+                    primary_school.in_(school_ids),
+                    Talent.is_visible.is_(True),
+                )
+                .group_by(primary_school)
+            )
+            rows = result.all()
 
         return {
             row.school_id: {
@@ -320,7 +380,7 @@ class SchoolRepository:
                 "professor_count": int(row.professor_count or 0),
                 "student_count": int(row.student_count or 0),
             }
-            for row in result.all()
+            for row in rows
         }
 
     async def get_country_stats(self) -> list[tuple]:
@@ -329,25 +389,89 @@ class SchoolRepository:
 
         Uses mv_school_talent_count for consistent affiliation-based counting.
 
+        Falls back to a real-time COUNT query when the materialized view
+        is unavailable (e.g. missing or locked).
+
         Returns:
             List of tuples (country_code, school_count, professor_count)
         """
-        result = await self.session.execute(
+        if await self._mv_exists():
+            result = await self.session.execute(
+                select(
+                    School.country_code,
+                    func.count(School.school_id).label("school_count"),
+                    func.sum(mv_school_talent_count.c.professor_count).label(
+                        "professor_count"
+                    ),
+                )
+                .select_from(School)
+                .join(
+                    mv_school_talent_count,
+                    School.school_id == mv_school_talent_count.c.school_id,
+                )
+                .where(
+                    School.is_visible.is_(True),
+                    School.country_code.isnot(None),
+                )
+                .group_by(School.country_code)
+                .order_by(func.sum(mv_school_talent_count.c.professor_count).desc())
+            )
+            return result.all()
+
+        logger.warning(
+            "Materialized view mv_school_talent_count missing; "
+            "falling back to real-time COUNT for get_country_stats"
+        )
+        # Fallback: real-time affiliation-based professor counts per country.
+        # Uses an outer join so countries with zero professors are still returned.
+        school_subq = (
             select(
                 School.country_code,
                 func.count(School.school_id).label("school_count"),
-                func.sum(mv_school_talent_count.c.professor_count).label("professor_count"),
-            )
-            .select_from(School)
-            .join(
-                mv_school_talent_count,
-                School.school_id == mv_school_talent_count.c.school_id,
             )
             .where(
                 School.is_visible.is_(True),
                 School.country_code.isnot(None),
             )
             .group_by(School.country_code)
-            .order_by(func.sum(mv_school_talent_count.c.professor_count).desc())
+            .subquery()
         )
+
+        prof_subq = (
+            select(
+                School.country_code,
+                func.count(func.distinct(Talent.talent_id)).label("professor_count"),
+            )
+            .select_from(School)
+            .join(
+                Talent,
+                (
+                    (Talent.school_id == School.school_id)
+                    | (Talent.education_school_id == School.school_id)
+                    | (Talent.company_school_id == School.school_id)
+                ),
+            )
+            .where(
+                School.is_visible.is_(True),
+                School.country_code.isnot(None),
+                Talent.is_visible.is_(True),
+                Talent.role_type == "professor",
+            )
+            .group_by(School.country_code)
+            .subquery()
+        )
+
+        fallback_query = (
+            select(
+                school_subq.c.country_code,
+                school_subq.c.school_count,
+                func.coalesce(prof_subq.c.professor_count, 0).label("professor_count"),
+            )
+            .select_from(school_subq)
+            .outerjoin(
+                prof_subq, school_subq.c.country_code == prof_subq.c.country_code
+            )
+            .order_by(func.coalesce(prof_subq.c.professor_count, 0).desc())
+        )
+        result = await self.session.execute(fallback_query)
         return result.all()

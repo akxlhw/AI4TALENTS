@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-05-25
+
+### Added
+
+- **物化视图韧性三重防护** (`phase_10_school_stats.py`, `homepage_repository.py`, `school_repository.py`)
+  - `REFRESH MATERIALIZED VIEW CONCURRENTLY` 增加唯一索引存在性预检，缺失时自动降级为阻塞式刷新
+  - 刷新操作增加 tenacity 指数退避重试（3 次，1-30s）+ `asyncio.wait_for` 300s 超时，防止无限挂起
+  - 首页 Top 院校 / 国家查询增加物化视图不可用降级：先检测 `pg_matviews`，缺失时 fallback 到实时 `COUNT(*)` 子查询
+  - 刷新成功后自动失效首页 Redis 缓存 `stats:home:highlights`
+- **采集错误长度限制配置化** (`config.py`)
+  - 新增 `COLLECT_ERROR_MAX_LENGTH: int = 500`，防止超长异常信息入库
+
+### Fixed
+
+- **P0: graduate_count 永远为 0** (`school_repository.py`, `base_talent_repository.py`, `api/schools.py`)
+  - 字典键 `'graduated'` → `'graduate'`，修复后 graduate_count 正确统计
+- **P0: 物化视图重复计数** (`99aed1b1b7e7` 迁移)
+  - `UNION ALL` → `UNION`，避免同一人才通过多个 affiliation 字段被重复计数
+- **Endpoint 层魔法数字集中化** (`homepage.py`)
+  - 提取 `HIGHLIGHT_LIMITS` 常量，消除散落在代码中的 `limit=6/5/10` 魔法数字
+
 ## [2.0.3] - 2026-05-22
 
 ### Added

@@ -20,6 +20,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.domains.open_source.models.open_source import (
@@ -488,7 +489,7 @@ class OSCollectionService:
                 task = await inner_service.get_collect_task(task_id)
                 if task:
                     task.status = "failed"
-                    task.error_message = str(e)[:500]
+                    task.error_message = str(e)[:settings.COLLECT_ERROR_MAX_LENGTH]
                     await session.commit()
         finally:
             cancelled_task_ids.discard(task_id)

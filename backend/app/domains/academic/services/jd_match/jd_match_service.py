@@ -165,7 +165,7 @@ class JDMatchService:
             api_base=llm_config.api_base,
             model=llm_config.model,
             embedding_model=llm_config.embedding_model,
-            timeout=llm_config.timeout or 60,
+            timeout=llm_config.timeout or settings.LLM_TIMEOUT,
             enable_fallback=settings.LLM_ENABLE_FALLBACK,
             api_format=llm_config.api_format,
             embedding_api_format=llm_config.embedding_api_format,
@@ -189,8 +189,8 @@ class JDMatchService:
             if cached:
                 return cached
 
-        # 调用 LLM 解析（带 fallback）
-        features = await self.llm_gateway.parse_jd_with_fallback(jd_text)
+        # 调用 LLM 解析
+        features = await self.llm_gateway.parse_jd(jd_text)
 
         # 写入缓存
         if self.cache:

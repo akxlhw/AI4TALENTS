@@ -20,6 +20,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.domains.academic.models.talent import Talent
 from app.domains.academic.repositories.embedding_repository import EmbeddingRepository
 from app.domains.shared.services.llm.errors import EmbeddingError, TalentNotFoundError
@@ -345,7 +346,7 @@ class EmbeddingService:
         import numpy as np
 
         if not talent_ids:
-            dim = self.dimension or 1024
+            dim = self.dimension or settings.EMBEDDING_DIMENSION
             return [0.0] * dim
 
         # 批量获取 embeddings（避免 N+1 查询）
@@ -369,7 +370,7 @@ class EmbeddingService:
             logger.info(f"Missing embeddings for {len(missing_ids)} talents, using zero vectors")
 
         if not embeddings:
-            dim = self.dimension or 1024
+            dim = self.dimension or settings.EMBEDDING_DIMENSION
             return [0.0] * dim
 
         # 计算平均
