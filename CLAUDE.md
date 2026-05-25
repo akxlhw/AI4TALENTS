@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-智能人才库 (AI4TALENTS) V2.0.4 — 面向招聘团队的多维度人才发现平台。
+智能人才库 (AI4TALENTS) V2.1.0 — 面向招聘团队的多维度人才发现平台。
 
 当前实现的人才数据源：
 - **学术人才** (`academic` domain): 基于 OpenAlex 学术数据库，完整功能

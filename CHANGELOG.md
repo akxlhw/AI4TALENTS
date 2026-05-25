@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - TBD
+
+### Planned
+
+- 物化视图 Table 重复定义提取至 `models/materialized_views.py`
+- Phase 10 DDL 越界修复：`REFRESH MATERIALIZED VIEW` 下沉至 `SchoolRepository`
+- 并发刷新互斥锁：多采集任务竞争刷新锁问题
+- Endpoint 层剩余架构违规清理
+
 ## [2.0.4] - 2026-05-25
 
 ### Added
