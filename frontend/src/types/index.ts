@@ -510,6 +510,7 @@ export interface OSSearchQuery {
   location?: string
   company?: string
   is_committer?: boolean
+  repo_full_names?: string[]
   sort_by?: string
   mode?: 'keyword' | 'semantic' | 'hybrid'
   page?: number

@@ -25,7 +25,7 @@ router = APIRouter(prefix="/open-source", tags=["Open Source Talent"])
 async def list_repo_configs(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    tech_element: str | None = Query(None),
+    tech_elements: list[str] | None = Query(None),
     is_active: bool | None = Query(None),
     collect_enabled: bool | None = Query(None),
     sort_by: str = Query("id_desc", description="id_desc | stars"),
@@ -37,7 +37,7 @@ async def list_repo_configs(
     items, total = await service.list_repo_configs(
         page=page,
         page_size=page_size,
-        tech_element=tech_element,
+        tech_elements=tech_elements,
         is_active=is_active,
         collect_enabled=collect_enabled,
         sort_by=sort_by,

@@ -68,7 +68,7 @@ class OpenSourceService:
         self,
         page: int = 1,
         page_size: int = 50,
-        tech_element: str | None = None,
+        tech_elements: list[str] | None = None,
         is_active: bool | None = None,
         collect_enabled: bool | None = None,
         sort_by: str = "id_desc",
@@ -78,7 +78,7 @@ class OpenSourceService:
         return await self._collection.list_repo_configs(
             page=page,
             page_size=page_size,
-            tech_element=tech_element,
+            tech_elements=tech_elements,
             is_active=is_active,
             collect_enabled=collect_enabled,
             sort_by=sort_by,

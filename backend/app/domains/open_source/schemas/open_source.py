@@ -167,6 +167,7 @@ class OSSearchFilters(BaseModel):
     location: str | None = Field(default=None)
     company: str | None = Field(default=None)
     min_stars: int | None = Field(default=None, ge=0)
+    repo_full_names: list[str] | None = Field(default=None)
 
 
 class OSSearchRequest(BaseModel):

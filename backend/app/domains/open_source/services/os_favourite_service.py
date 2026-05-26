@@ -13,7 +13,6 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ConflictError
-
 from app.domains.open_source.models.open_source import (
     OSFavourite,
     OSPoolMember,

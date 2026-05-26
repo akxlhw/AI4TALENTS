@@ -11,22 +11,16 @@ import logging
 import re
 from typing import Any
 
-from sqlalchemy import and_, cast, exists, func, or_, select, text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.open_source.models.open_source import (
-    OSCollectTask,
-    OSContribution,
     OSDeveloper,
     OSEmbedding,
-    OSFavourite,
     OSLanguageSkill,
-    OSPoolMember,
     OSRepoConfig,
     OSRepository,
-    OSTalentPool,
 )
 
 logger = logging.getLogger(__name__)
@@ -313,6 +307,12 @@ class OpenSourceAdvancedRepository:
             if "min_stars" in filters:
                 filter_clauses.append("d.total_stars_received >= :min_stars")
                 filter_params["min_stars"] = filters["min_stars"]
+            if "repo_full_names" in filters:
+                filter_clauses.append(
+                    "EXISTS (SELECT 1 FROM os_contribution oc JOIN os_repository ore ON oc.repo_id = ore.repo_id "
+                    "WHERE oc.developer_id = d.developer_id AND ore.full_name = ANY(:repo_full_names))"
+                )
+                filter_params["repo_full_names"] = filters["repo_full_names"]
 
         filter_sql = " AND " + " AND ".join(filter_clauses)
 

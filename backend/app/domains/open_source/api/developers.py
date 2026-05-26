@@ -4,7 +4,7 @@ Open Source — Developer, Repository, and Search endpoints.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
@@ -39,6 +39,7 @@ async def list_developers(
     company: str | None = Query(None),
     min_stars: int | None = Query(None, ge=0),
     is_committer: bool | None = Query(None, description="Filter developers who are committers"),
+    repo_full_names: list[str] | None = Query(None, description="Filter by repository full names"),
     sort_by: str = Query("stars_desc"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -54,6 +55,7 @@ async def list_developers(
         company=company,
         min_stars=min_stars,
         is_committer=is_committer,
+        repo_full_names=repo_full_names,
         sort_by=sort_by,
         page=page,
         page_size=page_size,
@@ -185,9 +187,10 @@ async def recommend_similar_developers(
 async def list_public_repositories(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    tech_element: str | None = Query(None),
+    tech_elements: list[str] | None = Query(None, description="Filter by tech elements"),
     q: str | None = Query(None, description="Search by repo name or description"),
     sort_by: str = Query("stars", description="stars | id_desc"),
+    collected_only: bool = Query(True, description="Only repos with completed collect tasks"),
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(get_current_user),
 ):
@@ -196,11 +199,11 @@ async def list_public_repositories(
     items, total = await service.list_repo_configs(
         page=page,
         page_size=page_size,
-        tech_element=tech_element,
+        tech_elements=tech_elements,
         is_active=True,
         collect_enabled=None,
         sort_by=sort_by,
-        collected_only=True,
+        collected_only=collected_only,
         q=q,
     )
     return PaginatedResponse.create(

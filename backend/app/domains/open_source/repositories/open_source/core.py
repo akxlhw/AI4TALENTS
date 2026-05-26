@@ -6,13 +6,12 @@ Encapsulates all database queries related to open-source talent.
 
 from __future__ import annotations
 
-import json
 import logging
-import re
 from typing import Any
 
-from sqlalchemy import and_, cast, exists, func, or_, select, text
-from sqlalchemy.dialects.postgresql import JSONB, array as pg_array
+from sqlalchemy import and_, cast, exists, func, or_, select
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import array as pg_array
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -65,14 +64,14 @@ class OpenSourceCoreRepository:
         filters = filters or {}
         conditions = []
 
-        tech_element = filters.get("tech_element")
+        tech_elements = filters.get("tech_elements")
         is_active = filters.get("is_active")
         collect_enabled = filters.get("collect_enabled")
         collected_only = filters.get("collected_only", False)
         q = filters.get("q")
 
-        if tech_element:
-            conditions.append(OSRepoConfig.tech_element == tech_element)
+        if tech_elements:
+            conditions.append(OSRepoConfig.tech_element.in_(tech_elements))
         if is_active is not None:
             conditions.append(OSRepoConfig.is_active == is_active)
         if collect_enabled is not None:
@@ -272,6 +271,16 @@ class OpenSourceCoreRepository:
                 exists().where(
                     OSContribution.developer_id == OSDeveloper.developer_id,
                     OSContribution.is_committer.is_(True),
+                )
+            )
+
+        repo_full_names = filters.get("repo_full_names")
+        if repo_full_names:
+            conditions.append(
+                exists().where(
+                    OSContribution.developer_id == OSDeveloper.developer_id,
+                    OSContribution.repo_id == OSRepository.repo_id,
+                    OSRepository.full_name.in_(repo_full_names),
                 )
             )
 

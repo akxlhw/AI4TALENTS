@@ -16,9 +16,8 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.exceptions import BadRequestError
-
 from app.core.database import AsyncSessionLocal
+from app.core.exceptions import BadRequestError
 from app.domains.open_source.repositories.open_source import OpenSourceRepository
 
 logger = logging.getLogger(__name__)

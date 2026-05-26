@@ -62,7 +62,7 @@ class OSCollectionService:
         self,
         page: int = 1,
         page_size: int = 50,
-        tech_element: str | None = None,
+        tech_elements: list[str] | None = None,
         is_active: bool | None = None,
         collect_enabled: bool | None = None,
         sort_by: str = "id_desc",
@@ -75,7 +75,7 @@ class OSCollectionService:
         Args:
             page: 页码
             page_size: 每页数量
-            tech_element: 技术要素筛选
+            tech_elements: 技术要素筛选（支持多选）
             is_active: 是否激活筛选
             collect_enabled: 是否启用采集筛选
             sort_by: 排序方式
@@ -85,8 +85,8 @@ class OSCollectionService:
             Tuple[List[OSRepoConfig], int]: 配置列表和总数
         """
         filters = {}
-        if tech_element is not None:
-            filters["tech_element"] = tech_element
+        if tech_elements is not None:
+            filters["tech_elements"] = tech_elements
         if is_active is not None:
             filters["is_active"] = is_active
         if collect_enabled is not None:

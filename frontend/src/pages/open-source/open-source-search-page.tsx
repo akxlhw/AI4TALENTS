@@ -87,7 +87,7 @@ const OpenSourceSearchPage: React.FC = () => {
     languages: searchParams.get('languages')?.split(',').filter(Boolean) || [],
     location: searchParams.get('location') || '',
     company: searchParams.get('company') || '',
-
+    repo_full_names: searchParams.get('repo_full_names')?.split(',').filter(Boolean) || [],
     is_committer: searchParams.get('is_committer') === 'true',
     sort_by: searchParams.get('sort_by') || 'stars_desc',
     mode: (searchParams.get('mode') as OSSearchQuery['mode']) || 'keyword',
@@ -95,29 +95,74 @@ const OpenSourceSearchPage: React.FC = () => {
     page_size: 20,
   })
 
+  const [repoOptions, setRepoOptions] = useState<{ value: string; label: string }[]>([])
+  const [repoLoading, setRepoLoading] = useState(false)
+
   const fetchDevelopers = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await api.openSource.listDevelopers({
-        q: query.q,
-        tech_elements: query.tech_elements,
-        languages: query.languages,
-        location: query.location,
-        company: query.company,
-        mode: query.mode,
-        is_committer: query.is_committer,
-        sort_by: query.sort_by,
-        page: query.page,
-        page_size: query.page_size,
-      })
+      let res
+      if (query.mode === 'keyword') {
+        res = await api.openSource.listDevelopers({
+          q: query.q,
+          tech_elements: query.tech_elements,
+          languages: query.languages,
+          location: query.location,
+          company: query.company,
+          repo_full_names: query.repo_full_names,
+          is_committer: query.is_committer,
+          sort_by: query.sort_by,
+          page: query.page,
+          page_size: query.page_size,
+        })
+      } else {
+        res = await api.openSource.search({
+          q: query.q,
+          mode: query.mode,
+          filters: {
+            tech_elements: query.tech_elements,
+            languages: query.languages,
+            location: query.location,
+            company: query.company,
+            repo_full_names: query.repo_full_names,
+          },
+          sort_by: query.sort_by,
+          page: query.page,
+          page_size: query.page_size,
+        })
+      }
       setDevelopers(res.data.items || [])
       setTotal(res.data.total || 0)
-    } catch {
-      console.error('Search failed')
+    } catch (err) {
+      console.error('Search failed', err)
     } finally {
       setLoading(false)
     }
   }, [query])
+
+  const loadRepos = useCallback(async (techElements: string[]) => {
+    if (!techElements?.length) {
+      setRepoOptions([])
+      return
+    }
+    try {
+      setRepoLoading(true)
+      const res = await api.openSource.listRepositories({
+        tech_elements: techElements,
+        page_size: 100,
+      })
+      const items = res.data.items || []
+      setRepoOptions(items.map((item: { repo_full_name: string }) => ({
+        value: item.repo_full_name,
+        label: item.repo_full_name,
+      })))
+    } catch (err) {
+      console.error('Failed to load repos', err)
+      setRepoOptions([])
+    } finally {
+      setRepoLoading(false)
+    }
+  }, [])
 
   const fetchFavoriteIds = useCallback(async () => {
     try {
@@ -133,6 +178,14 @@ const OpenSourceSearchPage: React.FC = () => {
     fetchFavoriteIds()
   }, [fetchDevelopers, fetchFavoriteIds])
 
+  useEffect(() => {
+    if (query.tech_elements?.length) {
+      loadRepos(query.tech_elements)
+    } else {
+      setRepoOptions([])
+    }
+  }, [query.tech_elements, loadRepos])
+
   const updateSearchParams = (newQuery: OSSearchQuery) => {
     const params = new URLSearchParams()
     if (newQuery.q) params.set('q', newQuery.q)
@@ -140,6 +193,7 @@ const OpenSourceSearchPage: React.FC = () => {
     if (newQuery.languages?.length) params.set('languages', newQuery.languages.join(','))
     if (newQuery.location) params.set('location', newQuery.location)
     if (newQuery.company) params.set('company', newQuery.company)
+    if (newQuery.repo_full_names?.length) params.set('repo_full_names', newQuery.repo_full_names.join(','))
 
     if (newQuery.is_committer) params.set('is_committer', 'true')
     if (newQuery.sort_by && newQuery.sort_by !== 'stars_desc') params.set('sort_by', newQuery.sort_by)
@@ -234,9 +288,33 @@ const OpenSourceSearchPage: React.FC = () => {
                   mode="multiple"
                   placeholder="选择技术领域"
                   value={query.tech_elements}
-                  onChange={(v) => setQuery({ ...query, tech_elements: v })}
+                  onChange={(v) => {
+                    const newQuery = { ...query, tech_elements: v, repo_full_names: [] as string[], page: 1 }
+                    setQuery(newQuery)
+                    updateSearchParams(newQuery)
+                  }}
                   style={{ width: '100%' }}
                   options={TECH_ELEMENT_OPTIONS}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item label="关联仓库" style={{ marginBottom: 8 }}>
+                <Select
+                  mode="multiple"
+                  placeholder={query.tech_elements?.length ? '选择仓库' : '请先选择技术领域'}
+                  value={query.repo_full_names}
+                  onChange={(v) => {
+                    const newQuery = { ...query, repo_full_names: v, page: 1 }
+                    setQuery(newQuery)
+                    updateSearchParams(newQuery)
+                  }}
+                  style={{ width: '100%' }}
+                  options={repoOptions}
+                  loading={repoLoading}
+                  disabled={!query.tech_elements?.length}
+                  allowClear
+                  showSearch
                 />
               </Form.Item>
             </Col>

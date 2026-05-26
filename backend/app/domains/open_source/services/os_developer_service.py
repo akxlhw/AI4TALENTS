@@ -20,7 +20,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
-
 from app.domains.open_source.models.open_source import (
     OSDeveloper,
     OSRepoConfig,
@@ -70,6 +69,7 @@ class OSDeveloperService:
         company: str | None = None,
         min_stars: int | None = None,
         is_committer: bool | None = None,
+        repo_full_names: list[str] | None = None,
         sort_by: str = "stars_desc",
         page: int = 1,
         page_size: int = 20,
@@ -106,6 +106,8 @@ class OSDeveloperService:
             filters["min_stars"] = min_stars
         if is_committer is not None:
             filters["is_committer"] = is_committer
+        if repo_full_names is not None:
+            filters["repo_full_names"] = repo_full_names
         return await self.repo.list_developers(
             filters=filters,
             sort_by=sort_by,
@@ -333,6 +335,8 @@ class OSDeveloperService:
                 filters["company"] = req.filters.company
             if req.filters.min_stars is not None:
                 filters["min_stars"] = req.filters.min_stars
+            if req.filters.repo_full_names:
+                filters["repo_full_names"] = req.filters.repo_full_names
 
         if req.mode == "semantic":
             semantic_items, total = await self.repo.search_by_vector_similarity(
@@ -352,6 +356,7 @@ class OSDeveloperService:
             location=req.filters.location if req.filters else None,
             company=req.filters.company if req.filters else None,
             min_stars=req.filters.min_stars if req.filters else None,
+            repo_full_names=req.filters.repo_full_names if req.filters else None,
             page=1,
             page_size=req.page_size * 2,
         )
