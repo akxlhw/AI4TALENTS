@@ -8,8 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import UploadFile
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domains.shared.models.user import UserAccount
 from app.domains.shared.repositories.suggestion_repository import SuggestionRepository
 from app.domains.shared.repositories.user_repository import UserRepository
 
@@ -127,11 +129,11 @@ class SuggestionService:
         user_ids = {item["user_id"] for item in items}
         if not user_ids:
             return items
-        user_map = {}
-        for uid in user_ids:
-            user = await self.user_repo.get_by_id(uid)
-            if user:
-                user_map[uid] = user.username
+        stmt = select(UserAccount.user_id, UserAccount.username).where(
+            UserAccount.user_id.in_(user_ids)
+        )
+        result = await self.session.execute(stmt)
+        user_map = {row.user_id: row.username for row in result.all()}
         for item in items:
-            item["username"] = user_map.get(item["user_id"])
+            item["username"] = user_map.get(item["user_id"], f"用户#{item['user_id']}")
         return items

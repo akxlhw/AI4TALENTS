@@ -62,6 +62,7 @@ interface SuggestionItem {
   created_at: string
   updated_at: string
   user_id: number
+  username: string
 }
 
 const SuggestionAdminPage: React.FC = () => {
@@ -155,10 +156,10 @@ const SuggestionAdminPage: React.FC = () => {
       align: 'center' as const,
     },
     {
-      title: '用户ID',
-      dataIndex: 'user_id',
-      width: 85,
-      align: 'center' as const,
+      title: '用户',
+      dataIndex: 'username',
+      width: 120,
+      ellipsis: true,
     },
     {
       title: '分类',
