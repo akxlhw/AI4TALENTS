@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useAuth } from '../../../contexts/AuthContext'
 import {
   Card,
   Input,
@@ -48,6 +49,7 @@ const { Text } = Typography
 const { Search } = Input
 
 interface School { school_id: number; school_name: string }
+
 interface Country { country_code: string; country_name_cn: string }
 
 interface SearchTabProps {
@@ -68,6 +70,7 @@ const SearchTab: React.FC<SearchTabProps> = ({
   techDomainOptions,
   onAddToReference,
 }) => {
+  const { isAdmin } = useAuth()
   const navigate = useNavigate()
   const [urlSearchParams] = useSearchParams()
   const searchInputRef = useRef<InputRef>(null)
@@ -505,9 +508,11 @@ const SearchTab: React.FC<SearchTabProps> = ({
               <Text>已选择 <strong>{selectedRowKeys.length}</strong> 项</Text>
               <Button size="small" onClick={() => setSelectedRowKeys([])}>取消选择</Button>
               <Button size="small" onClick={handleCompare} disabled={selectedRowKeys.length < 2 || selectedRowKeys.length > 4}>对比 ({selectedRowKeys.length}/4)</Button>
-              <Dropdown menu={exportMenu} trigger={['click']}>
-                <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>导出 <DownOutlined /></Button>
-              </Dropdown>
+              {isAdmin && (
+                <Dropdown menu={exportMenu} trigger={['click']}>
+                  <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>导出 <DownOutlined /></Button>
+                </Dropdown>
+              )}
             </Space>
           </div>
         )}

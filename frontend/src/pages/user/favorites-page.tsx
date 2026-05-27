@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 import {
   Card,
   Table,
@@ -41,6 +42,7 @@ import type { FavoriteTalent, TalentPool, FollowupStatus } from '../../types'
 const { Title, Text } = Typography
 
 const FavoritesPage: React.FC = () => {
+  const { isAdmin } = useAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [favorites, setFavorites] = useState<FavoriteTalent[]>([])
@@ -514,11 +516,13 @@ const FavoritesPage: React.FC = () => {
                       >
                         对比 ({selectedRowKeys.length}/4)
                       </Button>
-                      <Dropdown menu={exportMenu} trigger={['click']}>
-                        <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>
-                          导出 <DownOutlined />
-                        </Button>
-                      </Dropdown>
+                      {isAdmin && (
+                        <Dropdown menu={exportMenu} trigger={['click']}>
+                          <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>
+                            导出 <DownOutlined />
+                          </Button>
+                        </Dropdown>
+                      )}
                     </Space>
                   </div>
                 )}

@@ -23,6 +23,7 @@ from app.domains.academic.schemas.overview import (
     TechTagItem,
 )
 from app.domains.academic.services.talent_service import TalentService
+from app.domains.shared.api.auth import require_admin
 from app.domains.shared.schemas.common import (
     CountResponse,
     PaginatedResponse,
@@ -244,6 +245,7 @@ async def export_talents(
     format: str = Query("csv", description="导出格式: csv 或 xlsx"),
     talent_ids: list[int] = Query(..., description="要导出的人才ID列表"),
     session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_admin),
 ):
     """
     Export selected talents to CSV or Excel format.
