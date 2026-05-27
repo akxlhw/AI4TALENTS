@@ -11,7 +11,7 @@ from fastapi import UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.shared.models.user import UserAccount
+from app.domains.shared.models.iam import UserAccount
 from app.domains.shared.repositories.suggestion_repository import SuggestionRepository
 from app.domains.shared.repositories.user_repository import UserRepository
 
