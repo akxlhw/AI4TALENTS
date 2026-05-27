@@ -63,6 +63,7 @@ from app.domains.shared.models.iam import (
     UserAccount,
     UserSchoolScope,
 )
+from app.domains.shared.models.suggestion import Suggestion
 from app.domains.shared.models.system_config import SystemConfig
 
 __all__ = [
@@ -127,6 +128,8 @@ __all__ = [
     "SystemConfig",
     # Audit
     "AuditOperationLog",
+    # Suggestion (v2.1)
+    "Suggestion",
     # Open Source (v2.0)
     "OSRepoConfig",
     "OSDeveloper",

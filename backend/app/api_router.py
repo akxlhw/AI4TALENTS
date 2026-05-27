@@ -30,6 +30,7 @@ from app.domains.shared.api import (
     metrics,
     permissions,
     privacy,
+    suggestion,
     system_config,
 )
 
@@ -52,6 +53,9 @@ api_router.include_router(audit.router)
 
 # Privacy compliance endpoints
 api_router.include_router(privacy.router)
+
+# Suggestion / Feedback endpoints
+api_router.include_router(suggestion.router)
 
 # Overview endpoints
 api_router.include_router(overview.router)

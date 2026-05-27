@@ -26,6 +26,8 @@ import RepoDetailPage from './pages/open-source/repo-detail-page'
 import RepoListPage from './pages/open-source/repo-list-page'
 import CompetitionDemoPage from './pages/competition/competition-demo-page'
 import IndustryDemoPage from './pages/industry/industry-demo-page'
+import FeedbackPage from './pages/feedback/feedback-page'
+import SuggestionAdminPage from './pages/admin/suggestion-admin-page'
 import { useAuth } from './contexts/AuthContext'
 
 // Protected Route component
@@ -172,6 +174,15 @@ function AppRoutes() {
           element={
             <AdminRoute>
               <AuditLogPage />
+            </AdminRoute>
+          }
+        />
+        <Route path="feedback" element={<FeedbackPage />} />
+        <Route
+          path="suggestion-admin"
+          element={
+            <AdminRoute>
+              <SuggestionAdminPage />
             </AdminRoute>
           }
         />

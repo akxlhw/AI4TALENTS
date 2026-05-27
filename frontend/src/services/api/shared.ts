@@ -80,6 +80,18 @@ export const sharedApi = {
       apiClient.put('/users/me/default-view', { default_view: defaultView }),
   },
 
+  suggestions: {
+    create: (data: FormData) =>
+      apiClient.post('/suggestions', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    listMy: (params?: { page?: number; page_size?: number }) =>
+      apiClient.get('/suggestions/my', { params }),
+    listAll: (params?: { status?: string; category?: string; page?: number; page_size?: number }) =>
+      apiClient.get('/suggestions', { params }),
+    get: (id: number) => apiClient.get(`/suggestions/${id}`),
+    reply: (id: number, data: { admin_reply: string; status: string }) =>
+      apiClient.put(`/suggestions/${id}/reply`, data),
+  },
+
   systemConfig: {
     list: () =>
       apiClient.get('/system-config'),

@@ -12,6 +12,7 @@ import {
   TrophyOutlined,
   BuildOutlined,
   LockOutlined,
+  MessageOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useDomainStore } from '../stores/domainStore'
@@ -58,6 +59,7 @@ const MainLayout: React.FC = () => {
       { key: 'system-config', icon: <SettingOutlined />, label: '系统配置' },
       { key: 'data-version', icon: <DatabaseOutlined />, label: '数据管理' },
       { key: 'audit-logs', icon: <DatabaseOutlined />, label: '审计日志' },
+      { key: 'suggestion-admin', icon: <MessageOutlined />, label: '建议管理' },
     ] : []),
     { type: 'divider' as const },
     { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', danger: true },
@@ -70,6 +72,7 @@ const MainLayout: React.FC = () => {
     else if (key === 'system-config') navigate('/system-config')
     else if (key === 'data-version') navigate('/data-version')
     else if (key === 'audit-logs') navigate('/audit-logs')
+    else if (key === 'suggestion-admin') navigate('/suggestion-admin')
   }
 
   const roleColorMap: Record<string, string> = {
@@ -223,6 +226,15 @@ const MainLayout: React.FC = () => {
               style={{ fontSize: 13 }}
             >
               我的收藏
+            </Button>
+            <Button
+              type="text"
+              size="small"
+              icon={<MessageOutlined />}
+              onClick={() => navigate('/feedback')}
+              style={{ fontSize: 13 }}
+            >
+              意见反馈
             </Button>
             <Dropdown
               menu={{ items: userMenuItems, onClick: handleUserMenuClick }}

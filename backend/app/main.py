@@ -3,9 +3,11 @@ FastAPI application entry point.
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api_router import api_router
 from app.core.cache import close_cache_connection, get_cache_connection
@@ -115,6 +117,11 @@ def create_application() -> FastAPI:
 
     # Include API router
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
+    # Static files for uploads
+    upload_path = Path("uploads")
+    upload_path.mkdir(exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
     return app
 
