@@ -78,6 +78,7 @@ const SuggestionAdminPage: React.FC = () => {
 
   const [replyVisible, setReplyVisible] = useState(false)
   const [replyContent, setReplyContent] = useState('')
+  const [replyStatus, setReplyStatus] = useState<string>('resolved')
   const [replying, setReplying] = useState(false)
 
   const fetchData = async (p = 1, status?: string, category?: string) => {
@@ -114,6 +115,14 @@ const SuggestionAdminPage: React.FC = () => {
   const showReply = (item: SuggestionItem) => {
     setDetail(item)
     setReplyContent(item.admin_reply || '')
+    // 智能默认状态：待处理→处理中，处理中→已解决，其他保持原状
+    const nextStatus =
+      item.status === 'open'
+        ? 'in_progress'
+        : item.status === 'in_progress'
+          ? 'resolved'
+          : item.status
+    setReplyStatus(nextStatus)
     setReplyVisible(true)
   }
 
@@ -127,7 +136,7 @@ const SuggestionAdminPage: React.FC = () => {
     try {
       await api.suggestions.reply(detail.suggestion_id, {
         admin_reply: replyContent.trim(),
-        status: 'resolved',
+        status: replyStatus,
       })
       message.success('回复成功')
       setReplyVisible(false)
@@ -406,7 +415,7 @@ const SuggestionAdminPage: React.FC = () => {
             )}
             <div>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                用户ID：{detail.user_id} · 提交时间：
+                用户：{detail.username} · 提交时间：
                 {new Date(detail.created_at).toLocaleString('zh-CN')}
               </Text>
             </div>
@@ -444,6 +453,17 @@ const SuggestionAdminPage: React.FC = () => {
                 {detail.content}
               </div>
             </div>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Text strong>变更状态：</Text>
+                <Select
+                  value={replyStatus}
+                  onChange={setReplyStatus}
+                  options={STATUS_OPTIONS.filter((s) => s.value)}
+                  style={{ width: '100%', marginTop: 4 }}
+                />
+              </Col>
+            </Row>
             <div>
               <Text strong>回复内容：</Text>
               <TextArea
