@@ -24,6 +24,29 @@ const ImagePasteUpload: React.FC<ImagePasteUploadProps> = ({
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewImage, setPreviewImage] = useState('')
 
+  const processPastedFiles = (files: File[]) => {
+    const imageFiles = files.filter((f) => f.type.startsWith('image/'))
+    if (imageFiles.length === 0) return
+
+    const current = fileListRef.current
+    const remaining = maxCount - current.length
+    if (remaining <= 0) {
+      message.error(`最多上传 ${maxCount} 张图片`)
+      return
+    }
+
+    const toAdd = imageFiles.slice(0, remaining)
+    const newFiles: UploadFile[] = toAdd.map((file, idx) => ({
+      uid: `paste-${Date.now()}-${idx}`,
+      name: file.name || `pasted-image-${idx + 1}.png`,
+      status: 'done',
+      originFileObj: file as any,
+      url: URL.createObjectURL(file),
+    }))
+
+    onChange([...current, ...newFiles])
+  }
+
   const handleBeforeUpload = (file: File) => {
     if (!ACCEPT_TYPES.includes(file.type)) {
       message.error('仅支持 PNG、JPEG、GIF、WEBP 格式图片')
@@ -49,7 +72,12 @@ const ImagePasteUpload: React.FC<ImagePasteUploadProps> = ({
 
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
-      if (!containerRef.current?.contains(document.activeElement)) return
+      const target = e.target as HTMLElement | null
+      // 如果焦点在输入框/文本域中，让浏览器默认行为处理文本粘贴
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return
+      }
+
       const items = e.clipboardData?.items
       if (!items) return
 
@@ -62,30 +90,13 @@ const ImagePasteUpload: React.FC<ImagePasteUploadProps> = ({
       }
 
       if (imageItems.length === 0) return
-
       e.preventDefault()
-
-      const current = fileListRef.current
-      const remaining = maxCount - current.length
-      if (remaining <= 0) {
-        message.error(`最多上传 ${maxCount} 张图片`)
-        return
-      }
-
-      const toAdd = imageItems.slice(0, remaining)
-      const newFiles: UploadFile[] = toAdd.map((file, idx) => ({
-        uid: `paste-${Date.now()}-${idx}`,
-        name: file.name || `pasted-image-${idx + 1}.png`,
-        status: 'done',
-        originFileObj: file as any,
-        url: URL.createObjectURL(file),
-      }))
-
-      onChange([...current, ...newFiles])
+      processPastedFiles(imageItems)
     }
 
     document.addEventListener('paste', handlePaste)
     return () => document.removeEventListener('paste', handlePaste)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maxCount, onChange])
 
   const removeFile = (uid: string) => {
@@ -99,8 +110,24 @@ const ImagePasteUpload: React.FC<ImagePasteUploadProps> = ({
     }
   }
 
+  const handleContainerPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    const imageItems: File[] = []
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile()
+        if (file) imageItems.push(file)
+      }
+    }
+    if (imageItems.length === 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    processPastedFiles(imageItems)
+  }
+
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} tabIndex={0} onPaste={handleContainerPaste} style={{ outline: 'none' }}>
       <Upload
         listType="picture-card"
         fileList={fileList}
