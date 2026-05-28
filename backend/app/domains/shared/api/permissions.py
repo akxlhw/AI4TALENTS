@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.shared.api.auth import require_admin, require_user
+from app.domains.shared.api.auth import require_super_admin, require_user
 from app.domains.shared.models.enums import UserRoleType
 from app.domains.shared.schemas.common import SuccessResponse
 from app.domains.shared.services.audit_service import AuditService
@@ -144,7 +144,7 @@ async def list_users(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """List all users (admin only)."""
     service = UserService(session)
@@ -191,7 +191,7 @@ async def list_pending_users(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """List pending approval users (admin only)."""
     service = UserService(session)
@@ -236,7 +236,7 @@ async def create_user(
     request: Request,
     data: UserCreateRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Create a new user (admin only)."""
     from app.core.auth import hash_password
@@ -362,7 +362,7 @@ async def update_user(
     user_id: int,
     data: UserUpdateRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Update user (admin only)."""
     service = UserService(session)
@@ -422,7 +422,7 @@ async def deactivate_user(
     request: Request,
     user_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Deactivate user (admin only)."""
     # Prevent self-deactivation
@@ -460,7 +460,7 @@ async def approve_user(
     request: Request,
     user_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Approve a pending user registration (admin only)."""
     client_ip = request.client.host if request.client else None
@@ -506,7 +506,7 @@ async def reject_user(
     request: Request,
     user_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Reject a pending user registration (admin only)."""
     client_ip = request.client.host if request.client else None
@@ -552,7 +552,7 @@ async def reject_user(
 async def get_user_scopes(
     user_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get user's school scopes (admin only)."""
     service = UserService(session)
@@ -587,7 +587,7 @@ async def add_user_scope(
     user_id: int,
     data: ScopeCreateRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Add school scope to user (admin only)."""
     service = UserService(session)
@@ -644,7 +644,7 @@ async def remove_user_scope(
     user_id: int,
     scope_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Remove school scope from user (admin only)."""
     client_ip = request.client.host if request.client else None

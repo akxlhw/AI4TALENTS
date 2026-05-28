@@ -36,7 +36,7 @@ const domainNavItems: DomainNavItem[] = [
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate()
-  const { user, logout, isAdmin } = useAuth()
+  const { user, logout } = useAuth()
   const { currentDomain, setDomain, isDomainAvailable } = useDomainStore()
   const [scrolled, setScrolled] = useState(false)
 
@@ -53,7 +53,7 @@ const MainLayout: React.FC = () => {
 
   const userMenuItems = [
     { key: 'profile', icon: <UserOutlined />, label: '个人信息' },
-    ...(isAdmin ? [
+    ...(user?.role === 'super_admin' ? [
       { type: 'divider' as const },
       { key: 'admin', icon: <SettingOutlined />, label: '用户管理' },
       { key: 'system-config', icon: <SettingOutlined />, label: '系统配置' },

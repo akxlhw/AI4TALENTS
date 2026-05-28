@@ -32,3 +32,12 @@ async def require_admin(
     if user.get("role") not in (UserRoleType.ADMIN.value, UserRoleType.SUPER_ADMIN.value):
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
+
+
+async def require_super_admin(
+    authorization: str | None = Header(None, alias="Authorization"),
+) -> dict:
+    user = await get_current_user(authorization)
+    if user.get("role") != UserRoleType.SUPER_ADMIN.value:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    return user

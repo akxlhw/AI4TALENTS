@@ -37,20 +37,12 @@ from app.domains.academic.schemas.collect import (
 from app.domains.academic.schemas.venue import VenueSubTaskListResponse, VenueSubTaskResponse
 from app.domains.academic.services.collect_background_service import CollectBackgroundService
 from app.domains.academic.services.collect_service import CollectService
-from app.domains.shared.api.auth import require_user
+from app.domains.shared.api.auth import require_super_admin
 from app.domains.shared.schemas.common import SuccessResponse
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/collect", tags=["Collect Configuration"])
-
-
-# Helper to check admin role
-def require_admin_user(current_user: dict = Depends(require_user)) -> dict:
-    """Require admin or super_admin role."""
-    if current_user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return current_user
 
 
 # Background task runner
@@ -102,7 +94,7 @@ async def run_collect_task_background(task_id: int):
 )
 async def list_tech_domains_collect(
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """List all tech domains with collect configuration."""
     service = CollectService(session)
@@ -129,7 +121,7 @@ async def list_tasks(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """List collect tasks."""
     service = CollectService(session)
@@ -207,7 +199,7 @@ async def list_tasks(
 async def trigger_task(
     request: TriggerCollectTaskRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Trigger a new collect task."""
     service = CollectService(session)
@@ -312,7 +304,7 @@ async def trigger_task(
 async def get_task(
     task_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get collect task details."""
     service = CollectService(session)
@@ -369,7 +361,7 @@ async def get_task(
 async def execute_task(
     task_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Execute a pending task."""
     service = CollectService(session)
@@ -408,7 +400,7 @@ async def execute_task(
 async def cancel_task(
     task_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Cancel a running task."""
     service = CollectService(session)
@@ -434,7 +426,7 @@ async def cancel_task(
 async def delete_task(
     task_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Delete a completed task record."""
     service = CollectService(session)
@@ -459,7 +451,7 @@ async def delete_task(
 )
 async def get_active_tasks(
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get all active tasks."""
     service = CollectService(session)
@@ -537,7 +529,7 @@ async def get_years():
 async def get_task_sub_tasks(
     task_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get venue sub-tasks for a task."""
     service = CollectService(session)
@@ -557,7 +549,7 @@ async def get_task_sub_tasks(
 async def get_task_detailed_progress(
     task_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get detailed progress for a task."""
     service = CollectService(session)
@@ -574,7 +566,7 @@ async def retry_sub_task(
     task_id: int,
     sub_task_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Retry a failed venue sub-task."""
     service = CollectService(session)

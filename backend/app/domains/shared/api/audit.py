@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.shared.api.auth import require_admin
+from app.domains.shared.api.auth import require_super_admin
 from app.domains.shared.services.audit_service import AuditService
 
 router = APIRouter(prefix="/audit", tags=["Audit Logs"])
@@ -70,7 +70,7 @@ async def get_audit_logs(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """
     Get audit logs (admin only).
@@ -125,7 +125,7 @@ async def get_audit_logs(
 )
 async def get_event_types(
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get distinct event types."""
     service = AuditService(session)
@@ -141,7 +141,7 @@ async def get_event_types(
 )
 async def get_resource_types(
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get distinct resource types."""
     service = AuditService(session)

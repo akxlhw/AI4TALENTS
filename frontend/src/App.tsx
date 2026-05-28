@@ -49,9 +49,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>
 }
 
-// Admin Route component
-const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, loading, isAdmin } = useAuth()
+// Super Admin Route component (super_admin only)
+const SuperAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, loading, user } = useAuth()
 
   if (loading) {
     return (
@@ -65,7 +65,7 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <Navigate to="/login" replace />
   }
 
-  if (!isAdmin) {
+  if (user?.role !== 'super_admin') {
     return <Navigate to="/" replace />
   }
 
@@ -142,17 +142,17 @@ function AppRoutes() {
         <Route
           path="admin"
           element={
-            <AdminRoute>
+            <SuperAdminRoute>
               <AdminPage />
-            </AdminRoute>
+            </SuperAdminRoute>
           }
         />
         <Route
           path="system-config"
           element={
-            <AdminRoute>
+            <SuperAdminRoute>
               <SystemConfigPage />
-            </AdminRoute>
+            </SuperAdminRoute>
           }
         />
         <Route
@@ -164,26 +164,26 @@ function AppRoutes() {
         <Route
           path="data-version"
           element={
-            <AdminRoute>
+            <SuperAdminRoute>
               <DataVersionPage />
-            </AdminRoute>
+            </SuperAdminRoute>
           }
         />
         <Route
           path="audit-logs"
           element={
-            <AdminRoute>
+            <SuperAdminRoute>
               <AuditLogPage />
-            </AdminRoute>
+            </SuperAdminRoute>
           }
         />
         <Route path="feedback" element={<FeedbackPage />} />
         <Route
           path="suggestion-admin"
           element={
-            <AdminRoute>
+            <SuperAdminRoute>
               <SuggestionAdminPage />
-            </AdminRoute>
+            </SuperAdminRoute>
           }
         />
       </Route>

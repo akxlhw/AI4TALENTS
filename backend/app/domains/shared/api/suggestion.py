@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.shared.api.auth import require_admin, require_user
+from app.domains.shared.api.auth import require_super_admin, require_user
 from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
 from app.domains.shared.schemas.suggestion import SuggestionReply
 from app.domains.shared.services.suggestion_service import SuggestionService
@@ -62,7 +62,7 @@ async def list_all_suggestions(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """List all suggestions (admin only)."""
     service = SuggestionService(session)
@@ -80,7 +80,7 @@ async def list_all_suggestions(
 async def get_suggestion(
     suggestion_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get suggestion detail (admin only)."""
     service = SuggestionService(session)
@@ -96,7 +96,7 @@ async def reply_to_suggestion(
     suggestion_id: int,
     data: SuggestionReply,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Reply to a suggestion (admin only)."""
     service = SuggestionService(session)

@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.shared.api.auth import require_user
+from app.domains.shared.api.auth import require_super_admin
 from app.domains.shared.schemas.common import SuccessResponse
 from app.domains.shared.schemas.system_config import (
     GitHubConfigRequest,
@@ -43,13 +43,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/system-config", tags=["System Configuration"])
 
 
-def require_admin_user(current_user: dict = Depends(require_user)) -> dict:
-    """Require admin or super_admin role."""
-    if current_user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return current_user
-
-
 @router.get(
     "",
     response_model=SystemConfigListResponse,
@@ -58,7 +51,7 @@ def require_admin_user(current_user: dict = Depends(require_user)) -> dict:
 )
 async def list_configs(
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """List all system configurations."""
     config_service = ConfigService(session)
@@ -76,7 +69,7 @@ async def list_configs(
 )
 async def get_llm_config(
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get LLM configuration."""
     config_service = ConfigService(session)
@@ -110,7 +103,7 @@ async def get_llm_config(
 async def update_llm_config(
     request: LLMConfigRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Update LLM configuration."""
     config_service = ConfigService(session)
@@ -162,7 +155,7 @@ async def update_llm_config(
 async def test_llm_connection(
     request: TestLLMRequest | None = None,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Test LLM API connection."""
     config_service = ConfigService(session)
@@ -217,7 +210,7 @@ async def test_llm_connection(
 async def test_embedding_connection(
     request: TestEmbeddingRequest | None = None,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Test embedding model connection."""
     config_service = ConfigService(session)
@@ -271,7 +264,7 @@ async def test_embedding_connection(
 )
 async def get_proxy_config(
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get proxy configuration."""
     config_service = ConfigService(session)
@@ -300,7 +293,7 @@ async def get_proxy_config(
 async def update_proxy_config(
     request: ProxyConfigRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Update proxy configuration."""
     config_service = ConfigService(session)
@@ -330,7 +323,7 @@ async def update_proxy_config(
 async def test_proxy_connection(
     request: TestProxyRequest | None = None,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Test proxy connection.
 
@@ -387,7 +380,7 @@ async def test_proxy_connection(
 )
 async def get_github_config(
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get GitHub API configuration."""
     config_service = ConfigService(session)
@@ -408,7 +401,7 @@ async def get_github_config(
 async def update_github_config(
     request: GitHubConfigRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Update GitHub API configuration."""
     config_service = ConfigService(session)
@@ -431,7 +424,7 @@ async def update_github_config(
 @router.post("/github/test", response_model=TestGitHubResponse, summary="测试 GitHub API 连接")
 async def test_github_connection(
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Test GitHub API connection using configured tokens."""
     config_service = ConfigService(session)
@@ -458,7 +451,7 @@ async def update_config(
     key: str,
     request: UpdateConfigRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin_user),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Update a single configuration value."""
     config_service = ConfigService(session)

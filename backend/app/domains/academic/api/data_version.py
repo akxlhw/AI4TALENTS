@@ -27,7 +27,7 @@ from app.domains.academic.schemas.data_version import (
     QualitySummaryResponse,
 )
 from app.domains.academic.services.data_version_service import DataVersionService
-from app.domains.shared.api.auth import require_admin, require_user
+from app.domains.shared.api.auth import require_super_admin, require_user
 
 router = APIRouter(prefix="/data-version", tags=["Data Version Management"])
 
@@ -46,7 +46,7 @@ async def list_versions(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """List data versions."""
     service = DataVersionService(session)
@@ -89,7 +89,7 @@ async def get_active_version(
 async def create_version(
     request: CreateVersionRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Create a new data version."""
     service = DataVersionService(session)
@@ -118,7 +118,7 @@ async def create_version(
 async def get_version(
     version_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get data version details."""
     service = DataVersionService(session)
@@ -140,7 +140,7 @@ async def publish_version(
     version_id: int,
     request: PublishVersionRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Publish a version to make it active."""
     service = DataVersionService(session)
@@ -169,7 +169,7 @@ async def publish_version(
 async def list_publish_records(
     version_id: int | None = Query(None, description="按版本筛选"),
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """List publish records."""
     service = DataVersionService(session)
@@ -194,7 +194,7 @@ async def list_corrections(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """List corrections."""
     service = DataVersionService(session)
@@ -218,7 +218,7 @@ async def list_corrections(
 async def create_correction(
     request: CreateCorrectionRequest,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Create a correction record."""
     service = DataVersionService(session)
@@ -247,7 +247,7 @@ async def create_correction(
 async def revert_correction(
     correction_id: int,
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Revert a correction."""
     service = DataVersionService(session)
@@ -271,7 +271,7 @@ async def revert_correction(
 async def get_quality_summary(
     version_id: int | None = Query(None, description="指定版本ID"),
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get the latest quality summary."""
     service = DataVersionService(session)
@@ -292,7 +292,7 @@ async def get_quality_summary(
 )
 async def get_quality_metrics(
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     """Get quality metrics for dashboard."""
     service = DataVersionService(session)

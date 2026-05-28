@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.open_source.api.auth import require_admin
+from app.domains.open_source.api.auth import require_super_admin
 from app.domains.open_source.schemas.open_source import (
     OSBatchCollectRequest,
     OSBatchCollectResponse,
@@ -34,7 +34,7 @@ async def collect_single_repo(
     repo_config_id: int,
     contributors_per_repo: int = Query(0, ge=0, le=2000),
     session: AsyncSession = Depends(get_async_session),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_super_admin),
 ):
     """Start a background collection task for a single repository."""
     service = OpenSourceService(session)
@@ -61,7 +61,7 @@ async def collect_single_repo(
 async def collect_batch_repos(
     data: OSBatchCollectRequest,
     session: AsyncSession = Depends(get_async_session),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_super_admin),
 ):
     """Start background collection tasks for multiple repositories."""
     service = OpenSourceService(session)
@@ -105,7 +105,7 @@ async def list_collect_tasks(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
-    _user: dict = Depends(require_admin),
+    _user: dict = Depends(require_super_admin),
 ):
     service = OpenSourceService(session)
     items, total = await service.list_collect_tasks(page=page, page_size=page_size)
@@ -121,7 +121,7 @@ async def list_collect_tasks(
 async def create_collect_task(
     data: OSCollectTaskCreate,
     session: AsyncSession = Depends(get_async_session),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_super_admin),
 ):
     task_name = data.task_name or f"Collection_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d_%H%M%S')}"
     config_json = data.model_dump(exclude_unset=True)
@@ -138,7 +138,7 @@ async def create_collect_task(
 async def get_collect_task(
     task_id: int,
     session: AsyncSession = Depends(get_async_session),
-    _user: dict = Depends(require_admin),
+    _user: dict = Depends(require_super_admin),
 ):
     service = OpenSourceService(session)
     task = await service.get_collect_task(task_id)
@@ -151,7 +151,7 @@ async def get_collect_task(
 async def cancel_collect_task(
     task_id: int,
     session: AsyncSession = Depends(get_async_session),
-    _user: dict = Depends(require_admin),
+    _user: dict = Depends(require_super_admin),
 ):
     service = OpenSourceService(session)
     task = await service.cancel_collect_task(task_id)
@@ -166,7 +166,7 @@ async def cancel_collect_task(
 async def delete_collect_task(
     task_id: int,
     session: AsyncSession = Depends(get_async_session),
-    _user: dict = Depends(require_admin),
+    _user: dict = Depends(require_super_admin),
 ):
     service = OpenSourceService(session)
     success = await service.delete_collect_task(task_id)

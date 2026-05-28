@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.exceptions import NotFoundError
-from app.domains.open_source.api.auth import require_admin
+from app.domains.open_source.api.auth import require_super_admin
 from app.domains.open_source.schemas.open_source import (
     OSRepoConfigCreate,
     OSRepoConfigResponse,
@@ -31,7 +31,7 @@ async def list_repo_configs(
     sort_by: str = Query("id_desc", description="id_desc | stars"),
     collected_only: bool = Query(False, description="Only repos with completed collect tasks"),
     session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_super_admin),
 ):
     service = OpenSourceService(session)
     items, total = await service.list_repo_configs(
@@ -55,7 +55,7 @@ async def list_repo_configs(
 async def create_repo_config(
     data: OSRepoConfigCreate,
     session: AsyncSession = Depends(get_async_session),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_super_admin),
 ):
     service = OpenSourceService(session)
     config = await service.create_repo_config(
@@ -75,7 +75,7 @@ async def create_repo_config(
 async def get_repo_config(
     repo_config_id: int,
     session: AsyncSession = Depends(get_async_session),
-    _user: dict = Depends(require_admin),
+    _user: dict = Depends(require_super_admin),
 ):
     service = OpenSourceService(session)
     config = await service.get_repo_config(repo_config_id)
@@ -89,7 +89,7 @@ async def update_repo_config(
     repo_config_id: int,
     data: OSRepoConfigUpdate,
     session: AsyncSession = Depends(get_async_session),
-    _user: dict = Depends(require_admin),
+    _user: dict = Depends(require_super_admin),
 ):
     service = OpenSourceService(session)
     config = await service.update_repo_config(repo_config_id, data.model_dump(exclude_unset=True))
@@ -102,7 +102,7 @@ async def update_repo_config(
 async def delete_repo_config(
     repo_config_id: int,
     session: AsyncSession = Depends(get_async_session),
-    _user: dict = Depends(require_admin),
+    _user: dict = Depends(require_super_admin),
 ):
     service = OpenSourceService(session)
     success = await service.delete_repo_config(repo_config_id)
