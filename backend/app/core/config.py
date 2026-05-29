@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # Application
     APP_NAME: str = "智能人才库 API"
-    APP_VERSION: str = "2.1.0"
+    APP_VERSION: str = "2.1.1"
     DEBUG: bool = False
     ENVIRONMENT: str = "development"  # development, test, production
 

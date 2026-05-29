@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - TBD
+
+### Fixed
+
+- Phase 10 `is_critical=False` 导致的数据一致性风险
+- `favourite`/`favorite` 拼写混用统一为 `favorite`
+- `open_source_service.py` 纯委托门面消除
+- 物化视图刷新增加 Prometheus 指标采集
+- 清理死代码：`SimilarityCalculator`、`generate_reasons` 等零引用符号
+
+### Changed
+
+- 前端 localStorage 操作封装为 `storageService`
+
 ## [2.1.0] - 2026-05-29
 
 ### Added

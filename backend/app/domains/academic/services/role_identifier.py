@@ -184,32 +184,4 @@ class RoleIdentifier:
         return display_names.get(role_type, "未知")
 
 
-# Convenience functions for backward compatibility
-def determine_role(works_count: int, cited_by_count: int, h_index: int = 0) -> tuple[str, float]:
-    """
-    Convenience function for backward compatibility.
 
-    Args:
-        works_count: Number of published works
-        cited_by_count: Total citation count
-        h_index: H-index value
-
-    Returns:
-        Tuple of (role_type, confidence)
-    """
-    result = RoleIdentifier.identify(works_count, cited_by_count, h_index)
-    return result.role_type, result.confidence
-
-
-def determine_role_from_author(author_data: dict[str, Any]) -> tuple[str, float]:
-    """
-    Convenience function for backward compatibility.
-
-    Args:
-        author_data: Raw author data from OpenAlex API
-
-    Returns:
-        Tuple of (role_type, confidence)
-    """
-    result = RoleIdentifier.identify_from_author_data(author_data)
-    return result.role_type, result.confidence

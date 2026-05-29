@@ -491,21 +491,3 @@ class RecommendService:
             return ["部分匹配：有一定相似性"]
         return []
 
-    def generate_reasons(
-        self,
-        similarity_score: float,
-        reference_talent: dict[str, Any],
-        candidate_talent: dict[str, Any],
-    ) -> list[str]:
-        """
-        生成推荐原因
-
-        Args:
-            similarity_score: 相似度分数
-            reference_talent: 参考人才
-            candidate_talent: 候选人才
-
-        Returns:
-            List[str]: 推荐原因列表
-        """
-        return self._generate_reasons_for_similarity(similarity_score)

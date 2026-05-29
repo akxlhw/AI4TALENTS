@@ -32,7 +32,7 @@ class PhaseSchoolStatsHandler(PhaseHandler):
     phase_code = "phase_10_school_stats"
     phase_name = "更新学校统计"
     phase_progress = 90
-    is_critical = False
+    is_critical = True
 
     async def execute(self, context: PhaseContext) -> None:
         progress = context.progress
@@ -141,7 +141,14 @@ class PhaseSchoolStatsHandler(PhaseHandler):
           to blocking refresh if the index is missing.
         - Retries up to 3 times with exponential backoff on transient DB errors.
         - Applies a 300-second timeout to prevent indefinite hangs.
+        - Prometheus metrics: duration histogram + success/failure counters.
         """
+        import time
+
+        from app.core.metrics import MV_REFRESH_DURATION, MV_REFRESH_FAILURES, MV_REFRESH_SUCCESSES
+
+        start_time = time.perf_counter()
+
         # Check whether the unique index required by CONCURRENTLY exists.
         idx_result = await self.session.execute(
             text(
@@ -179,14 +186,21 @@ class PhaseSchoolStatsHandler(PhaseHandler):
                 "error", "刷新学校人才数物化视图超时（300s），后续查询可能返回旧数据"
             )
             logger.warning("Materialized view refresh timed out after 300s")
+            MV_REFRESH_FAILURES.inc()
+            MV_REFRESH_DURATION.observe(time.perf_counter() - start_time)
             raise
         except Exception as exc:
             self.progress_tracker.add_log(
                 "error", f"刷新物化视图失败（已重试3次）: {exc}"
             )
             logger.exception("Materialized view refresh failed after retries")
+            MV_REFRESH_FAILURES.inc()
+            MV_REFRESH_DURATION.observe(time.perf_counter() - start_time)
             raise
 
+        duration = time.perf_counter() - start_time
+        MV_REFRESH_SUCCESSES.inc()
+        MV_REFRESH_DURATION.observe(duration)
         self.progress_tracker.add_log("info", "已刷新学校人才数物化视图")
 
         # Invalidate homepage cache so the next request sees fresh data.

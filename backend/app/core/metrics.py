@@ -77,7 +77,7 @@ class HistogramMetric:
     def __post_init__(self) -> None:
         if not self.buckets:
             self.buckets = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
-        self._counts = {b: 0 for b in self.buckets}
+        self._counts = dict.fromkeys(self.buckets, 0)
         self._counts["+Inf"] = 0
 
     @property
@@ -273,6 +273,23 @@ COLLECTION_TASKS_TOTAL = metrics.counter(
 COLLECTION_ERRORS_TOTAL = metrics.counter(
     "collection_errors_total",
     "Total number of collection task errors",
+)
+
+# Materialized View Refresh Metrics
+MV_REFRESH_DURATION = metrics.histogram(
+    "mv_refresh_duration_seconds",
+    "Materialized view refresh duration in seconds",
+    buckets=[0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0],
+)
+
+MV_REFRESH_FAILURES = metrics.counter(
+    "mv_refresh_failures_total",
+    "Total number of materialized view refresh failures",
+)
+
+MV_REFRESH_SUCCESSES = metrics.counter(
+    "mv_refresh_successes_total",
+    "Total number of materialized view refresh successes",
 )
 
 
