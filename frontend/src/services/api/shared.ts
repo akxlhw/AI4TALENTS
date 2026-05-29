@@ -44,8 +44,10 @@ export const sharedApi = {
   },
 
   admin: {
-    listUsers: (params?: { role?: string; is_active?: boolean; page?: number; page_size?: number }) =>
+    listUsers: (params?: { role?: string; is_active?: boolean; status?: string; created_after?: string; created_before?: string; sort_by?: string; sort_order?: string; page?: number; page_size?: number }) =>
       apiClient.get('/users', { params }),
+    getUserActivities: (userId: number, params?: { page?: number; page_size?: number }) =>
+      apiClient.get(`/users/${userId}/activities`, { params }),
     createUser: (data: { username: string; email: string; password: string; role?: string; display_name?: string; employee_id?: string }) =>
       apiClient.post('/users', data),
     getUser: (userId: number) =>

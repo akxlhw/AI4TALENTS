@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 当前实现的人才数据源：
 - **学术人才** (`academic` domain): 基于 OpenAlex 学术数据库，完整功能
-- **开源人才** (`opensource` domain): 基于 GitHub API，v2.0 新增
+- **开源人才** (`open_source` domain): 基于 GitHub API，v2.0 新增
 - **竞赛人才** (`competition`): 规划中
 - **行业人才** (`industry`): 规划中
 
@@ -55,9 +55,11 @@ cd frontend && npm run test                       # Vitest 单元测试
 # 代码检查
 make lint-backend             # uv run ruff check + black --check
 make lint-frontend            # npm run lint
-make lint-full                # CI-level: lint-backend-full + lint-frontend-full (includes mypy gate + architecture check + npm audit + build)
-cd frontend && npm run type-check               # TypeScript 类型检查
+make lint-full                # CI gate: backend (ruff + black + mypy + architecture check) + frontend (lint + audit + build)
+cd frontend && npm run type-check               # TypeScript standalone type check (no emit)
 cd frontend && npm run format                   # Prettier 格式化
+cd frontend && npm run format:check             # Prettier 格式检查
+cd frontend && npm run build                    # Production build (runs tsc -b first)
 
 # 数据库
 make migrate                  # uv run alembic upgrade head
@@ -76,11 +78,15 @@ make docker-down              # 停止所有服务
 make docker-logs              # 查看日志
 
 # 数据初始化与维护 (backend/scripts/)
+#   scripts/data/     — 数据初始化 (init_system, seed_tech_domains, generate_embeddings)
+#   scripts/fix/      — 数据修复 (refresh_stats, dedup_schools)
+#   scripts/ops/      — 运维工具 (verify_indexes, db_health_check)
+#   scripts/collect/  — 采集相关辅助脚本
 cd backend && uv run python scripts/data/init_system.py --force    # 重置系统
-uv run python scripts/data/seed_tech_domains.py                    # 初始化六大技术领域
-uv run python scripts/data/generate_embeddings.py                  # 生成向量嵌入
-uv run python scripts/fix/refresh_stats.py                         # 刷新统计
-uv run python scripts/ops/verify_indexes.py                        # 验证索引
+cd backend && uv run python scripts/data/seed_tech_domains.py      # 初始化六大技术领域
+cd backend && uv run python scripts/data/generate_embeddings.py    # 生成向量嵌入
+cd backend && uv run python scripts/fix/refresh_stats.py           # 刷新统计
+cd backend && uv run python scripts/ops/verify_indexes.py          # 验证索引
 ```
 
 ## Architecture
@@ -220,7 +226,7 @@ Data flows: Raw → Standardized (via Normalizers) → Serving (via Sync service
 ### Infrastructure
 
 - **deploy/**: `docker-compose.yml` (postgres:16-alpine + redis:7-alpine + backend + frontend), `init-db.sql` (uuid-ossp + pg_trgm 扩展), `.env.example`
-- **Alembic 迁移**: `backend/migrations/` (非 `alembic/`), `env.py` 导入 `model_registry` 实现自动模型发现
+- **Alembic 迁移**: `backend/migrations/` (非 `alembic/`)。`env.py` 从 `app.model_registry` 导入所有模型，实现自动模型发现——新增模型只需在 `model_registry.py` 中导入即可被 Alembic 识别
 - **Windows 脚本**: `restart.bat` (终止进程→清理缓存→启动后端/前端), `stop.bat` (终止所有服务窗口)
 
 ### Database Conventions
@@ -268,7 +274,15 @@ Data flows: Raw → Standardized (via Normalizers) → Serving (via Sync service
 ## Environment Notes
 
 - 开发与生产均使用 PostgreSQL（非 SQLite）
-- 测试使用独立的 `talent_db_test` 数据库，运行后会清空表
+- 测试使用独立的 `talent_db_test` 数据库，运行后会清空表。首次运行测试前需创建：`CREATE DATABASE talent_db_test OWNER talent_user;`
 - 默认管理员: `admin` / `admin123`
 - 前端端口: 2012，后端端口: 8003
 - 前端 `.env` 中 `VITE_API_URL` 留空则使用 Vite proxy；后端 `.env` 包含所有数据库/Redis/LLM 配置
+
+### Windows 开发
+
+Windows 默认无 `make` 命令。可用以下替代方案：
+
+- **项目根目录 `restart.bat`**: 一键终止进程、清理缓存、启动后端 (port 8003) 和前端 (port 2012)
+- **手动命令**: 参考 README.md 中 PowerShell 命令，或使用 WSL
+- **后端依赖**: `cd backend && uv sync --all-groups` (需要单独安装 uv)

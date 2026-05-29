@@ -7,29 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.1.0] - TBD
+## [2.1.0] - 2026-05-29
 
-### Planned Features
+### Added
 
-1. **隐私合规声明**
-   - 用户隐私协议与数据使用声明页面
-   - Cookie / 本地存储使用提示与同意管理
-   - 符合《个人信息保护法》及 GDPR 基础要求的数据处理说明
+- **隐私合规声明** (`domains/shared/api/privacy.py`, `privacy_service.py`)
+  - 用户隐私协议与数据使用声明页面 (`privacy-policy-page.tsx`, `terms-of-use-page.tsx`)
+  - Cookie / 本地存储使用提示与同意管理 (`StorageConsentBanner.tsx`)
+  - 用户账号表增加隐私同意字段，支持 GDPR/PIPL 合规追踪
 
-2. **新增"我的建议"模块**
-   - 用户可向平台提交功能建议、数据纠错、体验反馈
-   - 后端：建议表设计 + 分类标签 + 处理状态流转
-   - 前端：建议入口 + 表单提交 + 历史建议列表
+- **新增"我的建议"模块** (`domains/shared/api/suggestion.py`, `suggestion_service.py`)
+  - 用户可向平台提交功能建议、数据纠错、体验反馈
+  - 支持截图附件上传（PNG/JPEG/GIF/WebP，最大 5MB）
+  - 后端：建议表设计 + 分类标签 + 处理状态流转（open/in_progress/resolved/closed）
+  - 前端：建议入口 + 表单提交 + 历史建议列表 + 管理员回复
 
-3. **开源人才库支持人才数据导出**
-   - 开源域（`domains/open_source/`）开发者列表/详情页增加导出按钮
-   - 支持 Excel / CSV 格式导出（复用学术域导出能力）
-   - 导出字段：开发者基本信息、仓库统计、技术标签、活跃度评分
+- **开源人才库支持人才数据导出** (`domains/open_source/api/developers.py`)
+  - 开源域开发者列表/详情页增加导出按钮，支持 Excel / CSV 格式
+  - 导出字段：开发者基本信息、仓库统计、技术标签、活跃度评分
+  - 导出文件附带法律声明水印，仅限管理员操作
 
-4. **用户管理模块优化**
-   - 管理员后台用户列表增强：支持按角色/状态/注册时间筛选与排序
-   - 用户详情页：操作日志、权限变更记录、登录历史
-   - 批量操作：批量启用/禁用/重置密码/分配角色
+- **用户管理模块优化** (`domains/shared/api/permissions.py`, `user_activity_service.py`)
+  - 管理员后台用户列表增强：支持按角色/状态/注册时间筛选与排序
+  - 用户详情页新增活动记录 Drawer：登录历史、操作日志、权限变更统一时间线展示
+  - 引入 `UserActivityService` 投影层：基于 `audit_operation_log` 统一聚合用户活动事件
+  - `iam_user_account` 增加 `created_at` 索引，优化注册时间筛选性能
+
+### Changed
+
+- **权限矩阵细化**：区分超级管理员与管理员的权限边界
+  - 角色变更、用户创建等敏感操作仅限超级管理员
+  - 开源仓库配置、系统配置等关键接口提升至超级管理员权限
 
 ### Technical Debt
 

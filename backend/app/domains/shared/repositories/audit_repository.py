@@ -121,6 +121,57 @@ class AuditRepository:
         await self.session.commit()
         return log
 
+    async def list_logs_by_user_context(
+        self,
+        user_id: int,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[AuditOperationLog], int]:
+        """
+        Get audit logs relevant to a specific user.
+
+        Includes:
+        - Authentication events where the user performed the action (logins)
+        - Authorization events where the user was the target (updates, approvals)
+        - Scope events where the user was the target
+
+        Ordered by event_time desc.
+        """
+        from sqlalchemy import or_
+
+        query = select(AuditOperationLog).where(
+            or_(
+                # User's own authentication events
+                and_(
+                    AuditOperationLog.user_id == user_id,
+                    AuditOperationLog.event_type == "authentication",
+                ),
+                # Management operations targeting this user
+                and_(
+                    AuditOperationLog.resource_type == "user",
+                    AuditOperationLog.resource_id == str(user_id),
+                ),
+                # Scope operations targeting this user
+                and_(
+                    AuditOperationLog.resource_type == "user_scope",
+                    AuditOperationLog.resource_id == str(user_id),
+                ),
+            )
+        )
+
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self.session.execute(count_query)
+        total = total_result.scalar() or 0
+
+        offset = (page - 1) * page_size
+        query = query.offset(offset).limit(page_size).order_by(
+            AuditOperationLog.event_time.desc()
+        )
+
+        result = await self.session.execute(query)
+        logs = list(result.scalars().all())
+        return logs, total
+
     async def get_resource_types(self) -> list[str]:
         """
         Get distinct resource types.

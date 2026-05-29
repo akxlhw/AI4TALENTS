@@ -117,12 +117,24 @@ class UserService:
         role: str | None = None,
         is_active: bool | None = None,
         status: str | None = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[UserAccount], int]:
         """获取用户列表"""
         return await self.user_repo.list_users(
-            role=role, is_active=is_active, status=status, page=page, page_size=page_size
+            role=role,
+            is_active=is_active,
+            status=status,
+            created_after=created_after,
+            created_before=created_before,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            page=page,
+            page_size=page_size,
         )
 
     # ---- Scope operations ----

@@ -15,6 +15,8 @@ import {
   Popconfirm,
   List,
   Tabs,
+  Drawer,
+  DatePicker,
 } from 'antd'
 import {
   UserOutlined,
@@ -22,7 +24,10 @@ import {
   EditOutlined,
   SafetyOutlined,
   PlusOutlined,
+  EyeOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons'
+import dayjs from 'dayjs'
 import { api } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatUTCToLocal } from '../../utils/datetime'
@@ -41,6 +46,19 @@ interface User {
   employee_id: string | null
   default_view: string
   last_login_at: string | null
+  created_at: string | null
+}
+
+interface ActivityItem {
+  activity_id: number
+  activity_time: string
+  activity_type: string
+  actor: { user_id: number; username: string } | null
+  target_user_id: number
+  description: string
+  detail: Record<string, unknown>
+  ip: string | null
+  status: string
 }
 
 interface Scope {
@@ -100,14 +118,47 @@ const AdminPage: React.FC = () => {
   const [userScopes, setUserScopes] = useState<Scope[]>([])
   const [scopeForm] = Form.useForm()
 
+  // Filter state
+  const [roleFilter, setRoleFilter] = useState<string | undefined>(undefined)
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined)
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
+  const [sortBy, setSortBy] = useState<string>('created_at')
+  const [sortOrder, setSortOrder] = useState<string>('desc')
+
+  // Detail drawer state
+  const [detailDrawerVisible, setDetailDrawerVisible] = useState(false)
+  const [detailUser, setDetailUser] = useState<User | null>(null)
+  const [detailTab, setDetailTab] = useState<string>('profile')
+  const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [activitiesLoading, setActivitiesLoading] = useState(false)
+  const [activitiesTotal, setActivitiesTotal] = useState(0)
+  const [activitiesPage, setActivitiesPage] = useState(1)
+
   const pageSize = 10
 
   const loadUsers = useCallback(async () => {
     setLoading(true)
     try {
-      const params: Record<string, unknown> = { page, page_size: pageSize }
+      const params: Record<string, unknown> = {
+        page,
+        page_size: pageSize,
+        sort_by: sortBy,
+        sort_order: sortOrder,
+      }
       if (activeTab === 'pending') {
         params.status = 'pending_approval'
+      }
+      if (roleFilter) {
+        params.role = roleFilter
+      }
+      if (statusFilter && activeTab !== 'pending') {
+        params.status = statusFilter
+      }
+      if (dateRange && dateRange[0]) {
+        params.created_after = dateRange[0].format('YYYY-MM-DDTHH:mm:ss')
+      }
+      if (dateRange && dateRange[1]) {
+        params.created_before = dateRange[1].format('YYYY-MM-DDTHH:mm:ss')
       }
       const response = await api.admin.listUsers(params)
       setUsers(response.data.items)
@@ -117,7 +168,7 @@ const AdminPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [page, activeTab])
+  }, [page, activeTab, roleFilter, statusFilter, dateRange, sortBy, sortOrder])
 
   useEffect(() => {
     loadUsers()
@@ -207,6 +258,63 @@ const AdminPage: React.FC = () => {
       message.error('加载权限失败')
     }
     setScopeModalVisible(true)
+  }
+
+  const handleViewDetail = async (user: User) => {
+    setDetailUser(user)
+    setDetailDrawerVisible(true)
+    setDetailTab('profile')
+    setActivitiesPage(1)
+    await loadActivities(user.user_id, 1)
+  }
+
+  const loadActivities = async (userId: number, pageNum: number) => {
+    setActivitiesLoading(true)
+    try {
+      const response = await api.admin.getUserActivities(userId, {
+        page: pageNum,
+        page_size: 10,
+      })
+      setActivities(response.data.items)
+      setActivitiesTotal(response.data.total)
+      setActivitiesPage(pageNum)
+    } catch {
+      message.error('加载活动记录失败')
+    } finally {
+      setActivitiesLoading(false)
+    }
+  }
+
+  const activityTypeColorMap: Record<string, string> = {
+    login: 'blue',
+    login_failure: 'red',
+    profile_update: 'orange',
+    role_change: 'purple',
+    account_activated: 'green',
+    account_deactivated: 'red',
+    account_created: 'cyan',
+    account_approved: 'green',
+    account_rejected: 'red',
+    scope_grant: 'geekblue',
+    scope_revoke: 'magenta',
+    password_change: 'gold',
+    other: 'default',
+  }
+
+  const activityTypeTextMap: Record<string, string> = {
+    login: '登录',
+    login_failure: '登录失败',
+    profile_update: '信息更新',
+    role_change: '角色变更',
+    account_activated: '账号启用',
+    account_deactivated: '账号禁用',
+    account_created: '账号创建',
+    account_approved: '注册通过',
+    account_rejected: '注册拒绝',
+    scope_grant: '权限授予',
+    scope_revoke: '权限移除',
+    password_change: '密码重置',
+    other: '其他',
   }
 
   const handleAddScope = async (values: Record<string, unknown>) => {
@@ -337,6 +445,14 @@ const AdminPage: React.FC = () => {
               <Button
                 type="link"
                 size="small"
+                icon={<EyeOutlined />}
+                onClick={() => handleViewDetail(record)}
+              >
+                详情
+              </Button>
+              <Button
+                type="link"
+                size="small"
                 icon={<SafetyOutlined />}
                 onClick={() => handleManageScopes(record.user_id)}
               >
@@ -369,6 +485,62 @@ const AdminPage: React.FC = () => {
 
   return (
     <div style={{ padding: '88px 32px 80px' }}>
+      {/* Filter Bar */}
+      {activeTab === 'all' && (
+        <Card style={{ marginBottom: 16 }}>
+          <Space wrap>
+            <Select
+              placeholder="角色"
+              allowClear
+              style={{ width: 120 }}
+              value={roleFilter}
+              onChange={(v) => { setRoleFilter(v); setPage(1) }}
+              options={[
+                { value: 'user', label: '普通用户' },
+                { value: 'admin', label: '管理员' },
+                { value: 'super_admin', label: '超级管理员' },
+              ]}
+            />
+            <Select
+              placeholder="状态"
+              allowClear
+              style={{ width: 120 }}
+              value={statusFilter}
+              onChange={(v) => { setStatusFilter(v); setPage(1) }}
+              options={[
+                { value: 'active', label: '正常' },
+                { value: 'inactive', label: '已禁用' },
+                { value: 'pending_approval', label: '待审核' },
+              ]}
+            />
+            <DatePicker.RangePicker
+              placeholder={['注册开始', '注册结束']}
+              value={dateRange as [dayjs.Dayjs, dayjs.Dayjs] | null}
+              onChange={(dates) => { setDateRange(dates as unknown as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null); setPage(1) }}
+            />
+            <Select
+              value={sortBy}
+              onChange={(v) => { setSortBy(v); setPage(1) }}
+              style={{ width: 140 }}
+              options={[
+                { value: 'created_at', label: '注册时间' },
+                { value: 'last_login_at', label: '最后登录' },
+                { value: 'username', label: '用户名' },
+              ]}
+            />
+            <Select
+              value={sortOrder}
+              onChange={(v) => { setSortOrder(v); setPage(1) }}
+              style={{ width: 100 }}
+              options={[
+                { value: 'desc', label: '降序' },
+                { value: 'asc', label: '升序' },
+              ]}
+            />
+          </Space>
+        </Card>
+      )}
+
       <Card
         title={
           <Space>
@@ -475,6 +647,189 @@ const AdminPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* User Detail Drawer */}
+      <Drawer
+        title={
+          detailUser ? (
+            <Space>
+              <UserOutlined />
+              <span>{detailUser.username}</span>
+              <Tag color={roleColorMap[detailUser.role] || 'default'}>
+                {roleTextMap[detailUser.role] || detailUser.role}
+              </Tag>
+            </Space>
+          ) : '用户详情'
+        }
+        width={720}
+        open={detailDrawerVisible}
+        onClose={() => setDetailDrawerVisible(false)}
+      >
+        {detailUser && (
+          <Tabs
+            activeKey={detailTab}
+            onChange={setDetailTab}
+            items={[
+              {
+                key: 'profile',
+                label: (
+                  <span>
+                    <UserOutlined /> 基本信息
+                  </span>
+                ),
+                children: (
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Card size="small">
+                      <p><strong>用户名：</strong>{detailUser.username}</p>
+                      <p><strong>邮箱：</strong>{detailUser.email}</p>
+                      <p><strong>显示名称：</strong>{detailUser.display_name || '-'}</p>
+                      <p><strong>部门：</strong>{detailUser.department || '-'}</p>
+                      <p><strong>工号：</strong>{detailUser.employee_id || '-'}</p>
+                      <p><strong>角色：</strong>{roleTextMap[detailUser.role] || detailUser.role}</p>
+                      <p><strong>状态：</strong>
+                        <Tag color={statusColorMap[detailUser.status] || 'default'}>
+                          {statusTextMap[detailUser.status] || detailUser.status}
+                        </Tag>
+                      </p>
+                      <p><strong>注册时间：</strong>{formatUTCToLocal(detailUser.created_at)}</p>
+                      <p><strong>最后登录：</strong>{formatUTCToLocal(detailUser.last_login_at)}</p>
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() => {
+                          setDetailDrawerVisible(false)
+                          handleEditUser(detailUser)
+                        }}
+                      >
+                        编辑信息
+                      </Button>
+                    </Card>
+                  </Space>
+                ),
+              },
+              {
+                key: 'activities',
+                label: (
+                  <span>
+                    <HistoryOutlined /> 活动记录
+                  </span>
+                ),
+                children: (
+                  <Table
+                    dataSource={activities}
+                    rowKey="activity_id"
+                    loading={activitiesLoading}
+                    pagination={{
+                      current: activitiesPage,
+                      pageSize: 10,
+                      total: activitiesTotal,
+                      showSizeChanger: false,
+                    }}
+                    onChange={(p) => {
+                      if (detailUser) {
+                        loadActivities(detailUser.user_id, p.current || 1)
+                      }
+                    }}
+                    columns={[
+                      {
+                        title: '时间',
+                        dataIndex: 'activity_time',
+                        key: 'activity_time',
+                        render: (t: string) => formatUTCToLocal(t),
+                        width: 180,
+                      },
+                      {
+                        title: '类型',
+                        dataIndex: 'activity_type',
+                        key: 'activity_type',
+                        render: (t: string) => (
+                          <Tag color={activityTypeColorMap[t] || 'default'}>
+                            {activityTypeTextMap[t] || t}
+                          </Tag>
+                        ),
+                        width: 120,
+                      },
+                      {
+                        title: '描述',
+                        dataIndex: 'description',
+                        key: 'description',
+                      },
+                      {
+                        title: '操作人',
+                        dataIndex: 'actor',
+                        key: 'actor',
+                        render: (actor: { username: string } | null) =>
+                          actor ? actor.username : '系统',
+                        width: 120,
+                      },
+                      {
+                        title: 'IP',
+                        dataIndex: 'ip',
+                        key: 'ip',
+                        render: (ip: string | null) => ip || '-',
+                        width: 140,
+                      },
+                    ]}
+                  />
+                ),
+              },
+              {
+                key: 'scopes',
+                label: (
+                  <span>
+                    <SafetyOutlined /> 权限范围
+                  </span>
+                ),
+                children: (
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => {
+                        setDetailDrawerVisible(false)
+                        handleManageScopes(detailUser.user_id)
+                      }}
+                    >
+                      管理权限
+                    </Button>
+                    <List
+                      dataSource={userScopes}
+                      renderItem={(scope) => (
+                        <List.Item>
+                          <List.Item.Meta
+                            title={
+                              <Space>
+                                <Tag color={scope.scope_type === 'all' ? 'red' : 'blue'}>
+                                  {scope.scope_type === 'school'
+                                    ? '学校'
+                                    : scope.scope_type === 'country'
+                                    ? '国家'
+                                    : scope.scope_type === 'tech_domain'
+                                    ? '技术领域'
+                                    : '全部'}
+                                </Tag>
+                                <Text>{scope.scope_value}</Text>
+                              </Space>
+                            }
+                            description={
+                              <Text type="secondary">
+                                授予于 {formatUTCToLocal(scope.granted_at)}
+                                {scope.expires_at && ` | 过期: ${formatUTCToLocal(scope.expires_at)}`}
+                              </Text>
+                            }
+                          />
+                        </List.Item>
+                      )}
+                      locale={{ emptyText: '暂无权限' }}
+                    />
+                  </Space>
+                ),
+              },
+            ]}
+          />
+        )}
+      </Drawer>
 
       {/* Scope Management Modal */}
       <Modal

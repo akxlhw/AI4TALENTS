@@ -280,6 +280,15 @@ class OpenSourceService:
     async def get_developers_by_ids(self, developer_ids: list[int]) -> list[OSDeveloper]:
         return await self._developer.get_developers_by_ids(developer_ids)
 
+    async def get_repositories_for_developers(self, developer_ids: list[int]) -> dict[int, list[Any]]:
+        return await self._developer.get_repositories_for_developers(developer_ids)
+
+    async def get_raw_developers_by_logins(self, github_logins: list[str]) -> dict[str, dict[str, Any]]:
+        return await self._developer.get_raw_developers_by_logins(github_logins)
+
+    async def get_collected_repos_for_developers(self, developer_ids: list[int]) -> dict[int, list[str]]:
+        return await self._developer.get_collected_repos_for_developers(developer_ids)
+
     async def get_talent_pool(self, pool_id: int) -> OSTalentPool | None:
         return await self._favourite.get_talent_pool(pool_id)
 

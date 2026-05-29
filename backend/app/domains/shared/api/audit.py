@@ -32,6 +32,7 @@ class AuditLogResponse(BaseModel):
     operation: str
     status: str
     error_message: str | None
+    operation_detail: dict | None = None
 
 
 class AuditLogListResponse(BaseModel):
@@ -105,6 +106,7 @@ async def get_audit_logs(
             operation=log.operation,
             status=log.status,
             error_message=log.error_message,
+            operation_detail=log.operation_detail,
         )
         for log in logs
     ]

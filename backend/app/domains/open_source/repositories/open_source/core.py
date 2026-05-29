@@ -23,6 +23,7 @@ from app.domains.open_source.models.open_source import (
     OSFavourite,
     OSLanguageSkill,
     OSPoolMember,
+    OSRawDeveloper,
     OSRepoConfig,
     OSRepository,
     OSTalentPool,
@@ -684,4 +685,66 @@ class OpenSourceCoreRepository:
             .order_by(OSDeveloper.developer_id)
         )
         return [row[0] for row in result.fetchall()]
+
+    async def get_repositories_for_developers(
+        self,
+        developer_ids: list[int],
+    ) -> dict[int, list[OSRepository]]:
+        """Batch get repositories for multiple developers, ordered by stars desc."""
+        if not developer_ids:
+            return {}
+        result = await self.session.execute(
+            select(OSRepository)
+            .where(OSRepository.developer_id.in_(developer_ids))
+            .order_by(OSRepository.developer_id, OSRepository.stars_count.desc())
+        )
+        mapping: dict[int, list[OSRepository]] = {}
+        for repo in result.scalars().all():
+            if repo.developer_id not in mapping:
+                mapping[repo.developer_id] = []
+            mapping[repo.developer_id].append(repo)
+        return mapping
+
+    async def get_raw_developers_by_logins(
+        self,
+        github_logins: list[str],
+    ) -> dict[str, dict[str, Any]]:
+        """Batch get raw developer data by GitHub logins."""
+        if not github_logins:
+            return {}
+        result = await self.session.execute(
+            select(OSRawDeveloper).where(OSRawDeveloper.github_login.in_(github_logins))
+        )
+        mapping: dict[str, dict[str, Any]] = {}
+        for raw in result.scalars().all():
+            mapping[raw.github_login] = raw.raw_data or {}
+        return mapping
+
+    async def get_collected_repos_for_developers(
+        self,
+        developer_ids: list[int],
+    ) -> dict[int, list[str]]:
+        """Get collected repo full_names that the developers have contributed to.
+        Only includes repos configured in OSRepoConfig (system-collected sources),
+        excluding personal repos that were fetched alongside contributor profiles.
+        """
+        if not developer_ids:
+            return {}
+        result = await self.session.execute(
+            select(OSContribution.developer_id, OSRepository.full_name)
+            .join(OSRepository, OSContribution.repo_id == OSRepository.repo_id)
+            .join(OSRepoConfig, OSRepository.full_name == OSRepoConfig.repo_full_name)
+            .where(
+                OSContribution.developer_id.in_(developer_ids),
+                OSRepoConfig.is_active.is_(True),
+            )
+            .distinct()
+            .order_by(OSContribution.developer_id, OSRepository.full_name)
+        )
+        mapping: dict[int, list[str]] = {}
+        for dev_id, full_name in result.all():
+            if dev_id not in mapping:
+                mapping[dev_id] = []
+            mapping[dev_id].append(full_name)
+        return mapping
 

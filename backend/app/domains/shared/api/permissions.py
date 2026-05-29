@@ -14,7 +14,9 @@ from app.core.database import get_async_session
 from app.domains.shared.api.auth import require_super_admin, require_user
 from app.domains.shared.models.enums import UserRoleType
 from app.domains.shared.schemas.common import SuccessResponse
+from app.domains.shared.schemas.user_activity import UserActivityListResponse
 from app.domains.shared.services.audit_service import AuditService
+from app.domains.shared.services.user_activity_service import UserActivityService
 from app.domains.shared.services.user_service import UserService
 
 router = APIRouter(prefix="/users", tags=["User Management"])
@@ -141,6 +143,10 @@ async def list_users(
     role: str | None = Query(None, description="按角色筛选"),
     is_active: bool | None = Query(None, description="按状态筛选"),
     status: str | None = Query(None, description="按账户状态筛选"),
+    created_after: datetime | None = Query(None, description="注册时间起"),
+    created_before: datetime | None = Query(None, description="注册时间止"),
+    sort_by: str = Query("created_at", description="排序字段: created_at, last_login_at, username"),
+    sort_order: str = Query("desc", description="排序方向: asc, desc"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
@@ -152,6 +158,10 @@ async def list_users(
         role=role,
         is_active=is_active,
         status=status,
+        created_after=created_after,
+        created_before=created_before,
+        sort_by=sort_by,
+        sort_order=sort_order,
         page=page,
         page_size=page_size,
     )
@@ -409,6 +419,34 @@ async def update_user(
         employee_id=user.employee_id,
         default_view=user.default_view,
         last_login_at=user.last_login_at,
+    )
+
+
+@router.get(
+    "/{user_id}/activities",
+    response_model=UserActivityListResponse,
+    summary="获取用户活动记录",
+    description="获取用户的登录历史、操作日志和权限变更等活动时间线",
+)
+async def get_user_activities(
+    user_id: int,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_super_admin),
+):
+    """Get user activity timeline (admin only)."""
+    service = UserActivityService(session)
+    items, total = await service.get_user_activity_timeline(
+        user_id=user_id,
+        page=page,
+        page_size=page_size,
+    )
+    return UserActivityListResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
     )
 
 

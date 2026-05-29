@@ -10,7 +10,7 @@ from __future__ import annotations
 import csv
 import io
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +30,7 @@ from app.domains.shared.schemas.common import (
     SyncStatusResponse,
     TaskStartResponse,
 )
+from app.domains.shared.services.audit_service import AuditService
 
 router = APIRouter(prefix="/talents", tags=["Talents"])
 
@@ -246,6 +247,7 @@ async def export_talents(
     talent_ids: list[int] = Query(..., description="要导出的人才ID列表"),
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_admin),
+    request: Request = None,
 ):
     """
     Export selected talents to CSV or Excel format.
@@ -259,6 +261,16 @@ async def export_talents(
     talents = await service.get_talents_by_ids(talent_ids)
 
     if not talents:
+        await AuditService.log_data_operation(
+            user_id=current_user.get("user_id"),
+            operation="export",
+            resource_type="talent",
+            resource_id=None,
+            status="failure",
+            user_ip=request.client.host if request and request.client else None,
+            request_id=getattr(request.state, "request_id", None) if request else None,
+            detail={"format": format, "talent_ids": talent_ids, "error": "未找到要导出的人才"},
+        )
         raise HTTPException(status_code=404, detail="未找到要导出的人才")
 
     # Watermark disclaimer text
@@ -339,6 +351,17 @@ async def export_talents(
         wb.save(buffer)
         buffer.seek(0)
 
+        await AuditService.log_data_operation(
+            user_id=current_user.get("user_id"),
+            operation="export",
+            resource_type="talent",
+            resource_id=None,
+            status="success",
+            user_ip=request.client.host if request and request.client else None,
+            request_id=getattr(request.state, "request_id", None) if request else None,
+            detail={"format": format, "count": len(talents), "talent_ids": talent_ids},
+        )
+
         return StreamingResponse(
             buffer,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -354,11 +377,24 @@ async def export_talents(
         writer.writerows(rows)
         buffer.seek(0)
 
-        return StreamingResponse(
+        response = StreamingResponse(
             io.BytesIO(buffer.getvalue().encode("utf-8-sig")),
             media_type="text/csv",
             headers={"Content-Disposition": "attachment; filename=talents_export.csv"},
         )
+
+        await AuditService.log_data_operation(
+            user_id=current_user.get("user_id"),
+            operation="export",
+            resource_type="talent",
+            resource_id=None,
+            status="success",
+            user_ip=request.client.host if request and request.client else None,
+            request_id=getattr(request.state, "request_id", None) if request else None,
+            detail={"format": format, "count": len(talents), "talent_ids": talent_ids},
+        )
+
+        return response
 
 
 @router.post(

@@ -4,7 +4,9 @@ Open Source — Developer, Repository, and Search endpoints.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
@@ -22,7 +24,9 @@ from app.domains.open_source.schemas.open_source import (
     OSSearchRequest,
 )
 from app.domains.open_source.services.open_source_service import OpenSourceService
+from app.domains.shared.api.auth import require_admin
 from app.domains.shared.schemas.common import PaginatedResponse
+from app.domains.shared.services.audit_service import AuditService
 
 router = APIRouter(prefix="/open-source", tags=["Open Source Talent"])
 
@@ -81,6 +85,40 @@ async def list_developers(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get("/developers/ids", response_model=list[int])
+async def list_all_developer_ids(
+    q: str = Query("", description="Keyword search"),
+    tech_elements: list[str] | None = Query(None),
+    languages: list[str] | None = Query(None),
+    location: str | None = Query(None),
+    company: str | None = Query(None),
+    min_stars: int | None = Query(None, ge=0),
+    is_committer: bool | None = Query(None, description="Filter developers who are committers"),
+    repo_full_names: list[str] | None = Query(None, description="Filter by repository full names"),
+    sort_by: str = Query("stars_desc"),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(get_current_user),
+):
+    """Return all developer IDs matching the current filters (no pagination).
+    Used for frontend 'select all' feature.
+    """
+    service = OpenSourceService(session)
+    items, _total = await service.list_developers(
+        q=q,
+        tech_elements=tech_elements,
+        languages=languages,
+        location=location,
+        company=company,
+        min_stars=min_stars,
+        is_committer=is_committer,
+        repo_full_names=repo_full_names,
+        sort_by=sort_by,
+        page=1,
+        page_size=100000,
+    )
+    return [dev.developer_id for dev in items]
 
 
 @router.get("/developers/{developer_id}", response_model=OSDeveloperDetail)
@@ -178,6 +216,178 @@ async def recommend_similar_developers(
     service = OpenSourceService(session)
     items = await service.recommend_similar(developer_id, limit=limit)
     return [OSDeveloperSummary.model_validate(i) for i in items]
+
+
+class ExportDevelopersRequest(BaseModel):
+    developer_ids: list[int]
+    format: str = "csv"
+
+
+@router.post("/developers/export", response_model=None)
+async def export_developers(
+    data: ExportDevelopersRequest,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_admin),
+    request: Request = None,
+):
+    """Export selected developers to CSV or Excel format."""
+    import csv
+    import io
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font
+
+    service = OpenSourceService(session)
+    developers = await service.get_developers_by_ids(data.developer_ids)
+
+    if not developers:
+        await AuditService.log_data_operation(
+            user_id=current_user.get("user_id"),
+            operation="export",
+            resource_type="os_developer",
+            resource_id=None,
+            status="failure",
+            user_ip=request.client.host if request and request.client else None,
+            request_id=getattr(request.state, "request_id", None) if request else None,
+            detail={"format": data.format, "developer_ids": data.developer_ids, "error": "未找到要导出的开发者"},
+        )
+        raise HTTPException(status_code=404, detail="未找到要导出的开发者")
+
+    # Batch fetch collected repos for enriched fields
+    dev_ids = [d.developer_id for d in developers]
+    repos_map = await service.get_collected_repos_for_developers(dev_ids)
+
+    disclaimer = (
+        "【重要声明】本文件导出的开源人才数据仅供内部人才发现与学术调研使用。"
+        "严禁通过任何渠道向人才发起招聘邀约，严禁将数据提供给第三方招聘机构，"
+        "严禁用于商业营销或数据贩卖。违规使用将导致账号封禁及法律责任。"
+    )
+
+    headers = [
+        "序号",
+        "GitHub账号",
+        "GitHub主页",
+        "姓名",
+        "邮箱",
+        "公司",
+        "地区",
+        "Blog主页",
+        "Stars总数",
+        "仓库数",
+        "Followers数",
+        "主要语言",
+        "技术标签",
+        "收录来源的开源项目",
+        "社交媒体链接（供参考）",
+    ]
+    from urllib.parse import quote
+
+    rows = []
+    for idx, d in enumerate(developers, 1):
+        repo_names = ", ".join(repos_map.get(d.developer_id, []))
+        name = d.name or d.github_login or ""
+        company = d.company or ""
+        search_query = f"{name} {company} LinkedIn".strip()
+        social_link = f"https://www.google.com/search?q={quote(search_query, safe='')}"
+
+        rows.append(
+            [
+                idx,
+                d.github_login,
+                f"https://github.com/{d.github_login}",
+                d.name or "",
+                d.email or "",
+                d.company or "",
+                d.location or "",
+                d.blog_url or "",
+                d.total_stars_received,
+                d.public_repos_count,
+                d.followers_count,
+                ", ".join(d.primary_languages or []),
+                ", ".join(d.tech_tags or []),
+                repo_names,
+                social_link,
+            ]
+        )
+
+    if data.format == "xlsx":
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "开源人才导出"
+
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
+        disclaimer_cell = ws.cell(row=1, column=1, value=disclaimer)
+        disclaimer_cell.alignment = Alignment(wrap_text=True, vertical="center")
+        disclaimer_cell.font = Font(color="FF0000", bold=True)
+        ws.row_dimensions[1].height = 45
+
+        for col, header in enumerate(headers, 1):
+            ws.cell(row=3, column=col, value=header)
+
+        for row_idx, row in enumerate(rows, 4):
+            for col_idx, value in enumerate(row, 1):
+                ws.cell(row=row_idx, column=col_idx, value=value)
+
+        from openpyxl.utils import get_column_letter
+
+        for idx in range(1, len(headers) + 1):
+            max_length = 0
+            column_letter = get_column_letter(idx)
+            # Skip disclaimer row (row 1) and empty separator row (row 2);
+            # start from header row (row 3)
+            for cell in ws[column_letter][2:]:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except (TypeError, ValueError, AttributeError):
+                    pass
+            ws.column_dimensions[column_letter].width = min(max_length + 2, 50)
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        await AuditService.log_data_operation(
+            user_id=current_user.get("user_id"),
+            operation="export",
+            resource_type="os_developer",
+            resource_id=None,
+            status="success",
+            user_ip=request.client.host if request and request.client else None,
+            request_id=getattr(request.state, "request_id", None) if request else None,
+            detail={"format": data.format, "count": len(developers), "developer_ids": data.developer_ids},
+        )
+
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=os_developers_export.xlsx"},
+        )
+    else:
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow([disclaimer])
+        writer.writerow([])
+        writer.writerow(headers)
+        writer.writerows(rows)
+        buffer.seek(0)
+
+        await AuditService.log_data_operation(
+            user_id=current_user.get("user_id"),
+            operation="export",
+            resource_type="os_developer",
+            resource_id=None,
+            status="success",
+            user_ip=request.client.host if request and request.client else None,
+            request_id=getattr(request.state, "request_id", None) if request else None,
+            detail={"format": data.format, "count": len(developers), "developer_ids": data.developer_ids},
+        )
+
+        return StreamingResponse(
+            io.BytesIO(buffer.getvalue().encode("utf-8-sig")),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=os_developers_export.csv"},
+        )
 
 
 # ============= Public Repository List =============

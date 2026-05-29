@@ -9,6 +9,12 @@ export const openSourceApi = {
     apiClient.get('/open-source/developers', { params }),
   getDeveloper: (id: number) =>
     apiClient.get(`/open-source/developers/${id}`),
+  exportDevelopers: (developerIds: number[], format: 'csv' | 'xlsx' = 'csv') =>
+    apiClient.post(`/open-source/developers/export`, { developer_ids: developerIds, format }, {
+      responseType: 'blob',
+    }),
+  getAllDeveloperIds: (params?: Record<string, unknown>) =>
+    apiClient.get('/open-source/developers/ids', { params }),
   getRepository: (owner: string, name: string) =>
     apiClient.get(`/open-source/repositories/${owner}/${name}`),
   getRepositoryContributors: (owner: string, name: string, params?: { page?: number; page_size?: number }) =>

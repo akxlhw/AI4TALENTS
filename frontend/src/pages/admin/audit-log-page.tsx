@@ -19,6 +19,7 @@ interface AuditLog {
   operation: string
   status: string
   error_message: string | null
+  operation_detail?: Record<string, unknown>
 }
 
 interface UserMapItem {
@@ -44,6 +45,7 @@ const OPERATION_MAP: Record<string, string> = {
   reject: '审批拒绝',
   grant_scope: '授予权限',
   revoke_scope: '移除权限',
+  export: '导出',
 }
 
 const STATUS_COLOR_MAP: Record<string, string> = {
@@ -111,9 +113,21 @@ const AuditLogPage: React.FC = () => {
     loadLogs()
   }, [loadLogs])
 
-  const formatEvent = (eventType: string, operation: string) => {
-    const typeLabel = EVENT_TYPE_MAP[eventType] || eventType
-    const opLabel = OPERATION_MAP[operation] || operation
+  const formatEvent = (record: AuditLog) => {
+    const typeLabel = EVENT_TYPE_MAP[record.event_type] || record.event_type
+    const opLabel = OPERATION_MAP[record.operation] || record.operation
+    const resourceLabel =
+      record.resource_type === 'talent' ? '人才'
+        : record.resource_type === 'os_developer' ? '开源人才'
+          : ''
+    if (record.event_type === 'data_operation' && record.operation === 'export' && record.operation_detail) {
+      const count = record.operation_detail.count as number | undefined
+      const fmt = record.operation_detail.format as string | undefined
+      return `${typeLabel} · ${opLabel}${resourceLabel} (${count || '?'}条${fmt ? ` ${fmt}` : ''})`
+    }
+    if (resourceLabel) {
+      return `${typeLabel} · ${opLabel}${resourceLabel}`
+    }
     return `${typeLabel} · ${opLabel}`
   }
 
@@ -145,10 +159,10 @@ const AuditLogPage: React.FC = () => {
     {
       title: '事件',
       key: 'event',
-      width: 160,
+      width: 200,
       render: (_: unknown, record: AuditLog) => (
         <Tag color={record.event_type === 'authentication' ? 'blue' : record.event_type === 'authorization' ? 'orange' : 'green'}>
-          {formatEvent(record.event_type, record.operation)}
+          {formatEvent(record)}
         </Tag>
       ),
     },
@@ -171,11 +185,24 @@ const AuditLogPage: React.FC = () => {
       render: (ip: string | null) => ip || '-',
     },
     {
-      title: '备注',
-      dataIndex: 'error_message',
-      key: 'error_message',
+      title: '详情',
+      key: 'detail',
       ellipsis: true,
-      render: (msg: string | null) => msg || '-',
+      render: (_: unknown, record: AuditLog) => {
+        if (record.error_message) {
+          return <span style={{ color: '#ff4d4f' }}>{record.error_message}</span>
+        }
+        if (record.operation_detail) {
+          const detail = record.operation_detail
+          if (detail.count !== undefined) {
+            const count = detail.count as number
+            const fmt = detail.format as string | undefined
+            return `导出 ${count} 条${fmt ? ` (${fmt})` : ''}`
+          }
+          return JSON.stringify(detail).slice(0, 60)
+        }
+        return '-'
+      },
     },
   ]
 
@@ -219,6 +246,38 @@ const AuditLogPage: React.FC = () => {
           columns={columns}
           rowKey="log_id"
           loading={loading}
+          expandable={{
+            expandedRowRender: (record: AuditLog) => {
+              if (!record.operation_detail && !record.error_message) {
+                return null
+              }
+              return (
+                <div style={{ padding: '8px 16px' }}>
+                  {record.error_message && (
+                    <div style={{ color: '#ff4d4f', marginBottom: 8 }}>
+                      <strong>错误信息：</strong>
+                      {record.error_message}
+                    </div>
+                  )}
+                  {record.operation_detail && (
+                    <pre
+                      style={{
+                        background: '#f6f6f6',
+                        padding: 12,
+                        borderRadius: 4,
+                        margin: 0,
+                        fontSize: 12,
+                      }}
+                    >
+                      {JSON.stringify(record.operation_detail, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              )
+            },
+            rowExpandable: (record: AuditLog) =>
+              !!record.operation_detail || !!record.error_message,
+          }}
           pagination={{
             current: page,
             pageSize,

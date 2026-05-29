@@ -479,6 +479,24 @@ class OSDeveloperService:
         """Get IDs of all visible developers."""
         return await self.repo.get_visible_developer_ids()
 
+    async def get_repositories_for_developers(
+        self, developer_ids: list[int]
+    ) -> dict[int, list[Any]]:
+        """Batch get repositories for multiple developers."""
+        return await self.repo.get_repositories_for_developers(developer_ids)
+
+    async def get_raw_developers_by_logins(
+        self, github_logins: list[str]
+    ) -> dict[str, dict[str, Any]]:
+        """Batch get raw developer data by GitHub logins."""
+        return await self.repo.get_raw_developers_by_logins(github_logins)
+
+    async def get_collected_repos_for_developers(
+        self, developer_ids: list[int]
+    ) -> dict[int, list[str]]:
+        """Get collected repo full_names for multiple developers."""
+        return await self.repo.get_collected_repos_for_developers(developer_ids)
+
     # ============= Stats & JD Match =============
 
     async def get_stats(self) -> OSStatsResponse:

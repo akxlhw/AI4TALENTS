@@ -18,6 +18,7 @@ import {
   Tooltip,
   Checkbox,
   message,
+  Dropdown,
 } from 'antd'
 import {
   SearchOutlined,
@@ -25,10 +26,14 @@ import {
   StarOutlined,
   HeartOutlined,
   HeartFilled,
+  DownOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons'
+import { useAuth } from '../../contexts/AuthContext'
 import { api } from '../../services/api'
 import { getErrorMessage } from '../../utils'
 import { semanticColors, domainThemes } from '../../theme'
+import ExportConfirmModal from '../../components/ExportConfirmModal'
 import type { OSDeveloper, OSSearchQuery } from '../../types'
 
 const { Title, Text, Paragraph } = Typography
@@ -74,12 +79,17 @@ const SORT_OPTIONS = [
 const OpenSourceSearchPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const { isAdmin } = useAuth()
 
   const [developers, setDevelopers] = useState<OSDeveloper[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set())
   const [filterExpanded, setFilterExpanded] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [exporting, setExporting] = useState(false)
+  const [exportConfirmVisible, setExportConfirmVisible] = useState(false)
+  const [pendingExportFormat, setPendingExportFormat] = useState<'csv' | 'xlsx' | null>(null)
 
   const [query, setQuery] = useState<OSSearchQuery>({
     q: searchParams.get('q') || '',
@@ -233,6 +243,104 @@ const OpenSourceSearchPage: React.FC = () => {
     }
   }
 
+  const toggleSelection = (developerId: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(developerId)) {
+        next.delete(developerId)
+      } else {
+        next.add(developerId)
+      }
+      return next
+    })
+  }
+
+  const isPageAllSelected = developers.length > 0 && developers.every((d) => selectedIds.has(d.developer_id))
+
+  const handleSelectPage = () => {
+    if (isPageAllSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        developers.forEach((d) => next.delete(d.developer_id))
+        return next
+      })
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        developers.forEach((d) => next.add(d.developer_id))
+        return next
+      })
+    }
+  }
+
+  const handleSelectAll = async () => {
+    try {
+      const params: Record<string, unknown> = {
+        q: query.q,
+        tech_elements: query.tech_elements,
+        languages: query.languages,
+        location: query.location,
+        company: query.company,
+        repo_full_names: query.repo_full_names,
+        is_committer: query.is_committer,
+        sort_by: query.sort_by,
+      }
+      const res = await api.openSource.getAllDeveloperIds(params)
+      setSelectedIds(new Set(res.data || []))
+      message.success(`已全选 ${res.data.length} 位开发者`)
+    } catch (e) {
+      message.error(getErrorMessage(e, '全选失败'))
+    }
+  }
+
+  const handleExportRequest = (format: 'csv' | 'xlsx') => {
+    if (selectedIds.size === 0) {
+      message.warning('请先选择要导出的开发者')
+      return
+    }
+    setPendingExportFormat(format)
+    setExportConfirmVisible(true)
+  }
+
+  const handleExportConfirm = async () => {
+    if (!pendingExportFormat) return
+    setExporting(true)
+    try {
+      const response = await api.openSource.exportDevelopers(
+        Array.from(selectedIds),
+        pendingExportFormat,
+      )
+      const blob = new Blob([response.data], {
+        type: pendingExportFormat === 'xlsx'
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : 'text/csv',
+      })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `os_developers_export.${pendingExportFormat}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      message.success(`已导出 ${selectedIds.size} 位开发者`)
+    } catch (e) {
+      message.error(getErrorMessage(e, '导出失败'))
+    } finally {
+      setExporting(false)
+      setExportConfirmVisible(false)
+      setPendingExportFormat(null)
+    }
+  }
+
+  const exportMenu = {
+    items: [
+      { key: 'csv', label: '导出 CSV' },
+      { key: 'xlsx', label: '导出 Excel' },
+    ],
+    onClick: (e: { key: string }) => handleExportRequest(e.key as 'csv' | 'xlsx'),
+  }
+
   const primary = domainThemes.opensource.primary
   
 
@@ -363,9 +471,48 @@ const OpenSourceSearchPage: React.FC = () => {
       </Card>
 
       {/* Results */}
-      <Text style={{ marginBottom: 16, display: 'block', color: 'var(--text-secondary)' }}>
-        共 {total} 条结果
-      </Text>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 16,
+      }}>
+        <Text style={{ color: 'var(--text-secondary)' }}>
+          共 {total} 条结果
+        </Text>
+        {developers.length > 0 && !loading && (
+          <Space wrap>
+            <Checkbox checked={isPageAllSelected} onChange={handleSelectPage}>
+              全选当前页
+            </Checkbox>
+            <Button size="small" onClick={handleSelectAll}>
+              全选所有结果
+            </Button>
+            <Text>
+              已选择 <strong>{selectedIds.size}</strong> 位开发者
+            </Text>
+            {selectedIds.size > 0 && (
+              <Button size="small" onClick={() => setSelectedIds(new Set())}>
+                取消选择
+              </Button>
+            )}
+            {isAdmin && (
+              <Dropdown menu={exportMenu} trigger={['click']}>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<DownloadOutlined />}
+                  loading={exporting}
+                >
+                  导出 <DownOutlined />
+                </Button>
+              </Dropdown>
+            )}
+          </Space>
+        )}
+      </div>
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60 }}>
@@ -381,7 +528,13 @@ const OpenSourceSearchPage: React.FC = () => {
                 <Card
                   hoverable
                   className="domain-card"
-                  style={{ borderLeft: `3px solid ${domainThemes.opensource.secondary}`, transition: 'all 0.2s ease' }}
+                  style={{
+                    borderLeft: `3px solid ${domainThemes.opensource.secondary}`,
+                    transition: 'all 0.2s ease',
+                    border: selectedIds.has(dev.developer_id)
+                      ? `2px solid ${primary}`
+                      : undefined,
+                  }}
                   styles={{ body: { padding: '14px 16px' } }}
                   onClick={() => navigate(`/opensource/developers/${dev.developer_id}`)}
                 >
@@ -477,6 +630,25 @@ const OpenSourceSearchPage: React.FC = () => {
                       </div>
                     </Col>
                   </Row>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginTop: 10,
+                      paddingTop: 10,
+                      borderTop: `1px solid ${semanticColors.borderGrayLight}`,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={selectedIds.has(dev.developer_id)}
+                      onChange={() => toggleSelection(dev.developer_id)}
+                    >
+                      选择
+                    </Checkbox>
+                  </div>
                 </Card>
               </Col>
             ))}
@@ -493,6 +665,15 @@ const OpenSourceSearchPage: React.FC = () => {
           </div>
         </>
       )}
+
+      <ExportConfirmModal
+        open={exportConfirmVisible}
+        onConfirm={handleExportConfirm}
+        onCancel={() => {
+          setExportConfirmVisible(false)
+          setPendingExportFormat(null)
+        }}
+      />
     </div>
   )
 }

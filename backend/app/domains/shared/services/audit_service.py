@@ -120,6 +120,36 @@ class AuditService:
             user_agent=None,
         )
 
+    @classmethod
+    async def log_data_operation(
+        cls,
+        user_id: int | None,
+        operation: str,
+        resource_type: str,
+        resource_id: str | None,
+        status: str,
+        user_ip: str | None = None,
+        request_id: str | None = None,
+        detail: dict | None = None,
+        error_message: str | None = None,
+    ) -> None:
+        """Log a data operation event (e.g., export)."""
+        await cls._write_log(
+            event_time=datetime.now(),
+            user_id=user_id,
+            user_ip=user_ip,
+            event_type="data_operation",
+            event_subtype="export",
+            resource_type=resource_type,
+            resource_id=resource_id,
+            operation=operation,
+            operation_detail=detail,
+            status=status,
+            error_message=error_message,
+            request_id=request_id,
+            user_agent=None,
+        )
+
     # ---- Read operations (use caller's session) ----
 
     def __init__(self, session: AsyncSession):

@@ -217,16 +217,24 @@ class UserRepository:
         role: str | None = None,
         is_active: bool | None = None,
         status: str | None = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[UserAccount], int]:
         """
-        List users with optional filters.
+        List users with optional filters and sorting.
 
         Args:
             role: Filter by role
             is_active: Filter by active status
             status: Filter by status string
+            created_after: Filter by registration time >=
+            created_before: Filter by registration time <=
+            sort_by: Sort field ('created_at', 'last_login_at', 'username')
+            sort_order: 'asc' or 'desc'
             page: Page number
             page_size: Items per page
 
@@ -241,6 +249,10 @@ class UserRepository:
             query = query.where(UserAccount.is_active == is_active)
         if status is not None:
             query = query.where(UserAccount.status == status)
+        if created_after is not None:
+            query = query.where(UserAccount.created_at >= created_after)
+        if created_before is not None:
+            query = query.where(UserAccount.created_at <= created_before)
 
         # Count
         from sqlalchemy import func
@@ -249,9 +261,21 @@ class UserRepository:
         total_result = await self.session.execute(count_query)
         total = total_result.scalar() or 0
 
+        # Sorting
+        sort_column = {
+            "created_at": UserAccount.created_at,
+            "last_login_at": UserAccount.last_login_at,
+            "username": UserAccount.username,
+        }.get(sort_by, UserAccount.created_at)
+
+        if sort_order.lower() == "asc":
+            query = query.order_by(sort_column.asc())
+        else:
+            query = query.order_by(sort_column.desc())
+
         # Paginate
         offset = (page - 1) * page_size
-        query = query.offset(offset).limit(page_size).order_by(UserAccount.user_id)
+        query = query.offset(offset).limit(page_size)
 
         result = await self.session.execute(query)
         users = list(result.scalars().all())
