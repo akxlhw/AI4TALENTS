@@ -407,6 +407,44 @@ class UserRepository:
             "storage_consent_level": user.storage_consent_level,
         }
 
+    async def update_user_and_commit(
+        self,
+        user_id: int,
+        display_name: str | None = None,
+        department: str | None = None,
+        role: str | None = None,
+        is_active: bool | None = None,
+    ) -> UserAccount | None:
+        """
+        Update user fields and commit.
+
+        Args:
+            user_id: User ID
+            display_name: Display name
+            department: Department
+            role: Role
+            is_active: Active status
+
+        Returns:
+            Updated UserAccount or None
+        """
+        user = await self.get_by_id(user_id)
+        if not user:
+            return None
+
+        if display_name is not None:
+            user.display_name = display_name
+        if department is not None:
+            user.department = department
+        if role is not None:
+            user.role_type = role
+        if is_active is not None:
+            user.is_active = is_active
+            user.status = "active" if is_active else "inactive"
+
+        await self.session.commit()
+        return user
+
 
 class UserScopeRepository:
     """Repository for user scope operations (school/country/tech_domain)."""
@@ -872,41 +910,3 @@ class UserScopeRepository:
         user.default_view = default_view
         await self.session.commit()
         return True
-
-    async def update_user_and_commit(
-        self,
-        user_id: int,
-        display_name: str | None = None,
-        department: str | None = None,
-        role: str | None = None,
-        is_active: bool | None = None,
-    ) -> UserAccount | None:
-        """
-        Update user fields and commit.
-
-        Args:
-            user_id: User ID
-            display_name: Display name
-            department: Department
-            role: Role
-            is_active: Active status
-
-        Returns:
-            Updated UserAccount or None
-        """
-        user = await self.get_by_id(user_id)
-        if not user:
-            return None
-
-        if display_name is not None:
-            user.display_name = display_name
-        if department is not None:
-            user.department = department
-        if role is not None:
-            user.role_type = role
-        if is_active is not None:
-            user.is_active = is_active
-            user.status = "active" if is_active else "inactive"
-
-        await self.session.commit()
-        return user
