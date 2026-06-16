@@ -87,6 +87,12 @@ docs/audit/
 # Playwright test results
 frontend/test-results/
 
+# Backend test results (pytest XML reports)
+backend/test-results/
+
+# Agent / tooling private state
+.superpowers/
+
 # TypeScript build cache
 *.tsbuildinfo
 

@@ -36,8 +36,6 @@ class PhaseBuildStatsHandler(PhaseHandler):
                     "info", "统计数据生成完成", {"records_created": result.records_created}
                 )
             else:
-                self.progress_tracker.add_log(
-                    "warning", f"统计数据生成失败: {result.errors}"
-                )
+                self.progress_tracker.add_log("warning", f"统计数据生成失败: {result.errors}")
         except Exception as e:
             self.progress_tracker.add_log("warning", f"统计数据生成异常: {str(e)}")

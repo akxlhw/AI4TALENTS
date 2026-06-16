@@ -51,10 +51,22 @@ class SyncService:
 
         # Update fields
         for key in [
-            "github_id", "name", "bio", "location", "company",
-            "blog_url", "email", "avatar_url", "followers_count",
-            "following_count", "public_repos_count", "total_stars_received",
-            "total_forks_received", "primary_languages", "tech_tags", "is_visible",
+            "github_id",
+            "name",
+            "bio",
+            "location",
+            "company",
+            "blog_url",
+            "email",
+            "avatar_url",
+            "followers_count",
+            "following_count",
+            "public_repos_count",
+            "total_stars_received",
+            "total_forks_received",
+            "primary_languages",
+            "tech_tags",
+            "is_visible",
         ]:
             if key in data and data[key] is not None:
                 setattr(dev, key, data[key])
@@ -78,8 +90,13 @@ class SyncService:
 
         repo.developer_id = developer_id
         for key in [
-            "github_repo_id", "name", "language", "stars_count",
-            "forks_count", "topics", "is_fork",
+            "github_repo_id",
+            "name",
+            "language",
+            "stars_count",
+            "forks_count",
+            "topics",
+            "is_fork",
         ]:
             if key in data and data[key] is not None:
                 setattr(repo, key, data[key])
@@ -104,8 +121,13 @@ class SyncService:
             self.session.add(contrib)
 
         for key in [
-            "commits_count", "prs_count", "issues_count",
-            "code_reviews_count", "is_owner", "is_maintainer", "is_committer",
+            "commits_count",
+            "prs_count",
+            "issues_count",
+            "code_reviews_count",
+            "is_owner",
+            "is_maintainer",
+            "is_committer",
         ]:
             if key in data and data[key] is not None:
                 setattr(contrib, key, data[key])

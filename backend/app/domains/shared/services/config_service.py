@@ -376,9 +376,7 @@ class ConfigService:
         await self.session.execute(text("DROP INDEX IF EXISTS ix_os_embedding_vector"))
         await self.session.execute(text("DELETE FROM os_embedding"))
         await self.session.execute(
-            text(
-                f"ALTER TABLE os_embedding ALTER COLUMN embedding TYPE vector({new_dimension})"
-            )
+            text(f"ALTER TABLE os_embedding ALTER COLUMN embedding TYPE vector({new_dimension})")
         )
         await self.session.execute(
             text(

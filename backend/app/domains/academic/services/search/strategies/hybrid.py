@@ -37,9 +37,7 @@ class HybridSearchStrategy(SearchStrategy):
             return await self._fallback_fulltext(query, page, page_size, filters)
 
         try:
-            extended_page_size = min(
-                page_size * settings.SEARCH_HYBRID_EXTENDED_FACTOR, 100
-            )
+            extended_page_size = min(page_size * settings.SEARCH_HYBRID_EXTENDED_FACTOR, 100)
             english_translation = get_english_translation(query)
 
             # Fulltext search with independent session
@@ -83,9 +81,11 @@ class HybridSearchStrategy(SearchStrategy):
 
             fulltext_result, semantic_result = await asyncio.gather(
                 _do_fulltext_search(),
-                semantic.search(query, 1, extended_page_size, filters)
-                if semantic
-                else _empty_semantic(),
+                (
+                    semantic.search(query, 1, extended_page_size, filters)
+                    if semantic
+                    else _empty_semantic()
+                ),
             )
 
             # Reciprocal Rank Fusion
@@ -137,17 +137,12 @@ class HybridSearchStrategy(SearchStrategy):
             )
 
             fulltext_count = sum(
-                1
-                for tid in sorted_ids
-                if "fulltext" in item_map[tid].get("match_sources", [])
+                1 for tid in sorted_ids if "fulltext" in item_map[tid].get("match_sources", [])
             )
             semantic_count = sum(
                 1
                 for tid in sorted_ids
-                if any(
-                    s.startswith("semantic_")
-                    for s in item_map[tid].get("match_sources", [])
-                )
+                if any(s.startswith("semantic_") for s in item_map[tid].get("match_sources", []))
             )
 
             offset = (page - 1) * page_size
@@ -172,12 +167,8 @@ class HybridSearchStrategy(SearchStrategy):
             }
 
         except Exception as e:
-            logger.error(
-                f"Hybrid search unexpected error: {e}, falling back to keyword search"
-            )
-            return await self._fallback_keyword(
-                query, page, page_size, filters, fields, fuzzy
-            )
+            logger.error(f"Hybrid search unexpected error: {e}, falling back to keyword search")
+            return await self._fallback_keyword(query, page, page_size, filters, fields, fuzzy)
 
     async def _fallback_fulltext(
         self, query: str, page: int, page_size: int, filters: dict | None

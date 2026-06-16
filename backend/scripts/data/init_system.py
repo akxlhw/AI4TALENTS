@@ -32,14 +32,12 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
-from app.core.config import settings
-from app.core.database import AsyncSessionLocal as _OriginalAsyncSessionLocal
-from app.core.auth import hash_password
 
 # Import model registry first to ensure all SQLAlchemy mappers are properly configured
-import app.model_registry
+from app.core.auth import hash_password
+from app.core.config import settings
 
 # Use NullPool for init script to avoid Windows asyncpg connection pool issues
 _init_engine = create_async_engine(settings.DATABASE_URL, poolclass=NullPool)
@@ -50,13 +48,12 @@ AsyncSessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False,
 )
-from app.domains.shared.models.enums import UserRoleType, ScopeType
-from app.domains.shared.models.iam import UserAccount, UserSchoolScope
-from app.domains.academic.models.talent import Talent
-from app.domains.academic.models.tech_domain import TechDomain
 from app.domains.academic.models.statistics import OverviewStatSnapshot
+from app.domains.academic.models.tech_domain import TechDomain
 from app.domains.academic.models.venue import Venue, VenueTechBinding
 from app.domains.open_source.models.open_source import OSRepoConfig
+from app.domains.shared.models.enums import ScopeType, UserRoleType
+from app.domains.shared.models.iam import UserAccount, UserSchoolScope
 
 # Academic domain business tables (cleared by default)
 ACADEMIC_TABLES = [

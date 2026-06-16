@@ -777,7 +777,9 @@ class UserScopeRepository:
 
         # Super admin has access to all
         if user.role_type == UserRoleType.SUPER_ADMIN.value:
-            result = await self.session.execute(text("SELECT tech_domain_id FROM config_tech_domain"))
+            result = await self.session.execute(
+                text("SELECT tech_domain_id FROM config_tech_domain")
+            )
             return [row[0] for row in result.fetchall()]
 
         # Get scopes
@@ -799,7 +801,9 @@ class UserScopeRepository:
                 continue
 
             if scope.scope_type == "all":
-                result = await self.session.execute(text("SELECT tech_domain_id FROM config_tech_domain"))
+                result = await self.session.execute(
+                    text("SELECT tech_domain_id FROM config_tech_domain")
+                )
                 return [row[0] for row in result.fetchall()]
 
             if scope.scope_type == "tech_domain":
@@ -858,7 +862,9 @@ class UserScopeRepository:
 
             if scope.scope_type == "all":
                 result = await self.session.execute(
-                    text("SELECT DISTINCT country_code FROM core_school WHERE country_code IS NOT NULL")
+                    text(
+                        "SELECT DISTINCT country_code FROM core_school WHERE country_code IS NOT NULL"
+                    )
                 )
                 return [row[0] for row in result.fetchall() if row[0]]
 

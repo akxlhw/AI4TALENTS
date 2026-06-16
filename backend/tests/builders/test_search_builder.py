@@ -69,7 +69,9 @@ class TestSearchBuilder:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_build_search_text_no_school(self, builder: SearchBuilder, sample_talent_and_school):
+    async def test_build_search_text_no_school(
+        self, builder: SearchBuilder, sample_talent_and_school
+    ):
         """Test _build_search_text with no school."""
         talent, _ = sample_talent_and_school
         text = builder._build_search_text(talent, None)
@@ -100,7 +102,9 @@ class TestSearchBuilder:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_build_creates_documents(self, builder: SearchBuilder, sample_talent_and_school, test_session: AsyncSession):
+    async def test_build_creates_documents(
+        self, builder: SearchBuilder, sample_talent_and_school, test_session: AsyncSession
+    ):
         """Test build() creates SearchTalentDocument records."""
         result = await builder.build()
 
@@ -122,7 +126,9 @@ class TestSearchBuilder:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_build_updates_existing_document(self, builder: SearchBuilder, sample_talent_and_school, test_session):
+    async def test_build_updates_existing_document(
+        self, builder: SearchBuilder, sample_talent_and_school, test_session
+    ):
         """Test build() updates existing document instead of creating duplicate."""
         talent, school = sample_talent_and_school
 

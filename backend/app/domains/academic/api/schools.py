@@ -8,6 +8,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_async_session
 from app.domains.academic.schemas.overview import (
     SchoolDetail,
@@ -33,7 +34,12 @@ async def list_schools(
     keyword: str | None = Query(None, description="搜索关键词"),
     is_top_school: bool | None = Query(None, description="按Top院校筛选"),
     page: int = Query(1, ge=1, description="页码"),
-    page_size: int = Query(20, ge=1, le=5000, description="每页数量"),
+    page_size: int = Query(
+        settings.DEFAULT_PAGE_SIZE,
+        ge=1,
+        le=settings.SCHOOL_LIST_MAX_PAGE_SIZE,
+        description="每页数量",
+    ),
     session: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -95,7 +101,12 @@ async def list_top_schools(
     country_code: str | None = Query(None, description="按国家代码筛选 (ISO 3166-1 alpha-2)"),
     keyword: str | None = Query(None, description="搜索关键词"),
     page: int = Query(1, ge=1, description="页码"),
-    page_size: int = Query(20, ge=1, le=5000, description="每页数量"),
+    page_size: int = Query(
+        settings.DEFAULT_PAGE_SIZE,
+        ge=1,
+        le=settings.SCHOOL_LIST_MAX_PAGE_SIZE,
+        description="每页数量",
+    ),
     session: AsyncSession = Depends(get_async_session),
 ):
     """获取Top院校列表"""
@@ -149,7 +160,12 @@ async def get_school_talents(
         None, description="按角色类型筛选 (professor/student/graduated/unknown)"
     ),
     page: int = Query(1, ge=1, description="页码"),
-    page_size: int = Query(20, ge=1, le=5000, description="每页数量"),
+    page_size: int = Query(
+        settings.DEFAULT_PAGE_SIZE,
+        ge=1,
+        le=settings.SCHOOL_LIST_MAX_PAGE_SIZE,
+        description="每页数量",
+    ),
     session: AsyncSession = Depends(get_async_session),
 ):
     """

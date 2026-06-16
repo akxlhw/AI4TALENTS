@@ -9,10 +9,10 @@ os.environ["REDIS_ENABLED"] = "false"
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.shared.models.enums import RoleType, VisibilityStatus
 from app.domains.academic.models.school import School
 from app.domains.academic.models.talent import Talent
 from app.domains.academic.models.tech_domain import TalentTechTag, TechDirection, TechDomain
+from app.domains.shared.models.enums import RoleType, VisibilityStatus
 
 
 @pytest.fixture

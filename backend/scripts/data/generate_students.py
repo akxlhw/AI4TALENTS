@@ -2,10 +2,9 @@
 Generate sample student data for existing schools.
 """
 import random
-import asyncio
 from datetime import datetime
+
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
 
 # Sample data pools
 FIRST_NAMES = [

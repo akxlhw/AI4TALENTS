@@ -3,15 +3,15 @@ CS背景得分筛选机制演示脚本
 
 演示不同学科背景的作者如何被计算CS得分并决定是否入库。
 """
+import io
 import json
 import sys
-import io
 
 # 设置标准输出为UTF-8编码
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-from app.domains.academic.services.normalizers.author import AuthorNormalizer
 from app.domains.academic.services.common.cs_concepts import CORE_CS_CONCEPTS, CS_SCORE_THRESHOLD
+from app.domains.academic.services.normalizers.author import AuthorNormalizer
 
 
 def create_demo_data():

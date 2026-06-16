@@ -16,7 +16,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.domains.academic.models.raw_data import AuthorTechBelong, RawAuthor, RawInstitution, RawWork
+from app.domains.academic.models.raw_data import (
+    AuthorTechBelong,
+    RawAuthor,
+    RawInstitution,
+    RawWork,
+)
 from app.domains.academic.models.standardized import StdAuthor, StdSchool
 from app.domains.academic.models.sync import CollectTask
 from app.domains.academic.models.talent import Talent
@@ -352,9 +357,9 @@ class TestMultiVenueTechBelong:
         work counts across venues.
         """
         from app.domains.academic.models.raw_data import RawWork
-        from app.domains.academic.models.venue import Venue, VenueTechBinding
         from app.domains.academic.models.talent import Talent
         from app.domains.academic.models.tech_domain import TalentTechTag
+        from app.domains.academic.models.venue import Venue, VenueTechBinding
         from app.domains.academic.services.normalizers import TechBelongCalculator
         from app.domains.academic.services.sync.tech_tag_sync import TechTagSyncService
 
@@ -433,9 +438,9 @@ class TestMultiVenueTechBelong:
             )
         )
         belongs = result.scalars().all()
-        assert len(belongs) == 2, (
-            f"Should have 2 AuthorTechBelong records (one per venue), got {len(belongs)}"
-        )
+        assert (
+            len(belongs) == 2
+        ), f"Should have 2 AuthorTechBelong records (one per venue), got {len(belongs)}"
 
         # Verify venue-specific counts
         venue_counts = {b.source_venue_id: b.work_count_in_venue for b in belongs}
@@ -468,18 +473,16 @@ class TestMultiVenueTechBelong:
             select(TalentTechTag).where(TalentTechTag.talent_id == talent.talent_id)
         )
         tag = result.scalar_one()
-        assert tag.confidence_score == 0.5, (
-            f"Expected confidence_score=0.5 (5 works / 10), got {tag.confidence_score}"
-        )
+        assert (
+            tag.confidence_score == 0.5
+        ), f"Expected confidence_score=0.5 (5 works / 10), got {tag.confidence_score}"
 
 
 class TestBatchNormalization:
     """Test batch-mode normalize_all_authors with mixed existing/new/bad-json authors."""
 
     @pytest.mark.asyncio
-    async def test_batch_normalize_with_fallback(
-        self, test_session: AsyncSession, full_setup
-    ):
+    async def test_batch_normalize_with_fallback(self, test_session: AsyncSession, full_setup):
         """
         Regression test for batch normalization refactor.
 
@@ -490,8 +493,8 @@ class TestBatchNormalization:
         - RawAuthor.processed_status and std_author_id updated correctly
         """
         from app.domains.academic.models.standardized import StdAuthor
-        from app.domains.academic.services.normalizers import AuthorNormalizer
         from app.domains.academic.models.sync import CollectTask
+        from app.domains.academic.services.normalizers import AuthorNormalizer
 
         setup = full_setup
 
@@ -525,10 +528,12 @@ class TestBatchNormalization:
         raw_authors = [
             RawAuthor(
                 openalex_author_id="A-EXISTING",
-                raw_json=json.dumps({
-                    "topics": [{"display_name": "Machine Learning", "count": 5}],
-                    "x_concepts": [{"id": "154945302", "score": 0.8}],
-                }),
+                raw_json=json.dumps(
+                    {
+                        "topics": [{"display_name": "Machine Learning", "count": 5}],
+                        "x_concepts": [{"id": "154945302", "score": 0.8}],
+                    }
+                ),
                 display_name="Updated Name",
                 works_count=20,
                 cited_by_count=200,
@@ -538,10 +543,12 @@ class TestBatchNormalization:
             ),
             RawAuthor(
                 openalex_author_id="A-NEW-1",
-                raw_json=json.dumps({
-                    "topics": [{"display_name": "Deep Learning", "count": 4}],
-                    "x_concepts": [{"id": "154945302", "score": 0.5}],
-                }),
+                raw_json=json.dumps(
+                    {
+                        "topics": [{"display_name": "Deep Learning", "count": 4}],
+                        "x_concepts": [{"id": "154945302", "score": 0.5}],
+                    }
+                ),
                 display_name="New Author One",
                 works_count=15,
                 cited_by_count=150,
@@ -551,10 +558,12 @@ class TestBatchNormalization:
             ),
             RawAuthor(
                 openalex_author_id="A-NEW-2",
-                raw_json=json.dumps({
-                    "topics": [{"display_name": "NLP", "count": 6}],
-                    "x_concepts": [{"id": "154945302", "score": 0.9}],
-                }),
+                raw_json=json.dumps(
+                    {
+                        "topics": [{"display_name": "NLP", "count": 6}],
+                        "x_concepts": [{"id": "154945302", "score": 0.9}],
+                    }
+                ),
                 display_name="New Author Two",
                 works_count=30,
                 cited_by_count=300,
@@ -589,15 +598,13 @@ class TestBatchNormalization:
         # Verify exactly 3 StdAuthor rows (1 updated + 2 new)
         result = await test_session.execute(
             select(StdAuthor).where(
-                StdAuthor.openalex_author_id.in_(
-                    ["A-EXISTING", "A-NEW-1", "A-NEW-2", "A-BAD-JSON"]
-                )
+                StdAuthor.openalex_author_id.in_(["A-EXISTING", "A-NEW-1", "A-NEW-2", "A-BAD-JSON"])
             )
         )
         std_authors = result.scalars().all()
-        assert len(std_authors) == 3, (
-            f"Expected 3 StdAuthors (existing+2 new), got {len(std_authors)}"
-        )
+        assert (
+            len(std_authors) == 3
+        ), f"Expected 3 StdAuthors (existing+2 new), got {len(std_authors)}"
 
         # Verify existing author was updated (refresh from DB to avoid stale cache)
         existing = next((a for a in std_authors if a.openalex_author_id == "A-EXISTING"), None)
@@ -618,28 +625,26 @@ class TestBatchNormalization:
         # Verify RawAuthor statuses
         result = await test_session.execute(
             select(RawAuthor).where(
-                RawAuthor.openalex_author_id.in_(
-                    ["A-EXISTING", "A-NEW-1", "A-NEW-2"]
-                )
+                RawAuthor.openalex_author_id.in_(["A-EXISTING", "A-NEW-1", "A-NEW-2"])
             )
         )
         processed_raws = result.scalars().all()
         for ra in processed_raws:
-            assert ra.processed_status == "processed", (
-                f"RawAuthor {ra.openalex_author_id} should be marked processed"
-            )
-            assert ra.std_author_id is not None, (
-                f"RawAuthor {ra.openalex_author_id} should have std_author_id"
-            )
+            assert (
+                ra.processed_status == "processed"
+            ), f"RawAuthor {ra.openalex_author_id} should be marked processed"
+            assert (
+                ra.std_author_id is not None
+            ), f"RawAuthor {ra.openalex_author_id} should have std_author_id"
 
         # Verify bad JSON author is marked as failed (not re-processed in next loop)
         result = await test_session.execute(
             select(RawAuthor).where(RawAuthor.openalex_author_id == "A-BAD-JSON")
         )
         bad_raw = result.scalar_one()
-        assert bad_raw.processed_status == "failed", (
-            "Bad JSON author should be marked failed to avoid infinite re-processing"
-        )
+        assert (
+            bad_raw.processed_status == "failed"
+        ), "Bad JSON author should be marked failed to avoid infinite re-processing"
 
 
 class TestSchoolNormalizerNoEmptyStringMatch:
@@ -673,12 +678,10 @@ class TestSchoolNormalizerNoEmptyStringMatch:
         assert normalizer.normalize_school_name("Stanford University") == "stanford"
 
     @pytest.mark.asyncio
-    async def test_find_matching_school_skips_empty_normalized(
-        self, test_session: AsyncSession
-    ):
+    async def test_find_matching_school_skips_empty_normalized(self, test_session: AsyncSession):
         """When normalized name is empty/too short, skip fuzzy match entirely."""
-        from app.domains.academic.services.normalizers.school import SchoolNormalizer
         from app.domains.academic.models.standardized import StdSchool
+        from app.domains.academic.services.normalizers.school import SchoolNormalizer
 
         normalizer = SchoolNormalizer(test_session)
 
@@ -698,9 +701,7 @@ class TestSchoolNormalizerNoEmptyStringMatch:
 
         # Must return None because openalex_id is None and exact/alias fail,
         # and normalized match is skipped for empty/short strings.
-        assert matched is None, (
-            "Empty normalized string must not trigger a full-table fuzzy match"
-        )
+        assert matched is None, "Empty normalized string must not trigger a full-table fuzzy match"
         assert match_type == "none"
 
     @pytest.mark.asyncio
@@ -709,9 +710,9 @@ class TestSchoolNormalizerNoEmptyStringMatch:
     ):
         """If find_matching_school returns a weak match, normalize_institution
         must create a new record instead of overwriting the existing one."""
-        from app.domains.academic.services.normalizers.school import SchoolNormalizer
         from app.domains.academic.models.raw_data import RawInstitution
         from app.domains.academic.models.standardized import StdSchool
+        from app.domains.academic.services.normalizers.school import SchoolNormalizer
 
         normalizer = SchoolNormalizer(test_session)
 
@@ -754,9 +755,9 @@ class TestSchoolNormalizerNoEmptyStringMatch:
         std_school = await normalizer.normalize_institution(raw_univ, task_id=None)
 
         # 5. Verify: a NEW record was created
-        assert std_school.std_school_id != mit_id, (
-            "normalize_institution must create a new record, not overwrite MIT"
-        )
+        assert (
+            std_school.std_school_id != mit_id
+        ), "normalize_institution must create a new record, not overwrite MIT"
         assert std_school.name_normalized == "University School"
         assert std_school.openalex_institution_id == "I-UNIV-SCHOOL"
 
@@ -773,9 +774,9 @@ class TestSchoolNormalizerNoEmptyStringMatch:
         self, test_session: AsyncSession
     ):
         """When openalex_id matches exactly, updating the existing record is safe."""
-        from app.domains.academic.services.normalizers.school import SchoolNormalizer
         from app.domains.academic.models.raw_data import RawInstitution
         from app.domains.academic.models.standardized import StdSchool
+        from app.domains.academic.services.normalizers.school import SchoolNormalizer
 
         normalizer = SchoolNormalizer(test_session)
 

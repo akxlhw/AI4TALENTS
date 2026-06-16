@@ -30,6 +30,14 @@ export const academicApi = {
       apiClient.post('/talents/collaborations/sync', null, { params: { talent_id: talentId } }),
     getCollaborationSyncStatus: () =>
       apiClient.get('/talents/collaborations/status'),
+    getGenealogy: (id: number, params?: { depth?: number; min_confidence?: number; relationship_type?: string; tier_filter?: string }) =>
+      apiClient.get(`/talents/${id}/genealogy`, { params }),
+    syncGenealogy: () =>
+      apiClient.post('/talents/genealogy/sync'),
+    getGenealogySyncStatus: () =>
+      apiClient.get('/talents/genealogy/sync-status'),
+    getInfluenceRanking: (params?: { tier?: string; limit?: number }) =>
+      apiClient.get('/talents/genealogy/influence-ranking', { params }),
   },
 
   search: {

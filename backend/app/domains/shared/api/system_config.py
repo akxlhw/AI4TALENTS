@@ -397,7 +397,12 @@ async def get_github_config(
     )
 
 
-@router.put("/github", response_model=dict, summary="更新 GitHub 配置", description="更新 GitHub API 相关配置")
+@router.put(
+    "/github",
+    response_model=dict,
+    summary="更新 GitHub 配置",
+    description="更新 GitHub API 相关配置",
+)
 async def update_github_config(
     request: GitHubConfigRequest,
     session: AsyncSession = Depends(get_async_session),

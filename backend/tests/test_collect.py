@@ -18,7 +18,6 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.shared.models.enums import RoleType, VisibilityStatus
 from app.domains.academic.models.raw_data import AuthorTechBelong
 from app.domains.academic.models.school import School
 from app.domains.academic.models.standardized import StdAuthor, StdSchool
@@ -26,12 +25,16 @@ from app.domains.academic.models.sync import CollectTask
 from app.domains.academic.models.talent import Talent
 from app.domains.academic.models.tech_domain import TalentTechTag, TechDirection, TechDomain
 from app.domains.academic.models.venue import Venue, VenueSubTask, VenueTechBinding
-from app.domains.academic.repositories.collect_repository import CollectTaskRepository, TechDomainCollectRepository
+from app.domains.academic.repositories.collect_repository import (
+    CollectTaskRepository,
+    TechDomainCollectRepository,
+)
 from app.domains.academic.repositories.tech_domain_repository import TechDomainRepository
 from app.domains.academic.repositories.venue_repository import (
     VenueSubTaskRepository,
     VenueTechBindingRepository,
 )
+from app.domains.shared.models.enums import RoleType, VisibilityStatus
 
 # ============ Fixtures ============
 

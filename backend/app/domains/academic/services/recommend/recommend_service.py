@@ -206,7 +206,13 @@ class RecommendService:
             "exclude_ids": exclude_ids,
         }
         if filters:
-            for key in ("school_ids", "role_type", "min_citations", "country_code", "tech_domain_id"):
+            for key in (
+                "school_ids",
+                "role_type",
+                "min_citations",
+                "country_code",
+                "tech_domain_id",
+            ):
                 if key in filters:
                     search_filters[key] = filters[key]
 
@@ -490,4 +496,3 @@ class RecommendService:
         elif similarity_score > 0:
             return ["部分匹配：有一定相似性"]
         return []
-

@@ -222,7 +222,9 @@ async def remove_pool_member(
     return SuccessResponse(message="Removed from pool")
 
 
-@router.get("/talent-pools/{pool_id}/members", response_model=PaginatedResponse[OSPoolMemberResponse])
+@router.get(
+    "/talent-pools/{pool_id}/members", response_model=PaginatedResponse[OSPoolMemberResponse]
+)
 async def list_pool_members(
     pool_id: int,
     page: int = Query(1, ge=1),

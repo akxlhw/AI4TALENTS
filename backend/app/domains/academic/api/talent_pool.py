@@ -74,7 +74,9 @@ async def list_pools(
     items = []
     for pool in pools:
         # Get member count
-        members, _ = await service.get_pool_members(pool.pool_id, page=1, page_size=_PREVIEW_PAGE_SIZE)
+        members, _ = await service.get_pool_members(
+            pool.pool_id, page=1, page_size=_PREVIEW_PAGE_SIZE
+        )
         items.append(
             TalentPoolResponse(
                 pool_id=pool.pool_id,

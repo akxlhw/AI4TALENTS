@@ -58,9 +58,7 @@ class UserAccount(Base, TimestampMixin):
     privacy_policy_version = Column(String(20), nullable=True)
     terms_of_use_accepted_at = Column(DateTime, nullable=True)
     terms_of_use_version = Column(String(20), nullable=True)
-    storage_consent_level = Column(
-        String(20), default="necessary", nullable=False
-    )
+    storage_consent_level = Column(String(20), default="necessary", nullable=False)
 
     # Relationships
     school_scopes = relationship("UserSchoolScope", back_populates="user")

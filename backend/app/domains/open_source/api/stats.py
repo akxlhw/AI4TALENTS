@@ -139,9 +139,7 @@ async def generate_embeddings(
         )
     )
 
-    return SuccessResponse(
-        message=f"Embedding generation started for {total} developers"
-    )
+    return SuccessResponse(message=f"Embedding generation started for {total} developers")
 
 
 @router.get("/embeddings/progress")

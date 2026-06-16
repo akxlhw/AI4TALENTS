@@ -72,6 +72,16 @@ async def super_admin_token(client: AsyncClient, test_super_admin):
 
 
 @pytest.fixture
+async def normal_user_token(client: AsyncClient, test_target_user):
+    """Get auth token for a normal user."""
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "activitytarget", "password": "password123"},
+    )
+    return response.json()["access_token"]
+
+
+@pytest.fixture
 async def login_audit_logs(test_session, test_target_user):
     """Create sample login audit logs for the target user."""
     from datetime import datetime

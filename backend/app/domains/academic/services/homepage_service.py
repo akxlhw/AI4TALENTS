@@ -50,9 +50,7 @@ class HomepageService:
         """
         return await self.repo.get_top_countries(limit=limit)
 
-    async def get_top_schools(
-        self, limit: int = 5, country_code: str | None = None
-    ) -> list[dict]:
+    async def get_top_schools(self, limit: int = 5, country_code: str | None = None) -> list[dict]:
         """
         获取Top院校（按人才数排序）
 

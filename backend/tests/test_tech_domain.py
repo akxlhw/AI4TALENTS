@@ -7,9 +7,9 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.auth import hash_password
+from app.domains.academic.models.tech_domain import TechDirection, TechDomain
 from app.domains.shared.models.enums import UserRoleType
 from app.domains.shared.models.iam import UserAccount
-from app.domains.academic.models.tech_domain import TechDirection, TechDomain
 
 
 @pytest.fixture

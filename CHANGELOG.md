@@ -7,7 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.1.1] - TBD
+## [2.2.0] - 2026-06-16
+
+### Added
+
+- **学术族谱人才洞察** (`domains/academic/services/genealogy_service.py`, `influence_service.py`)
+  - 新增 `genealogy_edge`（学术族谱边）与 `talent_influence_score`（影响力评分）两张表及 Alembic 迁移 `049_add_genealogy_tables`
+  - 影响力评分算法：h_index / citation / works / collaboration / bridge 五维加权，输出 composite_score 与 tier 分层（tier1 学术领军 / tier2 中坚学者 / tier3 青年才俊 / tier4 新锐）
+  - 导师-学生传承关系推断：基于 `raw_work.raw_json` 的 authorships 位置模式、同机构、重复合作、时间跨度等信号累加置信度
+  - API：`GET /api/v1/talents/{talent_id}/genealogy`（族谱网络查询）、`POST /api/v1/talents/genealogy/sync`（同步触发）
+  - 前端：`GenealogyGraph.tsx`（ECharts 分层力导向图），集成至人才详情页
+  - 设计依据：`docs/academic-genealogy-v2.2.0-design.md`
+
+- **运维脚本** (`scripts/ops/deploy_database.py`, `deploy_database.sh`)
+  - 数据库部署自动化
+
+- **采集配置增强**：前端 `collect-config-tab` 新增配置项（+95 行）
+
+### Changed
+
+- **采集数据提取层重构** (`services/data_fetchers.py`，+130 行)：扩展原始数据字段提取逻辑
+- **标准化层调整**：`AuthorNormalizer`、`SchoolNormalizer` 适配新增字段
+- **采集流水线阶段调整**：Phase 1（论文采集）、Phase 4/5（学校/作者标准化）、Phase 10（学校统计）流程优化
+- **核心配置扩展** (`core/config.py`，+14 行)：新增族谱相关配置项
+
+### Fixed
+
+- **历史迁移健壮性修复**：`012`/`022`/`025` 迁移将 `information_schema` 元数据查询替换为 `pg_catalog.pg_attribute` / `pg_constraint`，避免在权限受限或 schema 视图异常的环境下重复执行失败
+
+## [2.1.1] - 2026-05-29
 
 ### Fixed
 

@@ -343,7 +343,10 @@ class TestEmbeddingServiceErrorHandling:
     async def test_handles_invalid_talent_id(self, test_session: AsyncSession):
         """应处理无效人才ID"""
         # Arrange
-        from app.domains.academic.services.embedding.embedding_service import EmbeddingError, EmbeddingService
+        from app.domains.academic.services.embedding.embedding_service import (
+            EmbeddingError,
+            EmbeddingService,
+        )
 
         service = EmbeddingService(session=test_session, llm_gateway=MockLLMGateway())
 

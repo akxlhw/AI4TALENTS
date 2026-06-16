@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_async_session
 from app.domains.academic.services.embedding_domain_service import EmbeddingDomainService
 from app.domains.shared.api.auth import require_user
@@ -120,7 +121,7 @@ async def get_generation_progress(
 )
 async def trigger_generation(
     force: bool = False,
-    batch_size: int = 100,
+    batch_size: int = settings.EMBEDDING_BATCH_SIZE,
     vector_types: str = "research",  # Comma-separated: "research,papers"
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_super_admin),
@@ -217,7 +218,9 @@ async def cancel_generation(
         raise HTTPException(status_code=400, detail="No generation task is running")
 
     _embedding_progress["status"] = "cancelled"
-    _embedding_progress["completed_at"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    _embedding_progress["completed_at"] = (
+        datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    )
 
     return SuccessResponse(message="Generation task cancelled")
 

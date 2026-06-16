@@ -53,7 +53,9 @@ class ErrorResponse(BaseModel):
     error: str = Field(description="Error type")
     message: str = Field(description="Error message")
     detail: str | None = Field(default=None, description="Detailed error info")
-    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None).isoformat())
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    )
 
 
 class SuccessResponse(BaseModel):

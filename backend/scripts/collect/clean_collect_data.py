@@ -3,13 +3,14 @@
 删除所有采集相关的数据，保留系统配置
 """
 import asyncio
-import sys
 import os
+import sys
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from sqlalchemy import text
+
 from app.core.database import AsyncSessionLocal
 
 

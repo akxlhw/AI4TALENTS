@@ -14,8 +14,8 @@ Or create the database manually:
 
     psql -U postgres -c "CREATE DATABASE talent_db_test OWNER talent_user;"
 """
-import sys
 import os
+import sys
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 def main():
     from sqlalchemy import create_engine, text
+
     from app.core.config import settings
 
     # Parse DATABASE_URL to get connection info

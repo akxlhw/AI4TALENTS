@@ -93,9 +93,7 @@ class CircuitBreaker:
         if time.time() - self._opened_at >= self.recovery_timeout:
             self._state = CircuitState.HALF_OPEN
             self._consecutive_failures = 0
-            logger.warning(
-                f"Circuit breaker '{self.name}' entering HALF_OPEN after timeout"
-            )
+            logger.warning(f"Circuit breaker '{self.name}' entering HALF_OPEN after timeout")
             return True
         return False
 
@@ -116,9 +114,7 @@ class CircuitBreaker:
             if self._state == CircuitState.HALF_OPEN:
                 self._state = CircuitState.OPEN
                 self._opened_at = time.time()
-                logger.error(
-                    f"Circuit breaker '{self.name}' OPEN (probe failed)"
-                )
+                logger.error(f"Circuit breaker '{self.name}' OPEN (probe failed)")
             elif self._should_trip():
                 self._state = CircuitState.OPEN
                 self._opened_at = time.time()
@@ -141,9 +137,7 @@ class CircuitBreaker:
         """
         async with self._lock:
             if not await self._can_execute():
-                raise CircuitBreakerOpenError(
-                    f"Circuit breaker '{self.name}' is OPEN"
-                )
+                raise CircuitBreakerOpenError(f"Circuit breaker '{self.name}' is OPEN")
 
         try:
             result = await func(*args, **kwargs)

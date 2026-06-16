@@ -410,8 +410,9 @@ class OpenSourceCoreRepository:
     async def count_repository_contributors(self, repo_id: int) -> int:
         """Count distinct contributors for a repository."""
         result = await self.session.scalar(
-            select(func.count(func.distinct(OSContribution.developer_id)))
-            .where(OSContribution.repo_id == repo_id)
+            select(func.count(func.distinct(OSContribution.developer_id))).where(
+                OSContribution.repo_id == repo_id
+            )
         )
         return result or 0
 
@@ -441,9 +442,11 @@ class OpenSourceCoreRepository:
             )
 
         total = await self.session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-        stmt = stmt.order_by(OSFavourite.created_at.desc()).offset(
-            (page - 1) * page_size
-        ).limit(page_size)
+        stmt = (
+            stmt.order_by(OSFavourite.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
         result = await self.session.execute(stmt)
         return list(result.scalars().all()), total
 
@@ -747,4 +750,3 @@ class OpenSourceCoreRepository:
                 mapping[dev_id] = []
             mapping[dev_id].append(full_name)
         return mapping
-

@@ -73,9 +73,7 @@ class SearchService:
             SearchMode.HYBRID: HybridSearchStrategy(context),
         }
         # Allow strategies to reference each other for fallback chains
-        context.strategies = {
-            mode.value: strategy for mode, strategy in self._strategies.items()
-        }
+        context.strategies = {mode.value: strategy for mode, strategy in self._strategies.items()}
 
     @classmethod
     async def create_with_embedding(
@@ -90,7 +88,10 @@ class SearchService:
         needs_embedding = False
         if mode is not None:
             if isinstance(mode, str):
-                needs_embedding = mode.lower() in (SearchMode.SEMANTIC.value, SearchMode.HYBRID.value)
+                needs_embedding = mode.lower() in (
+                    SearchMode.SEMANTIC.value,
+                    SearchMode.HYBRID.value,
+                )
             else:
                 needs_embedding = mode in (SearchMode.SEMANTIC, SearchMode.HYBRID)
 

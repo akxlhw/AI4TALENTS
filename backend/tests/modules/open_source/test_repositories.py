@@ -12,7 +12,6 @@ from app.domains.open_source.models.open_source import (
     OSDeveloper,
     OSFavourite,
     OSLanguageSkill,
-    OSPoolMember,
     OSRepoConfig,
     OSRepository,
     OSTalentPool,
@@ -79,11 +78,13 @@ class TestRepoConfigRepository:
     async def test_create_repo_config(self, test_session: AsyncSession):
         """Test creating a repo config."""
         repo = OpenSourceRepository(test_session)
-        created = await repo.create_repo_config({
-            "repo_full_name": "new-org/new-repo",
-            "tech_element": "robotics",
-            "display_name": "New Repo",
-        })
+        created = await repo.create_repo_config(
+            {
+                "repo_full_name": "new-org/new-repo",
+                "tech_element": "robotics",
+                "display_name": "New Repo",
+            }
+        )
         assert created.repo_config_id is not None
         assert created.repo_full_name == "new-org/new-repo"
 
@@ -164,7 +165,9 @@ class TestDeveloperRepository:
         return repos
 
     @pytest.fixture
-    async def sample_contributions(self, test_session: AsyncSession, sample_developer, sample_repos):
+    async def sample_contributions(
+        self, test_session: AsyncSession, sample_developer, sample_repos
+    ):
         """Create sample contributions."""
         contrib = OSContribution(
             developer_id=sample_developer.developer_id,
@@ -205,7 +208,9 @@ class TestDeveloperRepository:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_get_developer_repositories(self, test_session: AsyncSession, sample_developer, sample_repos):
+    async def test_get_developer_repositories(
+        self, test_session: AsyncSession, sample_developer, sample_repos
+    ):
         """Test getting developer repositories."""
         repo = OpenSourceRepository(test_session)
         results = await repo.get_developer_repositories(sample_developer.developer_id)
@@ -214,7 +219,9 @@ class TestDeveloperRepository:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_get_developer_contributions(self, test_session: AsyncSession, sample_developer, sample_contributions):
+    async def test_get_developer_contributions(
+        self, test_session: AsyncSession, sample_developer, sample_contributions
+    ):
         """Test getting developer contributions."""
         repo = OpenSourceRepository(test_session)
         results = await repo.get_developer_contributions(sample_developer.developer_id)
@@ -256,7 +263,9 @@ class TestFavouriteRepository:
         """Create a sample favourite."""
         from app.domains.shared.models.iam import UserAccount
 
-        user = UserAccount(username="favuser", email="fav@test.com", password_hash="hash", role_type="user")
+        user = UserAccount(
+            username="favuser", email="fav@test.com", password_hash="hash", role_type="user"
+        )
         test_session.add(user)
         await test_session.flush()
 
@@ -298,7 +307,9 @@ class TestFavouriteRepository:
         """Test creating a favourite."""
         from app.domains.shared.models.iam import UserAccount
 
-        user = UserAccount(username="newfavuser", email="newfav@test.com", password_hash="hash", role_type="user")
+        user = UserAccount(
+            username="newfavuser", email="newfav@test.com", password_hash="hash", role_type="user"
+        )
         test_session.add(user)
         await test_session.flush()
 
@@ -307,7 +318,9 @@ class TestFavouriteRepository:
         await test_session.flush()
 
         repo = OpenSourceRepository(test_session)
-        fav = await repo.create_favourite(user_id=user.user_id, developer_id=dev.developer_id, notes="Note")
+        fav = await repo.create_favourite(
+            user_id=user.user_id, developer_id=dev.developer_id, notes="Note"
+        )
         assert fav.favourite_id is not None
         assert fav.is_active is True
 
@@ -328,7 +341,9 @@ class TestTalentPoolRepository:
         """Create a sample talent pool."""
         from app.domains.shared.models.iam import UserAccount
 
-        user = UserAccount(username="poolowner", email="pool@test.com", password_hash="hash", role_type="user")
+        user = UserAccount(
+            username="poolowner", email="pool@test.com", password_hash="hash", role_type="user"
+        )
         test_session.add(user)
         await test_session.flush()
 
@@ -365,15 +380,22 @@ class TestTalentPoolRepository:
         """Test creating a talent pool."""
         from app.domains.shared.models.iam import UserAccount
 
-        user = UserAccount(username="newpoolowner", email="newpool@test.com", password_hash="hash", role_type="user")
+        user = UserAccount(
+            username="newpoolowner",
+            email="newpool@test.com",
+            password_hash="hash",
+            role_type="user",
+        )
         test_session.add(user)
         await test_session.flush()
 
         repo = OpenSourceRepository(test_session)
-        pool = await repo.create_talent_pool({
-            "owner_user_id": user.user_id,
-            "pool_name": "New Pool",
-        })
+        pool = await repo.create_talent_pool(
+            {
+                "owner_user_id": user.user_id,
+                "pool_name": "New Pool",
+            }
+        )
         assert pool.pool_id is not None
         assert pool.pool_status == "active"
 
@@ -447,10 +469,12 @@ class TestCollectTaskRepository:
     async def test_create_collect_task(self, test_session: AsyncSession):
         """Test creating a collect task."""
         repo = OpenSourceRepository(test_session)
-        task = await repo.create_collect_task({
-            "task_name": "new-task",
-            "config_json": {},
-        })
+        task = await repo.create_collect_task(
+            {
+                "task_name": "new-task",
+                "config_json": {},
+            }
+        )
         assert task.task_id is not None
         assert task.status == "pending"
 
@@ -509,7 +533,9 @@ class TestStatsRepository:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_get_embedding_status(self, test_session: AsyncSession, sample_developer_for_stats):
+    async def test_get_embedding_status(
+        self, test_session: AsyncSession, sample_developer_for_stats
+    ):
         """Test getting embedding status."""
         repo = OpenSourceRepository(test_session)
         status = await repo.get_embedding_status()

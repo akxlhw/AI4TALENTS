@@ -154,12 +154,9 @@ class SchoolNormalizer:
             # openalex_id match is definitive; name/alias/normalized matches are
             # heuristic and must have the same openalex_id to avoid merging
             # unrelated institutions (e.g. "University School" overwriting MIT).
-            can_update = (
-                match_type == "openalex_id"
-                or (
-                    raw_inst.openalex_institution_id
-                    and raw_inst.openalex_institution_id == matched.openalex_institution_id
-                )
+            can_update = match_type == "openalex_id" or (
+                raw_inst.openalex_institution_id
+                and raw_inst.openalex_institution_id == matched.openalex_institution_id
             )
             if can_update:
                 matched.name_normalized = raw_inst.display_name
@@ -178,12 +175,17 @@ class SchoolNormalizer:
         # Create new
         return await self.create_std_school(raw_inst, task_id)
 
-    async def normalize_all_institutions(self, task_id: int | None = None) -> NormalizationResult:
+    async def normalize_all_institutions(
+        self, task_id: int | None = None, *, commit_per_batch: bool = True
+    ) -> NormalizationResult:
         """Normalize all pending institutions for a specific task.
 
         Args:
             task_id: The collection task ID. Only institutions from this task
                      will be processed. If None, processes all pending institutions.
+            commit_per_batch: If True (default), commits every 50 records.
+                Set to False when called inside a parent transaction (e.g. collection
+                phase orchestrator) so the caller can commit/rollback atomically.
 
         Returns:
             NormalizationResult with statistics
@@ -200,7 +202,7 @@ class SchoolNormalizer:
 
         result.total = len(pending)
 
-        # Commit every 50 institutions to release database lock
+        # Commit or flush every 50 institutions to release database lock
         commit_interval = 50
 
         for i, raw_inst in enumerate(pending):
@@ -213,9 +215,12 @@ class SchoolNormalizer:
                 if std_school.confirm_status == "pending_confirm":
                     result.pending_schools += 1
 
-                # Commit periodically to release database lock
+                # Commit/flush periodically to release database lock
                 if (i + 1) % commit_interval == 0:
-                    await self.session.commit()
+                    if commit_per_batch:
+                        await self.session.commit()
+                    else:
+                        await self.session.flush()
                     logger.debug(
                         f"School normalization progress: {result.processed}/{result.total}"
                     )

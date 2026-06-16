@@ -40,9 +40,7 @@ class GitHubCollector:
 
     # ============= Step helpers =============
 
-    async def _update_task(
-        self, task_id: int, **kwargs: Any
-    ) -> None:
+    async def _update_task(self, task_id: int, **kwargs: Any) -> None:
         """Update task progress in the database."""
         async with AsyncSessionLocal() as session:
             task = await session.get(OSCollectTask, task_id)
@@ -91,6 +89,7 @@ class GitHubCollector:
             from sqlalchemy import select
 
             from app.domains.open_source.models.open_source import OSRepoConfig
+
             config = await session.scalar(
                 select(OSRepoConfig).where(OSRepoConfig.repo_full_name == ctx.repo_full_name)
             )
@@ -126,7 +125,9 @@ class GitHubCollector:
             return
         total = len(contributors)
         logger.info(f"Fetched {total} contributors from {ctx.repo_full_name}")
-        await self._update_task(ctx.task_id, total_records=total, current_step="fetch_profiles", progress_percent=20)
+        await self._update_task(
+            ctx.task_id, total_records=total, current_step="fetch_profiles", progress_percent=20
+        )
 
         # Step 3-5: Process contributors concurrently with semaphore
         # Each contributor uses an independent transaction to ensure failure isolation.
@@ -146,9 +147,7 @@ class GitHubCollector:
                 try:
                     async with AsyncSessionLocal() as session:
                         sync = SyncService(session)
-                        await self._process_contributor(
-                            ctx, login, sync, repo_info, contributor
-                        )
+                        await self._process_contributor(ctx, login, sync, repo_info, contributor)
                         await session.commit()
                 except Exception as e:
                     logger.exception(f"Failed to process contributor {login}: {e}")
@@ -292,7 +291,9 @@ class GitHubCollector:
             # Batch upsert all repos (defer flush)
             repo_results: list[tuple[str, Any, dict[str, Any]]] = []
             for kind, repo_data, contrib_data in repo_ops:
-                repo_obj = await sync.upsert_repository(dev.developer_id, repo_data, auto_flush=False)
+                repo_obj = await sync.upsert_repository(
+                    dev.developer_id, repo_data, auto_flush=False
+                )
                 repo_results.append((kind, repo_obj, contrib_data))
 
             # Flush ①: allocate repo_ids for newly inserted repos
@@ -300,7 +301,9 @@ class GitHubCollector:
 
             # Batch upsert all contributions (defer flush)
             for _kind, repo_obj, contrib_data in repo_results:
-                await sync.upsert_contribution(dev.developer_id, repo_obj.repo_id, contrib_data, auto_flush=False)
+                await sync.upsert_contribution(
+                    dev.developer_id, repo_obj.repo_id, contrib_data, auto_flush=False
+                )
 
             # Flush ②: persist contributions
             await sync.session.flush()
@@ -316,14 +319,18 @@ class GitHubCollector:
             # Batch upsert language skills (defer flush)
             total_repos_with_lang = sum(s["repo_count"] for s in lang_stats.values())
             for lang, stats in lang_stats.items():
-                proportion = stats["repo_count"] / total_repos_with_lang if total_repos_with_lang > 0 else 0
+                proportion = (
+                    stats["repo_count"] / total_repos_with_lang if total_repos_with_lang > 0 else 0
+                )
                 proficiency = min(proportion * 10, 10.0)
                 skill_data = {
                     "repo_count": stats["repo_count"],
                     "total_commits": 0,
                     "proficiency_score": round(proficiency, 2),
                 }
-                await sync.upsert_language_skill(dev.developer_id, lang, skill_data, auto_flush=False)
+                await sync.upsert_language_skill(
+                    dev.developer_id, lang, skill_data, auto_flush=False
+                )
 
             # Flush ④: persist language skills
             await sync.session.flush()
@@ -389,12 +396,24 @@ class GitHubCollector:
         # Remove URL prefix if present
         if company.lower().startswith("http"):
             from urllib.parse import urlparse
+
             parsed = urlparse(company)
             company = parsed.netloc or parsed.path
             if company.lower().startswith("www."):
                 company = company[4:]
         # Remove common suffixes
-        for suffix in [" Inc.", " Inc", " Ltd.", " Ltd", " Corp.", " Corp", " LLC", " GmbH", " Co.", " Co"]:
+        for suffix in [
+            " Inc.",
+            " Inc",
+            " Ltd.",
+            " Ltd",
+            " Corp.",
+            " Corp",
+            " LLC",
+            " GmbH",
+            " Co.",
+            " Co",
+        ]:
             if company.endswith(suffix):
                 company = company[: -len(suffix)]
                 break

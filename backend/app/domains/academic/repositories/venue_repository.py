@@ -196,7 +196,10 @@ class VenueTechBindingRepository:
         work_count: int | None = None,
     ) -> None:
         """Update collection status for a binding"""
-        values = {"collect_status": status, "last_collect_at": datetime.now(timezone.utc).replace(tzinfo=None)}
+        values = {
+            "collect_status": status,
+            "last_collect_at": datetime.now(timezone.utc).replace(tzinfo=None),
+        }
         if author_count is not None:
             values["author_count"] = author_count
         if work_count is not None:

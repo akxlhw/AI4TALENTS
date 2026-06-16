@@ -50,9 +50,7 @@ class SuggestionRepository:
             .where(Suggestion.user_id == user_id)
             .order_by(desc(Suggestion.created_at))
         )
-        total_result = await self.session.execute(
-            select(func.count()).select_from(stmt.subquery())
-        )
+        total_result = await self.session.execute(select(func.count()).select_from(stmt.subquery()))
         total = total_result.scalar() or 0
 
         stmt = stmt.offset((page - 1) * page_size).limit(page_size)
@@ -72,9 +70,7 @@ class SuggestionRepository:
         if category:
             stmt = stmt.where(Suggestion.category == category)
 
-        total_result = await self.session.execute(
-            select(func.count()).select_from(stmt.subquery())
-        )
+        total_result = await self.session.execute(select(func.count()).select_from(stmt.subquery()))
         total = total_result.scalar() or 0
 
         stmt = stmt.offset((page - 1) * page_size).limit(page_size)

@@ -40,9 +40,7 @@ class FulltextSearchStrategy(SearchStrategy):
             doc_count = count_result.scalar() or 0
 
             if doc_count == 0:
-                logger.info(
-                    "SearchTalentDocument table is empty, falling back to keyword search"
-                )
+                logger.info("SearchTalentDocument table is empty, falling back to keyword search")
                 return await self._fallback(query, page, page_size, filters)
 
             # Build tsquery with OR connector for partial matching
@@ -117,9 +115,7 @@ class FulltextSearchStrategy(SearchStrategy):
             logger.warning(f"Fulltext search failed: {e}, falling back to keyword search")
             return await self._fallback(query, page, page_size, filters)
 
-    async def _fallback(
-        self, query: str, page: int, page_size: int, filters: dict | None
-    ) -> dict:
+    async def _fallback(self, query: str, page: int, page_size: int, filters: dict | None) -> dict:
         """Delegate to keyword search strategy."""
         keyword = self.context.strategies.get("keyword")
         if keyword:

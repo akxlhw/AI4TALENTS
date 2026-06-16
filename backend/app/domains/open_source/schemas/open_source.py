@@ -11,13 +11,16 @@ from pydantic import BaseModel, Field
 
 # ============= Repo Config =============
 
+
 class OSRepoConfigCreate(BaseModel):
     """Create repo config request."""
 
     repo_full_name: str = Field(..., description="GitHub repo full name, e.g. 'pytorch/pytorch'")
     display_name: str | None = Field(default=None, description="Display name")
     description: str | None = Field(default=None, description="Repository description")
-    tech_element: str = Field(..., description="Tech element code: ai/robotics/data_science/networks/systems/security")
+    tech_element: str = Field(
+        ..., description="Tech element code: ai/robotics/data_science/networks/systems/security"
+    )
     tech_direction_id: int | None = Field(default=None, description="Optional tech direction ID")
     language: str | None = Field(default=None, description="Primary programming language")
     notes: str | None = Field(default=None, description="Admin notes")
@@ -59,6 +62,7 @@ class OSRepoConfigResponse(BaseModel):
 
 
 # ============= Developer =============
+
 
 class OSDeveloperSummary(BaseModel):
     """Developer summary for list views."""
@@ -159,6 +163,7 @@ class OSDeveloperCompareResponse(BaseModel):
 
 # ============= Search =============
 
+
 class OSSearchFilters(BaseModel):
     """Search filters."""
 
@@ -182,6 +187,7 @@ class OSSearchRequest(BaseModel):
 
 
 # ============= Favorite =============
+
 
 class OSFavoriteCreate(BaseModel):
     """Create favorite request."""
@@ -221,6 +227,7 @@ class OSFavoriteIdsResponse(BaseModel):
 
 
 # ============= Talent Pool =============
+
 
 class OSTalentPoolCreate(BaseModel):
     """Create talent pool request."""
@@ -269,6 +276,7 @@ class OSPoolMemberResponse(BaseModel):
 
 
 # ============= Collect Task =============
+
 
 class OSCollectTaskCreate(BaseModel):
     """Create collect task request."""
@@ -329,6 +337,7 @@ class OSBatchCollectResponse(BaseModel):
 
 # ============= Stats =============
 
+
 class OSStatsResponse(BaseModel):
     """Open source stats response."""
 
@@ -352,6 +361,7 @@ class OSTrendingRepoItem(BaseModel):
 
 
 # ============= JD Match =============
+
 
 class OSJDMatchRequest(BaseModel):
     """JD match request."""
@@ -384,6 +394,7 @@ class OSJDMatchResponse(BaseModel):
 
 # ============= Embedding =============
 
+
 class OSEmbeddingStatusResponse(BaseModel):
     """Embedding status response."""
 
@@ -403,6 +414,7 @@ class OSEmbeddingGenerateRequest(BaseModel):
 
 
 # ============= Repository Detail =============
+
 
 class OSRepositoryDetailResponse(BaseModel):
     """Repository detail response."""

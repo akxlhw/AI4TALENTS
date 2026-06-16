@@ -6,12 +6,14 @@ OpenAlex 完整数据采集脚本
     python scripts/collect_openalex.py
 """
 import sys
+
 sys.path.insert(0, '.')
 
-import sqlite3
-import requests
-import time
 import json
+import sqlite3
+import time
+
+import requests
 
 OPENALEX_BASE_URL = "https://api.openalex.org"
 POLITE_POOL = "mailto:research@example.com"
@@ -223,7 +225,7 @@ def main():
 
             time.sleep(0.3)
 
-        except Exception as e:
+        except Exception:
             pass
 
     conn.commit()
@@ -265,7 +267,7 @@ def main():
 
             time.sleep(0.3)
 
-        except Exception as e:
+        except Exception:
             pass
 
     conn.commit()

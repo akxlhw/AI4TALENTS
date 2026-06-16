@@ -123,7 +123,10 @@ async def create_collect_task(
     session: AsyncSession = Depends(get_async_session),
     user: dict = Depends(require_super_admin),
 ):
-    task_name = data.task_name or f"Collection_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d_%H%M%S')}"
+    task_name = (
+        data.task_name
+        or f"Collection_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d_%H%M%S')}"
+    )
     config_json = data.model_dump(exclude_unset=True)
     service = OpenSourceService(session)
     task = await service.create_collect_task(

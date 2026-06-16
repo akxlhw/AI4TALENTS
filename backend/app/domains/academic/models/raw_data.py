@@ -45,7 +45,9 @@ class RawWork(Base, TimestampMixin):
     error_info = Column(Text, nullable=True)
 
     # Collection metadata
-    fetched_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    fetched_at = Column(
+        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
     fetch_task_id = Column(Integer, ForeignKey("sync_collect_task.task_id"), nullable=True)
 
     # Sub-task reference
@@ -94,7 +96,9 @@ class RawAuthor(Base, TimestampMixin):
     error_info = Column(Text, nullable=True)
 
     # Collection metadata
-    fetched_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    fetched_at = Column(
+        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
     fetch_task_id = Column(Integer, ForeignKey("sync_collect_task.task_id"), nullable=True)
 
     # Normalized reference (after standardization)
@@ -130,7 +134,9 @@ class RawInstitution(Base, TimestampMixin):
     error_info = Column(Text, nullable=True)
 
     # Collection metadata
-    fetched_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    fetched_at = Column(
+        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
     fetch_task_id = Column(Integer, ForeignKey("sync_collect_task.task_id"), nullable=True)
 
     # Normalized reference
@@ -145,7 +151,13 @@ class AuthorTechBelong(Base, TimestampMixin):
 
     __tablename__ = "rel_author_tech_belong"
     __table_args__ = (
-        Index("ix_author_tech_author_domain_venue", "openalex_author_id", "tech_domain_id", "source_venue_id", unique=True),
+        Index(
+            "ix_author_tech_author_domain_venue",
+            "openalex_author_id",
+            "tech_domain_id",
+            "source_venue_id",
+            unique=True,
+        ),
     )
 
     belong_id = Column(Integer, primary_key=True, index=True)

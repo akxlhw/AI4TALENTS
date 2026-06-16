@@ -182,12 +182,14 @@ class OSFavouriteService:
         Returns:
             OSTalentPool: 创建的人才池
         """
-        return await self.repo.create_talent_pool({
-            "owner_user_id": user_id,
-            "pool_name": pool_name,
-            "pool_type": pool_type,
-            "scope_desc": scope_desc,
-        })
+        return await self.repo.create_talent_pool(
+            {
+                "owner_user_id": user_id,
+                "pool_name": pool_name,
+                "pool_type": pool_type,
+                "scope_desc": scope_desc,
+            }
+        )
 
     async def update_talent_pool(
         self, pool_id: int, update_data: dict[str, Any]

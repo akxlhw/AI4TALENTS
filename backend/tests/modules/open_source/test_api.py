@@ -13,21 +13,28 @@ from app.domains.open_source.models.open_source import (
     OSFavourite,
     OSPoolMember,
     OSRepoConfig,
-    OSTalentPool,
 )
-
 
 # ============= Repo Config Tests =============
 
+
 class TestRepoConfig:
     @pytest.mark.asyncio
-    async def test_list_repo_configs_as_admin(self, admin_client: AsyncClient, sample_os_repo_config):
-        """Admin can list repo configs."""
-        response = await admin_client.get("/api/v1/open-source/repo-configs")
+    async def test_list_repo_configs_as_super_admin(
+        self, super_admin_client: AsyncClient, sample_os_repo_config
+    ):
+        """Super admin can list repo configs."""
+        response = await super_admin_client.get("/api/v1/open-source/repo-configs")
         assert response.status_code == 200
         data = response.json()
         assert "items" in data
         assert data["total"] >= 1
+
+    @pytest.mark.asyncio
+    async def test_list_repo_configs_as_admin_forbidden(self, admin_client: AsyncClient):
+        """Admin cannot list repo configs."""
+        response = await admin_client.get("/api/v1/open-source/repo-configs")
+        assert response.status_code == 403
 
     @pytest.mark.asyncio
     async def test_list_repo_configs_as_user_forbidden(self, auth_client: AsyncClient):
@@ -36,9 +43,9 @@ class TestRepoConfig:
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_create_repo_config(self, admin_client: AsyncClient):
-        """Admin can create repo config."""
-        response = await admin_client.post(
+    async def test_create_repo_config(self, super_admin_client: AsyncClient):
+        """Super admin can create repo config."""
+        response = await super_admin_client.post(
             "/api/v1/open-source/repo-configs",
             json={
                 "repo_full_name": "new-org/new-repo",
@@ -53,44 +60,48 @@ class TestRepoConfig:
         assert data["tech_element"] == "ai"
 
     @pytest.mark.asyncio
-    async def test_create_repo_config_invalid_format(self, admin_client: AsyncClient):
+    async def test_create_repo_config_invalid_format(self, super_admin_client: AsyncClient):
         """Invalid repo_full_name format returns 400."""
-        response = await admin_client.post(
+        response = await super_admin_client.post(
             "/api/v1/open-source/repo-configs",
             json={"repo_full_name": "invalid", "tech_element": "ai"},
         )
         assert response.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_create_repo_config_invalid_tech_element(self, admin_client: AsyncClient):
+    async def test_create_repo_config_invalid_tech_element(self, super_admin_client: AsyncClient):
         """Invalid tech_element returns 400."""
-        response = await admin_client.post(
+        response = await super_admin_client.post(
             "/api/v1/open-source/repo-configs",
             json={"repo_full_name": "owner/repo", "tech_element": "invalid"},
         )
         assert response.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_create_duplicate_repo_config(self, admin_client: AsyncClient, sample_os_repo_config):
+    async def test_create_duplicate_repo_config(
+        self, super_admin_client: AsyncClient, sample_os_repo_config
+    ):
         """Duplicate repo_full_name returns 409."""
-        response = await admin_client.post(
+        response = await super_admin_client.post(
             "/api/v1/open-source/repo-configs",
             json={"repo_full_name": sample_os_repo_config.repo_full_name, "tech_element": "ai"},
         )
         assert response.status_code == 409
 
     @pytest.mark.asyncio
-    async def test_get_repo_config(self, admin_client: AsyncClient, sample_os_repo_config):
-        """Admin can get single repo config."""
-        response = await admin_client.get(f"/api/v1/open-source/repo-configs/{sample_os_repo_config.repo_config_id}")
+    async def test_get_repo_config(self, super_admin_client: AsyncClient, sample_os_repo_config):
+        """Super admin can get single repo config."""
+        response = await super_admin_client.get(
+            f"/api/v1/open-source/repo-configs/{sample_os_repo_config.repo_config_id}"
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["repo_config_id"] == sample_os_repo_config.repo_config_id
 
     @pytest.mark.asyncio
-    async def test_update_repo_config(self, admin_client: AsyncClient, sample_os_repo_config):
-        """Admin can update repo config."""
-        response = await admin_client.put(
+    async def test_update_repo_config(self, super_admin_client: AsyncClient, sample_os_repo_config):
+        """Super admin can update repo config."""
+        response = await super_admin_client.put(
             f"/api/v1/open-source/repo-configs/{sample_os_repo_config.repo_config_id}",
             json={"display_name": "Updated Name", "is_active": False},
         )
@@ -100,19 +111,26 @@ class TestRepoConfig:
         assert data["is_active"] is False
 
     @pytest.mark.asyncio
-    async def test_delete_repo_config(self, admin_client: AsyncClient, sample_os_repo_config, test_session):
-        """Admin can delete repo config."""
-        response = await admin_client.delete(f"/api/v1/open-source/repo-configs/{sample_os_repo_config.repo_config_id}")
+    async def test_delete_repo_config(
+        self, super_admin_client: AsyncClient, sample_os_repo_config, test_session
+    ):
+        """Super admin can delete repo config."""
+        response = await super_admin_client.delete(
+            f"/api/v1/open-source/repo-configs/{sample_os_repo_config.repo_config_id}"
+        )
         assert response.status_code == 200
 
         # Verify deletion
         result = await test_session.execute(
-            select(OSRepoConfig).where(OSRepoConfig.repo_config_id == sample_os_repo_config.repo_config_id)
+            select(OSRepoConfig).where(
+                OSRepoConfig.repo_config_id == sample_os_repo_config.repo_config_id
+            )
         )
         assert result.scalar_one_or_none() is None
 
 
 # ============= Developer Tests =============
+
 
 class TestDevelopers:
     @pytest.mark.asyncio
@@ -126,7 +144,9 @@ class TestDevelopers:
         assert any(i["github_login"] == "testdeveloper" for i in data["items"])
 
     @pytest.mark.asyncio
-    async def test_list_developers_with_keyword_filter(self, auth_client: AsyncClient, sample_os_developer):
+    async def test_list_developers_with_keyword_filter(
+        self, auth_client: AsyncClient, sample_os_developer
+    ):
         """Keyword search filters developers."""
         response = await auth_client.get("/api/v1/open-source/developers?q=Test Developer")
         assert response.status_code == 200
@@ -135,7 +155,9 @@ class TestDevelopers:
         assert any(i["name"] == "Test Developer" for i in data["items"])
 
     @pytest.mark.asyncio
-    async def test_list_developers_with_tech_element_filter(self, auth_client: AsyncClient, sample_os_developer):
+    async def test_list_developers_with_tech_element_filter(
+        self, auth_client: AsyncClient, sample_os_developer
+    ):
         """Tech element filter works."""
         response = await auth_client.get("/api/v1/open-source/developers?tech_elements=ai")
         assert response.status_code == 200
@@ -150,9 +172,13 @@ class TestDevelopers:
         assert response.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_get_developer_detail(self, auth_client: AsyncClient, sample_os_developer, sample_os_repositories):
+    async def test_get_developer_detail(
+        self, auth_client: AsyncClient, sample_os_developer, sample_os_repositories
+    ):
         """Get developer detail with repositories."""
-        response = await auth_client.get(f"/api/v1/open-source/developers/{sample_os_developer.developer_id}")
+        response = await auth_client.get(
+            f"/api/v1/open-source/developers/{sample_os_developer.developer_id}"
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["github_login"] == "testdeveloper"
@@ -166,9 +192,13 @@ class TestDevelopers:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_developer_repositories(self, auth_client: AsyncClient, sample_os_developer, sample_os_repositories):
+    async def test_list_developer_repositories(
+        self, auth_client: AsyncClient, sample_os_developer, sample_os_repositories
+    ):
         """List developer repositories."""
-        response = await auth_client.get(f"/api/v1/open-source/developers/{sample_os_developer.developer_id}/repositories")
+        response = await auth_client.get(
+            f"/api/v1/open-source/developers/{sample_os_developer.developer_id}/repositories"
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 2
@@ -177,20 +207,27 @@ class TestDevelopers:
     @pytest.mark.asyncio
     async def test_list_developer_languages(self, auth_client: AsyncClient, sample_os_developer):
         """List developer language skills."""
-        response = await auth_client.get(f"/api/v1/open-source/developers/{sample_os_developer.developer_id}/languages")
+        response = await auth_client.get(
+            f"/api/v1/open-source/developers/{sample_os_developer.developer_id}/languages"
+        )
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 
     @pytest.mark.asyncio
-    async def test_recommend_similar_developers(self, auth_client: AsyncClient, sample_os_developer):
+    async def test_recommend_similar_developers(
+        self, auth_client: AsyncClient, sample_os_developer
+    ):
         """Get similar developer recommendations."""
-        response = await auth_client.get(f"/api/v1/open-source/developers/{sample_os_developer.developer_id}/recommend?limit=5")
+        response = await auth_client.get(
+            f"/api/v1/open-source/developers/{sample_os_developer.developer_id}/recommend?limit=5"
+        )
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
 
 
 # ============= Search Tests =============
+
 
 class TestSearch:
     @pytest.mark.asyncio
@@ -230,6 +267,7 @@ class TestSearch:
 
 
 # ============= Favorite Tests =============
+
 
 class TestFavorites:
     @pytest.mark.asyncio
@@ -283,9 +321,13 @@ class TestFavorites:
         assert data["followup_status"] == "interviewed"
 
     @pytest.mark.asyncio
-    async def test_remove_favorite(self, auth_client: AsyncClient, sample_os_favorite, test_session):
+    async def test_remove_favorite(
+        self, auth_client: AsyncClient, sample_os_favorite, test_session
+    ):
         """User can remove favorite."""
-        response = await auth_client.delete(f"/api/v1/open-source/favourites/{sample_os_favorite.developer_id}")
+        response = await auth_client.delete(
+            f"/api/v1/open-source/favourites/{sample_os_favorite.developer_id}"
+        )
         assert response.status_code == 200
 
         # Verify soft delete
@@ -297,6 +339,7 @@ class TestFavorites:
 
 
 # ============= Talent Pool Tests =============
+
 
 class TestTalentPools:
     @pytest.mark.asyncio
@@ -320,7 +363,9 @@ class TestTalentPools:
         assert any(i["pool_id"] == sample_os_talent_pool.pool_id for i in data)
 
     @pytest.mark.asyncio
-    async def test_add_pool_member(self, auth_client: AsyncClient, sample_os_talent_pool, sample_os_developer):
+    async def test_add_pool_member(
+        self, auth_client: AsyncClient, sample_os_talent_pool, sample_os_developer
+    ):
         """User can add member to pool."""
         response = await auth_client.post(
             f"/api/v1/open-source/talent-pools/{sample_os_talent_pool.pool_id}/members/{sample_os_developer.developer_id}"
@@ -328,7 +373,9 @@ class TestTalentPools:
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_add_duplicate_pool_member(self, auth_client: AsyncClient, sample_os_talent_pool, sample_os_developer):
+    async def test_add_duplicate_pool_member(
+        self, auth_client: AsyncClient, sample_os_talent_pool, sample_os_developer
+    ):
         """Duplicate pool member returns 409."""
         await auth_client.post(
             f"/api/v1/open-source/talent-pools/{sample_os_talent_pool.pool_id}/members/{sample_os_developer.developer_id}"
@@ -339,7 +386,9 @@ class TestTalentPools:
         assert response.status_code == 409
 
     @pytest.mark.asyncio
-    async def test_remove_pool_member(self, auth_client: AsyncClient, sample_os_talent_pool, sample_os_developer, test_session):
+    async def test_remove_pool_member(
+        self, auth_client: AsyncClient, sample_os_talent_pool, sample_os_developer, test_session
+    ):
         """User can remove member from pool."""
         await auth_client.post(
             f"/api/v1/open-source/talent-pools/{sample_os_talent_pool.pool_id}/members/{sample_os_developer.developer_id}"
@@ -359,12 +408,16 @@ class TestTalentPools:
         assert result.scalar_one_or_none() is None
 
     @pytest.mark.asyncio
-    async def test_list_pool_members(self, auth_client: AsyncClient, sample_os_talent_pool, sample_os_developer):
+    async def test_list_pool_members(
+        self, auth_client: AsyncClient, sample_os_talent_pool, sample_os_developer
+    ):
         """User can list pool members."""
         await auth_client.post(
             f"/api/v1/open-source/talent-pools/{sample_os_talent_pool.pool_id}/members/{sample_os_developer.developer_id}"
         )
-        response = await auth_client.get(f"/api/v1/open-source/talent-pools/{sample_os_talent_pool.pool_id}/members")
+        response = await auth_client.get(
+            f"/api/v1/open-source/talent-pools/{sample_os_talent_pool.pool_id}/members"
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 1
@@ -373,11 +426,12 @@ class TestTalentPools:
 
 # ============= Collect Task Tests =============
 
+
 class TestCollectTasks:
     @pytest.mark.asyncio
-    async def test_create_collect_task_as_admin(self, admin_client: AsyncClient):
-        """Admin can create collect task."""
-        response = await admin_client.post(
+    async def test_create_collect_task_as_super_admin(self, super_admin_client: AsyncClient):
+        """Super admin can create collect task."""
+        response = await super_admin_client.post(
             "/api/v1/open-source/collect/tasks",
             json={
                 "task_name": "Test Collection",
@@ -391,6 +445,15 @@ class TestCollectTasks:
         assert data["task_name"] == "Test Collection"
 
     @pytest.mark.asyncio
+    async def test_create_collect_task_as_admin_forbidden(self, admin_client: AsyncClient):
+        """Admin cannot create collect task."""
+        response = await admin_client.post(
+            "/api/v1/open-source/collect/tasks",
+            json={"tech_elements": ["ai"]},
+        )
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
     async def test_create_collect_task_as_user_forbidden(self, auth_client: AsyncClient):
         """Normal user cannot create collect task."""
         response = await auth_client.post(
@@ -400,16 +463,16 @@ class TestCollectTasks:
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_list_collect_tasks(self, admin_client: AsyncClient):
-        """Admin can list collect tasks."""
-        response = await admin_client.get("/api/v1/open-source/collect/tasks")
+    async def test_list_collect_tasks(self, super_admin_client: AsyncClient):
+        """Super admin can list collect tasks."""
+        response = await super_admin_client.get("/api/v1/open-source/collect/tasks")
         assert response.status_code == 200
         data = response.json()
         assert "items" in data
 
     @pytest.mark.asyncio
-    async def test_get_collect_task(self, admin_client: AsyncClient, test_session):
-        """Admin can get collect task detail."""
+    async def test_get_collect_task(self, super_admin_client: AsyncClient, test_session):
+        """Super admin can get collect task detail."""
         task = OSCollectTask(
             task_name="Test Task",
             status="pending",
@@ -418,14 +481,14 @@ class TestCollectTasks:
         test_session.add(task)
         await test_session.commit()
 
-        response = await admin_client.get(f"/api/v1/open-source/collect/tasks/{task.task_id}")
+        response = await super_admin_client.get(f"/api/v1/open-source/collect/tasks/{task.task_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["task_id"] == task.task_id
 
     @pytest.mark.asyncio
-    async def test_cancel_collect_task(self, admin_client: AsyncClient, test_session):
-        """Admin can cancel pending task."""
+    async def test_cancel_collect_task(self, super_admin_client: AsyncClient, test_session):
+        """Super admin can cancel pending task."""
         task = OSCollectTask(
             task_name="Task to Cancel",
             status="pending",
@@ -434,16 +497,21 @@ class TestCollectTasks:
         test_session.add(task)
         await test_session.commit()
 
-        response = await admin_client.post(f"/api/v1/open-source/collect/tasks/{task.task_id}/cancel")
+        response = await super_admin_client.post(
+            f"/api/v1/open-source/collect/tasks/{task.task_id}/cancel"
+        )
         assert response.status_code == 200
 
         # Verify status
-        result = await test_session.execute(select(OSCollectTask).where(OSCollectTask.task_id == task.task_id))
+        result = await test_session.execute(
+            select(OSCollectTask).where(OSCollectTask.task_id == task.task_id)
+        )
         updated = result.scalar_one()
         assert updated.status == "cancelled"
 
 
 # ============= Stats Tests =============
+
 
 class TestStats:
     @pytest.mark.asyncio
@@ -466,6 +534,7 @@ class TestStats:
 
 # ============= JD Match Tests =============
 
+
 class TestJDMatch:
     @pytest.mark.asyncio
     async def test_jd_match(self, auth_client: AsyncClient, sample_os_developer):
@@ -485,6 +554,7 @@ class TestJDMatch:
 
 # ============= Embedding Tests =============
 
+
 class TestEmbeddings:
     @pytest.mark.asyncio
     async def test_get_embedding_status(self, admin_client: AsyncClient):
@@ -500,7 +570,6 @@ class TestEmbeddings:
     async def test_generate_embeddings_as_admin(self, admin_client: AsyncClient, test_session):
         """Admin can trigger embedding generation."""
         from app.domains.shared.models.system_config import SystemConfig
-        from app.domains.open_source.models.open_source import OSDeveloper
 
         # Create a visible developer to process
         dev = OSDeveloper(github_login="test-dev", is_visible=True)
@@ -508,11 +577,23 @@ class TestEmbeddings:
         await test_session.flush()
 
         # Seed required LLM config for embedding generation
-        test_session.add_all([
-            SystemConfig(config_key="LLM_EMBEDDING_ENABLED", config_value="true", config_type="bool"),
-            SystemConfig(config_key="LLM_EMBEDDING_MODEL", config_value="text-embedding-3-small", config_type="string"),
-            SystemConfig(config_key="LLM_EMBEDDING_API_BASE", config_value="https://api.openai.com/v1", config_type="string"),
-        ])
+        test_session.add_all(
+            [
+                SystemConfig(
+                    config_key="LLM_EMBEDDING_ENABLED", config_value="true", config_type="bool"
+                ),
+                SystemConfig(
+                    config_key="LLM_EMBEDDING_MODEL",
+                    config_value="text-embedding-3-small",
+                    config_type="string",
+                ),
+                SystemConfig(
+                    config_key="LLM_EMBEDDING_API_BASE",
+                    config_value="https://api.openai.com/v1",
+                    config_type="string",
+                ),
+            ]
+        )
         await test_session.commit()
 
         response = await admin_client.post(
@@ -536,6 +617,7 @@ class TestEmbeddings:
         """Cancel returns error when no task is running."""
         # Reset global progress state to avoid interference from other tests
         from app.domains.open_source.services.background_state import embedding_progress
+
         embedding_progress["status"] = "idle"
 
         response = await admin_client.post("/api/v1/open-source/embeddings/cancel")
@@ -553,27 +635,34 @@ class TestEmbeddings:
 
 # ============= Security / Permission Tests =============
 
+
 class TestSecurity:
     @pytest.mark.asyncio
-    async def test_sql_injection_in_repo_full_name(self, admin_client: AsyncClient):
+    async def test_sql_injection_in_repo_full_name(self, super_admin_client: AsyncClient):
         """SQL injection in repo_full_name is blocked by validation."""
-        response = await admin_client.post(
+        response = await super_admin_client.post(
             "/api/v1/open-source/repo-configs",
             json={"repo_full_name": "' OR '1'='1", "tech_element": "ai"},
         )
         assert response.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_cross_user_favorite_access(self, auth_client: AsyncClient, sample_os_favorite, sample_os_developer, test_session):
+    async def test_cross_user_favorite_access(
+        self, auth_client: AsyncClient, sample_os_favorite, sample_os_developer, test_session
+    ):
         """User cannot access another user's favorites directly via ID manipulation."""
         # Try to delete favorite belonging to another user (if any)
         # The endpoint uses current user from token, so this is inherently protected
-        response = await auth_client.delete(f"/api/v1/open-source/favourites/{sample_os_developer.developer_id}")
+        response = await auth_client.delete(
+            f"/api/v1/open-source/favourites/{sample_os_developer.developer_id}"
+        )
         # Should return 404 since this favorite doesn't exist for auth_client user
         assert response.status_code in (404, 200)
 
     @pytest.mark.asyncio
-    async def test_unauthorized_access_all_endpoints(self, client: AsyncClient, sample_os_developer):
+    async def test_unauthorized_access_all_endpoints(
+        self, client: AsyncClient, sample_os_developer
+    ):
         """All protected endpoints return 401 without token."""
         endpoints = [
             ("GET", "/api/v1/open-source/developers"),
@@ -590,7 +679,9 @@ class TestSecurity:
                 response = await client.get(url)
             else:
                 response = await client.post(url, json={})
-            assert response.status_code == 401, f"{method} {url} should return 401, got {response.status_code}"
+            assert (
+                response.status_code == 401
+            ), f"{method} {url} should return 401, got {response.status_code}"
 
     @pytest.mark.asyncio
     async def test_admin_endpoints_forbidden_to_user(self, auth_client: AsyncClient):
@@ -608,4 +699,6 @@ class TestSecurity:
                 response = await auth_client.get(url)
             else:
                 response = await auth_client.post(url, json={})
-            assert response.status_code == 403, f"{method} {url} should return 403, got {response.status_code}"
+            assert (
+                response.status_code == 403
+            ), f"{method} {url} should return 403, got {response.status_code}"

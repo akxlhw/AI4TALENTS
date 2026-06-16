@@ -14,12 +14,9 @@ Coverage:
 - get_talent_collaborations: 合作者查询
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.academic.models.talent import Talent
 from app.domains.academic.services.talent_service import TalentService
 
 
@@ -27,7 +24,9 @@ class TestTalentServiceList:
     """人才列表查询测试"""
 
     @pytest.mark.asyncio
-    async def test_get_talent_list_returns_results(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_talent_list_returns_results(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """获取人才列表应返回结果和总数"""
         # Arrange
         service = TalentService(test_session)
@@ -42,7 +41,9 @@ class TestTalentServiceList:
         assert total >= 0
 
     @pytest.mark.asyncio
-    async def test_get_talent_list_filters_by_school(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_talent_list_filters_by_school(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """按学校ID筛选应返回对应学校的人才"""
         # Arrange
         service = TalentService(test_session)
@@ -57,7 +58,9 @@ class TestTalentServiceList:
             assert talent.school_id == school_id
 
     @pytest.mark.asyncio
-    async def test_get_talent_list_filters_by_country(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_talent_list_filters_by_country(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """按国家代码筛选应返回对应国家的人才"""
         # Arrange
         service = TalentService(test_session)
@@ -69,7 +72,9 @@ class TestTalentServiceList:
         assert total >= 1
 
     @pytest.mark.asyncio
-    async def test_get_talent_list_filters_by_role_type(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_talent_list_filters_by_role_type(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """按角色类型筛选应返回对应类型的人才"""
         # Arrange
         service = TalentService(test_session)
@@ -83,7 +88,9 @@ class TestTalentServiceList:
                 assert talent.role_type == "professor"
 
     @pytest.mark.asyncio
-    async def test_get_talent_list_filters_by_min_works(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_talent_list_filters_by_min_works(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """按最小论文数筛选应返回符合条件的人才"""
         # Arrange
         service = TalentService(test_session)
@@ -97,7 +104,9 @@ class TestTalentServiceList:
                 assert talent.works_count >= 10
 
     @pytest.mark.asyncio
-    async def test_get_talent_list_filters_by_min_citations(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_talent_list_filters_by_min_citations(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """按最小引用数筛选应返回符合条件的人才"""
         # Arrange
         service = TalentService(test_session)
@@ -111,7 +120,9 @@ class TestTalentServiceList:
                 assert talent.cited_by_count >= 100
 
     @pytest.mark.asyncio
-    async def test_get_talent_list_keyword_search(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_talent_list_keyword_search(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """关键词搜索应返回匹配的人才"""
         # Arrange
         service = TalentService(test_session)
@@ -123,7 +134,9 @@ class TestTalentServiceList:
         assert isinstance(results, list)
 
     @pytest.mark.asyncio
-    async def test_get_talent_list_pagination(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_talent_list_pagination(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """分页应正确返回指定页码的数据"""
         # Arrange
         service = TalentService(test_session)
@@ -152,7 +165,9 @@ class TestTalentServiceDetail:
     """人才详情测试"""
 
     @pytest.mark.asyncio
-    async def test_get_talent_by_id_returns_talent(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_talent_by_id_returns_talent(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """获取存在的人才ID应返回人才详情"""
         # Arrange
         service = TalentService(test_session)
@@ -209,7 +224,9 @@ class TestTalentServiceBatch:
     """批量操作测试"""
 
     @pytest.mark.asyncio
-    async def test_get_talents_by_ids_returns_list(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_talents_by_ids_returns_list(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """批量获取人才应返回人才列表"""
         # Arrange
         service = TalentService(test_session)
@@ -252,7 +269,9 @@ class TestTalentServiceExists:
     """存在性检查测试"""
 
     @pytest.mark.asyncio
-    async def test_talent_exists_returns_true(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_talent_exists_returns_true(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """存在的人才应返回True"""
         # Arrange
         service = TalentService(test_session)
@@ -281,7 +300,9 @@ class TestTalentServiceStatistics:
     """统计信息测试"""
 
     @pytest.mark.asyncio
-    async def test_get_statistics_returns_dict(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_statistics_returns_dict(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """统计信息应返回包含必要字段的字典"""
         # Arrange
         service = TalentService(test_session)
@@ -315,7 +336,9 @@ class TestTalentServiceSearch:
     """搜索功能测试"""
 
     @pytest.mark.asyncio
-    async def test_search_talents_basic_returns_results(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_search_talents_basic_returns_results(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """基础关键词搜索应返回结果"""
         # Arrange
         service = TalentService(test_session)
@@ -328,7 +351,9 @@ class TestTalentServiceSearch:
         assert isinstance(total, int)
 
     @pytest.mark.asyncio
-    async def test_search_talents_basic_with_role_filter(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_search_talents_basic_with_role_filter(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """带角色筛选的搜索应返回过滤后的结果"""
         # Arrange
         service = TalentService(test_session)
@@ -385,7 +410,9 @@ class TestTalentServiceUpdate:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_update_talent_ignores_invalid_fields(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_update_talent_ignores_invalid_fields(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """更新时应忽略无效字段"""
         # Arrange
         service = TalentService(test_session)
@@ -393,7 +420,9 @@ class TestTalentServiceUpdate:
         original_name = sample_talent["talent"].name
 
         # Act
-        result = await service.update_talent(talent_id, {"name": "New Name", "invalid_field": "value"})
+        result = await service.update_talent(
+            talent_id, {"name": "New Name", "invalid_field": "value"}
+        )
 
         # Assert
         assert result is not None
@@ -404,7 +433,9 @@ class TestTalentServiceCollaborations:
     """合作者查询测试"""
 
     @pytest.mark.asyncio
-    async def test_get_talent_collaborations_returns_list(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_talent_collaborations_returns_list(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """获取合作者应返回列表"""
         # Arrange
         service = TalentService(test_session)
@@ -417,7 +448,9 @@ class TestTalentServiceCollaborations:
         assert isinstance(result, list)
 
     @pytest.mark.asyncio
-    async def test_get_talent_collaborations_respects_limit(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_talent_collaborations_respects_limit(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """合作者数量应受limit限制"""
         # Arrange
         service = TalentService(test_session)
@@ -434,7 +467,9 @@ class TestTalentServiceSelectedWorks:
     """代表作品测试"""
 
     @pytest.mark.asyncio
-    async def test_get_selected_works_returns_list(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_selected_works_returns_list(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """获取代表作品应返回列表"""
         # Arrange
         service = TalentService(test_session)
@@ -447,7 +482,9 @@ class TestTalentServiceSelectedWorks:
         assert isinstance(result, list)
 
     @pytest.mark.asyncio
-    async def test_get_selected_works_respects_limit(self, test_session: AsyncSession, sample_talent: dict):
+    async def test_get_selected_works_respects_limit(
+        self, test_session: AsyncSession, sample_talent: dict
+    ):
         """作品数量应受limit限制"""
         # Arrange
         service = TalentService(test_session)

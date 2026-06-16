@@ -24,9 +24,7 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
 
 # Password policy constants
 MIN_PASSWORD_LENGTH = 8
-PASSWORD_PATTERN = re.compile(
-    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$"
-)
+PASSWORD_PATTERN = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$")
 
 
 def validate_password_strength(password: str) -> tuple[bool, str]:
@@ -62,11 +60,18 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
 
     # Check against common weak passwords (exact match only)
     COMMON_WEAK_PASSWORDS = {
-        "password", "password1", "password123",
-        "admin123", "admin1234",
-        "qwerty123", "qwertyui",
-        "12345678", "123456789", "1234567890",
-        "abcd1234", "a1b2c3d4",
+        "password",
+        "password1",
+        "password123",
+        "admin123",
+        "admin1234",
+        "qwerty123",
+        "qwertyui",
+        "12345678",
+        "123456789",
+        "1234567890",
+        "abcd1234",
+        "a1b2c3d4",
     }
     if password.lower() in COMMON_WEAK_PASSWORDS:
         return False, "Password is too common or easily guessable"
@@ -178,9 +183,7 @@ def decode_token(token: str) -> dict[str, Any] | None:
         Decoded payload or None if invalid
     """
     try:
-        payload: dict[str, Any] = jwt.decode(
-            token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM]
-        )
+        payload: dict[str, Any] = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
         return None

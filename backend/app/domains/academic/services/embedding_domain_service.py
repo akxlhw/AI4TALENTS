@@ -53,7 +53,9 @@ class EmbeddingDomainService:
             logger.error(f"Embedding generation failed: {e}")
             progress_tracker["status"] = "error"
             progress_tracker["error_message"] = str(e)
-            progress_tracker["completed_at"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+            progress_tracker["completed_at"] = (
+                datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+            )
 
     @staticmethod
     async def _do_run_background_generation(
@@ -113,7 +115,9 @@ class EmbeddingDomainService:
 
             if not talent_ids:
                 progress_tracker["status"] = "completed"
-                progress_tracker["completed_at"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+                progress_tracker["completed_at"] = (
+                    datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+                )
                 return
 
             embed_service = EmbeddingService(
@@ -161,7 +165,7 @@ class EmbeddingDomainService:
                     progress_tracker["failed"] = failed
 
             progress_tracker["status"] = "completed"
-            progress_tracker["completed_at"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
-            logger.info(
-                f"Embedding generation completed: processed={processed}, failed={failed}"
+            progress_tracker["completed_at"] = (
+                datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             )
+            logger.info(f"Embedding generation completed: processed={processed}, failed={failed}")

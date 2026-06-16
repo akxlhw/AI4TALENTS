@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.domains.shared.models.enums import RoleType, SyncJobStatus, UserRoleType
 from app.model_registry import (
     OverviewStatSnapshot,
     School,
@@ -16,7 +17,6 @@ from app.model_registry import (
     UserAccount,
     UserSchoolScope,
 )
-from app.domains.shared.models.enums import RoleType, SyncJobStatus, UserRoleType
 
 
 @pytest.fixture(scope="function")

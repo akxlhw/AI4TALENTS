@@ -7,9 +7,9 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.auth import hash_password
+from app.domains.academic.models.school import School
 from app.domains.shared.models.enums import UserRoleType
 from app.domains.shared.models.iam import UserAccount
-from app.domains.academic.models.school import School
 
 
 @pytest.fixture
@@ -108,17 +108,27 @@ class TestRoleBasedAccess:
     """Tests for role-based access control."""
 
     @pytest.mark.asyncio
-    async def test_admin_can_list_users(self, client: AsyncClient, admin_token):
-        """Test that admin can list users."""
+    async def test_super_admin_can_list_users(self, client: AsyncClient, super_admin_token):
+        """Test that super admin can list users."""
         response = await client.get(
             "/api/v1/users",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            headers={"Authorization": f"Bearer {super_admin_token}"},
         )
 
         assert response.status_code == 200
         data = response.json()
         assert "items" in data
         assert "total" in data
+
+    @pytest.mark.asyncio
+    async def test_admin_cannot_list_users(self, client: AsyncClient, admin_token):
+        """Test that admin cannot list users."""
+        response = await client.get(
+            "/api/v1/users",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+        assert response.status_code == 403
 
     @pytest.mark.asyncio
     async def test_normal_user_cannot_list_users(self, client: AsyncClient, normal_user_token):
@@ -137,11 +147,11 @@ class TestRoleBasedAccess:
         assert response.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_admin_can_create_user(self, client: AsyncClient, admin_token):
-        """Test that admin can create a new user."""
+    async def test_super_admin_can_create_user(self, client: AsyncClient, super_admin_token):
+        """Test that super admin can create a new user."""
         response = await client.post(
             "/api/v1/users",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            headers={"Authorization": f"Bearer {super_admin_token}"},
             json={
                 "username": "newuser",
                 "email": "newuser@example.com",
@@ -220,13 +230,13 @@ class TestUserScopes:
     """Tests for user scope management."""
 
     @pytest.mark.asyncio
-    async def test_admin_can_add_scope(
-        self, client: AsyncClient, admin_token, test_normal_user, test_school
+    async def test_super_admin_can_add_scope(
+        self, client: AsyncClient, super_admin_token, test_normal_user, test_school
     ):
-        """Test that admin can add scope to user."""
+        """Test that super admin can add scope to user."""
         response = await client.post(
             f"/api/v1/users/{test_normal_user.user_id}/scopes",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            headers={"Authorization": f"Bearer {super_admin_token}"},
             json={
                 "user_id": test_normal_user.user_id,
                 "scope_type": "school",
@@ -240,13 +250,13 @@ class TestUserScopes:
         assert data["scope_value"] == str(test_school.school_id)
 
     @pytest.mark.asyncio
-    async def test_admin_can_list_user_scopes(
-        self, client: AsyncClient, admin_token, test_normal_user
+    async def test_super_admin_can_list_user_scopes(
+        self, client: AsyncClient, super_admin_token, test_normal_user
     ):
-        """Test that admin can list user scopes."""
+        """Test that super admin can list user scopes."""
         response = await client.get(
             f"/api/v1/users/{test_normal_user.user_id}/scopes",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            headers={"Authorization": f"Bearer {super_admin_token}"},
         )
 
         assert response.status_code == 200
@@ -401,30 +411,32 @@ class TestSuperAdminPrivileges:
             },
         )
 
-        assert response.status_code == 400  # Invalid role
+        assert response.status_code == 403  # Admin has no access to user management
 
 
 class TestUserDeactivation:
     """Tests for user deactivation."""
 
     @pytest.mark.asyncio
-    async def test_admin_can_deactivate_user(
-        self, client: AsyncClient, admin_token, test_normal_user
+    async def test_super_admin_can_deactivate_user(
+        self, client: AsyncClient, super_admin_token, test_normal_user
     ):
-        """Test that admin can deactivate a user."""
+        """Test that super admin can deactivate a user."""
         response = await client.delete(
             f"/api/v1/users/{test_normal_user.user_id}",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            headers={"Authorization": f"Bearer {super_admin_token}"},
         )
 
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_admin_cannot_deactivate_self(self, client: AsyncClient, admin_token, test_admin):
-        """Test that admin cannot deactivate themselves."""
+    async def test_super_admin_cannot_deactivate_self(
+        self, client: AsyncClient, super_admin_token, test_super_admin
+    ):
+        """Test that super admin cannot deactivate themselves."""
         response = await client.delete(
-            f"/api/v1/users/{test_admin.user_id}",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            f"/api/v1/users/{test_super_admin.user_id}",
+            headers={"Authorization": f"Bearer {super_admin_token}"},
         )
 
         assert response.status_code == 400
@@ -452,13 +464,13 @@ class TestUserApproval:
         return user
 
     @pytest.mark.asyncio
-    async def test_admin_can_approve_user(
-        self, client: AsyncClient, admin_token, pending_user
+    async def test_super_admin_can_approve_user(
+        self, client: AsyncClient, super_admin_token, pending_user
     ):
-        """Test that admin can approve a pending user."""
+        """Test that super admin can approve a pending user."""
         response = await client.post(
             f"/api/v1/users/{pending_user.user_id}/approve",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            headers={"Authorization": f"Bearer {super_admin_token}"},
         )
 
         assert response.status_code == 200
@@ -467,13 +479,13 @@ class TestUserApproval:
         assert data["is_active"] is True
 
     @pytest.mark.asyncio
-    async def test_admin_can_reject_user(
-        self, client: AsyncClient, admin_token, pending_user
+    async def test_super_admin_can_reject_user(
+        self, client: AsyncClient, super_admin_token, pending_user
     ):
-        """Test that admin can reject a pending user."""
+        """Test that super admin can reject a pending user."""
         response = await client.post(
             f"/api/v1/users/{pending_user.user_id}/reject",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            headers={"Authorization": f"Bearer {super_admin_token}"},
         )
 
         assert response.status_code == 200
@@ -483,22 +495,22 @@ class TestUserApproval:
 
     @pytest.mark.asyncio
     async def test_approve_non_pending_user_returns_404(
-        self, client: AsyncClient, admin_token, test_normal_user
+        self, client: AsyncClient, super_admin_token, test_normal_user
     ):
         """Test approving a non-pending user returns 404."""
         response = await client.post(
             f"/api/v1/users/{test_normal_user.user_id}/approve",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            headers={"Authorization": f"Bearer {super_admin_token}"},
         )
 
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_pending_users(self, client: AsyncClient, admin_token, pending_user):
+    async def test_list_pending_users(self, client: AsyncClient, super_admin_token, pending_user):
         """Test listing pending approval users."""
         response = await client.get(
             "/api/v1/users/pending",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            headers={"Authorization": f"Bearer {super_admin_token}"},
         )
 
         assert response.status_code == 200
@@ -506,11 +518,13 @@ class TestUserApproval:
         assert any(u["user_id"] == pending_user.user_id for u in data["items"])
 
     @pytest.mark.asyncio
-    async def test_filter_users_by_status(self, client: AsyncClient, admin_token, pending_user):
+    async def test_filter_users_by_status(
+        self, client: AsyncClient, super_admin_token, pending_user
+    ):
         """Test filtering users by status."""
         response = await client.get(
             "/api/v1/users?status=pending_approval",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            headers={"Authorization": f"Bearer {super_admin_token}"},
         )
 
         assert response.status_code == 200
@@ -518,12 +532,14 @@ class TestUserApproval:
         assert all(u["status"] == "pending_approval" for u in data["items"])
 
     @pytest.mark.asyncio
-    async def test_approved_user_can_login(self, client: AsyncClient, admin_token, pending_user):
+    async def test_approved_user_can_login(
+        self, client: AsyncClient, super_admin_token, pending_user
+    ):
         """Test that approved user can login."""
         # Approve first
         await client.post(
             f"/api/v1/users/{pending_user.user_id}/approve",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            headers={"Authorization": f"Bearer {super_admin_token}"},
         )
 
         # Try login

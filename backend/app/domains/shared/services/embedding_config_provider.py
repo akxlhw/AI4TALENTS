@@ -83,24 +83,12 @@ class PerDomainEmbeddingConfigProvider:
         """Get embedding configuration for the specified domain."""
         prefix = domain.upper()
 
-        dimension = await self.config_service.get_value(
-            f"{prefix}_EMBEDDING_DIMENSION", None
-        )
-        model = await self.config_service.get_value(
-            f"{prefix}_EMBEDDING_MODEL", None
-        )
-        api_base = await self.config_service.get_value(
-            f"{prefix}_EMBEDDING_API_BASE", None
-        )
-        api_key = await self.config_service.get_value(
-            f"{prefix}_EMBEDDING_API_KEY", None
-        )
-        api_format = await self.config_service.get_value(
-            f"{prefix}_EMBEDDING_API_FORMAT", None
-        )
-        enabled = await self.config_service.get_value(
-            f"{prefix}_EMBEDDING_ENABLED", None
-        )
+        dimension = await self.config_service.get_value(f"{prefix}_EMBEDDING_DIMENSION", None)
+        model = await self.config_service.get_value(f"{prefix}_EMBEDDING_MODEL", None)
+        api_base = await self.config_service.get_value(f"{prefix}_EMBEDDING_API_BASE", None)
+        api_key = await self.config_service.get_value(f"{prefix}_EMBEDDING_API_KEY", None)
+        api_format = await self.config_service.get_value(f"{prefix}_EMBEDDING_API_FORMAT", None)
+        enabled = await self.config_service.get_value(f"{prefix}_EMBEDDING_ENABLED", None)
 
         # If any domain-specific key is missing, fall back to shared config
         if dimension is None or model is None:

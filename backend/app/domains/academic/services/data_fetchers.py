@@ -35,6 +35,15 @@ from app.domains.academic.services.common.openalex_utils import (
     extract_short_id,
 )
 from app.domains.academic.services.common.progress import FetchProgress
+from app.domains.shared.services.common.circuit_breaker import CircuitBreaker
+
+# Circuit breaker for OpenAlex data fetchers (shared across WorkFetcher/AuthorFetcher/InstitutionFetcher)
+_openalex_fetcher_breaker = CircuitBreaker(
+    name="openalex_data_fetcher",
+    failure_threshold=settings.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
+    recovery_timeout=settings.CIRCUIT_BREAKER_RECOVERY_TIMEOUT,
+    window_size=settings.CIRCUIT_BREAKER_WINDOW_SIZE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +137,7 @@ class WorkFetcher:
         headers: dict,
         proxy: str | None = None,
     ) -> dict:
-        """带重试的单页获取
+        """带重试和熔断保护的单页获取
 
         Args:
             http_session: aiohttp 会话
@@ -142,17 +151,26 @@ class WorkFetcher:
 
         Raises:
             RetryableError: 可重试的错误（速率限制、服务器错误、临时网络问题）
+            CircuitBreakerOpenError: 熔断器打开时直接拒绝请求
         """
-        async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
-            if response.status == 429:
-                # 速率限制，触发重试
-                raise RetryableError("Rate limited (HTTP 429)")
-            if response.status >= 500:
-                # 服务器错误（5xx）也触发重试，提升企业内网稳定性
-                raise RetryableError(f"Server error (HTTP {response.status})")
-            if response.status != 200:
-                raise Exception(f"HTTP {response.status}")
-            return await response.json()
+
+        async def _do_fetch() -> dict:
+            async with http_session.get(
+                url, params=params, headers=headers, proxy=proxy
+            ) as response:
+                if response.status == 429:
+                    # 速率限制，触发重试
+                    raise RetryableError("Rate limited (HTTP 429)")
+                if response.status >= 500:
+                    # 服务器错误（5xx）也触发重试，提升企业内网稳定性
+                    raise RetryableError(f"Server error (HTTP {response.status})")
+                if response.status != 200:
+                    raise Exception(f"HTTP {response.status}")
+                return await response.json()
+
+        if not settings.CIRCUIT_BREAKER_ENABLED:
+            return await _do_fetch()
+        return await _openalex_fetcher_breaker.call(_do_fetch)
 
     @with_retry(max_attempts=3, max_wait=30.0)
     async def _fetch_work_count(
@@ -162,19 +180,25 @@ class WorkFetcher:
         headers: dict,
         proxy: str | None,
     ) -> int:
-        """Fetch work count with retry support."""
-        async with self.client.create_session(timeout=DEFAULT_TIMEOUT) as http_session:
-            async with http_session.get(
-                url, params=params, headers=headers, proxy=proxy
-            ) as response:
-                if response.status == 429:
-                    raise RetryableError("Rate limited (HTTP 429)")
-                if response.status >= 500:
-                    raise RetryableError(f"Server error (HTTP {response.status})")
-                if response.status != 200:
-                    raise Exception(f"HTTP {response.status}")
-                data = await response.json()
-                return data.get("meta", {}).get("count", 0)
+        """Fetch work count with retry and circuit breaker support."""
+
+        async def _do_fetch() -> int:
+            async with self.client.create_session(timeout=DEFAULT_TIMEOUT) as http_session:
+                async with http_session.get(
+                    url, params=params, headers=headers, proxy=proxy
+                ) as response:
+                    if response.status == 429:
+                        raise RetryableError("Rate limited (HTTP 429)")
+                    if response.status >= 500:
+                        raise RetryableError(f"Server error (HTTP {response.status})")
+                    if response.status != 200:
+                        raise Exception(f"HTTP {response.status}")
+                    data = await response.json()
+                    return data.get("meta", {}).get("count", 0)
+
+        if not settings.CIRCUIT_BREAKER_ENABLED:
+            return await _do_fetch()
+        return await _openalex_fetcher_breaker.call(_do_fetch)
 
     async def get_work_count_from_venue(
         self, venue: Venue, year_from: int | None = None, year_to: int | None = None
@@ -223,9 +247,7 @@ class WorkFetcher:
         try:
             return await self._fetch_work_count(url, params, headers, proxy)
         except Exception as e:
-            logger.warning(
-                f"Failed to get work count for venue {venue.venue_name}: {e}"
-            )
+            logger.warning(f"Failed to get work count for venue {venue.venue_name}: {e}")
             return 0
 
     async def fetch_works_from_venue(
@@ -573,15 +595,23 @@ class AuthorFetcher:
         headers: dict,
         proxy: str | None = None,
     ) -> dict:
-        """带重试的批量获取"""
-        async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
-            if response.status == 429:
-                raise RetryableError("Rate limited (HTTP 429)")
-            if response.status >= 500:
-                raise RetryableError(f"Server error (HTTP {response.status})")
-            if response.status != 200:
-                raise Exception(f"HTTP {response.status}")
-            return await response.json()
+        """带重试和熔断保护的批量获取"""
+
+        async def _do_fetch() -> dict:
+            async with http_session.get(
+                url, params=params, headers=headers, proxy=proxy
+            ) as response:
+                if response.status == 429:
+                    raise RetryableError("Rate limited (HTTP 429)")
+                if response.status >= 500:
+                    raise RetryableError(f"Server error (HTTP {response.status})")
+                if response.status != 200:
+                    raise Exception(f"HTTP {response.status}")
+                return await response.json()
+
+        if not settings.CIRCUIT_BREAKER_ENABLED:
+            return await _do_fetch()
+        return await _openalex_fetcher_breaker.call(_do_fetch)
 
     async def fetch_authors_by_ids(
         self,
@@ -607,7 +637,9 @@ class AuthorFetcher:
         stale_ids: list[str] = []
         if refresh_days > 0:
             existing_authors = await self.repo.get_by_openalex_ids(author_ids)
-            stale_threshold = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=refresh_days)
+            stale_threshold = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
+                days=refresh_days
+            )
             for author in existing_authors:
                 if author.fetched_at is None or author.fetched_at < stale_threshold:
                     stale_ids.append(author.openalex_author_id)
@@ -730,15 +762,23 @@ class InstitutionFetcher:
         headers: dict,
         proxy: str | None = None,
     ) -> dict:
-        """带重试的批量获取"""
-        async with http_session.get(url, params=params, headers=headers, proxy=proxy) as response:
-            if response.status == 429:
-                raise RetryableError("Rate limited (HTTP 429)")
-            if response.status >= 500:
-                raise RetryableError(f"Server error (HTTP {response.status})")
-            if response.status != 200:
-                raise Exception(f"HTTP {response.status}")
-            return await response.json()
+        """带重试和熔断保护的批量获取"""
+
+        async def _do_fetch() -> dict:
+            async with http_session.get(
+                url, params=params, headers=headers, proxy=proxy
+            ) as response:
+                if response.status == 429:
+                    raise RetryableError("Rate limited (HTTP 429)")
+                if response.status >= 500:
+                    raise RetryableError(f"Server error (HTTP {response.status})")
+                if response.status != 200:
+                    raise Exception(f"HTTP {response.status}")
+                return await response.json()
+
+        if not settings.CIRCUIT_BREAKER_ENABLED:
+            return await _do_fetch()
+        return await _openalex_fetcher_breaker.call(_do_fetch)
 
     async def fetch_institutions_by_ids(
         self,

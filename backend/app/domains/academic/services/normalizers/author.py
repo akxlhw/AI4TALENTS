@@ -215,9 +215,7 @@ class AuthorNormalizer:
         # Create new StdAuthor
         return await self.create_std_author(raw_author, std_school_id, task_id)
 
-    async def _batch_find_std_authors(
-        self, openalex_author_ids: list[str]
-    ) -> dict[str, StdAuthor]:
+    async def _batch_find_std_authors(self, openalex_author_ids: list[str]) -> dict[str, StdAuthor]:
         """Batch preload existing StdAuthors by OpenAlex IDs."""
         if not openalex_author_ids:
             return {}
@@ -226,9 +224,7 @@ class AuthorNormalizer:
         )
         return {a.openalex_author_id: a for a in result.scalars().all()}
 
-    async def _batch_find_std_schools(
-        self, openalex_institution_ids: list[str]
-    ) -> dict[str, int]:
+    async def _batch_find_std_schools(self, openalex_institution_ids: list[str]) -> dict[str, int]:
         """Batch preload StdSchool IDs by OpenAlex institution IDs."""
         if not openalex_institution_ids:
             return {}
@@ -310,12 +306,17 @@ class AuthorNormalizer:
         result = await self.session.execute(stmt)
         return {row.openalex_author_id: row.std_author_id for row in result.all()}
 
-    async def normalize_all_authors(self, task_id: int | None = None) -> NormalizationResult:
+    async def normalize_all_authors(
+        self, task_id: int | None = None, *, commit_per_batch: bool = True
+    ) -> NormalizationResult:
         """Normalize all pending authors for a specific task using batch processing.
 
         Args:
             task_id: The collection task ID. Only authors from this task
                      will be processed. If None, processes all pending authors.
+            commit_per_batch: If True (default), commits after each batch.
+                Set to False when called inside a parent transaction (e.g. collection
+                phase orchestrator) so the caller can commit/rollback atomically.
 
         Returns:
             NormalizationResult with statistics
@@ -335,7 +336,9 @@ class AuthorNormalizer:
             author_ids = [r.openalex_author_id for r in pending]
             await self._batch_find_std_authors(author_ids)
 
-            inst_ids = list({r.last_known_institution_id for r in pending if r.last_known_institution_id})
+            inst_ids = list(
+                {r.last_known_institution_id for r in pending if r.last_known_institution_id}
+            )
             school_map = await self._batch_find_std_schools(inst_ids)
 
             # 3. Parse raw_json once per author; isolate failures
@@ -348,9 +351,7 @@ class AuthorNormalizer:
                         json.loads(raw.raw_json)
                     parsed[raw.raw_author_id] = self._parse_raw_json(raw.raw_json)
                 except Exception as e:
-                    logger.warning(
-                        f"JSON parse failed for author {raw.openalex_author_id}: {e}"
-                    )
+                    logger.warning(f"JSON parse failed for author {raw.openalex_author_id}: {e}")
                     failed_ids.append(raw.raw_author_id)
 
             # 4. Build values for batch upsert
@@ -387,11 +388,7 @@ class AuthorNormalizer:
                             failed_ids.append(raw.raw_author_id)
 
             # 6. Bulk mark successful RawAuthors as processed
-            ok_raw_ids = [
-                raw_id
-                for raw_id in raw_id_to_alex_id.keys()
-                if raw_id not in failed_ids
-            ]
+            ok_raw_ids = [raw_id for raw_id in raw_id_to_alex_id.keys() if raw_id not in failed_ids]
             if ok_raw_ids and author_id_map:
                 std_id_map = {
                     raw_id: author_id_map[raw_id_to_alex_id[raw_id]]
@@ -407,8 +404,11 @@ class AuthorNormalizer:
             result.processed += len(ok_raw_ids)
             result.failed += len(failed_ids)
 
-            # Commit per batch to release locks
-            await self.session.commit()
+            # Commit or flush per batch depending on caller's transaction scope
+            if commit_per_batch:
+                await self.session.commit()
+            else:
+                await self.session.flush()
             logger.info(
                 f"Author normalization batch: processed={result.processed}, "
                 f"failed={result.failed}, total_so_far={result.total}"

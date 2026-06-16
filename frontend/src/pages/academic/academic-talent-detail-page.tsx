@@ -18,6 +18,7 @@ import {
   Alert,
   Progress,
   message,
+  Tabs,
 } from 'antd'
 import {
   UserOutlined,
@@ -34,6 +35,7 @@ import { api } from '../../services/api'
 import { semanticColors } from '../../theme'
 import FavoriteButton from '../../components/FavoriteButton'
 import CollaborationGraph, { CollaborationNode, CollaborationLink } from '../../components/CollaborationGraph'
+import GenealogyGraph, { GenealogyNode, GenealogyLink } from '../../components/GenealogyGraph'
 import { getRoleTypeConfig } from '../../constants/roleType'
 import { formatNumber } from '../../utils/format'
 import { getErrorMessage } from '../../utils'
@@ -92,6 +94,11 @@ const TalentDetailPage: React.FC = () => {
   const [collabLoading, setCollabLoading] = useState(false)
   const [collabNodes, setCollabNodes] = useState<CollaborationNode[]>([])
   const [collabLinks, setCollabLinks] = useState<CollaborationLink[]>([])
+  const [genealogyLoading, setGenealogyLoading] = useState(false)
+  const [genealogyRoot, setGenealogyRoot] = useState<GenealogyNode | null>(null)
+  const [genealogyNodes, setGenealogyNodes] = useState<GenealogyNode[]>([])
+  const [genealogyLinks, setGenealogyLinks] = useState<GenealogyLink[]>([])
+  const [genealogyError, setGenealogyError] = useState<string | null>(null)
 
   useEffect(() => {
     if (id) {
@@ -126,10 +133,31 @@ const TalentDetailPage: React.FC = () => {
     }
   }
 
-  // Fetch collaborations when talent is loaded
+  const fetchGenealogy = async (talentId: number) => {
+    setGenealogyLoading(true)
+    setGenealogyError(null)
+    try {
+      const response = await api.talents.getGenealogy(talentId)
+      setGenealogyRoot(response.data.root_talent || null)
+      setGenealogyNodes(response.data.nodes || [])
+      setGenealogyLinks(response.data.links || [])
+    } catch (error: any) {
+      console.error('Failed to fetch genealogy:', error)
+      const msg = error?.response?.data?.detail || getErrorMessage(error, '加载族谱数据失败')
+      setGenealogyError(msg)
+      setGenealogyRoot(null)
+      setGenealogyNodes([])
+      setGenealogyLinks([])
+    } finally {
+      setGenealogyLoading(false)
+    }
+  }
+
+  // Fetch collaborations and genealogy when talent is loaded
   useEffect(() => {
     if (talent) {
       fetchCollaborations(talent.talent_id)
+      fetchGenealogy(talent.talent_id)
     }
   }, [talent])
 
@@ -467,32 +495,92 @@ const TalentDetailPage: React.FC = () => {
         )}
       </Card>
 
-      {/* 合作网络 */}
-      <Card title={<><TeamOutlined style={{ marginRight: 8 }} />合作网络</>}>
-        {collabNodes.length > 0 ? (
-          <CollaborationGraph
-            nodes={collabNodes}
-            links={collabLinks}
-            loading={collabLoading}
-            onNodeClick={(nodeId) => {
-              if (nodeId !== String(talent.talent_id)) {
-                navigate(`/talents/${nodeId}`)
-              }
-            }}
-          />
-        ) : (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <Space direction="vertical" size={4}>
-                <Text type="secondary">暂无合作数据</Text>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  请联系管理员在「采集配置 - 合作网络同步」中同步数据
-                </Text>
-              </Space>
-            }
-          />
-        )}
+      {/* 合作网络 + 学术族谱 */}
+      <Card>
+        <Tabs
+          defaultActiveKey="collaboration"
+          items={[
+            {
+              key: 'collaboration',
+              label: (
+                <span>
+                  <TeamOutlined style={{ marginRight: 6 }} />
+                  合作网络
+                </span>
+              ),
+              children: collabNodes.length > 0 ? (
+                <CollaborationGraph
+                  nodes={collabNodes}
+                  links={collabLinks}
+                  loading={collabLoading}
+                  onNodeClick={(nodeId) => {
+                    if (nodeId !== String(talent.talent_id)) {
+                      navigate(`/talents/${nodeId}`)
+                    }
+                  }}
+                />
+              ) : (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description={
+                    <Space direction="vertical" size={4}>
+                      <Text type="secondary">暂无合作数据</Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        请联系管理员在「采集配置 - 合作网络同步」中同步数据
+                      </Text>
+                    </Space>
+                  }
+                />
+              ),
+            },
+            {
+              key: 'genealogy',
+              label: (
+                <span>
+                  <GlobalOutlined style={{ marginRight: 6 }} />
+                  学术族谱
+                </span>
+              ),
+              children: genealogyError ? (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description={
+                    <Space direction="vertical" size={4}>
+                      <Text type="danger">族谱加载失败</Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {genealogyError}
+                      </Text>
+                    </Space>
+                  }
+                />
+              ) : genealogyRoot ? (
+                <GenealogyGraph
+                  rootTalent={genealogyRoot}
+                  nodes={genealogyNodes}
+                  links={genealogyLinks}
+                  loading={genealogyLoading}
+                  onNodeClick={(nodeId) => {
+                    if (nodeId !== talent.talent_id) {
+                      navigate(`/talents/${nodeId}`)
+                    }
+                  }}
+                />
+              ) : (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description={
+                    <Space direction="vertical" size={4}>
+                      <Text type="secondary">暂无学术族谱数据</Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        该学者未推断出族谱关系，或需要管理员重新触发族谱计算
+                      </Text>
+                    </Space>
+                  }
+                />
+              ),
+            },
+          ]}
+        />
       </Card>
     </div>
   )

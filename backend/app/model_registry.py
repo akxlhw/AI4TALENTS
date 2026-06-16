@@ -5,6 +5,7 @@ All models are imported here for Alembic to detect them.
 
 from app.domains.academic.models.collaboration import Collaboration, WorkAuthor
 from app.domains.academic.models.embedding import TalentEmbedding
+from app.domains.academic.models.genealogy import GenealogyEdge, TalentInfluenceScore
 from app.domains.academic.models.jd_match import JDMatchResult, JDMatchSession
 from app.domains.academic.models.raw_data import (
     AuthorTechBelong,
@@ -85,6 +86,9 @@ __all__ = [
     "TalentTechTag",
     "Collaboration",
     "WorkAuthor",
+    # Genealogy (v2.1.1)
+    "GenealogyEdge",
+    "TalentInfluenceScore",
     # Statistics
     "OverviewStatSnapshot",
     "ResearchTopicStats",

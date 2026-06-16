@@ -49,6 +49,7 @@ class TechTagSyncService:
 
         # Aggregate work counts across venues for the same tech domain
         from collections import defaultdict
+
         domain_work_counts: dict[int, int] = defaultdict(int)
         for b in belongs:
             domain_work_counts[b.tech_domain_id] += b.work_count_in_venue or 0
@@ -109,11 +110,7 @@ class TechTagSyncService:
                 tag_level="primary",
                 tag_source="auto_mapping",
                 confirm_status="auto_identified",
-                confidence_score=(
-                    min(1.0, work_count / 10.0)
-                    if work_count
-                    else 0.5
-                ),
+                confidence_score=(min(1.0, work_count / 10.0) if work_count else 0.5),
                 is_enabled=True,
             )
 

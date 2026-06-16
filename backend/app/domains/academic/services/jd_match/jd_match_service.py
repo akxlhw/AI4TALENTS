@@ -265,7 +265,7 @@ class JDMatchService:
                     talent_id=item.talent_id,
                     overall_score=item.overall_score,
                     research_score=item.research_score,
-                    skill_score=item.impact_score,       # h-index 影响力分
+                    skill_score=item.impact_score,  # h-index 影响力分
                     experience_score=None,
                     match_reasons=item.match_reasons,
                     highlight_skills=[],
@@ -388,8 +388,12 @@ class JDMatchService:
                 name=talent.name,
                 title=talent.current_title or "",
                 school_name=talent.primary_school_name or "",
-                education_school_name=talent.education_school.school_name if talent.education_school else None,
-                company_school_name=talent.company_school.school_name if talent.company_school else None,
+                education_school_name=(
+                    talent.education_school.school_name if talent.education_school else None
+                ),
+                company_school_name=(
+                    talent.company_school.school_name if talent.company_school else None
+                ),
                 overall_score=overall_score,
                 research_score=research_score,
                 impact_score=impact_score,

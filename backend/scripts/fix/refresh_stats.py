@@ -17,11 +17,12 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
-from sqlalchemy import select, func, case, update, text
+from sqlalchemy import case, func, select, text
+
 from app.core.database import AsyncSessionLocal
 from app.domains.academic.models.school import School
 from app.domains.academic.models.talent import Talent
-from app.domains.academic.models.tech_domain import TechDomain, TalentTechTag
+from app.domains.academic.models.tech_domain import TalentTechTag
 
 logging.basicConfig(
     level=logging.INFO,
@@ -137,8 +138,9 @@ async def refresh_research_topic_stats(session):
 
 async def rebuild_search_index(session):
     """Rebuild search index for all talents."""
-    from app.builders.search_builder import SearchBuilder
     from sqlalchemy import text
+
+    from app.builders.search_builder import SearchBuilder
 
     logger.info("Rebuilding search index...")
 

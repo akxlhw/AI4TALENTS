@@ -213,7 +213,9 @@ class OSEmbeddingService:
                         progress_dict["failed"] = failed
 
                 progress_dict["status"] = "completed"
-                progress_dict["completed_at"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+                progress_dict["completed_at"] = (
+                    datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+                )
 
                 logger.info(
                     f"OS embedding generation completed: processed={processed}, failed={failed}"
@@ -222,7 +224,9 @@ class OSEmbeddingService:
             logger.error(f"OS embedding generation failed: {e}")
             progress_dict["status"] = "error"
             progress_dict["error_message"] = str(e)
-            progress_dict["completed_at"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+            progress_dict["completed_at"] = (
+                datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+            )
 
     async def generate_embeddings(self, batch_size: int = 50) -> dict[str, Any]:
         """

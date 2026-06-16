@@ -31,7 +31,9 @@ class OSRepoConfig(Base, TimestampMixin):
     display_name = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
     tech_element = Column(String(50), nullable=False, index=True)
-    tech_direction_id = Column(Integer, ForeignKey("core_tech_direction.tech_direction_id"), nullable=True)
+    tech_direction_id = Column(
+        Integer, ForeignKey("core_tech_direction.tech_direction_id"), nullable=True
+    )
     language = Column(String(50), nullable=True)
     stars_count = Column(Integer, default=0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
@@ -71,7 +73,9 @@ class OSRepository(Base, TimestampMixin):
     __tablename__ = "os_repository"
 
     repo_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    developer_id = Column(Integer, ForeignKey("os_developer.developer_id"), nullable=False, index=True)
+    developer_id = Column(
+        Integer, ForeignKey("os_developer.developer_id"), nullable=False, index=True
+    )
     github_repo_id = Column(BigInteger, nullable=True, index=True)
     full_name = Column(String(255), nullable=False, unique=True)
     name = Column(String(255), nullable=False)
@@ -88,7 +92,9 @@ class OSContribution(Base, TimestampMixin):
     __tablename__ = "os_contribution"
 
     contribution_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    developer_id = Column(Integer, ForeignKey("os_developer.developer_id"), nullable=False, index=True)
+    developer_id = Column(
+        Integer, ForeignKey("os_developer.developer_id"), nullable=False, index=True
+    )
     repo_id = Column(Integer, ForeignKey("os_repository.repo_id"), nullable=False)
     commits_count = Column(Integer, default=0, nullable=False)
     prs_count = Column(Integer, default=0, nullable=False)
@@ -105,7 +111,9 @@ class OSLanguageSkill(Base, TimestampMixin):
     __tablename__ = "os_language_skill"
 
     skill_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    developer_id = Column(Integer, ForeignKey("os_developer.developer_id"), nullable=False, index=True)
+    developer_id = Column(
+        Integer, ForeignKey("os_developer.developer_id"), nullable=False, index=True
+    )
     language = Column(String(50), nullable=False)
     repo_count = Column(Integer, default=0, nullable=False)
     total_commits = Column(Integer, default=0, nullable=False)
@@ -146,7 +154,9 @@ class OSTalentPool(Base, TimestampMixin):
     __tablename__ = "os_talent_pool"
 
     pool_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    owner_user_id = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=False, index=True)
+    owner_user_id = Column(
+        Integer, ForeignKey("iam_user_account.user_id"), nullable=False, index=True
+    )
     pool_name = Column(String(255), nullable=False)
     pool_type = Column(String(50), nullable=True)
     scope_desc = Column(Text, nullable=True)
@@ -204,7 +214,9 @@ class OSRepoMapping(Base):
 
     mapping_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     repo_full_name = Column(String(255), nullable=False, index=True)
-    tech_direction_id = Column(Integer, ForeignKey("core_tech_direction.tech_direction_id"), nullable=False)
+    tech_direction_id = Column(
+        Integer, ForeignKey("core_tech_direction.tech_direction_id"), nullable=False
+    )
     weight = Column(Float, default=1.0, nullable=False)
     is_enabled = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)

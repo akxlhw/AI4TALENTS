@@ -6,7 +6,6 @@ Extracted test logic from system_config API to reduce endpoint file size.
 from __future__ import annotations
 
 import logging
-import time
 
 from app.domains.shared.schemas.system_config import (
     TestEmbeddingResponse,
@@ -17,6 +16,7 @@ from app.domains.shared.schemas.system_config import (
 from app.domains.shared.services.common.http_client import HttpClientFactory
 
 logger = logging.getLogger(__name__)
+
 
 async def _test_embedding_model(
     api_key: str,
@@ -155,8 +155,6 @@ async def _test_embedding_model(
 # ========== Proxy Configuration Endpoints ==========
 
 
-
-
 async def _test_chat_model(
     api_key: str,
     api_base: str,
@@ -293,9 +291,7 @@ async def _test_proxy_connection(
     openalex_base = settings.OPENALEX_BASE_URL or "https://api.openalex.org"
     external_url = f"{openalex_base}/works?per_page=1"
     try:
-        async with HttpClientFactory.create_client_for_url(
-            external_url, timeout=30.0
-        ) as client:
+        async with HttpClientFactory.create_client_for_url(external_url, timeout=30.0) as client:
             response = await client.get(external_url)
 
             if response.status_code == 200:
@@ -460,30 +456,38 @@ async def _test_github_connection(
                 if response.status_code == 200:
                     data = response.json()
                     rate = data.get("rate", {})
-                    results.append({
-                        "token_prefix": token[:8] + "****",
-                        "success": True,
-                        "limit": rate.get("limit", 0),
-                        "remaining": rate.get("remaining", 0),
-                    })
+                    results.append(
+                        {
+                            "token_prefix": token[:8] + "****",
+                            "success": True,
+                            "limit": rate.get("limit", 0),
+                            "remaining": rate.get("remaining", 0),
+                        }
+                    )
                 elif response.status_code == 401:
-                    results.append({
-                        "token_prefix": token[:8] + "****",
-                        "success": False,
-                        "error": "Token 无效或已过期",
-                    })
+                    results.append(
+                        {
+                            "token_prefix": token[:8] + "****",
+                            "success": False,
+                            "error": "Token 无效或已过期",
+                        }
+                    )
                 else:
-                    results.append({
-                        "token_prefix": token[:8] + "****",
-                        "success": False,
-                        "error": f"HTTP {response.status_code}",
-                    })
+                    results.append(
+                        {
+                            "token_prefix": token[:8] + "****",
+                            "success": False,
+                            "error": f"HTTP {response.status_code}",
+                        }
+                    )
         except Exception as e:
-            results.append({
-                "token_prefix": token[:8] + "****",
-                "success": False,
-                "error": str(e),
-            })
+            results.append(
+                {
+                    "token_prefix": token[:8] + "****",
+                    "success": False,
+                    "error": str(e),
+                }
+            )
 
     success_count = sum(1 for r in results if r["success"])
     if success_count == len(token_list):
@@ -504,5 +508,3 @@ async def _test_github_connection(
             message="所有 Token 均无法连接 GitHub API",
             details={"results": results},
         )
-
-

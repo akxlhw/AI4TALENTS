@@ -39,9 +39,10 @@ def upgrade() -> None:
             DO $$
             BEGIN
                 IF NOT EXISTS (
-                    SELECT 1 FROM information_schema.columns
-                    WHERE table_name = 'search_talent_document'
-                    AND column_name = 'search_vector'
+                    SELECT 1 FROM pg_catalog.pg_attribute
+                    WHERE attrelid = 'search_talent_document'::regclass
+                    AND attname = 'search_vector'
+                    AND attnum > 0 AND NOT attisdropped
                 ) THEN
                     ALTER TABLE search_talent_document
                     ADD COLUMN search_vector tsvector;

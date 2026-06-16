@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # Application
     APP_NAME: str = "智能人才库 API"
-    APP_VERSION: str = "2.1.1"
+    APP_VERSION: str = "2.2.0"
     DEBUG: bool = False
     ENVIRONMENT: str = "development"  # development, test, production
 
@@ -128,6 +128,18 @@ class Settings(BaseSettings):
 
     # Collection
     COLLECT_ERROR_MAX_LENGTH: int = 500  # Max length for collection error messages
+    COLLECT_SUBTASK_RETRY_COUNT: int = 3  # Max retries per venue sub-task (Phase 1)
+    COLLECT_SUBTASK_RETRY_BASE_WAIT: int = 1  # Base wait seconds for sub-task retry backoff
+
+    # Genealogy
+    GENEALOGY_RANKING_DEFAULT_LIMIT: int = 50
+    GENEALOGY_RANKING_MAX_LIMIT: int = 200
+
+    # Schools
+    SCHOOL_LIST_MAX_PAGE_SIZE: int = 5000
+
+    # Materialized View Refresh
+    MV_REFRESH_TIMEOUT: int = 300  # Seconds for materialized view refresh
 
     # Search Configuration (v1.4)
     SEARCH_DEFAULT_MODE: str = "keyword"  # keyword, fulltext, semantic, hybrid
@@ -163,7 +175,7 @@ class Settings(BaseSettings):
             if self.ENVIRONMENT == "production":
                 raise ValueError(
                     "SECRET_KEY must be set in production environment. "
-                    "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+                    'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
                 )
             # Development: auto-generate but warn
             object.__setattr__(self, "SECRET_KEY", _generate_secret_key())

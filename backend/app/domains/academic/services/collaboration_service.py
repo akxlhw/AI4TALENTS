@@ -604,6 +604,8 @@ class CollaborationService:
 
         config_service = ConfigService(self.session)
         await config_service.set_value(
-            "COLLABORATION_LAST_SYNC", datetime.now(timezone.utc).replace(tzinfo=None).isoformat(), "string"
+            "COLLABORATION_LAST_SYNC",
+            datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+            "string",
         )
         await self.session.commit()

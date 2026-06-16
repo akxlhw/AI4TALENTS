@@ -11,8 +11,8 @@ Usage:
     # With custom batch size
     python -m scripts.sync_collaborations --batch-size 50 --works-per-author 100
 """
-import asyncio
 import argparse
+import asyncio
 import sys
 from pathlib import Path
 
@@ -69,7 +69,7 @@ async def main():
                     progress_callback=progress_callback
                 )
 
-                print(f"\n\nSync completed!")
+                print("\n\nSync completed!")
                 print(f"Total talents: {result['total_talents']}")
                 print(f"Processed: {result['processed']}")
                 print(f"Collaborations created: {result['collaborations_created']}")

@@ -182,6 +182,3 @@ class RoleIdentifier:
             RoleType.UNKNOWN.value: "未知",
         }
         return display_names.get(role_type, "未知")
-
-
-

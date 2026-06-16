@@ -40,6 +40,7 @@ class TestTechBelongCalculator:
     async def sample_tech_domain(self, test_session: AsyncSession):
         """Create a sample tech domain."""
         from app.domains.academic.models.tech_domain import TechDomain
+
         domain = TechDomain(
             domain_code="TEST",
             domain_name="Test Domain",
@@ -56,35 +57,35 @@ class TestTechBelongCalculator:
         works = [
             RawWork(
                 openalex_work_id="W1",
-                raw_json='{}',
+                raw_json="{}",
                 source_id="S-TEST-123",
                 publication_year=2020,
                 author_ids=json.dumps(["A1", "A2"]),
             ),
             RawWork(
                 openalex_work_id="W2",
-                raw_json='{}',
+                raw_json="{}",
                 source_id="S-TEST-123",
                 publication_year=2021,
                 author_ids=json.dumps(["A1", "A3"]),
             ),
             RawWork(
                 openalex_work_id="W3",
-                raw_json='{}',
+                raw_json="{}",
                 source_id="S-TEST-123",
                 publication_year=2022,
                 author_ids=json.dumps(["A1"]),
             ),
             RawWork(
                 openalex_work_id="W4",
-                raw_json='{}',
+                raw_json="{}",
                 source_id="S-TEST-123",
                 publication_year=2021,
-                author_ids='null',  # parses to None, causes TypeError in loop (caught by source)
+                author_ids="null",  # parses to None, causes TypeError in loop (caught by source)
             ),
             RawWork(
                 openalex_work_id="W5",
-                raw_json='{}',
+                raw_json="{}",
                 source_id="S-TEST-123",
                 publication_year=2023,
                 author_ids=None,
@@ -97,9 +98,18 @@ class TestTechBelongCalculator:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_calculate_for_venue(self, calculator: TechBelongCalculator, sample_venue, sample_tech_domain, sample_works, test_session):
+    async def test_calculate_for_venue(
+        self,
+        calculator: TechBelongCalculator,
+        sample_venue,
+        sample_tech_domain,
+        sample_works,
+        test_session,
+    ):
         """Test calculate_for_venue creates correct AuthorTechBelong records."""
-        count = await calculator.calculate_for_venue(sample_venue.venue_id, tech_domain_id=sample_tech_domain.tech_domain_id, task_id=None)
+        count = await calculator.calculate_for_venue(
+            sample_venue.venue_id, tech_domain_id=sample_tech_domain.tech_domain_id, task_id=None
+        )
 
         # A1 appears in 3 works, A2 in 1, A3 in 1
         assert count == 3
@@ -108,7 +118,9 @@ class TestTechBelongCalculator:
         from sqlalchemy import select
 
         result = await test_session.execute(
-            select(AuthorTechBelong).where(AuthorTechBelong.source_venue_id == sample_venue.venue_id)
+            select(AuthorTechBelong).where(
+                AuthorTechBelong.source_venue_id == sample_venue.venue_id
+            )
         )
         belongs = result.scalars().all()
         assert len(belongs) == 3
@@ -127,7 +139,14 @@ class TestTechBelongCalculator:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_calculate_for_venue_updates_existing(self, calculator: TechBelongCalculator, sample_venue, sample_tech_domain, sample_works, test_session):
+    async def test_calculate_for_venue_updates_existing(
+        self,
+        calculator: TechBelongCalculator,
+        sample_venue,
+        sample_tech_domain,
+        sample_works,
+        test_session,
+    ):
         """Test calculate_for_venue updates existing AuthorTechBelong records."""
         # Pre-create an existing record
         existing = AuthorTechBelong(
@@ -141,7 +160,9 @@ class TestTechBelongCalculator:
         test_session.add(existing)
         await test_session.commit()
 
-        count = await calculator.calculate_for_venue(sample_venue.venue_id, tech_domain_id=sample_tech_domain.tech_domain_id)
+        count = await calculator.calculate_for_venue(
+            sample_venue.venue_id, tech_domain_id=sample_tech_domain.tech_domain_id
+        )
 
         assert count == 3
         assert existing.work_count_in_venue == 3
@@ -157,7 +178,9 @@ class TestTechBelongCalculator:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_calculate_for_venue_no_source_id(self, calculator: TechBelongCalculator, test_session):
+    async def test_calculate_for_venue_no_source_id(
+        self, calculator: TechBelongCalculator, test_session
+    ):
         """Test calculate_for_venue with venue missing openalex_source_id returns 0."""
         venue = Venue(
             venue_code="NO-SOURCE",
@@ -174,25 +197,33 @@ class TestTechBelongCalculator:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_calculate_for_venue_no_works(self, calculator: TechBelongCalculator, sample_venue, sample_tech_domain):
+    async def test_calculate_for_venue_no_works(
+        self, calculator: TechBelongCalculator, sample_venue, sample_tech_domain
+    ):
         """Test calculate_for_venue with no matching works returns 0."""
-        count = await calculator.calculate_for_venue(sample_venue.venue_id, tech_domain_id=sample_tech_domain.tech_domain_id)
+        count = await calculator.calculate_for_venue(
+            sample_venue.venue_id, tech_domain_id=sample_tech_domain.tech_domain_id
+        )
         assert count == 0
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_calculate_for_venue_skips_invalid_author_ids(self, calculator: TechBelongCalculator, sample_venue, sample_tech_domain, test_session):
+    async def test_calculate_for_venue_skips_invalid_author_ids(
+        self, calculator: TechBelongCalculator, sample_venue, sample_tech_domain, test_session
+    ):
         """Test calculate_for_venue skips works with invalid author_ids."""
         work = RawWork(
             openalex_work_id="W-INVALID",
-            raw_json='{}',
+            raw_json="{}",
             source_id="S-TEST-123",
             publication_year=2021,
-            author_ids='null',  # parses to None, loop raises TypeError (caught by source)
+            author_ids="null",  # parses to None, loop raises TypeError (caught by source)
         )
         test_session.add(work)
         await test_session.commit()
 
-        count = await calculator.calculate_for_venue(sample_venue.venue_id, tech_domain_id=sample_tech_domain.tech_domain_id)
+        count = await calculator.calculate_for_venue(
+            sample_venue.venue_id, tech_domain_id=sample_tech_domain.tech_domain_id
+        )
         # No valid authors, so count should be 0
         assert count == 0

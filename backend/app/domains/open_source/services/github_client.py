@@ -189,9 +189,7 @@ class GitHubClient:
         self._last_request_time = time.time()
         return response
 
-    async def _do_get(
-        self, path: str, params: dict[str, Any] | None = None
-    ) -> Any:
+    async def _do_get(self, path: str, params: dict[str, Any] | None = None) -> Any:
         """Core GET logic with rate-limit handling and token rotation."""
         # Proactively pick the healthiest token before each request
         self._pick_best_token()
@@ -320,18 +318,19 @@ class GitHubClient:
         """Fetch user profile."""
         return cast(dict[str, Any], await self._get(f"/users/{login}"))
 
-    async def list_user_repos(
-        self, login: str, per_page: int = 100
-    ) -> list[dict[str, Any]]:
+    async def list_user_repos(self, login: str, per_page: int = 100) -> list[dict[str, Any]]:
         """Fetch user's public repositories.
 
         GitHub API max per_page is 100. Single-page fetch to minimize
         rate limit consumption; covers the vast majority of users.
         """
-        return cast(list[dict[str, Any]], await self._get(
-            f"/users/{login}/repos",
-            params={"per_page": per_page, "page": 1, "sort": "updated"},
-        ))
+        return cast(
+            list[dict[str, Any]],
+            await self._get(
+                f"/users/{login}/repos",
+                params={"per_page": per_page, "page": 1, "sort": "updated"},
+            ),
+        )
 
     async def get_repo_languages(self, owner: str, repo: str) -> dict[str, int]:
         """Fetch repository language breakdown."""
@@ -395,7 +394,9 @@ class GitHubClient:
             for i, commits in enumerate(results):
                 page_num = current_page + i
                 if isinstance(commits, Exception):
-                    logger.warning(f"Failed to fetch commits page {page_num} for {owner}/{repo}: {commits}")
+                    logger.warning(
+                        f"Failed to fetch commits page {page_num} for {owner}/{repo}: {commits}"
+                    )
                     continue
 
                 if not commits:
@@ -429,8 +430,7 @@ class GitHubClient:
 
             if current_page > max_pages:
                 logger.warning(
-                    f"Commits API pagination capped at {max_pages} pages "
-                    f"for {owner}/{repo}"
+                    f"Commits API pagination capped at {max_pages} pages " f"for {owner}/{repo}"
                 )
                 break
 

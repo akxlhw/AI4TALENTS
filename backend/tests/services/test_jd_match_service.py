@@ -224,10 +224,11 @@ class TestJDMatchServiceScoring:
         scorer = MatchScorer()
 
         # Act
-        overall = scorer.calculate_overall_score(research_score=80)
+        overall, impact = scorer.calculate_overall_score(research_score=80)
 
-        # Assert
-        assert overall == 80.0
+        # Assert: research=80 * 0.8 + impact=0 * 0.2 = 64.0
+        assert overall == 64.0
+        assert impact == 0.0
 
     @pytest.mark.asyncio
     async def test_score_zero_on_no_match(self, test_session: AsyncSession):

@@ -3,10 +3,10 @@ OpenAlex data sync script - Fetches real data from OpenAlex API.
 Includes professors, students, and graduates.
 """
 import asyncio
-import httpx
 import random
 from datetime import datetime
-from typing import Dict, List
+
+import httpx
 from sqlalchemy import create_engine, text
 
 # OpenAlex API configuration
@@ -39,7 +39,7 @@ class OpenAlexSync:
     async def close(self):
         await self.client.aclose()
 
-    async def fetch_author_works(self, author_openalex_id: str, max_works: int = 10) -> List[Dict]:
+    async def fetch_author_works(self, author_openalex_id: str, max_works: int = 10) -> list[dict]:
         """Fetch top works for an author, sorted by citation count."""
         url = f"{OPENALEX_BASE_URL}/works"
 
@@ -64,7 +64,7 @@ class OpenAlexSync:
         institution_id: str,
         max_authors: int = 100,
         min_works: int = None
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Fetch authors from a specific institution with optional filters."""
         authors = []
         page = 1
@@ -117,7 +117,7 @@ class OpenAlexSync:
         institution_id: str,
         max_authors: int = 50,
         works_range: tuple = (1, 20)
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Fetch authors within a specific works count range (for students)."""
         authors = []
         page = 1
@@ -157,7 +157,7 @@ class OpenAlexSync:
 
         return authors
 
-    def determine_role_type(self, author: Dict) -> tuple:
+    def determine_role_type(self, author: dict) -> tuple:
         """
         Determine if author is professor, student, or graduated.
         Returns (role_type, confidence, reason)
@@ -185,7 +185,7 @@ class OpenAlexSync:
         else:
             return "professor", 0.60, "Default to professor"
 
-    def extract_topics(self, author: Dict) -> List[str]:
+    def extract_topics(self, author: dict) -> list[str]:
         """Extract research topics from author data."""
         x_concepts = author.get("x_concepts", [])
         topics = []
@@ -211,7 +211,7 @@ class OpenAlexSync:
             conn.commit()
             print("  Database cleaned.")
 
-    def insert_schools(self) -> Dict[str, int]:
+    def insert_schools(self) -> dict[str, int]:
         """Insert target institutions."""
         school_ids = {}
 
@@ -234,7 +234,7 @@ class OpenAlexSync:
 
         return school_ids
 
-    async def sync_authors(self, school_ids: Dict[str, int], professors_per_school: int = 50, students_per_school: int = 30):
+    async def sync_authors(self, school_ids: dict[str, int], professors_per_school: int = 50, students_per_school: int = 30):
         """Sync authors from all institutions."""
         print(f"\nSyncing authors ({professors_per_school} professors, {students_per_school} students per school)...")
 
@@ -251,7 +251,7 @@ class OpenAlexSync:
             print(f"\n  {inst['name']}:")
 
             # 1. Fetch professors (high works count)
-            print(f"    Fetching professors...")
+            print("    Fetching professors...")
             prof_authors = await self.fetch_authors_by_institution(
                 openalex_id,
                 max_authors=professors_per_school,
@@ -259,7 +259,7 @@ class OpenAlexSync:
             )
 
             # 2. Fetch students (low works count)
-            print(f"    Fetching students...")
+            print("    Fetching students...")
             student_authors = await self.fetch_authors_random(
                 openalex_id,
                 max_authors=students_per_school,
@@ -366,9 +366,9 @@ class OpenAlexSync:
 
                 conn.commit()
 
-        print(f"\n=== Sync Complete ===")
+        print("\n=== Sync Complete ===")
         print(f"Total authors: {total_authors}")
-        print(f"Role distribution:")
+        print("Role distribution:")
         for role, count in role_counts.items():
             print(f"  {role}: {count}")
 
@@ -443,13 +443,13 @@ class OpenAlexSync:
 
                     # Rate limiting
                     if (i + 1) % 10 == 0:
-                        print(f"    Pausing to respect rate limits...")
+                        print("    Pausing to respect rate limits...")
                         await asyncio.sleep(1)
 
                 except Exception as e:
                     print(f"    Error: {e}")
 
-            print(f"\n=== Works Sync Complete ===")
+            print("\n=== Works Sync Complete ===")
             print(f"Total works inserted: {total_works}")
 
 

@@ -23,10 +23,11 @@ depends_on = None
 
 def column_exists(conn, table_name, column_name):
     """Check if a column exists in a table (PostgreSQL compatible)."""
-    result = conn.execute(sa.text("""
-        SELECT column_name FROM information_schema.columns
-        WHERE table_name = :table AND column_name = :column
-    """), {"table": table_name, "column": column_name})
+    result = conn.execute(sa.text(
+        f"SELECT attname FROM pg_catalog.pg_attribute "
+        f"WHERE attrelid = '{table_name}'::regclass AND attname = :column "
+        f"AND attnum > 0 AND NOT attisdropped"
+    ), {"column": column_name})
     return result.fetchone() is not None
 
 

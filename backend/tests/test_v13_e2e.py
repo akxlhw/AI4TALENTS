@@ -17,11 +17,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.metrics import metrics
-from app.main import app
-from app.domains.shared.models.enums import RoleType, VisibilityStatus
 from app.domains.academic.models.school import School
 from app.domains.academic.models.talent import Talent
 from app.domains.academic.models.tech_domain import TalentTechTag, TechDirection, TechDomain
+from app.domains.shared.models.enums import RoleType, VisibilityStatus
+from app.main import app
 
 
 @pytest.fixture
@@ -110,6 +110,7 @@ async def setup_e2e_data(test_session: AsyncSession):
 @pytest.fixture
 async def e2e_client(test_session: AsyncSession):
     """Create E2E test client with proper database session override."""
+
     async def override_get_session():
         yield test_session
 
@@ -242,7 +243,9 @@ class TestE2ETechDomainFlow:
         assert len(data["items"]) >= 2  # Should have AI and ROBOTICS
 
     @pytest.mark.asyncio
-    async def test_tech_domain_talents_pagination_e2e(self, e2e_client: AsyncClient, setup_e2e_data):
+    async def test_tech_domain_talents_pagination_e2e(
+        self, e2e_client: AsyncClient, setup_e2e_data
+    ):
         """Test tech domain talents pagination."""
         data = setup_e2e_data
         domain_id = data["domains"][0].tech_domain_id
@@ -276,9 +279,7 @@ class TestE2ETalentList:
             assert talent["role_type"] == "professor"
 
     @pytest.mark.asyncio
-    async def test_talent_list_with_keyword_search(
-        self, e2e_client: AsyncClient, setup_e2e_data
-    ):
+    async def test_talent_list_with_keyword_search(self, e2e_client: AsyncClient, setup_e2e_data):
         """Test talent list with keyword search."""
         # Use a known keyword from the test data
         response = await e2e_client.get(

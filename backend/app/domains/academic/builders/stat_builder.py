@@ -57,7 +57,9 @@ class StatBuilder(BaseBuilder):
 
             await self.session.commit()
 
-            records_created = 1 + school_result["schools_processed"] + topic_result["topics_processed"]
+            records_created = (
+                1 + school_result["schools_processed"] + topic_result["topics_processed"]
+            )
             completed_at = datetime.now()
 
             return BuildResult(
@@ -94,7 +96,9 @@ class StatBuilder(BaseBuilder):
         logger.info("Building overview statistics")
 
         # Count schools with visible talents (using primary school affiliation)
-        primary_school = func.coalesce(Talent.education_school_id, Talent.company_school_id, Talent.school_id)
+        primary_school = func.coalesce(
+            Talent.education_school_id, Talent.company_school_id, Talent.school_id
+        )
         school_result = await self.session.execute(
             select(func.count(func.distinct(primary_school))).where(
                 Talent.is_visible.is_(True),
@@ -173,7 +177,9 @@ class StatBuilder(BaseBuilder):
         await self.session.execute(ResearchTopicStats.__table__.delete())
 
         # Aggregate openalex_topics from all enabled talent-tech-tag associations
-        result = await self.session.execute(text("""
+        result = await self.session.execute(
+            text(
+                """
             SELECT
                 topic,
                 COUNT(DISTINCT t.talent_id) as talent_count
@@ -186,7 +192,9 @@ class StatBuilder(BaseBuilder):
             GROUP BY topic
             ORDER BY talent_count DESC
             LIMIT 50
-        """))
+        """
+            )
+        )
 
         topics_processed = 0
         for row in result:
@@ -213,7 +221,9 @@ class StatBuilder(BaseBuilder):
         logger.info("Building school statistics")
 
         # Get all schools with talents (using primary school affiliation)
-        primary_school = func.coalesce(Talent.education_school_id, Talent.company_school_id, Talent.school_id)
+        primary_school = func.coalesce(
+            Talent.education_school_id, Talent.company_school_id, Talent.school_id
+        )
         result = await self.session.execute(
             select(School.school_id, School.school_name)
             .join(Talent, School.school_id == primary_school)
@@ -235,7 +245,9 @@ class StatBuilder(BaseBuilder):
 
     async def _build_single_school_stats(self, school_id: int) -> None:
         """Build statistics for a single school."""
-        primary_school = func.coalesce(Talent.education_school_id, Talent.company_school_id, Talent.school_id)
+        primary_school = func.coalesce(
+            Talent.education_school_id, Talent.company_school_id, Talent.school_id
+        )
 
         # Count professors
         professor_result = await self.session.execute(

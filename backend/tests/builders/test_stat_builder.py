@@ -11,7 +11,7 @@ from app.domains.academic.builders.stat_builder import StatBuilder
 from app.domains.academic.models.school import School
 from app.domains.academic.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
 from app.domains.academic.models.talent import Talent
-from app.domains.shared.models.enums import RoleType, VisibilityStatus
+from app.domains.shared.models.enums import RoleType
 
 
 class TestStatBuilder:
@@ -68,7 +68,9 @@ class TestStatBuilder:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_build_overview_stats(self, builder: StatBuilder, sample_data, test_session: AsyncSession):
+    async def test_build_overview_stats(
+        self, builder: StatBuilder, sample_data, test_session: AsyncSession
+    ):
         """Test _build_overview_stats creates snapshot with correct counts."""
         result = await builder._build_overview_stats()
 
@@ -86,7 +88,9 @@ class TestStatBuilder:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_build_school_stats(self, builder: StatBuilder, sample_data, test_session: AsyncSession):
+    async def test_build_school_stats(
+        self, builder: StatBuilder, sample_data, test_session: AsyncSession
+    ):
         """Test _build_school_stats creates per-school snapshots."""
         school, _ = sample_data
         result = await builder._build_school_stats()
@@ -129,7 +133,9 @@ class TestStatBuilder:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_build_deactivates_old_overview(self, builder: StatBuilder, sample_data, test_session: AsyncSession):
+    async def test_build_deactivates_old_overview(
+        self, builder: StatBuilder, sample_data, test_session: AsyncSession
+    ):
         """Test that new build deactivates old overview snapshots."""
         # Create an old active snapshot
         old = OverviewStatSnapshot(
@@ -149,7 +155,9 @@ class TestStatBuilder:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_build_deactivates_old_school_stats(self, builder: StatBuilder, sample_data, test_session: AsyncSession):
+    async def test_build_deactivates_old_school_stats(
+        self, builder: StatBuilder, sample_data, test_session: AsyncSession
+    ):
         """Test that new build deactivates old school snapshots."""
         school, _ = sample_data
 

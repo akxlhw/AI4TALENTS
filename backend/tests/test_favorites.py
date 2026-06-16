@@ -7,10 +7,10 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.auth import hash_password
-from app.domains.shared.models.enums import RoleType, UserRoleType, VisibilityStatus
-from app.domains.shared.models.iam import UserAccount
 from app.domains.academic.models.school import School
 from app.domains.academic.models.talent import Talent
+from app.domains.shared.models.enums import RoleType, UserRoleType, VisibilityStatus
+from app.domains.shared.models.iam import UserAccount
 
 
 @pytest.fixture

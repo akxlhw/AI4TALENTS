@@ -670,15 +670,9 @@ class TalentSearchRepository(TalentExportRepository):
             params["min_citations"] = filters["min_citations"]
 
         if "country_code" in filters:
-            join_clauses.append(
-                "LEFT JOIN core_school s ON t.school_id = s.school_id"
-            )
-            join_clauses.append(
-                "LEFT JOIN core_school es ON t.education_school_id = es.school_id"
-            )
-            join_clauses.append(
-                "LEFT JOIN core_school cs ON t.company_school_id = cs.school_id"
-            )
+            join_clauses.append("LEFT JOIN core_school s ON t.school_id = s.school_id")
+            join_clauses.append("LEFT JOIN core_school es ON t.education_school_id = es.school_id")
+            join_clauses.append("LEFT JOIN core_school cs ON t.company_school_id = cs.school_id")
             filter_clauses.append(
                 "(s.country_code = :country_code OR es.country_code = :country_code "
                 "OR cs.country_code = :country_code)"

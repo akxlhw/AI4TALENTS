@@ -288,7 +288,9 @@ class EmbeddingService:
 
                 # 批量存储结果（只存成功返回的部分）
                 items_to_store = []
-                for tid, text, result in zip(valid_talent_ids[:result_count], texts[:result_count], results, strict=False):
+                for tid, text, result in zip(
+                    valid_talent_ids[:result_count], texts[:result_count], results, strict=False
+                ):
                     source_hash = self.calculate_source_hash(text)
                     items_to_store.append(
                         {

@@ -471,6 +471,7 @@ class TestChangePassword:
         )
 
         assert response.status_code == 422  # Pydantic min_length validation
+
     """Tests for authentication utility functions."""
 
     def test_hash_password(self):

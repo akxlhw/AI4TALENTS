@@ -99,9 +99,9 @@ def main() -> int:
 
     if fixed_errors:
         print(f"PASS: {len(fixed_errors)} existing mypy error(s) fixed -- nice work!")
-        # Optionally shrink baseline automatically
-        remaining = current & baseline
-        save_baseline(remaining | current)
+        # NOTE: Previously this block auto-shrank the baseline by saving
+        # (remaining | current), which is equivalent to current and silently
+        # absorbed new errors. Do not auto-save here; use --regenerate instead.
 
     if new_errors:
         print(f"FAIL: {len(new_errors)} new mypy error(s) introduced:")

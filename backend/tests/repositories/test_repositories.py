@@ -5,13 +5,13 @@ Tests for repository classes.
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.shared.models.enums import RoleType
 from app.domains.academic.models.school import School
 from app.domains.academic.models.statistics import OverviewStatSnapshot, SchoolStatSnapshot
 from app.domains.academic.models.talent import RoleProfile, Talent
 from app.domains.academic.repositories.school_repository import SchoolRepository
 from app.domains.academic.repositories.stat_repository import StatisticsRepository
 from app.domains.academic.repositories.talent_repository import TalentRepository
+from app.domains.shared.models.enums import RoleType
 
 
 class TestSchoolRepository:

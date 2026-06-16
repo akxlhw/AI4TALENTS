@@ -39,6 +39,33 @@ async def admin_token(client: AsyncClient, test_admin):
     return response.json()["access_token"]
 
 
+@pytest.fixture
+async def test_super_admin(test_session):
+    """Create a test super admin user."""
+    super_admin = UserAccount(
+        username="superadmin",
+        email="superadmin@example.com",
+        password_hash=hash_password("superadmin123"),
+        role_type=UserRoleType.SUPER_ADMIN.value,
+        is_active=True,
+        status="active",
+        display_name="Super Admin",
+    )
+    test_session.add(super_admin)
+    await test_session.commit()
+    return super_admin
+
+
+@pytest.fixture
+async def super_admin_token(client: AsyncClient, test_super_admin):
+    """Get auth token for super admin user."""
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "superadmin", "password": "superadmin123"},
+    )
+    return response.json()["access_token"]
+
+
 class TestAuditLogWriting:
     """Tests that audit logs are written for key operations."""
 
@@ -52,6 +79,8 @@ class TestAuditLogWriting:
                 "email": "auditregister@example.com",
                 "password": "Str0ng!Pw",
                 "employee_id": "h00999999",
+                "privacy_policy_accepted": True,
+                "terms_of_use_accepted": True,
             },
         )
 
@@ -92,7 +121,7 @@ class TestAuditLogWriting:
 
     @pytest.mark.asyncio
     async def test_user_approval_creates_audit_log(
-        self, client: AsyncClient, test_session, admin_token
+        self, client: AsyncClient, test_session, super_admin_token
     ):
         """Test that user approval creates an audit log."""
         # Create pending user
@@ -110,7 +139,7 @@ class TestAuditLogWriting:
 
         response = await client.post(
             f"/api/v1/users/{user.user_id}/approve",
-            headers={"Authorization": f"Bearer {admin_token}"},
+            headers={"Authorization": f"Bearer {super_admin_token}"},
         )
 
         assert response.status_code == 200

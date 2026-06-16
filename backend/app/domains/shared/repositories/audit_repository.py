@@ -164,9 +164,7 @@ class AuditRepository:
         total = total_result.scalar() or 0
 
         offset = (page - 1) * page_size
-        query = query.offset(offset).limit(page_size).order_by(
-            AuditOperationLog.event_time.desc()
-        )
+        query = query.offset(offset).limit(page_size).order_by(AuditOperationLog.event_time.desc())
 
         result = await self.session.execute(query)
         logs = list(result.scalars().all())

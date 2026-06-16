@@ -111,7 +111,9 @@ class OpenSourceService:
             created_by=created_by,
         )
 
-    async def update_repo_config(self, repo_config_id: int, update_data: dict[str, Any]) -> OSRepoConfig | None:
+    async def update_repo_config(
+        self, repo_config_id: int, update_data: dict[str, Any]
+    ) -> OSRepoConfig | None:
         return await self._collection.update_repo_config(repo_config_id, update_data)
 
     async def delete_repo_config(self, repo_config_id: int) -> bool:
@@ -119,14 +121,20 @@ class OpenSourceService:
 
     # ============= Collect Task =============
 
-    async def list_collect_tasks(self, page: int = 1, page_size: int = 20) -> tuple[list[OSCollectTask], int]:
+    async def list_collect_tasks(
+        self, page: int = 1, page_size: int = 20
+    ) -> tuple[list[OSCollectTask], int]:
         return await self._collection.list_collect_tasks(page=page, page_size=page_size)
 
     async def get_collect_task(self, task_id: int) -> OSCollectTask | None:
         return await self._collection.get_collect_task(task_id)
 
-    async def create_collect_task(self, task_name: str, config_json: dict[str, Any], created_by: int) -> OSCollectTask:
-        return await self._collection.create_collect_task(task_name=task_name, config_json=config_json, created_by=created_by)
+    async def create_collect_task(
+        self, task_name: str, config_json: dict[str, Any], created_by: int
+    ) -> OSCollectTask:
+        return await self._collection.create_collect_task(
+            task_name=task_name, config_json=config_json, created_by=created_by
+        )
 
     async def cancel_collect_task(self, task_id: int) -> OSCollectTask | None:
         return await self._collection.cancel_collect_task(task_id)
@@ -172,8 +180,12 @@ class OpenSourceService:
     async def get_repository_detail(self, repo_full_name: str) -> dict[str, Any]:
         return await self._developer.get_repository_detail(repo_full_name)
 
-    async def get_repository_contributors(self, repo_full_name: str, page: int = 1, page_size: int = 50) -> tuple[list[OSRepositoryContributor], int]:
-        return await self._developer.get_repository_contributors(repo_full_name, page=page, page_size=page_size)
+    async def get_repository_contributors(
+        self, repo_full_name: str, page: int = 1, page_size: int = 50
+    ) -> tuple[list[OSRepositoryContributor], int]:
+        return await self._developer.get_repository_contributors(
+            repo_full_name, page=page, page_size=page_size
+        )
 
     async def search_developers(self, req: OSSearchRequest) -> tuple[list[OSDeveloper], int]:
         return await self._developer.search_developers(req)
@@ -186,17 +198,33 @@ class OpenSourceService:
 
     # ============= Favourite =============
 
-    async def list_favourites(self, user_id: int, page: int = 1, page_size: int = 20, keyword: str | None = None) -> tuple[list[OSFavourite], int]:
-        return await self._favourite.list_favourites(user_id=user_id, page=page, page_size=page_size, keyword=keyword)
+    async def list_favourites(
+        self, user_id: int, page: int = 1, page_size: int = 20, keyword: str | None = None
+    ) -> tuple[list[OSFavourite], int]:
+        return await self._favourite.list_favourites(
+            user_id=user_id, page=page, page_size=page_size, keyword=keyword
+        )
 
     async def get_favourite_ids(self, user_id: int) -> list[int]:
         return await self._favourite.get_favourite_ids(user_id)
 
-    async def add_favourite(self, user_id: int, developer_id: int, notes: str | None = None) -> OSFavourite:
-        return await self._favourite.add_favourite(user_id=user_id, developer_id=developer_id, notes=notes)
+    async def add_favourite(
+        self, user_id: int, developer_id: int, notes: str | None = None
+    ) -> OSFavourite:
+        return await self._favourite.add_favourite(
+            user_id=user_id, developer_id=developer_id, notes=notes
+        )
 
-    async def update_favourite(self, user_id: int, developer_id: int, notes: str | None = None, followup_status: str | None = None) -> OSFavourite | None:
-        return await self._favourite.update_favourite(user_id=user_id, developer_id=developer_id, notes=notes, followup_status=followup_status)
+    async def update_favourite(
+        self,
+        user_id: int,
+        developer_id: int,
+        notes: str | None = None,
+        followup_status: str | None = None,
+    ) -> OSFavourite | None:
+        return await self._favourite.update_favourite(
+            user_id=user_id, developer_id=developer_id, notes=notes, followup_status=followup_status
+        )
 
     async def remove_favourite(self, user_id: int, developer_id: int) -> bool:
         return await self._favourite.remove_favourite(user_id=user_id, developer_id=developer_id)
@@ -206,30 +234,50 @@ class OpenSourceService:
     async def list_talent_pools(self, user_id: int) -> list[OSTalentPool]:
         return await self._favourite.list_talent_pools(user_id)
 
-    async def create_talent_pool(self, user_id: int, pool_name: str, pool_type: str | None = "custom", scope_desc: str | None = None) -> OSTalentPool:
-        return await self._favourite.create_talent_pool(user_id=user_id, pool_name=pool_name, pool_type=pool_type, scope_desc=scope_desc)
+    async def create_talent_pool(
+        self,
+        user_id: int,
+        pool_name: str,
+        pool_type: str | None = "custom",
+        scope_desc: str | None = None,
+    ) -> OSTalentPool:
+        return await self._favourite.create_talent_pool(
+            user_id=user_id, pool_name=pool_name, pool_type=pool_type, scope_desc=scope_desc
+        )
 
-    async def update_talent_pool(self, pool_id: int, update_data: dict[str, Any]) -> OSTalentPool | None:
+    async def update_talent_pool(
+        self, pool_id: int, update_data: dict[str, Any]
+    ) -> OSTalentPool | None:
         return await self._favourite.update_talent_pool(pool_id, update_data)
 
     async def delete_talent_pool(self, pool_id: int) -> bool:
         return await self._favourite.delete_talent_pool(pool_id)
 
-    async def add_pool_member(self, pool_id: int, developer_id: int, notes: str | None = None) -> OSPoolMember:
-        return await self._favourite.add_pool_member(pool_id=pool_id, developer_id=developer_id, notes=notes)
+    async def add_pool_member(
+        self, pool_id: int, developer_id: int, notes: str | None = None
+    ) -> OSPoolMember:
+        return await self._favourite.add_pool_member(
+            pool_id=pool_id, developer_id=developer_id, notes=notes
+        )
 
     async def remove_pool_member(self, pool_id: int, developer_id: int) -> bool:
         return await self._favourite.remove_pool_member(pool_id=pool_id, developer_id=developer_id)
 
-    async def list_pool_members(self, pool_id: int, page: int = 1, page_size: int = 20) -> tuple[list[dict[str, Any]], int]:
-        return await self._favourite.list_pool_members(pool_id=pool_id, page=page, page_size=page_size)
+    async def list_pool_members(
+        self, pool_id: int, page: int = 1, page_size: int = 20
+    ) -> tuple[list[dict[str, Any]], int]:
+        return await self._favourite.list_pool_members(
+            pool_id=pool_id, page=page, page_size=page_size
+        )
 
     # ============= Stats & JD Match =============
 
     async def get_stats(self) -> OSStatsResponse:
         return await self._developer.get_stats()
 
-    async def jd_match(self, jd_text: str, filters: Any | None = None, top_k: int = 20) -> OSJDMatchResponse:
+    async def jd_match(
+        self, jd_text: str, filters: Any | None = None, top_k: int = 20
+    ) -> OSJDMatchResponse:
         return await self._developer.jd_match(jd_text=jd_text, filters=filters, top_k=top_k)
 
     # ============= Embedding =============
@@ -280,13 +328,19 @@ class OpenSourceService:
     async def get_developers_by_ids(self, developer_ids: list[int]) -> list[OSDeveloper]:
         return await self._developer.get_developers_by_ids(developer_ids)
 
-    async def get_repositories_for_developers(self, developer_ids: list[int]) -> dict[int, list[Any]]:
+    async def get_repositories_for_developers(
+        self, developer_ids: list[int]
+    ) -> dict[int, list[Any]]:
         return await self._developer.get_repositories_for_developers(developer_ids)
 
-    async def get_raw_developers_by_logins(self, github_logins: list[str]) -> dict[str, dict[str, Any]]:
+    async def get_raw_developers_by_logins(
+        self, github_logins: list[str]
+    ) -> dict[str, dict[str, Any]]:
         return await self._developer.get_raw_developers_by_logins(github_logins)
 
-    async def get_collected_repos_for_developers(self, developer_ids: list[int]) -> dict[int, list[str]]:
+    async def get_collected_repos_for_developers(
+        self, developer_ids: list[int]
+    ) -> dict[int, list[str]]:
         return await self._developer.get_collected_repos_for_developers(developer_ids)
 
     async def get_talent_pool(self, pool_id: int) -> OSTalentPool | None:

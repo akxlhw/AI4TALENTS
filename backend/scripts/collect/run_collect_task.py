@@ -8,9 +8,9 @@ This script is designed to be run in a separate subprocess to avoid
 issues with asyncio event loops and database connections on Windows.
 """
 import asyncio
-import sys
 import os
 import signal
+import sys
 
 # Add backend directory to Python path
 # Script is at: backend/scripts/run_collect_task.py
@@ -40,7 +40,11 @@ async def run_task(task_id: int):
     # Import here to ensure clean environment
     from app.core.database import AsyncSessionLocal
     from app.domains.academic.services.collect.orchestrator import CollectionOrchestrator
-    from app.domains.academic.services.data_fetchers import WorkFetcher, AuthorFetcher, InstitutionFetcher
+    from app.domains.academic.services.data_fetchers import (
+        AuthorFetcher,
+        InstitutionFetcher,
+        WorkFetcher,
+    )
 
     print(f"[INFO] Starting task {task_id}")
     sys.stdout.flush()

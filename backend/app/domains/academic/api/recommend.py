@@ -92,8 +92,6 @@ async def recommend_talents(
 
     except RecommendError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get(
@@ -145,5 +143,3 @@ async def find_similar_talents(
 
     except RecommendError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e

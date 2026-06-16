@@ -9,8 +9,8 @@ Options:
     --task-id   Task ID to process (required)
     --sync      Also run sync to serving layer (create Talent records)
 """
-import asyncio
 import argparse
+import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -19,11 +19,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from sqlalchemy import select
+
 from app.core.database import AsyncSessionLocal
+from app.domains.academic.models.sync import CollectTask
+from app.domains.academic.repositories.raw_data_repository import (
+    RawAuthorRepository,
+    RawInstitutionRepository,
+)
 from app.domains.academic.services.normalizers import AuthorNormalizer, SchoolNormalizer
 from app.domains.academic.services.sync import ServingLayerOrchestrator
-from app.domains.academic.repositories.raw_data_repository import RawAuthorRepository, RawInstitutionRepository
-from app.domains.academic.models.sync import CollectTask
 
 logging.basicConfig(
     level=logging.INFO,
@@ -88,7 +92,7 @@ async def fix_pending_normalization(task_id: int, run_sync: bool = False):
         remaining_authors = await raw_author_repo.get_pending(task_id)
         remaining_institutions = await raw_inst_repo.get_pending(task_id)
 
-        logger.info(f"Remaining pending:")
+        logger.info("Remaining pending:")
         logger.info(f"  - Authors: {len(remaining_authors)}")
         logger.info(f"  - Institutions: {len(remaining_institutions)}")
 
@@ -97,8 +101,8 @@ async def fix_pending_normalization(task_id: int, run_sync: bool = False):
 
 async def get_default_tech_direction(session, tech_domain_id: int) -> int:
     """Get or create default tech direction for a tech domain."""
+
     from app.domains.academic.models.tech_domain import TechDirection
-    from sqlalchemy import func
 
     # Try to get the first available direction
     result = await session.execute(

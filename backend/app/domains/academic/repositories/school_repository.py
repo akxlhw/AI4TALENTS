@@ -359,12 +359,10 @@ class SchoolRepository:
                 select(
                     primary_school.label("school_id"),
                     func.count().label("talent_count"),
-                    func.count(case((Talent.role_type == "professor", 1))).label(
-                        "professor_count"
+                    func.count(case((Talent.role_type == "professor", 1))).label("professor_count"),
+                    func.count(case((Talent.role_type.in_(["student", "graduate"]), 1))).label(
+                        "student_count"
                     ),
-                    func.count(
-                        case((Talent.role_type.in_(["student", "graduate"]), 1))
-                    ).label("student_count"),
                 )
                 .where(
                     primary_school.in_(school_ids),
@@ -400,9 +398,7 @@ class SchoolRepository:
                 select(
                     School.country_code,
                     func.count(School.school_id).label("school_count"),
-                    func.sum(mv_school_talent_count.c.professor_count).label(
-                        "professor_count"
-                    ),
+                    func.sum(mv_school_talent_count.c.professor_count).label("professor_count"),
                 )
                 .select_from(School)
                 .join(
@@ -468,9 +464,7 @@ class SchoolRepository:
                 func.coalesce(prof_subq.c.professor_count, 0).label("professor_count"),
             )
             .select_from(school_subq)
-            .outerjoin(
-                prof_subq, school_subq.c.country_code == prof_subq.c.country_code
-            )
+            .outerjoin(prof_subq, school_subq.c.country_code == prof_subq.c.country_code)
             .order_by(func.coalesce(prof_subq.c.professor_count, 0).desc())
         )
         result = await self.session.execute(fallback_query)

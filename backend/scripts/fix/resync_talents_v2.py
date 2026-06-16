@@ -5,7 +5,6 @@ This script uses the ServingLayerOrchestrator for proper syncing.
 
 Run with: python scripts/resync_talents_v2.py
 """
-import argparse
 import asyncio
 import logging
 import sys
@@ -14,12 +13,12 @@ from pathlib import Path
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from sqlalchemy import select, delete
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.domains.academic.models.talent import Talent, RoleProfile
 from app.domains.academic.models.standardized import StdAuthor
+from app.domains.academic.models.talent import RoleProfile, Talent
 from app.domains.academic.services.common.cs_concepts import CS_SCORE_THRESHOLD
 
 logging.basicConfig(
@@ -85,8 +84,8 @@ async def resync_talents():
         for author in qualified_authors:
             try:
                 # Create Talent record directly
+
                 from app.domains.shared.models.enums import VisibilityStatus
-                from datetime import datetime, timezone
 
                 talent = Talent(
                     std_author_id=author.std_author_id,

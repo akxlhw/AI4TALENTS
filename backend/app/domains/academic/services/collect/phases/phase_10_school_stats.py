@@ -9,6 +9,7 @@ from sqlalchemy import case, func, select, text
 from sqlalchemy.exc import DatabaseError, OperationalError
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
+from app.core.config import settings
 from app.domains.academic.models.school import School
 from app.domains.academic.models.talent import Talent
 from app.domains.academic.services.collect.phases.base import PhaseContext, PhaseHandler
@@ -73,12 +74,10 @@ class PhaseSchoolStatsHandler(PhaseHandler):
             result = await self.session.execute(
                 select(
                     primary_school.label("primary_school_id"),
-                    func.count(case((Talent.role_type == "professor", 1))).label(
-                        "professor_count"
+                    func.count(case((Talent.role_type == "professor", 1))).label("professor_count"),
+                    func.count(case((Talent.role_type.in_(["student", "graduate"]), 1))).label(
+                        "student_count"
                     ),
-                    func.count(
-                        case((Talent.role_type.in_(["student", "graduate"]), 1))
-                    ).label("student_count"),
                 )
                 .where(primary_school.in_(batch_ids), Talent.is_visible.is_(True))
                 .group_by(primary_school)
@@ -108,12 +107,10 @@ class PhaseSchoolStatsHandler(PhaseHandler):
         result = await self.session.execute(
             select(
                 primary_school.label("primary_school_id"),
-                func.count(case((Talent.role_type == "professor", 1))).label(
-                    "professor_count"
+                func.count(case((Talent.role_type == "professor", 1))).label("professor_count"),
+                func.count(case((Talent.role_type.in_(["student", "graduate"]), 1))).label(
+                    "student_count"
                 ),
-                func.count(
-                    case((Talent.role_type.in_(["student", "graduate"]), 1))
-                ).label("student_count"),
             )
             .where(primary_school.isnot(None), Talent.is_visible.is_(True))
             .group_by(primary_school)
@@ -176,23 +173,24 @@ class PhaseSchoolStatsHandler(PhaseHandler):
         async def _do_refresh() -> None:
             await asyncio.wait_for(
                 self.session.execute(text(refresh_sql)),
-                timeout=300,
+                timeout=settings.MV_REFRESH_TIMEOUT,
             )
 
         try:
             await _do_refresh()
         except TimeoutError:
             self.progress_tracker.add_log(
-                "error", "刷新学校人才数物化视图超时（300s），后续查询可能返回旧数据"
+                "error",
+                f"刷新学校人才数物化视图超时（{settings.MV_REFRESH_TIMEOUT}s），后续查询可能返回旧数据",
             )
-            logger.warning("Materialized view refresh timed out after 300s")
+            logger.warning(
+                f"Materialized view refresh timed out after {settings.MV_REFRESH_TIMEOUT}s"
+            )
             MV_REFRESH_FAILURES.inc()
             MV_REFRESH_DURATION.observe(time.perf_counter() - start_time)
             raise
         except Exception as exc:
-            self.progress_tracker.add_log(
-                "error", f"刷新物化视图失败（已重试3次）: {exc}"
-            )
+            self.progress_tracker.add_log("error", f"刷新物化视图失败（已重试3次）: {exc}")
             logger.exception("Materialized view refresh failed after retries")
             MV_REFRESH_FAILURES.inc()
             MV_REFRESH_DURATION.observe(time.perf_counter() - start_time)
@@ -206,6 +204,7 @@ class PhaseSchoolStatsHandler(PhaseHandler):
         # Invalidate homepage cache so the next request sees fresh data.
         try:
             from app.core.cache import get_cache_connection
+
             cache_conn = await get_cache_connection()
             cache_service = CacheService(cache_conn)
             await cache_service.delete(CacheKeys.STATS_HOME_HIGHLIGHTS)

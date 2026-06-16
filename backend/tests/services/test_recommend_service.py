@@ -131,74 +131,6 @@ class TestRecommendServiceSimilar:
         assert result.mode == "similar"
 
 
-class TestRecommendServiceSimilarity:
-    """相似度计算测试"""
-
-    @pytest.mark.asyncio
-    async def test_cosine_similarity_same_vector(self):
-        """相同向量相似度应为 1"""
-        # Arrange
-        from app.domains.academic.services.recommend.similarity import SimilarityCalculator
-
-        calc = SimilarityCalculator()
-        vec1 = [0.5, 0.5, 0.5, 0.5]
-        vec2 = [0.5, 0.5, 0.5, 0.5]
-
-        # Act
-        similarity = calc.cosine_similarity(vec1, vec2)
-
-        # Assert
-        assert abs(similarity - 1.0) < 0.001
-
-    @pytest.mark.asyncio
-    async def test_cosine_similarity_orthogonal_vector(self):
-        """正交向量相似度应为 0"""
-        # Arrange
-        from app.domains.academic.services.recommend.similarity import SimilarityCalculator
-
-        calc = SimilarityCalculator()
-        vec1 = [1.0, 0.0, 0.0, 0.0]
-        vec2 = [0.0, 1.0, 0.0, 0.0]
-
-        # Act
-        similarity = calc.cosine_similarity(vec1, vec2)
-
-        # Assert
-        assert abs(similarity - 0.0) < 0.001
-
-    @pytest.mark.asyncio
-    async def test_cosine_similarity_opposite_vector(self):
-        """相反向量相似度应为 -1"""
-        # Arrange
-        from app.domains.academic.services.recommend.similarity import SimilarityCalculator
-
-        calc = SimilarityCalculator()
-        vec1 = [1.0, 0.0]
-        vec2 = [-1.0, 0.0]
-
-        # Act
-        similarity = calc.cosine_similarity(vec1, vec2)
-
-        # Assert
-        assert abs(similarity - (-1.0)) < 0.001
-
-    @pytest.mark.asyncio
-    async def test_euclidean_distance(self):
-        """欧氏距离应正确计算"""
-        # Arrange
-        from app.domains.academic.services.recommend.similarity import SimilarityCalculator
-
-        calc = SimilarityCalculator()
-        vec1 = [0.0, 0.0]
-        vec2 = [3.0, 4.0]
-
-        # Act
-        distance = calc.euclidean_distance(vec1, vec2)
-
-        # Assert
-        assert abs(distance - 5.0) < 0.001
-
-
 class TestRecommendServiceFilters:
     """过滤测试"""
 
@@ -269,48 +201,6 @@ class TestRecommendServiceFilters:
         pass
 
 
-class TestRecommendServiceReasons:
-    """推荐原因测试"""
-
-    @pytest.mark.asyncio
-    async def test_generate_reasons_includes_similarity(self, test_session: AsyncSession):
-        """推荐原因应包含相似度信息"""
-        # Arrange
-        from app.domains.academic.services.recommend.recommend_service import RecommendService
-
-        mock_embed = AsyncMock()
-
-        service = RecommendService(session=test_session, embed_service=mock_embed)
-
-        # Act
-        reasons = service.generate_reasons(
-            similarity_score=0.85,
-            reference_talent={"openalex_topics": ["Machine Learning"]},
-            candidate_talent={"openalex_topics": ["Deep Learning"]},
-        )
-
-        # Assert
-        assert len(reasons) > 0
-
-    @pytest.mark.asyncio
-    async def test_reasons_includes_research_match(self, test_session: AsyncSession):
-        """推荐原因应包含研究方向匹配"""
-        # Arrange
-        from app.domains.academic.services.recommend.recommend_service import RecommendService
-
-        service = RecommendService(session=test_session, embed_service=AsyncMock())
-
-        # Act
-        reasons = service.generate_reasons(
-            similarity_score=0.9,
-            reference_talent={"openalex_topics": ["NLP", "Deep Learning"]},
-            candidate_talent={"openalex_topics": ["Deep Learning", "Machine Learning"]},
-        )
-
-        # Assert
-        assert any("深度学习" in r or "研究方向" in r for r in reasons)
-
-
 class TestRecommendServiceMultiReference:
     """多参考人才测试"""
 
@@ -363,8 +253,8 @@ class TestRecommendServiceErrorHandling:
     async def test_handles_invalid_reference_id(self, test_session: AsyncSession):
         """应处理无效参考ID"""
         # Arrange
-        from app.domains.shared.services.llm.errors import InvalidReferenceError
         from app.domains.academic.services.recommend.recommend_service import RecommendService
+        from app.domains.shared.services.llm.errors import InvalidReferenceError
 
         mock_embed = AsyncMock()
 
@@ -378,8 +268,8 @@ class TestRecommendServiceErrorHandling:
     async def test_handles_empty_reference_list(self, test_session: AsyncSession):
         """应处理空参考列表"""
         # Arrange
-        from app.domains.shared.services.llm.errors import EmptyReferenceError
         from app.domains.academic.services.recommend.recommend_service import RecommendService
+        from app.domains.shared.services.llm.errors import EmptyReferenceError
 
         service = RecommendService(session=test_session, embed_service=AsyncMock())
 

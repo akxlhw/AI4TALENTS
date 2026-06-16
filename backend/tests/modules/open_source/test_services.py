@@ -3,18 +3,14 @@ Tests for OpenSourceService.
 Covers: repo config, collect tasks, developers, favourites, talent pools, search.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
-
 from app.domains.open_source.models.open_source import (
     OSCollectTask,
     OSDeveloper,
     OSFavourite,
-    OSPoolMember,
     OSRepoConfig,
     OSRepository,
     OSTalentPool,
@@ -120,7 +116,10 @@ class TestCollectTaskService:
     @pytest.fixture
     async def sample_task(self, test_session: AsyncSession):
         from app.domains.shared.models.iam import UserAccount
-        user = UserAccount(username="taskuser", email="task@test.com", password_hash="hash", role_type="user")
+
+        user = UserAccount(
+            username="taskuser", email="task@test.com", password_hash="hash", role_type="user"
+        )
         test_session.add(user)
         await test_session.flush()
 
@@ -155,7 +154,10 @@ class TestCollectTaskService:
     async def test_create_collect_task(self, service: OpenSourceService, test_session):
         """Test creating collect task."""
         from app.domains.shared.models.iam import UserAccount
-        user = UserAccount(username="newtaskuser", email="ntask@test.com", password_hash="hash", role_type="user")
+
+        user = UserAccount(
+            username="newtaskuser", email="ntask@test.com", password_hash="hash", role_type="user"
+        )
         test_session.add(user)
         await test_session.flush()
 
@@ -217,7 +219,10 @@ class TestCollectTaskService:
     async def test_collect_batch_repos(self, service: OpenSourceService, test_session):
         """Test batch collect repos."""
         from app.domains.shared.models.iam import UserAccount
-        user = UserAccount(username="batchuser", email="batch@test.com", password_hash="hash", role_type="user")
+
+        user = UserAccount(
+            username="batchuser", email="batch@test.com", password_hash="hash", role_type="user"
+        )
         test_session.add(user)
         await test_session.flush()
 
@@ -230,7 +235,9 @@ class TestCollectTaskService:
         await test_session.commit()
         await test_session.refresh(config)
 
-        tasks, skipped = await service.collect_batch_repos([config.repo_config_id], 30, user.user_id)
+        tasks, skipped = await service.collect_batch_repos(
+            [config.repo_config_id], 30, user.user_id
+        )
         assert len(tasks) == 1
         assert skipped == []
 
@@ -300,7 +307,9 @@ class TestDeveloperService:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_get_developer_detail(self, service: OpenSourceService, sample_developer, sample_repos):
+    async def test_get_developer_detail(
+        self, service: OpenSourceService, sample_developer, sample_repos
+    ):
         """Test getting developer detail."""
         detail = await service.get_developer_detail(sample_developer.developer_id)
         assert detail.github_login == "testdeveloper"
@@ -375,7 +384,9 @@ class TestSearchService:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_search_developers_empty_query(self, service: OpenSourceService, sample_developer):
+    async def test_search_developers_empty_query(
+        self, service: OpenSourceService, sample_developer
+    ):
         """Test search with empty query falls back to list."""
         from app.domains.open_source.schemas.open_source import OSSearchRequest
 
@@ -394,7 +405,10 @@ class TestFavouriteService:
     @pytest.fixture
     async def sample_favourite(self, test_session: AsyncSession):
         from app.domains.shared.models.iam import UserAccount
-        user = UserAccount(username="favuser", email="fav@test.com", password_hash="hash", role_type="user")
+
+        user = UserAccount(
+            username="favuser", email="fav@test.com", password_hash="hash", role_type="user"
+        )
         test_session.add(user)
         await test_session.flush()
 
@@ -432,7 +446,10 @@ class TestFavouriteService:
     async def test_add_favourite(self, service: OpenSourceService, test_session):
         """Test adding favourite."""
         from app.domains.shared.models.iam import UserAccount
-        user = UserAccount(username="newfavuser", email="newfav@test.com", password_hash="hash", role_type="user")
+
+        user = UserAccount(
+            username="newfavuser", email="newfav@test.com", password_hash="hash", role_type="user"
+        )
         test_session.add(user)
         await test_session.flush()
 
@@ -440,7 +457,9 @@ class TestFavouriteService:
         test_session.add(dev)
         await test_session.flush()
 
-        fav = await service.add_favourite(user_id=user.user_id, developer_id=dev.developer_id, notes="Good")
+        fav = await service.add_favourite(
+            user_id=user.user_id, developer_id=dev.developer_id, notes="Good"
+        )
         assert fav.favourite_id is not None
 
     @pytest.mark.asyncio
@@ -448,7 +467,9 @@ class TestFavouriteService:
     async def test_add_duplicate_favourite(self, service: OpenSourceService, sample_favourite):
         """Test adding duplicate favourite raises ValueError."""
         with pytest.raises(ConflictError, match="Already favorited"):
-            await service.add_favourite(user_id=sample_favourite.user_id, developer_id=sample_favourite.developer_id)
+            await service.add_favourite(
+                user_id=sample_favourite.user_id, developer_id=sample_favourite.developer_id
+            )
 
     @pytest.mark.asyncio
     @pytest.mark.unit
@@ -466,7 +487,9 @@ class TestFavouriteService:
     @pytest.mark.unit
     async def test_remove_favourite(self, service: OpenSourceService, sample_favourite):
         """Test removing favourite."""
-        result = await service.remove_favourite(user_id=sample_favourite.user_id, developer_id=sample_favourite.developer_id)
+        result = await service.remove_favourite(
+            user_id=sample_favourite.user_id, developer_id=sample_favourite.developer_id
+        )
         assert result is True
 
     @pytest.mark.asyncio
@@ -487,7 +510,10 @@ class TestTalentPoolService:
     @pytest.fixture
     async def sample_pool(self, test_session: AsyncSession):
         from app.domains.shared.models.iam import UserAccount
-        user = UserAccount(username="poolowner", email="pool@test.com", password_hash="hash", role_type="user")
+
+        user = UserAccount(
+            username="poolowner", email="pool@test.com", password_hash="hash", role_type="user"
+        )
         test_session.add(user)
         await test_session.flush()
 
@@ -509,7 +535,13 @@ class TestTalentPoolService:
     async def test_create_talent_pool(self, service: OpenSourceService, test_session):
         """Test creating talent pool."""
         from app.domains.shared.models.iam import UserAccount
-        user = UserAccount(username="newpoolowner", email="newpool@test.com", password_hash="hash", role_type="user")
+
+        user = UserAccount(
+            username="newpoolowner",
+            email="newpool@test.com",
+            password_hash="hash",
+            role_type="user",
+        )
         test_session.add(user)
         await test_session.flush()
 
@@ -545,7 +577,9 @@ class TestTalentPoolService:
 
     @pytest.mark.asyncio
     @pytest.mark.unit
-    async def test_add_duplicate_pool_member(self, service: OpenSourceService, sample_pool, test_session):
+    async def test_add_duplicate_pool_member(
+        self, service: OpenSourceService, sample_pool, test_session
+    ):
         """Test adding duplicate pool member raises ValueError."""
         dev = OSDeveloper(github_login="dupmember", is_visible=True)
         test_session.add(dev)

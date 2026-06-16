@@ -16,15 +16,14 @@ from pathlib import Path
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from sqlalchemy import select, delete
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.domains.academic.models.talent import Talent, RoleProfile
 from app.domains.academic.models.standardized import StdAuthor
-from app.domains.academic.models.school import School
-from app.domains.academic.services.sync.author_sync import AuthorSyncService
+from app.domains.academic.models.talent import RoleProfile, Talent
 from app.domains.academic.services.common.cs_concepts import CS_SCORE_THRESHOLD
+from app.domains.academic.services.sync.author_sync import AuthorSyncService
 
 logging.basicConfig(
     level=logging.INFO,

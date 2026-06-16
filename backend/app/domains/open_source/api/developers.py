@@ -131,7 +131,9 @@ async def get_developer(
     return await service.get_developer_detail(developer_id)
 
 
-@router.get("/developers/{developer_id}/repositories", response_model=PaginatedResponse[OSRepositoryItem])
+@router.get(
+    "/developers/{developer_id}/repositories", response_model=PaginatedResponse[OSRepositoryItem]
+)
 async def list_developer_repositories(
     developer_id: int,
     page: int = Query(1, ge=1),
@@ -147,15 +149,17 @@ async def list_developer_repositories(
         items,
         key=lambda r: getattr(
             r,
-            (sort_by.replace("_desc", "").replace("_asc", "") + "_count")
-            if sort_by in ("stars", "forks")
-            else "name",
+            (
+                (sort_by.replace("_desc", "").replace("_asc", "") + "_count")
+                if sort_by in ("stars", "forks")
+                else "name"
+            ),
         ),
         reverse=reverse,
     )
     total = len(items)
     start = (page - 1) * page_size
-    items = items[start:start + page_size]
+    items = items[start : start + page_size]
     return PaginatedResponse.create(
         items=[OSRepositoryItem.model_validate(i) for i in items],
         total=total,
@@ -249,7 +253,11 @@ async def export_developers(
             status="failure",
             user_ip=request.client.host if request and request.client else None,
             request_id=getattr(request.state, "request_id", None) if request else None,
-            detail={"format": data.format, "developer_ids": data.developer_ids, "error": "未找到要导出的开发者"},
+            detail={
+                "format": data.format,
+                "developer_ids": data.developer_ids,
+                "error": "未找到要导出的开发者",
+            },
         )
         raise HTTPException(status_code=404, detail="未找到要导出的开发者")
 
@@ -355,7 +363,11 @@ async def export_developers(
             status="success",
             user_ip=request.client.host if request and request.client else None,
             request_id=getattr(request.state, "request_id", None) if request else None,
-            detail={"format": data.format, "count": len(developers), "developer_ids": data.developer_ids},
+            detail={
+                "format": data.format,
+                "count": len(developers),
+                "developer_ids": data.developer_ids,
+            },
         )
 
         return StreamingResponse(
@@ -380,7 +392,11 @@ async def export_developers(
             status="success",
             user_ip=request.client.host if request and request.client else None,
             request_id=getattr(request.state, "request_id", None) if request else None,
-            detail={"format": data.format, "count": len(developers), "developer_ids": data.developer_ids},
+            detail={
+                "format": data.format,
+                "count": len(developers),
+                "developer_ids": data.developer_ids,
+            },
         )
 
         return StreamingResponse(
@@ -439,7 +455,10 @@ async def get_repository(
     return await service.get_repository_detail(f"{owner}/{name}")
 
 
-@router.get("/repositories/{owner}/{name}/contributors", response_model=PaginatedResponse[OSRepositoryContributor])
+@router.get(
+    "/repositories/{owner}/{name}/contributors",
+    response_model=PaginatedResponse[OSRepositoryContributor],
+)
 async def get_repository_contributors(
     owner: str,
     name: str,

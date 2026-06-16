@@ -13,7 +13,6 @@ Features:
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import time
@@ -25,7 +24,6 @@ from app.core.config import settings
 from app.domains.shared.services.llm.errors import LLMError, LLMErrorType
 from app.domains.shared.services.llm.llm_embedding_mixin import LLMEmbeddingMixin
 from app.domains.shared.services.llm.protocols import (
-    EmbeddingResult,
     JDFeatures,
     LLMGatewayProtocol,
 )

@@ -79,7 +79,7 @@ async def run_collect_task_background(task_id: int):
         else:
             logging.error("[BACKGROUND] 任务 #%s 失败: %s", task_id, progress.errors)
     except Exception as e:
-        logger.error(f"Background task {task_id} failed: {e}")
+        logger.exception(f"Background task {task_id} failed")
         await bg_service.fail_task_if_running(task_id, str(e))
 
 
@@ -143,7 +143,9 @@ async def list_tasks(
             # 检查是否是"至今"（接近当前时间）
             from datetime import timedelta
 
-            if datetime.now(timezone.utc).replace(tzinfo=None) - t.time_window_end < timedelta(days=1):
+            if datetime.now(timezone.utc).replace(tzinfo=None) - t.time_window_end < timedelta(
+                days=1
+            ):
                 end_year = None
 
         items.append(
@@ -321,7 +323,9 @@ async def get_task(
     if end_year == current_year and task.time_window_end:
         from datetime import timedelta
 
-        if datetime.now(timezone.utc).replace(tzinfo=None) - task.time_window_end < timedelta(days=1):
+        if datetime.now(timezone.utc).replace(tzinfo=None) - task.time_window_end < timedelta(
+            days=1
+        ):
             end_year = None
 
     return CollectTaskResponse(

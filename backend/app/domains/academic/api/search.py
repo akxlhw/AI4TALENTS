@@ -199,5 +199,3 @@ async def enhanced_search_talents(
 
     except EmptyQueryError:
         raise HTTPException(status_code=400, detail="Query cannot be empty") from None
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e

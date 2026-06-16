@@ -254,19 +254,16 @@ async def register(
 
     # Validate privacy policy and terms of use acceptance
     if not data.privacy_policy_accepted:
-        raise HTTPException(
-            status_code=400, detail="必须同意隐私政策才能注册"
-        )
+        raise HTTPException(status_code=400, detail="必须同意隐私政策才能注册")
     if not data.terms_of_use_accepted:
-        raise HTTPException(
-            status_code=400, detail="必须同意用户协议才能注册"
-        )
+        raise HTTPException(status_code=400, detail="必须同意用户协议才能注册")
 
     # Create user with pending approval status
     password_hash = hash_password(data.password)
     from datetime import datetime
 
     from app.core.config import settings
+
     now = datetime.now()
     user = await service.create_user_and_commit(
         username=data.username,

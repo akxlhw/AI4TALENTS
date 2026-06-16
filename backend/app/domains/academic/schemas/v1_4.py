@@ -45,7 +45,9 @@ class SemanticSearchResult(BaseModel):
     name_en: str | None = Field(default=None, description="English name")
     role_type: str = Field(description="Role type")
     school_name: str | None = Field(default=None, description="School name")
-    education_school_name: str | None = Field(default=None, description="Education institution name")
+    education_school_name: str | None = Field(
+        default=None, description="Education institution name"
+    )
     company_school_name: str | None = Field(default=None, description="Company institution name")
     current_title: str | None = Field(default=None, description="Current title/position")
     works_count: int = Field(default=0, description="Number of works")
@@ -112,7 +114,9 @@ class MatchResultItemResponse(BaseModel):
     name: str = Field(description="Name")
     title: str = Field(description="Current title/position")
     school_name: str = Field(description="Primary school name (for backward compatibility)")
-    education_school_name: str | None = Field(default=None, description="Education institution name")
+    education_school_name: str | None = Field(
+        default=None, description="Education institution name"
+    )
     company_school_name: str | None = Field(default=None, description="Company institution name")
     overall_score: float = Field(description="Overall match score (0-100)")
     research_score: float = Field(description="Research match score")

@@ -100,18 +100,19 @@ def upgrade() -> None:
         conn = op.get_bind()
         # Check if foreign key exists before dropping
         result = conn.execute(text("""
-            SELECT constraint_name FROM information_schema.table_constraints
-            WHERE table_name = 'core_school'
-            AND constraint_type = 'FOREIGN KEY'
-            AND constraint_name = 'fk_core_school_country_id_core_country'
+            SELECT conname FROM pg_catalog.pg_constraint
+            WHERE conrelid = 'core_school'::regclass
+            AND contype = 'f'
+            AND conname = 'fk_core_school_country_id_core_country'
         """))
         if result.fetchone():
             op.drop_constraint('fk_core_school_country_id_core_country', 'core_school', type_='foreignkey')
 
         # Check if column exists before dropping
         result = conn.execute(text("""
-            SELECT column_name FROM information_schema.columns
-            WHERE table_name = 'core_school' AND column_name = 'country_id'
+            SELECT attname FROM pg_catalog.pg_attribute
+            WHERE attrelid = 'core_school'::regclass AND attname = 'country_id'
+            AND attnum > 0 AND NOT attisdropped
         """))
         if result.fetchone():
             op.drop_column('core_school', 'country_id')
@@ -121,13 +122,19 @@ def upgrade() -> None:
 
     # First, drop any foreign keys referencing core_country
     result = conn.execute(text("""
-        SELECT tc.table_name, tc.constraint_name
-        FROM information_schema.table_constraints tc
-        JOIN information_schema.key_column_usage kcu
-            ON tc.constraint_name = kcu.constraint_name
-        WHERE tc.constraint_type = 'FOREIGN KEY'
-        AND kcu.table_name != 'core_school'
-        AND kcu.column_name = 'country_id'
+        SELECT cl.relname AS table_name, con.conname AS constraint_name
+        FROM pg_catalog.pg_constraint con
+        JOIN pg_catalog.pg_class cl ON con.conrelid = cl.oid
+        JOIN pg_catalog.pg_namespace ns ON cl.relnamespace = ns.oid
+        WHERE con.contype = 'f'
+        AND ns.nspname = 'public'
+        AND cl.relname != 'core_school'
+        AND EXISTS (
+            SELECT 1 FROM pg_catalog.pg_attribute a
+            WHERE a.attrelid = con.conrelid
+            AND a.attnum = ANY(con.conkey)
+            AND a.attname = 'country_id'
+        )
     """))
     for row in result.fetchall():
         table_name, constraint_name = row
@@ -135,9 +142,13 @@ def upgrade() -> None:
 
     # Also drop country_id columns from other tables
     result = conn.execute(text("""
-        SELECT table_name FROM information_schema.columns
-        WHERE column_name = 'country_id' AND table_name != 'core_school'
-        AND table_schema = 'public'
+        SELECT c.relname AS table_name
+        FROM pg_catalog.pg_attribute a
+        JOIN pg_catalog.pg_class c ON a.attrelid = c.oid
+        JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+        WHERE a.attname = 'country_id' AND c.relname NOT IN ('core_school', 'core_country')
+        AND n.nspname = 'public' AND c.relkind = 'r'
+        AND a.attnum > 0 AND NOT a.attisdropped
     """))
     for row in result.fetchall():
         table_name = row[0]
@@ -145,8 +156,9 @@ def upgrade() -> None:
 
     # Now check if core_country exists and drop it
     result = conn.execute(text("""
-        SELECT table_name FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = 'core_country'
+        SELECT c.relname FROM pg_catalog.pg_class c
+        JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+        WHERE n.nspname = 'public' AND c.relname = 'core_country'
     """))
     if result.fetchone():
         op.drop_table('core_country')

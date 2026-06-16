@@ -196,9 +196,7 @@ class HomepageRepository:
             for row in rows
         ]
 
-    async def get_top_schools(
-        self, limit: int = 5, country_code: str | None = None
-    ) -> list[dict]:
+    async def get_top_schools(self, limit: int = 5, country_code: str | None = None) -> list[dict]:
         """
         Get top schools by talent count.
         按人才数获取Top院校
@@ -241,9 +239,7 @@ class HomepageRepository:
             elif country_code:
                 mv_query = mv_query.where(School.country_code == country_code)
 
-            mv_query = mv_query.order_by(
-                mv_school_talent_count.c.talent_count.desc()
-            ).limit(limit)
+            mv_query = mv_query.order_by(mv_school_talent_count.c.talent_count.desc()).limit(limit)
 
             result = await self.session.execute(mv_query)
             rows = result.all()
@@ -282,9 +278,7 @@ class HomepageRepository:
             elif country_code:
                 fallback_query = fallback_query.where(School.country_code == country_code)
 
-            fallback_query = fallback_query.order_by(
-                fallback_subq.c.tc.desc()
-            ).limit(limit)
+            fallback_query = fallback_query.order_by(fallback_subq.c.tc.desc()).limit(limit)
 
             result = await self.session.execute(fallback_query)
             rows = result.all()

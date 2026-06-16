@@ -119,9 +119,7 @@ class SemanticSearchStrategy(SearchStrategy):
             logger.warning(f"Semantic search vector error: {e}, falling back to fulltext")
             return await self._fallback(query, page, page_size, filters)
         except Exception as e:
-            logger.error(
-                f"Semantic search unexpected error: {e}, falling back to fulltext"
-            )
+            logger.error(f"Semantic search unexpected error: {e}, falling back to fulltext")
             return await self._fallback(query, page, page_size, filters)
 
     @staticmethod
@@ -167,9 +165,7 @@ class SemanticSearchStrategy(SearchStrategy):
             reverse=True,
         )
 
-    async def _fallback(
-        self, query: str, page: int, page_size: int, filters: dict | None
-    ) -> dict:
+    async def _fallback(self, query: str, page: int, page_size: int, filters: dict | None) -> dict:
         """Delegate to fulltext search strategy."""
         fulltext = self.context.strategies.get("fulltext")
         if fulltext:

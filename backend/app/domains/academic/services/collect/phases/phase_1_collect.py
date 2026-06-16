@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,11 +47,50 @@ class PhaseCollectHandler(PhaseHandler):
         progress.total_venues = len(sub_tasks)
 
         estimated_total = context.estimated_total
-        for sub_task in sub_tasks:
-            try:
-                venue_name = await self.venue_executor.get_venue_name(sub_task.venue_id)
+        MAX_SUBTASK_RETRIES = 3
 
-                works_fetched = await self.venue_executor.execute(task, sub_task, progress)
+        for sub_task in sub_tasks:
+            venue_name = None
+            works_fetched = 0
+            last_error = None
+
+            for attempt in range(MAX_SUBTASK_RETRIES):
+                try:
+                    if venue_name is None:
+                        venue_name = await self.venue_executor.get_venue_name(sub_task.venue_id)
+
+                    works_fetched = await self.venue_executor.execute(task, sub_task, progress)
+                    last_error = None
+                    break  # Success — exit retry loop
+                except Exception as e:
+                    last_error = e
+                    if attempt < MAX_SUBTASK_RETRIES - 1:
+                        wait_seconds = 2**attempt  # 1s, 2s, 4s
+                        self.progress_tracker.add_log(
+                            "warning",
+                            f"Venue {sub_task.venue_id} 第 {attempt + 1} 次采集失败，"
+                            f"{wait_seconds}秒后重试",
+                            {"error": str(e)},
+                        )
+                        logger.warning(
+                            f"Sub-task {sub_task.sub_task_id} (venue {sub_task.venue_id}) "
+                            f"attempt {attempt + 1} failed, retrying in {wait_seconds}s: {e}"
+                        )
+                        await asyncio.sleep(wait_seconds)
+                    else:
+                        # Final attempt failed
+                        if venue_name is None:
+                            venue_name = await self.venue_executor.get_venue_name(sub_task.venue_id)
+                        error_msg = f"Venue {sub_task.venue_id}: {str(e)}"
+                        progress.errors.append(error_msg)
+                        self.progress_tracker.add_log(
+                            "error", f"采集失败: {venue_name}", {"error": str(e)}
+                        )
+                        await self.sub_task_repo.update_status(
+                            sub_task.sub_task_id, "failed", error_message=str(e)
+                        )
+
+            if last_error is None:
                 progress.completed_venues += 1
                 progress.total_works += works_fetched
 
@@ -62,20 +102,7 @@ class PhaseCollectHandler(PhaseHandler):
                 else:
                     # Fallback: progress based on venue count
                     work_progress = int((progress.completed_venues / len(sub_tasks)) * 15) + 5
-                    step_msg = (
-                        f"采集论文 ({progress.completed_venues}/{len(sub_tasks)} venues)"
-                    )
+                    step_msg = f"采集论文 ({progress.completed_venues}/{len(sub_tasks)} venues)"
 
                 await self.progress_tracker.update_progress(task, step_msg, work_progress)
-
                 logger.debug(f"完成采集: {venue_name} ({works_fetched} works)")
-            except Exception as e:
-                venue_name = await self.venue_executor.get_venue_name(sub_task.venue_id)
-                error_msg = f"Venue {sub_task.venue_id}: {str(e)}"
-                progress.errors.append(error_msg)
-                self.progress_tracker.add_log(
-                    "error", f"采集失败: {venue_name}", {"error": str(e)}
-                )
-                await self.sub_task_repo.update_status(
-                    sub_task.sub_task_id, "failed", error_message=str(e)
-                )

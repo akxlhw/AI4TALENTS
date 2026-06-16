@@ -35,8 +35,7 @@ from collections.abc import AsyncGenerator
 import httpx
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -45,14 +44,18 @@ from app.core import config
 
 config.get_settings.cache_clear()
 
+# Import all models to ensure they are registered with Base.metadata for create_all
+import app.model_registry  # noqa: E402, F401
 from app.core.database import Base, get_async_session  # noqa: E402
 from app.main import app as _fastapi_app  # noqa: E402
 
-# Import all models to ensure they are registered with Base.metadata for create_all
-import app.model_registry  # noqa: E402, F401
-
 # Restore app variable after import app.model_registry rebinds it
 app = _fastapi_app
+
+
+# Historical failures tracked in docs/audit/v2.2.0-known-test-failures.md
+# NOTE: All historical failures were fixed in v2.2.0 release cleanup.
+_HISTORICALLY_FAILING_TESTS: set[str] = set()
 
 
 def pytest_configure(config):
@@ -61,6 +64,18 @@ def pytest_configure(config):
         "markers",
         "requires_pgvector: mark test as requiring pgvector extension in the test database",
     )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Mark historically failing tests as xfail so they don't block CI."""
+    for item in items:
+        if item.nodeid in _HISTORICALLY_FAILING_TESTS:
+            item.add_marker(
+                pytest.mark.xfail(
+                    reason="Historical failure tracked in docs/audit/v2.2.0-known-test-failures.md",
+                    strict=False,
+                )
+            )
 
 
 @pytest.fixture(autouse=True)
@@ -72,8 +87,9 @@ def require_pgvector(request):
         return
     # Dynamically check pgvector availability (in case test_engine hasn't run yet)
     import asyncio
-    from sqlalchemy.ext.asyncio import create_async_engine
+
     from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
 
     async def _check():
         engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
@@ -119,17 +135,25 @@ async def test_engine():
         # First test run: full schema setup
         # Drop all tables (not the entire schema) to preserve extensions like pgvector
         async with engine.begin() as conn:
-            result = await conn.execute(text("""
+            result = await conn.execute(
+                text(
+                    """
                 SELECT tablename FROM pg_tables
                 WHERE schemaname = 'public'
                 AND tablename NOT LIKE 'pg_%'
                 AND tablename NOT LIKE 'sql_%'
-            """))
+            """
+                )
+            )
             tables = [row[0] for row in result.fetchall()]
             if tables:
-                await conn.execute(text(f"""
+                await conn.execute(
+                    text(
+                        f"""
                     DROP TABLE IF EXISTS {','.join(tables)} CASCADE
-                """))
+                """
+                    )
+                )
 
         # Ensure pgvector extension exists
         _pgvector_create_error = None
@@ -151,6 +175,7 @@ async def test_engine():
 
         if not PGVECTOR_AVAILABLE and _pgvector_create_error:
             import warnings
+
             warnings.warn(
                 f"pgvector extension not available in test database: {_pgvector_create_error[:200]}. "
                 f"Tests marked @pytest.mark.requires_pgvector will be skipped. "
@@ -167,11 +192,15 @@ async def test_engine():
         if PGVECTOR_AVAILABLE:
             try:
                 async with engine.begin() as conn:
-                    await conn.execute(text("""
+                    await conn.execute(
+                        text(
+                            """
                         ALTER TABLE core_talent_embedding
                         ALTER COLUMN embedding TYPE vector(1536)
                         USING embedding::vector(1536)
-                    """))
+                    """
+                        )
+                    )
             except Exception:
                 pass  # Column may already be the correct type
 
@@ -179,22 +208,31 @@ async def test_engine():
     else:
         # Fast path: TRUNCATE all tables to maintain isolation
         async with engine.begin() as conn:
-            result = await conn.execute(text("""
+            result = await conn.execute(
+                text(
+                    """
                 SELECT tablename FROM pg_tables
                 WHERE schemaname = 'public'
                 AND tablename NOT LIKE 'pg_%'
                 AND tablename NOT LIKE 'sql_%'
                 ORDER BY tablename
-            """))
+            """
+                )
+            )
             tables = [row[0] for row in result.fetchall()]
 
             if tables:
-                await conn.execute(text(f"""
+                await conn.execute(
+                    text(
+                        f"""
                     TRUNCATE TABLE {','.join(tables)} RESTART IDENTITY CASCADE
-                """))
+                """
+                    )
+                )
 
     # Dispose the application engine's connection pool
     from app.core.database import async_engine as app_engine
+
     await app_engine.dispose()
 
     yield engine
@@ -283,9 +321,9 @@ async def sample_venue(test_session: AsyncSession):
 @pytest.fixture
 async def sample_talent(test_session: AsyncSession):
     """Create sample talent for testing."""
-    from app.domains.shared.models.enums import RoleType, VisibilityStatus
     from app.domains.academic.models.school import School
     from app.domains.academic.models.talent import Talent
+    from app.domains.shared.models.enums import RoleType, VisibilityStatus
 
     school = School(
         school_name="Test University",

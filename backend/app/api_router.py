@@ -11,6 +11,7 @@ from app.domains.academic.api import (
     data_version,
     embeddings,
     favorites,
+    genealogy,
     homepage,
     jd_match,
     overview,
@@ -104,6 +105,9 @@ api_router.include_router(jd_match.router)
 
 # Recommend endpoints (v1.4)
 api_router.include_router(recommend.router)
+
+# Genealogy endpoints (v2.1.1)
+api_router.include_router(genealogy.router)
 
 # Open Source Talent endpoints (v2.0)
 api_router.include_router(open_source.router)

@@ -27,9 +27,7 @@ class FavoriteService:
         self.session = session
         self.repo = FavoriteRepository(session)
 
-    async def get_by_user_and_talent(
-        self, user_id: int, talent_id: int
-    ) -> FavoriteTalent | None:
+    async def get_by_user_and_talent(self, user_id: int, talent_id: int) -> FavoriteTalent | None:
         """
         根据用户ID和人才ID获取收藏记录
 

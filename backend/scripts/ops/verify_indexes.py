@@ -17,7 +17,6 @@ from sqlalchemy import create_engine, text
 
 from app.core.config import settings
 
-
 # Required indexes for v1.3 performance optimization
 # Format: (index_name, table_name)
 REQUIRED_INDEXES = [

@@ -198,14 +198,16 @@ class TalentService:
             if talent.talent_id in seen_ids:
                 continue
             seen_ids.add(talent.talent_id)
-            collaborators.append({
-                "talent_id": talent.talent_id,
-                "name": talent.name,
-                "title": talent.title,
-                "school_name": talent.school_name,
-                "collaboration_count": collab.collaboration_count,
-                "last_collaboration_year": collab.last_collaboration_year,
-            })
+            collaborators.append(
+                {
+                    "talent_id": talent.talent_id,
+                    "name": talent.name,
+                    "title": talent.title,
+                    "school_name": talent.school_name,
+                    "collaboration_count": collab.collaboration_count,
+                    "last_collaboration_year": collab.last_collaboration_year,
+                }
+            )
 
         collaborators.sort(key=lambda x: x["collaboration_count"], reverse=True)
         return collaborators[:limit]

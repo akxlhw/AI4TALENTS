@@ -88,6 +88,15 @@ const CollectConfigTab: React.FC = () => {
   } | null>(null)
   const [collabSyncLoading, setCollabSyncLoading] = useState(false)
 
+  const [genealogySyncStatus, setGenealogySyncStatus] = useState<{
+    status: string
+    processed: number
+    total: number
+    edges: number
+    current_phase?: string
+  } | null>(null)
+  const [genealogySyncLoading, setGenealogySyncLoading] = useState(false)
+
   const [embeddingStatus, setEmbeddingStatus] = useState<{
     total_talents: number
     embedded_talents: number
@@ -293,6 +302,45 @@ const CollectConfigTab: React.FC = () => {
     } catch (error) {
       message.error(getErrorMessage(error, '启动同步失败'))
       setCollabSyncStatus(null)
+    }
+  }
+
+  const loadGenealogySyncStatus = async () => {
+    setGenealogySyncLoading(true)
+    try {
+      const response = await api.talents.getGenealogySyncStatus()
+      setGenealogySyncStatus(response.data)
+    } catch {
+      message.error('加载族谱计算状态失败')
+    } finally {
+      setGenealogySyncLoading(false)
+    }
+  }
+
+  const handleSyncGenealogy = async () => {
+    try {
+      setGenealogySyncStatus({ status: 'pending', processed: 0, total: 0, edges: 0 })
+      message.info('正在启动族谱计算任务...')
+      await api.talents.syncGenealogy()
+      message.success('族谱计算任务已启动')
+      setGenealogySyncStatus({ status: 'running', processed: 0, total: 0, edges: 0 })
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await api.talents.getGenealogySyncStatus()
+          const progress = statusResponse.data
+          setGenealogySyncStatus(progress)
+          if (progress.status === 'completed' || (typeof progress.status === 'string' && progress.status.startsWith('error'))) {
+            clearInterval(pollInterval)
+            if (progress.status === 'completed') {
+              message.success(`族谱计算完成！处理 ${progress.processed} 篇论文，推断 ${progress.edges} 条关系`)
+            }
+          }
+        } catch { /* ignore */ }
+      }, 2000)
+      setTimeout(() => clearInterval(pollInterval), 300000)
+    } catch (error) {
+      message.error(getErrorMessage(error, '启动族谱计算失败'))
+      setGenealogySyncStatus(null)
     }
   }
 
@@ -671,6 +719,53 @@ const CollectConfigTab: React.FC = () => {
                       {collabSyncStatus?.status === 'running' ? '同步中...' : '批量同步所有学者'}
                     </Button>
                     <Button icon={<ReloadOutlined />} onClick={loadCollabSyncStatus} loading={collabSyncLoading}>刷新状态</Button>
+                  </Space>
+                </Spin>
+              </Card>
+            ),
+          },
+          {
+            key: 'genealogy',
+            label: <span><TeamOutlined /> 学术族谱</span>,
+            children: (
+              <Card>
+                <Spin spinning={genealogySyncLoading}>
+                  <Alert
+                    message="学术族谱计算"
+                    description="从 RawWork 论文数据推断导师-学生传承关系，并计算学者影响力评分。计算过程为后台异步执行，耗时取决于论文数量。"
+                    type="info"
+                    showIcon
+                    style={{ marginBottom: 24 }}
+                  />
+                  {(genealogySyncStatus?.status === 'running' || genealogySyncStatus?.status === 'pending') && (
+                    <div style={{ marginBottom: 16 }}>
+                      <Alert type="info" showIcon icon={<SyncOutlined spin />} style={{ marginBottom: 8 }} message={genealogySyncStatus?.status === 'pending' ? '正在启动计算任务...' : `族谱计算进行中... (${genealogySyncStatus?.current_phase || ''})`} />
+                      {genealogySyncStatus?.status === 'running' && genealogySyncStatus?.total > 0 && (
+                        <div style={{ marginTop: 8 }}>
+                          <Progress
+                            percent={Math.min(100, Math.round((genealogySyncStatus.processed / genealogySyncStatus.total) * 100))}
+                            status="active"
+                            format={() => `${genealogySyncStatus.processed}/${genealogySyncStatus.total} 论文，${genealogySyncStatus.edges} 条关系`}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {genealogySyncStatus?.status === 'completed' && (
+                    <div style={{ marginBottom: 16 }}>
+                      <Alert type="success" showIcon message={`族谱计算完成！处理 ${genealogySyncStatus.processed} 篇论文，推断 ${genealogySyncStatus.edges} 条关系`} />
+                    </div>
+                  )}
+                  {genealogySyncStatus?.status && typeof genealogySyncStatus.status === 'string' && genealogySyncStatus.status.startsWith('error') && (
+                    <div style={{ marginBottom: 16 }}>
+                      <Alert type="error" showIcon message={`计算失败: ${genealogySyncStatus.status}`} />
+                    </div>
+                  )}
+                  <Space>
+                    <Button type="primary" icon={<SyncOutlined spin={genealogySyncStatus?.status === 'running'} />} onClick={handleSyncGenealogy} loading={genealogySyncStatus?.status === 'running'} disabled={genealogySyncStatus?.status === 'running'}>
+                      {genealogySyncStatus?.status === 'running' ? '计算中...' : '启动族谱计算'}
+                    </Button>
+                    <Button icon={<ReloadOutlined />} onClick={loadGenealogySyncStatus} loading={genealogySyncLoading}>刷新状态</Button>
                   </Space>
                 </Spin>
               </Card>

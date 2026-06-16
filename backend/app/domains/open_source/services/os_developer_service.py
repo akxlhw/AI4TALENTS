@@ -206,6 +206,7 @@ class OSDeveloperService:
 
         # Fetch description and tech_element from OSRepoConfig (OSRepository doesn't have these fields)
         from sqlalchemy import select
+
         config_result = await self.session.execute(
             select(OSRepoConfig).where(OSRepoConfig.repo_full_name == repo_full_name)
         )
@@ -270,9 +271,7 @@ class OSDeveloperService:
             )
         return contributors, total
 
-    async def search_developers(
-        self, req: OSSearchRequest
-    ) -> tuple[list[OSDeveloper], int]:
+    async def search_developers(self, req: OSSearchRequest) -> tuple[list[OSDeveloper], int]:
         """搜索开发者（支持关键词/语义/混合模式）
 
         所有搜索逻辑统一在 Service 层处理，Endpoint 只负责调用此接口。
@@ -442,9 +441,7 @@ class OSDeveloperService:
             radar=radar,
         )
 
-    async def recommend_similar(
-        self, developer_id: int, limit: int = 10
-    ) -> list[OSDeveloper]:
+    async def recommend_similar(self, developer_id: int, limit: int = 10) -> list[OSDeveloper]:
         """
         推荐相似开发者
 

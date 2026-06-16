@@ -25,7 +25,10 @@ class PhaseNormalizeAuthorsHandler(PhaseHandler):
         progress = context.progress
         progress.current_step = "Normalizing authors"
 
-        result = await self.author_normalizer.normalize_all_authors(task_id=context.task.task_id)
+        result = await self.author_normalizer.normalize_all_authors(
+            task_id=context.task.task_id,
+            commit_per_batch=False,
+        )
         progress.normalized_authors = result.processed
 
         if result.processed > 0:

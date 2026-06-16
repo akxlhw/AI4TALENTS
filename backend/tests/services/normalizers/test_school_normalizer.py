@@ -26,7 +26,10 @@ class TestSchoolNormalizerUnit:
 
     def test_normalize_school_name_removes_suffixes(self, normalizer: SchoolNormalizer):
         """Test removal of common suffixes."""
-        assert normalizer.normalize_school_name("California Institute of Technology") == "california of technology"
+        assert (
+            normalizer.normalize_school_name("California Institute of Technology")
+            == "california of technology"
+        )
         assert normalizer.normalize_school_name("Boston College") == "boston"
 
     def test_normalize_school_name_empty(self, normalizer: SchoolNormalizer):
@@ -77,7 +80,7 @@ class TestSchoolNormalizerIntegration:
         """Create a sample raw institution."""
         inst = RawInstitution(
             openalex_institution_id="I123456789",
-            raw_json='{}',
+            raw_json="{}",
             display_name="Test University",
             country_code="US",
             country_name="United States",
@@ -90,7 +93,9 @@ class TestSchoolNormalizerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_find_matching_school_by_openalex_id(self, normalizer: SchoolNormalizer, sample_std_school):
+    async def test_find_matching_school_by_openalex_id(
+        self, normalizer: SchoolNormalizer, sample_std_school
+    ):
         """Test finding school by OpenAlex ID."""
         school, match_type = await normalizer.find_matching_school("I123456789", "Any Name")
         assert school is not None
@@ -99,7 +104,9 @@ class TestSchoolNormalizerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_find_matching_school_by_name(self, normalizer: SchoolNormalizer, sample_std_school):
+    async def test_find_matching_school_by_name(
+        self, normalizer: SchoolNormalizer, sample_std_school
+    ):
         """Test finding school by exact name match."""
         school, match_type = await normalizer.find_matching_school(None, "Test University")
         assert school is not None
@@ -107,7 +114,9 @@ class TestSchoolNormalizerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_find_matching_school_by_alias(self, normalizer: SchoolNormalizer, sample_std_school, test_session):
+    async def test_find_matching_school_by_alias(
+        self, normalizer: SchoolNormalizer, sample_std_school, test_session
+    ):
         """Test finding school by alias."""
         alias = SchoolNameAlias(
             std_school_id=sample_std_school.std_school_id,
@@ -122,7 +131,9 @@ class TestSchoolNormalizerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_find_matching_school_by_normalized(self, normalizer: SchoolNormalizer, sample_std_school):
+    async def test_find_matching_school_by_normalized(
+        self, normalizer: SchoolNormalizer, sample_std_school
+    ):
         """Test finding school by normalized name match."""
         school, match_type = await normalizer.find_matching_school(None, "Test Univ")
         assert school is not None
@@ -138,7 +149,9 @@ class TestSchoolNormalizerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_create_std_school(self, normalizer: SchoolNormalizer, sample_raw_institution, test_session):
+    async def test_create_std_school(
+        self, normalizer: SchoolNormalizer, sample_raw_institution, test_session
+    ):
         """Test creating StdSchool from RawInstitution."""
         school = await normalizer.create_std_school(sample_raw_institution, task_id=None)
 
@@ -155,7 +168,7 @@ class TestSchoolNormalizerIntegration:
         """Test TW country code is mapped to CN."""
         inst = RawInstitution(
             openalex_institution_id="I999",
-            raw_json='{}',
+            raw_json="{}",
             display_name="Taiwan University",
             country_code="TW",
             country_name="Taiwan",
@@ -168,12 +181,14 @@ class TestSchoolNormalizerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_normalize_institution_creates_new(self, normalizer: SchoolNormalizer, sample_raw_institution, test_session):
+    async def test_normalize_institution_creates_new(
+        self, normalizer: SchoolNormalizer, sample_raw_institution, test_session
+    ):
         """Test normalize_institution creates new when no match."""
         # Use a raw institution that won't match existing
         inst = RawInstitution(
             openalex_institution_id="I777",
-            raw_json='{}',
+            raw_json="{}",
             display_name="Brand New University",
             country_code="UK",
         )
@@ -186,7 +201,9 @@ class TestSchoolNormalizerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_normalize_institution_updates_existing(self, normalizer: SchoolNormalizer, sample_std_school, sample_raw_institution, test_session):
+    async def test_normalize_institution_updates_existing(
+        self, normalizer: SchoolNormalizer, sample_std_school, sample_raw_institution, test_session
+    ):
         """Test normalize_institution updates existing matched school."""
         # Modify raw_inst to have same openalex_id
         sample_raw_institution.type = "updated_type"

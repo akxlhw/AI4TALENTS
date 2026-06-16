@@ -13,12 +13,12 @@ from pathlib import Path
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.domains.academic.models.standardized import StdAuthor
 from app.domains.academic.models.raw_data import RawAuthor
+from app.domains.academic.models.standardized import StdAuthor
 from app.domains.academic.services.common.cs_concepts import CORE_CS_CONCEPTS
 
 logging.basicConfig(

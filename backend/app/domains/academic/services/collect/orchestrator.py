@@ -97,9 +97,7 @@ class CollectionOrchestrator:
         self._handlers: list = [
             PhaseCollectHandler(session, self.progress_tracker, self.work_fetcher),
             PhaseFetchAuthorsHandler(session, self.progress_tracker, self.author_fetcher),
-            PhaseFetchInstitutionsHandler(
-                session, self.progress_tracker, self.institution_fetcher
-            ),
+            PhaseFetchInstitutionsHandler(session, self.progress_tracker, self.institution_fetcher),
             PhaseNormalizeSchoolsHandler(session, self.progress_tracker),
             PhaseNormalizeAuthorsHandler(session, self.progress_tracker),
             PhaseTechBelongHandler(session, self.progress_tracker),
@@ -132,9 +130,7 @@ class CollectionOrchestrator:
         progress = self.progress_tracker.create_progress(task_id)
         self.progress_tracker.reset_logs()
 
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
         if not task:
             progress.status = "failed"
@@ -192,9 +188,7 @@ class CollectionOrchestrator:
                         f"Phase '{handler.phase_name}' failed: {phase_err}",
                         {"traceback": traceback.format_exc()},
                     )
-                    logger.error(
-                        f"Task {task_id} phase '{handler.phase_name}' failed: {phase_err}"
-                    )
+                    logger.error(f"Task {task_id} phase '{handler.phase_name}' failed: {phase_err}")
                     if handler.is_critical:
                         raise
                     else:
@@ -235,9 +229,7 @@ class CollectionOrchestrator:
                 "updated_talents": progress.updated_talents,
                 "created_tech_tags": progress.created_tech_tags,
                 "venue_details": venue_details,
-                "total_duration": self._calculate_duration(
-                    task.started_at, task.completed_at
-                ),
+                "total_duration": self._calculate_duration(task.started_at, task.completed_at),
             }
 
             await self.progress_tracker.update_task_status(task, "completed")
@@ -310,9 +302,7 @@ class CollectionOrchestrator:
 
     async def get_task_progress(self, task_id: int) -> dict:
         """Get progress summary for a task."""
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
         if not task:
             return {"error": "Task not found"}
@@ -383,9 +373,8 @@ class CollectionOrchestrator:
     async def _fetch_all_authors(self, task_id: int, progress) -> None:
         """Shim: Phase 2 — delegates to :class:`PhaseFetchAuthorsHandler`."""
         from app.domains.academic.models.sync import CollectTask
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
         if not task:
             return
@@ -396,9 +385,8 @@ class CollectionOrchestrator:
     async def _fetch_all_institutions(self, task_id: int, progress) -> None:
         """Shim: Phase 3 — delegates to :class:`PhaseFetchInstitutionsHandler`."""
         from app.domains.academic.models.sync import CollectTask
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
         if not task:
             return
@@ -411,9 +399,8 @@ class CollectionOrchestrator:
     async def _normalize_schools(self, task_id: int, progress) -> None:
         """Shim: Phase 4 — delegates to :class:`PhaseNormalizeSchoolsHandler`."""
         from app.domains.academic.models.sync import CollectTask
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
         if not task:
             return
@@ -424,9 +411,8 @@ class CollectionOrchestrator:
     async def _normalize_authors(self, task_id: int, progress) -> None:
         """Shim: Phase 5 — delegates to :class:`PhaseNormalizeAuthorsHandler`."""
         from app.domains.academic.models.sync import CollectTask
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
         if not task:
             return
@@ -437,9 +423,8 @@ class CollectionOrchestrator:
     async def _calculate_tech_belong(self, task_id: int, tech_domain_id: int) -> None:
         """Shim: Phase 6 — delegates to :class:`PhaseTechBelongHandler`."""
         from app.domains.academic.models.sync import CollectTask
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
         if not task:
             return
@@ -452,9 +437,8 @@ class CollectionOrchestrator:
     ) -> list[dict]:
         """Shim: Phase 7 — delegates to :class:`PhaseSyncServingHandler`."""
         from app.domains.academic.models.sync import CollectTask
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
         if not task:
             return []
@@ -475,9 +459,8 @@ class CollectionOrchestrator:
     async def _update_talent_topic_tags(self, task_id: int, progress) -> None:
         """Shim: Phase 9 — delegates to :class:`PhaseTopicTagsHandler`."""
         from app.domains.academic.models.sync import CollectTask
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
         if not task:
             self.progress_tracker.add_log("warning", f"任务 {task_id} 不存在")
@@ -489,9 +472,8 @@ class CollectionOrchestrator:
     async def _update_school_statistics(self, task_id: int, progress) -> None:
         """Shim: Phase 10 — delegates to :class:`PhaseSchoolStatsHandler`."""
         from app.domains.academic.models.sync import CollectTask
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
         if not task:
             return
@@ -502,9 +484,8 @@ class CollectionOrchestrator:
     async def _build_statistics(self, task_id: int, progress) -> None:
         """Shim: Phase 11 — delegates to :class:`PhaseBuildStatsHandler`."""
         from app.domains.academic.models.sync import CollectTask
-        task = await self.session.execute(
-            select(CollectTask).where(CollectTask.task_id == task_id)
-        )
+
+        task = await self.session.execute(select(CollectTask).where(CollectTask.task_id == task_id))
         task = task.scalar_one_or_none()
         if not task:
             return

@@ -6,8 +6,6 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.auth import create_access_token, hash_password
-from app.domains.shared.models.enums import UserRoleType
-from app.domains.shared.models.iam import UserAccount
 from app.domains.open_source.models.open_source import (
     OSDeveloper,
     OSFavourite,
@@ -15,6 +13,8 @@ from app.domains.open_source.models.open_source import (
     OSRepository,
     OSTalentPool,
 )
+from app.domains.shared.models.enums import UserRoleType
+from app.domains.shared.models.iam import UserAccount
 
 
 @pytest.fixture
@@ -52,6 +52,23 @@ async def os_test_admin(test_session):
 
 
 @pytest.fixture
+async def os_test_super_admin(test_session):
+    """Create a test super admin for open source tests."""
+    super_admin = UserAccount(
+        username="os_test_super_admin",
+        email="os_super_admin@example.com",
+        password_hash=hash_password("superadminpassword123"),
+        role_type=UserRoleType.SUPER_ADMIN.value,
+        is_active=True,
+        display_name="OS Test Super Admin",
+    )
+    test_session.add(super_admin)
+    await test_session.commit()
+    await test_session.refresh(super_admin)
+    return super_admin
+
+
+@pytest.fixture
 def os_user_token(os_test_user):
     """Generate auth token for test user."""
     return create_access_token(
@@ -68,6 +85,16 @@ def os_admin_token(os_test_admin):
         user_id=os_test_admin.user_id,
         username=os_test_admin.username,
         role=os_test_admin.role_type,
+    )
+
+
+@pytest.fixture
+def os_super_admin_token(os_test_super_admin):
+    """Generate auth token for test super admin."""
+    return create_access_token(
+        user_id=os_test_super_admin.user_id,
+        username=os_test_super_admin.username,
+        role=os_test_super_admin.role_type,
     )
 
 
@@ -193,4 +220,11 @@ async def auth_client(client: AsyncClient, os_user_token):
 async def admin_client(client: AsyncClient, os_admin_token):
     """Create authenticated client for admin user."""
     client.headers["Authorization"] = f"Bearer {os_admin_token}"
+    return client
+
+
+@pytest.fixture
+async def super_admin_client(client: AsyncClient, os_super_admin_token):
+    """Create authenticated client for super admin user."""
+    client.headers["Authorization"] = f"Bearer {os_super_admin_token}"
     return client

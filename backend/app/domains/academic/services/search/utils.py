@@ -113,7 +113,9 @@ def talent_to_dict(talent: Talent) -> dict:
         "school_id": talent.school_id,
         "school_name": talent.primary_school_name,
         "education_school_id": talent.education_school_id,
-        "education_school_name": talent.education_school.school_name if talent.education_school else None,
+        "education_school_name": (
+            talent.education_school.school_name if talent.education_school else None
+        ),
         "company_school_id": talent.company_school_id,
         "company_school_name": talent.company_school.school_name if talent.company_school else None,
         "role_type": talent.role_type,
@@ -147,9 +149,7 @@ def apply_talent_filters(query, filters: dict | None):
         query = query.where(Talent.country_code == filters["country_code"])
 
     if "tech_domain_id" in filters:
-        query = query.join(
-            TalentTechTag, Talent.talent_id == TalentTechTag.talent_id
-        ).where(
+        query = query.join(TalentTechTag, Talent.talent_id == TalentTechTag.talent_id).where(
             TalentTechTag.tech_domain_id == filters["tech_domain_id"],
             TalentTechTag.is_enabled.is_(True),
         )
@@ -159,9 +159,9 @@ def apply_talent_filters(query, filters: dict | None):
         query = query.where(Talent.is_graduated == is_grad)
 
     if "confirm_status" in filters:
-        query = query.join(
-            TalentTechTag, Talent.talent_id == TalentTechTag.talent_id
-        ).where(TalentTechTag.confirm_status == filters["confirm_status"])
+        query = query.join(TalentTechTag, Talent.talent_id == TalentTechTag.talent_id).where(
+            TalentTechTag.confirm_status == filters["confirm_status"]
+        )
 
     return query
 

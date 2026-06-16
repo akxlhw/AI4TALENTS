@@ -171,17 +171,19 @@ class OSCollectionService:
         except Exception as e:
             logger.warning(f"Failed to fetch stars for {repo_full_name}: {e}")
 
-        return await self.repo.create_repo_config({
-            "repo_full_name": repo_full_name,
-            "tech_element": tech_element,
-            "display_name": display_name or repo_full_name.split("/")[-1],
-            "description": description,
-            "tech_direction_id": tech_direction_id,
-            "language": language,
-            "notes": notes,
-            "created_by": created_by,
-            "stars_count": stars_count,
-        })
+        return await self.repo.create_repo_config(
+            {
+                "repo_full_name": repo_full_name,
+                "tech_element": tech_element,
+                "display_name": display_name or repo_full_name.split("/")[-1],
+                "description": description,
+                "tech_direction_id": tech_direction_id,
+                "language": language,
+                "notes": notes,
+                "created_by": created_by,
+                "stars_count": stars_count,
+            }
+        )
 
     async def update_repo_config(
         self, repo_config_id: int, update_data: dict[str, Any]
@@ -262,11 +264,13 @@ class OSCollectionService:
         Returns:
             OSCollectTask: 创建的任务
         """
-        return await self.repo.create_collect_task({
-            "task_name": task_name,
-            "config_json": config_json,
-            "created_by": created_by,
-        })
+        return await self.repo.create_collect_task(
+            {
+                "task_name": task_name,
+                "config_json": config_json,
+                "created_by": created_by,
+            }
+        )
 
     async def cancel_collect_task(self, task_id: int) -> OSCollectTask | None:
         """
@@ -333,17 +337,19 @@ class OSCollectionService:
         if existing:
             raise ConflictError("A collection task is already running for this repository")
 
-        task = await self.repo.create_collect_task({
-            "task_name": config.repo_full_name,
-            "status": "pending",
-            "config_json": {
-                "repo_config_id": repo_config_id,
-                "repo_full_name": config.repo_full_name,
-                "tech_element": config.tech_element,
-                "contributors_per_repo": contributors_per_repo,
-            },
-            "created_by": created_by,
-        })
+        task = await self.repo.create_collect_task(
+            {
+                "task_name": config.repo_full_name,
+                "status": "pending",
+                "config_json": {
+                    "repo_config_id": repo_config_id,
+                    "repo_full_name": config.repo_full_name,
+                    "tech_element": config.tech_element,
+                    "contributors_per_repo": contributors_per_repo,
+                },
+                "created_by": created_by,
+            }
+        )
         return task, config.repo_full_name, config.tech_element
 
     async def collect_batch_repos(
@@ -369,40 +375,48 @@ class OSCollectionService:
         for repo_config_id in repo_config_ids:
             config = await self.repo.get_repo_config(repo_config_id)
             if not config:
-                skipped.append({
-                    "repo_config_id": repo_config_id,
-                    "repo_full_name": None,
-                    "reason": "Repo config not found",
-                })
+                skipped.append(
+                    {
+                        "repo_config_id": repo_config_id,
+                        "repo_full_name": None,
+                        "reason": "Repo config not found",
+                    }
+                )
                 continue
             if not config.collect_enabled:
-                skipped.append({
-                    "repo_config_id": repo_config_id,
-                    "repo_full_name": config.repo_full_name,
-                    "reason": "Repository collection is disabled",
-                })
+                skipped.append(
+                    {
+                        "repo_config_id": repo_config_id,
+                        "repo_full_name": config.repo_full_name,
+                        "reason": "Repository collection is disabled",
+                    }
+                )
                 continue
 
             existing = await self.repo.get_active_collect_task(config.repo_full_name)
             if existing:
-                skipped.append({
-                    "repo_config_id": repo_config_id,
-                    "repo_full_name": config.repo_full_name,
-                    "reason": "A collection task is already running for this repository",
-                })
+                skipped.append(
+                    {
+                        "repo_config_id": repo_config_id,
+                        "repo_full_name": config.repo_full_name,
+                        "reason": "A collection task is already running for this repository",
+                    }
+                )
                 continue
 
-            task = await self.repo.create_collect_task({
-                "task_name": config.repo_full_name,
-                "status": "pending",
-                "config_json": {
-                    "repo_config_id": repo_config_id,
-                    "repo_full_name": config.repo_full_name,
-                    "tech_element": config.tech_element,
-                    "contributors_per_repo": contributors_per_repo,
-                },
-                "created_by": created_by,
-            })
+            task = await self.repo.create_collect_task(
+                {
+                    "task_name": config.repo_full_name,
+                    "status": "pending",
+                    "config_json": {
+                        "repo_config_id": repo_config_id,
+                        "repo_full_name": config.repo_full_name,
+                        "tech_element": config.tech_element,
+                        "contributors_per_repo": contributors_per_repo,
+                    },
+                    "created_by": created_by,
+                }
+            )
             created_tasks.append(task)
 
         return created_tasks, skipped
@@ -489,7 +503,7 @@ class OSCollectionService:
                 task = await inner_service.get_collect_task(task_id)
                 if task:
                     task.status = "failed"
-                    task.error_message = str(e)[:settings.COLLECT_ERROR_MAX_LENGTH]
+                    task.error_message = str(e)[: settings.COLLECT_ERROR_MAX_LENGTH]
                     await session.commit()
         finally:
             cancelled_task_ids.discard(task_id)

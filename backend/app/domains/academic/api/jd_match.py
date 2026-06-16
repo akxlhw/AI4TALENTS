@@ -59,8 +59,6 @@ async def parse_jd(
         raise HTTPException(status_code=400, detail="JD 文本不能为空") from None
     except LLMError as e:
         raise HTTPException(status_code=502, detail=f"LLM 错误: {e.message}") from e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post(
@@ -109,9 +107,7 @@ async def match_talents(
 
         # Get user ID from authentication
         if not current_user:
-            raise HTTPException(
-                status_code=401, detail="用户未认证，无法创建 JD 匹配会话"
-            )
+            raise HTTPException(status_code=401, detail="用户未认证，无法创建 JD 匹配会话")
         user_id = current_user["user_id"]
 
         # Execute match

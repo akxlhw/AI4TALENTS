@@ -40,13 +40,15 @@ class TestAuthorNormalizerUnit:
 
     def test_parse_raw_json_with_topics(self, normalizer: AuthorNormalizer):
         """Test extracting topics from raw_json."""
-        raw = json.dumps({
-            "topics": [
-                {"display_name": "Machine Learning", "count": 10},
-                {"display_name": "Deep Learning", "count": 5},
-                {"display_name": "Low Count", "count": 1},
-            ]
-        })
+        raw = json.dumps(
+            {
+                "topics": [
+                    {"display_name": "Machine Learning", "count": 10},
+                    {"display_name": "Deep Learning", "count": 5},
+                    {"display_name": "Low Count", "count": 1},
+                ]
+            }
+        )
         topics, score = normalizer._parse_raw_json(raw)
         assert "Machine Learning" in topics
         assert "Deep Learning" in topics
@@ -54,24 +56,28 @@ class TestAuthorNormalizerUnit:
 
     def test_parse_raw_json_cs_score(self, normalizer: AuthorNormalizer):
         """Test calculating CS score from raw_json."""
-        raw = json.dumps({
-            "x_concepts": [
-                {"id": "https://openalex.org/C41008148", "score": 0.8},
-                {"id": "https://openalex.org/C154945302", "score": 0.5},
-            ]
-        })
+        raw = json.dumps(
+            {
+                "x_concepts": [
+                    {"id": "https://openalex.org/C41008148", "score": 0.8},
+                    {"id": "https://openalex.org/C154945302", "score": 0.5},
+                ]
+            }
+        )
         topics, score = normalizer._parse_raw_json(raw)
         # Only the numeric part of concept IDs are matched
         assert score == 0.0  # URL format not matched by CORE_CS_CONCEPTS
 
     def test_parse_raw_json_cs_score_numeric_id(self, normalizer: AuthorNormalizer):
         """Test CS score with numeric concept IDs."""
-        raw = json.dumps({
-            "x_concepts": [
-                {"id": "41008148", "score": 0.8},
-                {"id": "154945302", "score": 0.5},
-            ]
-        })
+        raw = json.dumps(
+            {
+                "x_concepts": [
+                    {"id": "41008148", "score": 0.8},
+                    {"id": "154945302", "score": 0.5},
+                ]
+            }
+        )
         topics, score = normalizer._parse_raw_json(raw)
         assert score == pytest.approx(1.0)  # min(1.3, 1.0)
 
@@ -106,10 +112,12 @@ class TestAuthorNormalizerIntegration:
         raw = RawAuthor(
             openalex_author_id="A123456789",
             display_name="test author",
-            raw_json=json.dumps({
-                "topics": [{"display_name": "Machine Learning", "count": 10}],
-                "x_concepts": [{"id": "41008148", "score": 0.85}],
-            }),
+            raw_json=json.dumps(
+                {
+                    "topics": [{"display_name": "Machine Learning", "count": 10}],
+                    "x_concepts": [{"id": "41008148", "score": 0.85}],
+                }
+            ),
             works_count=25,
             cited_by_count=500,
             h_index=10,
@@ -142,7 +150,9 @@ class TestAuthorNormalizerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_create_std_author(self, normalizer: AuthorNormalizer, sample_raw_author, test_session):
+    async def test_create_std_author(
+        self, normalizer: AuthorNormalizer, sample_raw_author, test_session
+    ):
         """Test creating StdAuthor from RawAuthor."""
         std = await normalizer.create_std_author(sample_raw_author)
 
@@ -157,16 +167,22 @@ class TestAuthorNormalizerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_create_std_author_with_school(self, normalizer: AuthorNormalizer, sample_raw_author, sample_std_school, test_session):
+    async def test_create_std_author_with_school(
+        self, normalizer: AuthorNormalizer, sample_raw_author, sample_std_school, test_session
+    ):
         """Test creating StdAuthor with school linkage."""
-        std = await normalizer.create_std_author(sample_raw_author, std_school_id=sample_std_school.std_school_id)
+        std = await normalizer.create_std_author(
+            sample_raw_author, std_school_id=sample_std_school.std_school_id
+        )
 
         assert std.std_school_id == sample_std_school.std_school_id
         assert std.confidence_score == pytest.approx(0.8)
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_normalize_author_creates_new(self, normalizer: AuthorNormalizer, sample_raw_author, test_session):
+    async def test_normalize_author_creates_new(
+        self, normalizer: AuthorNormalizer, sample_raw_author, test_session
+    ):
         """Test normalize_author creates new StdAuthor when not exists."""
         std = await normalizer.normalize_author(sample_raw_author)
 
@@ -175,7 +191,9 @@ class TestAuthorNormalizerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_normalize_author_updates_existing(self, normalizer: AuthorNormalizer, sample_raw_author, test_session):
+    async def test_normalize_author_updates_existing(
+        self, normalizer: AuthorNormalizer, sample_raw_author, test_session
+    ):
         """Test normalize_author updates existing StdAuthor."""
         # Create existing StdAuthor
         existing = StdAuthor(
@@ -217,7 +235,9 @@ class TestAuthorNormalizerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_batch_find_std_schools(self, normalizer: AuthorNormalizer, sample_std_school, test_session):
+    async def test_batch_find_std_schools(
+        self, normalizer: AuthorNormalizer, sample_std_school, test_session
+    ):
         """Test batch finding std schools by institution IDs."""
         result = await normalizer._batch_find_std_schools(["I987654321", "I000"])
         assert len(result) == 1

@@ -155,7 +155,10 @@ class RawWorkRepository:
         self, work_id: int, status: str = "processed", error: str | None = None
     ) -> None:
         """Mark work as processed"""
-        values = {"processed_status": status, "processed_at": datetime.now(timezone.utc).replace(tzinfo=None)}
+        values = {
+            "processed_status": status,
+            "processed_at": datetime.now(timezone.utc).replace(tzinfo=None),
+        }
         if error:
             values["error_info"] = error
         await self.session.execute(
@@ -373,7 +376,9 @@ class RawAuthorRepository:
 
         return [aid for aid in author_ids if aid not in existing_ids]
 
-    async def get_pending(self, task_id: int | None = None, limit: int | None = None) -> list[RawAuthor]:
+    async def get_pending(
+        self, task_id: int | None = None, limit: int | None = None
+    ) -> list[RawAuthor]:
         """Get pending authors for processing.
 
         Args:
@@ -394,7 +399,10 @@ class RawAuthorRepository:
         self, author_id: int, status: str = "processed", std_author_id: int | None = None
     ) -> None:
         """Mark author as processed"""
-        values = {"processed_status": status, "processed_at": datetime.now(timezone.utc).replace(tzinfo=None)}
+        values = {
+            "processed_status": status,
+            "processed_at": datetime.now(timezone.utc).replace(tzinfo=None),
+        }
         if std_author_id:
             values["std_author_id"] = std_author_id
         await self.session.execute(
@@ -574,7 +582,10 @@ class RawInstitutionRepository:
         self, inst_id: int, status: str = "processed", std_school_id: int | None = None
     ) -> None:
         """Mark institution as processed"""
-        values = {"processed_status": status, "processed_at": datetime.now(timezone.utc).replace(tzinfo=None)}
+        values = {
+            "processed_status": status,
+            "processed_at": datetime.now(timezone.utc).replace(tzinfo=None),
+        }
         if std_school_id:
             values["std_school_id"] = std_school_id
         await self.session.execute(

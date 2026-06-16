@@ -26,7 +26,8 @@ class PhaseNormalizeSchoolsHandler(PhaseHandler):
         progress.current_step = "Normalizing schools"
 
         result = await self.school_normalizer.normalize_all_institutions(
-            task_id=context.task.task_id
+            task_id=context.task.task_id,
+            commit_per_batch=False,
         )
         progress.normalized_schools = result.processed
 

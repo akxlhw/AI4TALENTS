@@ -62,9 +62,7 @@ async def get_highlights(
         hot_tech_domains = await service.get_hot_tech_domains(
             limit=HIGHLIGHT_LIMITS["tech_domains"]
         )
-        top_countries = await service.get_top_countries(
-            limit=HIGHLIGHT_LIMITS["countries"]
-        )
+        top_countries = await service.get_top_countries(limit=HIGHLIGHT_LIMITS["countries"])
         top_domestic_schools = await service.get_top_schools(
             limit=HIGHLIGHT_LIMITS["schools"], country_code="CN"
         )
@@ -102,9 +100,7 @@ async def get_highlights(
         hot_tech_domains = await service.get_hot_tech_domains(
             limit=HIGHLIGHT_LIMITS["tech_domains"]
         )
-        top_countries = await service.get_top_countries(
-            limit=HIGHLIGHT_LIMITS["countries"]
-        )
+        top_countries = await service.get_top_countries(limit=HIGHLIGHT_LIMITS["countries"])
         top_domestic_schools = await service.get_top_schools(
             limit=HIGHLIGHT_LIMITS["schools"], country_code="CN"
         )

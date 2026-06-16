@@ -70,7 +70,11 @@ class TalentPoolService:
         return await self.repo.list_user_pools(user_id)
 
     async def update_pool_and_commit(
-        self, pool_id: int, name: str | None = None, desc: str | None = None, status: str | None = None
+        self,
+        pool_id: int,
+        name: str | None = None,
+        desc: str | None = None,
+        status: str | None = None,
     ) -> TalentPool | None:
         """
         更新人才池并提交

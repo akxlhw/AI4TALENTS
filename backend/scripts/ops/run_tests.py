@@ -11,9 +11,9 @@ Usage:
     python scripts/run_tests.py --collect          # Run collect tests
     python scripts/run_tests.py --cov              # Run with coverage
 """
+import argparse
 import subprocess
 import sys
-import argparse
 
 
 def run_tests(test_type: str = "all", coverage: bool = False, verbose: bool = True):
