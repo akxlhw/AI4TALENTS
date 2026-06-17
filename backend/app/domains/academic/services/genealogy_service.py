@@ -12,7 +12,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from typing import Any
 
-from sqlalchemy import func, select, tuple_
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.genealogy import GenealogyEdge
@@ -299,21 +299,59 @@ class GenealogyService:
         await self.session.flush()
 
     async def _prune_stale_edges(self, current_edges: list[dict[str, Any]]) -> None:
-        """Remove edges that are no longer present or no longer above min confidence."""
+        """Remove edges that are no longer present or above min confidence.
+
+        Uses a temp table + NOT EXISTS anti-join instead of a giant NOT IN
+        clause. On 100k+ talents the old ``tuple_.in_(current_keys)`` approach
+        generated a SQL string of tens of MB (hundreds of thousands of 3-tuples
+        inlined into ``NOT IN (...)``), which crashed the PostgreSQL backend
+        parser with a stack overflow.
+        """
         if current_edges:
-            # Delete edges whose (from, to, type) tuple is not in the current batch.
-            # This prevents accumulation of stale edges from previous inference runs.
-            current_keys = {
+            # Keep set is batched into a temp table so the anti-join stays a
+            # fixed-size SQL regardless of edge count. ON COMMIT DROP cleans up
+            # automatically at the surrounding infer_all_genealogy() commit,
+            # which runs after prune (same transaction).
+            await self.session.execute(
+                text(
+                    "CREATE TEMP TABLE _genealogy_keep ("
+                    " from_id INTEGER NOT NULL,"
+                    " to_id INTEGER NOT NULL,"
+                    " rel_type VARCHAR(20) NOT NULL"
+                    ") ON COMMIT DROP"
+                )
+            )
+
+            keep_keys = [
                 (e["from_talent_id"], e["to_talent_id"], e["relationship_type"])
                 for e in current_edges
-            }
+            ]
+            TEMP_BATCH = 5000
+            for i in range(0, len(keep_keys), TEMP_BATCH):
+                chunk = keep_keys[i : i + TEMP_BATCH]
+                # Parameterized bulk insert: f/t/r prefixed per-row to keep
+                # every value bound (no literal interpolation -> no injection).
+                placeholders = ",".join(f"(:f{j},:t{j},:r{j})" for j in range(len(chunk)))
+                params: dict[str, Any] = {}
+                for j, (f_id, t_id, r_type) in enumerate(chunk):
+                    params[f"f{j}"] = f_id
+                    params[f"t{j}"] = t_id
+                    params[f"r{j}"] = r_type
+                await self.session.execute(
+                    text(f"INSERT INTO _genealogy_keep VALUES {placeholders}"),
+                    params,
+                )
+
+            # NOT EXISTS -> PostgreSQL picks a hash anti-join, no giant IN list.
             await self.session.execute(
-                GenealogyEdge.__table__.delete().where(
-                    ~tuple_(
-                        GenealogyEdge.from_talent_id,
-                        GenealogyEdge.to_talent_id,
-                        GenealogyEdge.relationship_type,
-                    ).in_(current_keys)
+                text(
+                    "DELETE FROM genealogy_edge e "
+                    "WHERE NOT EXISTS ("
+                    " SELECT 1 FROM _genealogy_keep k "
+                    " WHERE k.from_id = e.from_talent_id"
+                    "   AND k.to_id = e.to_talent_id"
+                    "   AND k.rel_type = e.relationship_type"
+                    ")"
                 )
             )
 
