@@ -31,10 +31,15 @@ class TestRepoConfig:
         assert data["total"] >= 1
 
     @pytest.mark.asyncio
-    async def test_list_repo_configs_as_admin_forbidden(self, admin_client: AsyncClient):
-        """Admin cannot list repo configs."""
+    async def test_list_repo_configs_as_admin(
+        self, admin_client: AsyncClient, sample_os_repo_config
+    ):
+        """Admin can list repo configs (read-only browse endpoint)."""
         response = await admin_client.get("/api/v1/open-source/repo-configs")
-        assert response.status_code == 403
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert data["total"] >= 1
 
     @pytest.mark.asyncio
     async def test_list_repo_configs_as_user_forbidden(self, auth_client: AsyncClient):
