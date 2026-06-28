@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Spin } from 'antd'
 import MainLayout from './layouts/MainLayout'
@@ -10,25 +11,27 @@ import RegisterPage from './pages/auth/register-page'
 import PrivacyPolicyPage from './pages/legal/privacy-policy-page'
 import TermsOfUsePage from './pages/legal/terms-of-use-page'
 import StorageConsentBanner from './components/StorageConsentBanner'
-import AdminPage from './pages/admin/admin-page'
-import AuditLogPage from './pages/admin/audit-log-page'
 import FavoritesPage from './pages/user/favorites-page'
 import ProfilePage from './pages/user/profile-page'
 import TechDomainPage from './pages/academic/academic-tech-domain-page'
 import CountrySchoolPage from './pages/academic/academic-country-school-page'
-import SystemConfigPage from './pages/system-config/system-config-page'
-import DataVersionPage from './pages/admin/data-version-page'
-import OpenSourceDemoPage from './pages/open-source/open-source-demo-page'
 import OpenSourcePage from './pages/open-source/open-source-page'
 import OpenSourceSearchPage from './pages/open-source/open-source-search-page'
 import DeveloperDetailPage from './pages/open-source/open-source-developer-detail-page'
 import RepoDetailPage from './pages/open-source/repo-detail-page'
 import RepoListPage from './pages/open-source/repo-list-page'
-import CompetitionDemoPage from './pages/competition/competition-demo-page'
-import IndustryDemoPage from './pages/industry/industry-demo-page'
 import FeedbackPage from './pages/feedback/feedback-page'
-import SuggestionAdminPage from './pages/admin/suggestion-admin-page'
 import { useAuth } from './contexts/AuthContext'
+
+// Lazy-loaded admin/demo pages to reduce main bundle size
+const AdminPage = lazy(() => import('./pages/admin/admin-page'))
+const AuditLogPage = lazy(() => import('./pages/admin/audit-log-page'))
+const DataVersionPage = lazy(() => import('./pages/admin/data-version-page'))
+const SuggestionAdminPage = lazy(() => import('./pages/admin/suggestion-admin-page'))
+const SystemConfigPage = lazy(() => import('./pages/system-config/system-config-page'))
+const OpenSourceDemoPage = lazy(() => import('./pages/open-source/open-source-demo-page'))
+const CompetitionDemoPage = lazy(() => import('./pages/competition/competition-demo-page'))
+const IndustryDemoPage = lazy(() => import('./pages/industry/industry-demo-page'))
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -91,6 +94,13 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>
 }
 
+// Lazy page loading fallback
+const LazyFallback = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    <Spin size="large" />
+  </div>
+)
+
 function AppRoutes() {
   return (
     <Routes>
@@ -127,14 +137,35 @@ function AppRoutes() {
         <Route path="search" element={<Navigate to="/search-recommend" replace />} />
         <Route path="jd-match" element={<Navigate to="/search-recommend?tab=recommend&mode=jd-match" replace />} />
         <Route path="recommend" element={<Navigate to="/search-recommend?tab=recommend&mode=similar" replace />} />
-        <Route path="demo-opensource" element={<OpenSourceDemoPage />} />
+        <Route
+          path="demo-opensource"
+          element={
+            <Suspense fallback={<LazyFallback />}>
+              <OpenSourceDemoPage />
+            </Suspense>
+          }
+        />
         <Route path="opensource" element={<OpenSourcePage />} />
         <Route path="opensource/search" element={<OpenSourceSearchPage />} />
         <Route path="opensource/developers/:id" element={<DeveloperDetailPage />} />
         <Route path="opensource/repos" element={<RepoListPage />} />
         <Route path="opensource/repos/:owner/:name" element={<RepoDetailPage />} />
-        <Route path="demo-competition" element={<CompetitionDemoPage />} />
-        <Route path="demo-industry" element={<IndustryDemoPage />} />
+        <Route
+          path="demo-competition"
+          element={
+            <Suspense fallback={<LazyFallback />}>
+              <CompetitionDemoPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="demo-industry"
+          element={
+            <Suspense fallback={<LazyFallback />}>
+              <IndustryDemoPage />
+            </Suspense>
+          }
+        />
         <Route path="talents/:id" element={<TalentDetailPage />} />
         <Route path="schools/:id" element={<SchoolDetailPage />} />
         <Route path="favorites" element={<FavoritesPage />} />
@@ -143,7 +174,9 @@ function AppRoutes() {
           path="admin"
           element={
             <SuperAdminRoute>
-              <AdminPage />
+              <Suspense fallback={<LazyFallback />}>
+                <AdminPage />
+              </Suspense>
             </SuperAdminRoute>
           }
         />
@@ -151,7 +184,9 @@ function AppRoutes() {
           path="system-config"
           element={
             <SuperAdminRoute>
-              <SystemConfigPage />
+              <Suspense fallback={<LazyFallback />}>
+                <SystemConfigPage />
+              </Suspense>
             </SuperAdminRoute>
           }
         />
@@ -165,7 +200,9 @@ function AppRoutes() {
           path="data-version"
           element={
             <SuperAdminRoute>
-              <DataVersionPage />
+              <Suspense fallback={<LazyFallback />}>
+                <DataVersionPage />
+              </Suspense>
             </SuperAdminRoute>
           }
         />
@@ -173,7 +210,9 @@ function AppRoutes() {
           path="audit-logs"
           element={
             <SuperAdminRoute>
-              <AuditLogPage />
+              <Suspense fallback={<LazyFallback />}>
+                <AuditLogPage />
+              </Suspense>
             </SuperAdminRoute>
           }
         />
@@ -182,7 +221,9 @@ function AppRoutes() {
           path="suggestion-admin"
           element={
             <SuperAdminRoute>
-              <SuggestionAdminPage />
+              <Suspense fallback={<LazyFallback />}>
+                <SuggestionAdminPage />
+              </Suspense>
             </SuperAdminRoute>
           }
         />

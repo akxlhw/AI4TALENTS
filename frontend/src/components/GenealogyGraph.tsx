@@ -52,8 +52,8 @@ const TIER_ORDER = ['tier1', 'tier2', 'tier3', 'tier4']
 
 const RELATIONSHIP_NAMES: Record<string, string> = {
   advisor_student: '导师-学生',
-  mentor_mentee: ' mentor-mentee',
-  senior_junior: ' senior-junior',
+  mentor_mentee: '导师-门徒',
+  senior_junior: '前辈-后辈',
 }
 
 const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
