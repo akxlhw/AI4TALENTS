@@ -15,7 +15,9 @@ class TestSyncBatchRepository:
     @pytest.fixture
     def mock_session(self):
         """Create mock session."""
-        return AsyncMock()
+        session = AsyncMock()
+        session.add = MagicMock()
+        return session
 
     @pytest.fixture
     def repo(self, mock_session):

@@ -496,7 +496,7 @@ class TestBatchNormalization:
         from app.domains.academic.models.sync import CollectTask
         from app.domains.academic.services.normalizers import AuthorNormalizer
 
-        setup = full_setup
+        _ = full_setup
 
         # Create a dedicated task so get_pending is scoped
         task = CollectTask(

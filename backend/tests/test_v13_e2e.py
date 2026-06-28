@@ -12,7 +12,7 @@ import os
 os.environ["REDIS_ENABLED"] = "false"
 
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
@@ -116,7 +116,7 @@ async def e2e_client(test_session: AsyncSession):
 
     app.dependency_overrides[get_async_session] = override_get_session
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
 
     app.dependency_overrides.clear()

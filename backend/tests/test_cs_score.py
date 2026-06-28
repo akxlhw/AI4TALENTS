@@ -19,6 +19,7 @@ class TestCSCoreCalculation:
     def normalizer(self):
         """Create normalizer instance with mock session."""
         mock_session = AsyncMock()
+        mock_session.add = MagicMock()
         return AuthorNormalizer(mock_session)
 
     def test_calculate_cs_score_with_ai_background(self, normalizer):
@@ -105,6 +106,7 @@ class TestAuthorSyncFiltering:
     def sync_service(self):
         """Create sync service instance with mock session."""
         mock_session = AsyncMock()
+        mock_session.add = MagicMock()
         return AuthorSyncService(mock_session)
 
     @pytest.fixture

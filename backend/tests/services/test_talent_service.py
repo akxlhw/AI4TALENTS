@@ -417,7 +417,6 @@ class TestTalentServiceUpdate:
         # Arrange
         service = TalentService(test_session)
         talent_id = sample_talent["talent"].talent_id
-        original_name = sample_talent["talent"].name
 
         # Act
         result = await service.update_talent(

@@ -7,7 +7,7 @@ import os
 os.environ["REDIS_ENABLED"] = "false"
 
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 
 from app.core.metrics import (
     CounterMetric,
@@ -189,7 +189,7 @@ class TestMetricsMiddleware:
     @pytest.mark.asyncio
     async def test_metrics_endpoint(self):
         """Test /metrics endpoint returns Prometheus format."""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/api/v1/metrics")
 
             assert response.status_code == 200
@@ -202,7 +202,7 @@ class TestMetricsMiddleware:
     @pytest.mark.asyncio
     async def test_metrics_json_endpoint(self):
         """Test /metrics/json endpoint returns JSON format."""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/api/v1/metrics/json")
 
             assert response.status_code == 200
@@ -218,7 +218,7 @@ class TestMetricsMiddleware:
         # Reset metrics
         metrics.reset_all()
 
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # Make a request
             await client.get("/api/v1/health/live")
 

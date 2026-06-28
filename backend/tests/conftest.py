@@ -30,17 +30,21 @@ os.environ["DATABASE_SYNC_URL"] = TEST_DATABASE_SYNC_URL
 # Tests that require pgvector should be decorated with @pytest.mark.requires_pgvector.
 PGVECTOR_AVAILABLE = False
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator  # noqa: E402
 
-import httpx
-import pytest
-from httpx import AsyncClient
-from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
+import httpx  # noqa: E402
+import pytest  # noqa: E402
+from httpx import AsyncClient  # noqa: E402
+from sqlalchemy import select, text  # noqa: E402
+from sqlalchemy.ext.asyncio import (  # noqa: E402
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.pool import NullPool  # noqa: E402
 
 # Clear settings cache and import fresh
-from app.core import config
+from app.core import config  # noqa: E402
 
 config.get_settings.cache_clear()
 
