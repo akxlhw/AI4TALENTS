@@ -1,4 +1,5 @@
 """Parsing tests for the StanfordSailCollector (offline, against fixture HTML)."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,18 +15,16 @@ pytestmark = pytest.mark.unit
 FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "lab_web" / "stanford_sail_people.html"
 
 
-class _FakeResponse:
-    """Wrap fixture HTML so the collector's hooks parse it via Scrapling Selector."""
-
-    def __init__(self, html: str) -> None:
-        from scrapling.parser import Selector
-
-        self.selector = Selector(html)
-
-
 @pytest.fixture
 def response():
-    return _FakeResponse(FIXTURE.read_text(encoding="utf-8"))
+    """Return a real Scrapling Selector, exactly what ScraplingFetcher.fetch yields.
+
+    This is the contract test for C1: the collector hooks must work against the
+    actual Selector type (response.css(...)), not a faked wrapper.
+    """
+    from scrapling.parser import Selector
+
+    return Selector(FIXTURE.read_text(encoding="utf-8"))
 
 
 def _make_collector():

@@ -23,7 +23,7 @@ class StanfordSailCollector(BaseLabCollector):
     max_pages = 1  # fixture is single-page; revisit if live site paginates
 
     def parse_person_cards(self, response: Any) -> list[Any]:
-        return list(response.selector.css("div.person-card"))
+        return list(response.css("div.person-card"))
 
     def extract_person(self, card: Any) -> RawPersonDraft:
         def _text(selector: str) -> str | None:

@@ -83,20 +83,27 @@ class LWCollectionService:
 
     async def _run_collection(self, task_id: int, lab_id: int) -> None:
         """Background run. Uses its own session (background tasks may use
-        AsyncSessionLocal, per os_collection_service precedent)."""
+        AsyncSessionLocal, per os_collection_service precedent).
+
+        A cancel-watcher coroutine polls task status from the DB and sets
+        ctx.cancelled when a cancel request lands (POST /tasks/{id}/cancel
+        flips the DB status; the collector loop checks ctx.cancelled between
+        pages). Without the watcher, cancel would be a no-op on running tasks.
+        """
         async with COLLECTION_SEMAPHORE:
             async with AsyncSessionLocal() as session:
                 repo = LWRepository(session)
                 person_service = LWPersonService(session)
-                lab = await repo.get_lab(lab_id)
-                if lab is None:
-                    raise LookupError(f"Lab {lab_id} not found during run")
-                await repo.update_task(
-                    task_id,
-                    status="running",
-                    started_at=datetime.now(timezone.utc).replace(tzinfo=None),
-                )
                 try:
+                    lab = await repo.get_lab(lab_id)
+                    if lab is None:
+                        raise LookupError(f"Lab {lab_id} not found during run")
+                    await repo.update_task(
+                        task_id,
+                        status="running",
+                        started_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    )
+                    ctx = CollectContext(task_id=task_id, lab_id=lab_id)
                     collector = self._load_collector(
                         str(lab.collector_class),
                         fetcher=_make_fetcher(str(lab.fetch_mode)),
@@ -104,8 +111,23 @@ class LWCollectionService:
                         repo=repo,
                         person_service=person_service,
                     )
-                    ctx = CollectContext(task_id=task_id, lab_id=lab_id)
-                    await collector.collect(ctx)
+                    # Run collector concurrently with a cancel-watcher so that a
+                    # cancel request (DB status -> 'cancelled') is observed and
+                    # propagated into ctx.cancelled, stopping the scrape loop.
+                    watcher = asyncio.create_task(self._watch_cancel(ctx, repo, task_id))
+                    try:
+                        await collector.collect(ctx)
+                    finally:
+                        watcher.cancel()
+                        # Suppress the CancelledError from the watcher cleanup.
+                        try:
+                            await watcher
+                        except (asyncio.CancelledError, Exception):
+                            pass
+
+                    if ctx.cancelled.is_set():
+                        # Collector left status as 'cancelled'; nothing more to do.
+                        return
                     await repo.update_task(
                         task_id,
                         status="success",
@@ -125,6 +147,24 @@ class LWCollectionService:
                         error_message=(msg[:max_len] if len(msg) > max_len else msg),
                         completed_at=datetime.now(timezone.utc).replace(tzinfo=None),
                     )
+
+    @staticmethod
+    async def _watch_cancel(ctx: CollectContext, repo: LWRepository, task_id: int) -> None:
+        """Poll task DB status; set ctx.cancelled when status becomes 'cancelled'.
+
+        Polls every CANCEL_POLL_INTERVAL seconds. Exits when cancelled is set
+        (so the collector's cooperative check unblocks quickly).
+        """
+        interval = float(getattr(settings, "LAB_WEB_CANCEL_POLL_INTERVAL", 2.0))
+        while not ctx.cancelled.is_set():
+            try:
+                task = await repo.get_task(task_id)
+                if task is not None and str(task.status) == "cancelled":
+                    ctx.cancelled.set()
+                    return
+            except Exception:
+                logger.warning("cancel-watch DB poll failed for task %s", task_id, exc_info=True)
+            await asyncio.sleep(interval)
 
     @staticmethod
     def _load_collector(collector_class: str, **kwargs: object) -> BaseLabCollector:
