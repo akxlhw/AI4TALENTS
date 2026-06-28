@@ -121,12 +121,13 @@ class BaseLabCollector(ABC):
             raise RuntimeError(f"Unknown fetch_mode {self.lab.fetch_mode!r}")
 
     async def _guard_robots_txt(self) -> None:
-        """Disallow scraping if robots.txt forbids the People path."""
-        # Implementation detail: a minimal robots check is acceptable in v1.
-        # Real fetching of robots.txt happens in ScraplingFetcher; here we
-        # raise if the fetcher reported disallow. (See ScraplingFetcher.)
-        disallowed = getattr(self.fetcher, "robots_disallows", None)
-        if disallowed and self.lab.people_url in disallowed:
+        """Disallow scraping if robots.txt forbids the People path.
+
+        Delegates the actual /robots.txt fetch+eval to ScraplingFetcher, which
+        caches disallowed URLs in self.fetcher.robots_disallows.
+        """
+        allowed = await self.fetcher.is_allowed_by_robots(self.lab.people_url)
+        if not allowed:
             raise PermissionError(
                 f"people_url {self.lab.people_url} disallowed by robots.txt"
             )
