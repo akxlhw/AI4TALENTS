@@ -13,6 +13,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+
+# Design coupling (I1, acknowledged): lab_web writes into the shared core_talent
+# serving layer, whose ORM model currently lives in the academic domain. This is
+# an intentional v1 decision per the spec — core_talent is the unified sink for
+# all talent sources. A future refactor would lift Talent into domains/shared/.
 from app.domains.academic.models.talent import Talent
 from app.domains.lab_web.constants.normalizers import normalize_email, normalize_name
 from app.domains.lab_web.constants.role_mapping import map_role_type

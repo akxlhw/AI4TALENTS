@@ -171,7 +171,11 @@ class LWCollectionService:
         """Dynamically import and instantiate a collector by dotted path.
 
         collector_class is stored as e.g. 'labs.stanford_sail.StanfordSailCollector'
-        and is resolved relative to the collectors package.
+        and is resolved relative to the collectors package (the
+        'app.domains.lab_web.services.collectors.' prefix is prepended here).
+        Convention (I4): the stored value MUST start with 'labs.' and follow the
+        '<subpkg>.<module>.<Class>' shape; a malformed value fails at runtime
+        (first fetch), not at registration — validate when adding new labs.
         """
         module_path, _, class_name = collector_class.rpartition(".")
         module = importlib.import_module(f"app.domains.lab_web.services.collectors.{module_path}")

@@ -68,7 +68,7 @@ class LWRawPerson(Base):
         return f"<LWRawPerson(raw_id={self.raw_id}, name_raw={self.name_raw})>"
 
 
-class LWCollectTask(Base):
+class LWCollectTask(Base, TimestampMixin):
     """Collection task tracking, mirroring OSCollectTask."""
 
     __tablename__ = "lw_collect_task"
@@ -86,8 +86,6 @@ class LWCollectTask(Base):
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     created_by = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=True)
-    created_at = Column(DateTime, default=func.now(), nullable=False)
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
 
     def __repr__(self) -> str:
         return f"<LWCollectTask(task_id={self.task_id}, status={self.status})>"

@@ -57,6 +57,13 @@ def compute_content_hash(
     Fields chosen intentionally: name/title/email/homepage identify a person
     and are stable; source_url and avatar_url are excluded because they may
     change while the person stays the same.
+
+    Cross-source uniqueness (I2, acknowledged): this hash is written into
+    core_talent.source_record_id, which has a GLOBAL unique constraint. In
+    practice OpenAlex numeric ids never collide with a sha256 hex, so this is
+    safe. Within one lab, two genuinely-different people sharing all of
+    name/title/email/homepage would dedup to one row — rare for real People
+    pages (which almost always publish a homepage or email) but a known edge.
     """
     payload = "|".join(
         [

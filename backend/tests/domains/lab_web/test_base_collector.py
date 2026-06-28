@@ -84,3 +84,48 @@ async def test_collect_writes_raw_and_syncs_core_talent(test_session, sample_lab
     # Base flow leaves total_records set; status flip to success happens in
     # LWCollectionService._run_collection (not in collect() itself).
     assert refreshed.total_records == 1
+
+
+class _DisallowingFetcher:
+    """Fake fetcher whose robots check always disallows (for guard test)."""
+
+    robots_disallows: set[str] = set()
+
+    async def is_allowed_by_robots(self, url: str) -> bool:
+        return False
+
+    async def fetch(self, url: str):  # never reached — guard raises first
+        raise AssertionError("fetch should not be called when robots disallows")
+
+
+class _NoopCollector(BaseLabCollector):
+    """Collector that yields nothing; only the guard matters here."""
+
+    def parse_person_cards(self, response):
+        return []
+
+    def extract_person(self, card):
+        raise AssertionError("no cards expected")
+
+
+async def test_guard_robots_txt_blocks_disallowed_people_url(test_session, sample_lab):
+    """M6 / spec §10.9: a people_url disallowed by robots.txt must abort the
+    collection with PermissionError BEFORE any content fetch occurs.
+    """
+    repo = LWRepository(test_session)
+    person_service = LWPersonService(test_session)
+    task = await repo.create_task(task_name="t1", lab_id=sample_lab.lab_id, status="running")
+    collector = _NoopCollector(
+        fetcher=_DisallowingFetcher(),
+        lab=sample_lab,
+        repo=repo,
+        person_service=person_service,
+    )
+    ctx = CollectContext(task_id=int(task.task_id), lab_id=sample_lab.lab_id)
+
+    with pytest.raises(PermissionError, match="robots.txt"):
+        await collector.collect(ctx)
+
+    # Nothing was scraped: no raw rows, task untouched by the collector flow.
+    raw_rows = (await test_session.execute(select(LWRawPerson))).scalars().all()
+    assert raw_rows == []

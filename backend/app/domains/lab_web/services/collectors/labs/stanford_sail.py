@@ -1,8 +1,13 @@
 """Stanford SAIL People-page collector.
 
-Selectors target the simplified fixture structure in
-tests/fixtures/lab_web/stanford_sail_people.html. When wiring against the
-live site, re-derive selectors from the live DOM and refresh the fixture.
+Selectors target the SIMPLIFIED fixture structure in
+tests/fixtures/lab_web/stanford_sail_people.html, NOT the real ai.stanford.edu
+DOM. Success criterion §10.3 (scrape all SAIL people) is therefore NOT yet
+verified end-to-end (I3, acknowledged): before relying on this in production,
+curl the live page, commit a real snapshot as the fixture, re-derive the
+selectors below against the actual markup, and add a `slow`-marked live smoke
+test (spec §9). The parsing contract (response.css(...)) is correct; only the
+selector strings need to match the real DOM.
 """
 
 from __future__ import annotations
