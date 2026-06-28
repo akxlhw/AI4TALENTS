@@ -54,6 +54,7 @@ class SourceType(str, enum.Enum):
     MANUAL = "manual"
     IMPORT = "import"
     LAB_WEB = "lab_web"
+    LAB_WEB_SITE = "lab_web_site"
 
 
 class ScopeType(str, enum.Enum):

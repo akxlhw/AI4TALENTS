@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from dataclasses import dataclass
 from typing import Any
 
 from openai import APIConnectionError, APIError, AsyncOpenAI, RateLimitError
@@ -49,6 +50,14 @@ JD_PARSE_PROMPT = """你是一个专业的招聘助手。请分析以下职位�
 重要：research_areas 必须输出英文关键词，以便与学术数据库匹配。
 
 直接返回 JSON 对象，从 { 开始，以 } 结束，不要有任何其他内容。"""
+
+
+@dataclass
+class CompletionResult:
+    """Result of a generic LLM chat completion."""
+
+    content: str
+    tokens_used: int = 0
 
 
 class LLMGateway(LLMEmbeddingMixin, LLMGatewayProtocol):
@@ -271,6 +280,45 @@ class LLMGateway(LLMEmbeddingMixin, LLMGatewayProtocol):
             raise LLMError(
                 error_type=LLMErrorType.API_ERROR, message=f"Unexpected error: {e}"
             ) from e
+
+    @with_retry(max_retries=3)
+    @with_timeout(timeout_seconds=60.0)
+    async def complete(
+        self,
+        messages: list[dict[str, str]],
+        temperature: float = 0.1,
+        json_mode: bool = False,
+    ) -> CompletionResult:
+        """Generic chat completion. Returns the assistant content + token usage.
+
+        Added for lab_web_site v2 (LLM-driven HTML parsing). Reuses the same
+        OpenAI client + proxy + retry as parse_jd, but without JD-specific logic.
+        """
+        try:
+            request_params: dict[str, Any] = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature,
+            }
+            if self.api_format == "openai" and json_mode:
+                request_params["response_format"] = {"type": "json_object"}
+            response = await self.client.chat.completions.create(**request_params)
+            content = response.choices[0].message.content
+            if not content:
+                raise LLMError(
+                    error_type=LLMErrorType.INVALID_RESPONSE,
+                    message="Empty response from LLM",
+                )
+            tokens = 0
+            if response.usage and response.usage.total_tokens:
+                tokens = response.usage.total_tokens
+            return CompletionResult(content=content, tokens_used=tokens)
+        except LLMError:
+            raise
+        except Exception as exc:
+            raise LLMError(
+                error_type=LLMErrorType.API_ERROR, message=f"complete() failed: {exc}"
+            ) from exc
 
     @with_retry(max_retries=3)
     @with_timeout(timeout_seconds=60.0)
