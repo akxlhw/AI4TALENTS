@@ -53,6 +53,7 @@ class SourceType(str, enum.Enum):
     OPENALEX = "openalex"
     MANUAL = "manual"
     IMPORT = "import"
+    LAB_WEB = "lab_web"
 
 
 class ScopeType(str, enum.Enum):
