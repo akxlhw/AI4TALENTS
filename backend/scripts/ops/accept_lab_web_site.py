@@ -24,13 +24,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 # Register all mappers (avoid the SQLAlchemy partial-import trap documented in AGENTS.md).
-import app.model_registry  # noqa: F401,E402
+from sqlalchemy import select
 
-from sqlalchemy import func, select
+import app.model_registry  # noqa: F401,E402
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.domains.academic.models.talent import Talent
-from app.domains.lab_web.models.lab_web_site import LWSiteConfig, LWSiteRawPage
+from app.domains.lab_web.models.lab_web_site import LWSiteRawPage
 from app.domains.lab_web.repositories.lab_web.site import LWSiteRepository
 from app.domains.lab_web.services.collectors.base_site_collector import (
     BaseLabSiteCollector,
@@ -38,7 +38,7 @@ from app.domains.lab_web.services.collectors.base_site_collector import (
 )
 from app.domains.lab_web.services.collectors.scrapling_fetcher import ScraplingFetcher
 from app.domains.lab_web.services.lw_site_person_service import LWSitePersonService
-from app.domains.shared.models.enums import RoleType, SourceType
+from app.domains.shared.models.enums import SourceType
 from app.domains.shared.services.llm.llm_gateway import create_llm_gateway
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
@@ -84,7 +84,7 @@ async def main() -> int:
             )
         ).scalar_one()
         print()
-        print(f"=== RAW PAGE ===")
+        print("=== RAW PAGE ===")
         print(f"  parse_status:    {latest.parse_status}")
         print(f"  html bytes:      {len(latest.html_content)}")
         print(f"  llm_model:       {latest.llm_model}")
@@ -104,7 +104,7 @@ async def main() -> int:
         for t in talents:
             role_counts[t.role_type] = role_counts.get(t.role_type, 0) + 1
         print(f"  role distribution: {role_counts}")
-        print(f"  --- first 10 ---")
+        print("  --- first 10 ---")
         for t in talents[:10]:
             section = (t.extra_data or {}).get("role_section_raw", "?")
             print(f"    {t.name:24} role_type={t.role_type:16} section={section}")
@@ -112,7 +112,7 @@ async def main() -> int:
         # Verdict
         if latest.parse_status != "parsed":
             print()
-            print(f"RESULT: needs_review / partial — LLM did not parse cleanly.")
+            print("RESULT: needs_review / partial — LLM did not parse cleanly.")
             print("        Inspect the LLM output and tune the prompt if accuracy is poor.")
             return 1
         if not talents:
