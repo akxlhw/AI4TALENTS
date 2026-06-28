@@ -48,6 +48,11 @@ from app.domains.open_source.models.open_source import (
     OSRepository,
     OSTalentPool,
 )
+from app.domains.lab_web.models.lab_web import (
+    LWCollectTask,
+    LWLabRegistry,
+    LWRawPerson,
+)
 from app.domains.shared.models.audit import AuditOperationLog
 from app.domains.shared.models.enums import (
     RoleType,
@@ -147,4 +152,8 @@ __all__ = [
     "OSCollectTask",
     "OSRawDeveloper",
     "OSRepoMapping",
+    # lab_web (v2.x)
+    "LWLabRegistry",
+    "LWRawPerson",
+    "LWCollectTask",
 ]
