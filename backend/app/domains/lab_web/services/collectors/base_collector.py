@@ -62,10 +62,10 @@ class BaseLabCollector(ABC):
 
     def __init__(
         self,
-        fetcher: "ScraplingFetcher",
-        lab: "LWLabRegistry",
-        repo: "LWRepository",
-        person_service: "LWPersonService",
+        fetcher: ScraplingFetcher,
+        lab: LWLabRegistry,
+        repo: LWRepository,
+        person_service: LWPersonService,
     ) -> None:
         self.fetcher = fetcher
         self.lab = lab

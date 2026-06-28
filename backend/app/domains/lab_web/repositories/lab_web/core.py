@@ -17,6 +17,7 @@ from app.domains.lab_web.models.lab_web import (
     LWLabRegistry,
     LWRawPerson,
 )
+from app.domains.lab_web.services.collectors.base_collector import RawPersonDraft
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class LWRepository:
     async def upsert_raw_persons(
         self,
         lab_id: int,
-        drafts: list["RawPersonDraft"],
+        drafts: list[RawPersonDraft],
         task_id: int,
         lab_code: str,
     ) -> list[LWRawPerson]:
@@ -95,10 +96,6 @@ class LWRepository:
         raw layer is append-only: existing rows are never updated. Dedup happens
         within the current batch (same person appearing twice in one scrape).
         """
-        from app.domains.lab_web.services.collectors.base_collector import (
-            RawPersonDraft,
-        )  # local import to avoid cycle at module load
-
         seen_hashes: set[str] = set()
         created: list[LWRawPerson] = []
         for draft in drafts:
