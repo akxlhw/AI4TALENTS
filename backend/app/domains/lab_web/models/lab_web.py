@@ -3,6 +3,7 @@
 Three tables with 'lw_' prefix, mirroring the open_source domain conventions
 (os_raw_developer -> serving layer). raw layer is append-only.
 """
+
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -47,9 +48,7 @@ class LWRawPerson(Base):
     __tablename__ = "lw_raw_person"
 
     raw_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    lab_id = Column(
-        Integer, ForeignKey("lw_lab_registry.lab_id"), nullable=False, index=True
-    )
+    lab_id = Column(Integer, ForeignKey("lw_lab_registry.lab_id"), nullable=False, index=True)
     source_url = Column(String(500), nullable=True)
     name_raw = Column(String(255), nullable=False)
     title_raw = Column(String(255), nullable=True)
@@ -76,9 +75,7 @@ class LWCollectTask(Base):
 
     task_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     task_name = Column(String(255), nullable=False)
-    lab_id = Column(
-        Integer, ForeignKey("lw_lab_registry.lab_id"), nullable=False
-    )
+    lab_id = Column(Integer, ForeignKey("lw_lab_registry.lab_id"), nullable=False)
     status = Column(String(20), nullable=False, default="pending", index=True)
     progress_percent = Column(Integer, default=0, nullable=False)
     current_step = Column(String(100), nullable=True)
@@ -88,13 +85,9 @@ class LWCollectTask(Base):
     error_message = Column(Text, nullable=True)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
-    created_by = Column(
-        Integer, ForeignKey("iam_user_account.user_id"), nullable=True
-    )
+    created_by = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=True)
     created_at = Column(DateTime, default=func.now(), nullable=False)
-    updated_at = Column(
-        DateTime, default=func.now(), onupdate=func.now(), nullable=False
-    )
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
 
     def __repr__(self) -> str:
         return f"<LWCollectTask(task_id={self.task_id}, status={self.status})>"

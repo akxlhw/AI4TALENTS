@@ -3,6 +3,7 @@
 Strategy: upsert by source_record_id (= content_hash) scoped to
 source_type='lab_web'. openalex-sourced talents are never touched.
 """
+
 from __future__ import annotations
 
 import logging
@@ -36,9 +37,7 @@ class LWPersonService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def sync_to_core_talent(
-        self, raw_persons: list[LWRawPerson], lab
-    ) -> SyncResult:
+    async def sync_to_core_talent(self, raw_persons: list[LWRawPerson], lab) -> SyncResult:
         """Upsert raw snapshots into core_talent, scoped to lab_web source."""
         result = SyncResult()
         commit_batch = getattr(settings, "SYNC_COMMIT_BATCH_SIZE", 100)

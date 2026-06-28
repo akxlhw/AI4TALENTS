@@ -1,4 +1,5 @@
 """Data access layer for lab_web tables."""
+
 from __future__ import annotations
 
 import logging
@@ -45,9 +46,7 @@ class LWRepository:
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def update_lab_collected_at(
-        self, lab_id: int, collected_at: Any
-    ) -> None:
+    async def update_lab_collected_at(self, lab_id: int, collected_at: Any) -> None:
         lab = await self.session.get(LWLabRegistry, lab_id)
         if lab:
             lab.last_collected_at = collected_at
@@ -72,9 +71,7 @@ class LWRepository:
     async def get_task(self, task_id: int) -> LWCollectTask | None:
         return await self.session.get(LWCollectTask, task_id)
 
-    async def list_tasks(
-        self, lab_id: int | None = None, limit: int = 50
-    ) -> list[LWCollectTask]:
+    async def list_tasks(self, lab_id: int | None = None, limit: int = 50) -> list[LWCollectTask]:
         stmt = select(LWCollectTask)
         if lab_id is not None:
             stmt = stmt.where(LWCollectTask.lab_id == lab_id)

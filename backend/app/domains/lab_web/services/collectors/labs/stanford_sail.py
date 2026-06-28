@@ -4,6 +4,7 @@ Selectors target the simplified fixture structure in
 tests/fixtures/lab_web/stanford_sail_people.html. When wiring against the
 live site, re-derive selectors from the live DOM and refresh the fixture.
 """
+
 from __future__ import annotations
 
 from typing import Any

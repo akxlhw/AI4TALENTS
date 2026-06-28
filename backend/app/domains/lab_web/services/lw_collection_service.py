@@ -3,6 +3,7 @@
 Creates a task, then runs the lab's collector in the background. Collector
 classes are loaded dynamically from lw_lab_registry.collector_class.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -21,9 +22,7 @@ from app.domains.lab_web.services.lw_person_service import LWPersonService
 logger = logging.getLogger(__name__)
 
 # Limit concurrent lab collection tasks to be polite to target sites.
-COLLECTION_SEMAPHORE = asyncio.Semaphore(
-    int(getattr(settings, "LAB_WEB_MAX_CONCURRENT", 2))
-)
+COLLECTION_SEMAPHORE = asyncio.Semaphore(int(getattr(settings, "LAB_WEB_MAX_CONCURRENT", 2)))
 
 
 class LWCollectionService:
@@ -45,9 +44,7 @@ class LWCollectionService:
         await self.repo.update_task(task_id, status="cancelled")
         return True
 
-    async def start_collection(
-        self, lab_id: int, created_by: int | None = None
-    ) -> int:
+    async def start_collection(self, lab_id: int, created_by: int | None = None) -> int:
         """Create a task and launch background collection. Returns task_id."""
         lab = await self.repo.get_lab(lab_id)
         if lab is None:
@@ -127,9 +124,7 @@ class LWCollectionService:
         and is resolved relative to the collectors package.
         """
         module_path, _, class_name = collector_class.rpartition(".")
-        module = importlib.import_module(
-            f"app.domains.lab_web.services.collectors.{module_path}"
-        )
+        module = importlib.import_module(f"app.domains.lab_web.services.collectors.{module_path}")
         cls = getattr(module, class_name)
         return cls(**kwargs)
 

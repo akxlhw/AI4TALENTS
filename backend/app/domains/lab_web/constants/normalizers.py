@@ -4,6 +4,7 @@
 - normalize_name: trim/collapse whitespace, preserve case & script
 - compute_content_hash: stable fingerprint for dedup across fetches
 """
+
 from __future__ import annotations
 
 import hashlib

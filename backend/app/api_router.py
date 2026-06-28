@@ -23,6 +23,7 @@ from app.domains.academic.api import (
     tech_domain,
     venue,
 )
+from app.domains.lab_web.api import collection as lab_web_collection
 from app.domains.open_source.api import open_source
 from app.domains.shared.api import (
     audit,
@@ -111,3 +112,6 @@ api_router.include_router(genealogy.router)
 
 # Open Source Talent endpoints (v2.0)
 api_router.include_router(open_source.router)
+
+# Lab Web Talent endpoints (v2.x)
+api_router.include_router(lab_web_collection.router)

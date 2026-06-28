@@ -5,6 +5,7 @@ Lab People pages carry fine-grained titles (e.g. "Assistant Professor",
 the original title verbatim (title_raw / current_title) AND map it to a
 RoleType plus a confidence score via substring matching.
 """
+
 from __future__ import annotations
 
 from app.domains.shared.models.enums import RoleType

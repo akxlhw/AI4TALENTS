@@ -11,6 +11,7 @@ in curl_cffi/playwright. Static pages (SAIL v1) are fully covered by httpx.
 The `robots_disallows` attribute is populated by check_robots_txt() so
 BaseLabCollector._guard_robots_txt can enforce compliance.
 """
+
 from __future__ import annotations
 
 import logging
@@ -51,9 +52,7 @@ class ScraplingFetcher:
             async with HttpClientFactory.create_client_for_url(
                 robots_url, timeout=FETCH_TIMEOUT
             ) as client:
-                resp = await client.get(
-                    robots_url, headers={"User-Agent": USER_AGENT}
-                )
+                resp = await client.get(robots_url, headers={"User-Agent": USER_AGENT})
             if resp.status_code >= 400:
                 # No robots.txt (404) or unreachable => treat as allow.
                 return True
@@ -71,9 +70,7 @@ class ScraplingFetcher:
         """Fetch HTML via httpx (HttpClientFactory) and return a Scrapling Selector."""
         from scrapling.parser import Selector  # deferred: keep base install light
 
-        async with HttpClientFactory.create_client_for_url(
-            url, timeout=FETCH_TIMEOUT
-        ) as client:
+        async with HttpClientFactory.create_client_for_url(url, timeout=FETCH_TIMEOUT) as client:
             resp = await client.get(url, headers={"User-Agent": USER_AGENT})
             resp.raise_for_status()
 

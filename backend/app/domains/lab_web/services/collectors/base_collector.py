@@ -14,6 +14,7 @@ Flow (collect()):
 
 Steps 1,2,3,5,8,9,10 are fixed; 4 and 6 are abstract hooks.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -111,7 +112,9 @@ class BaseLabCollector(ABC):
         sync_result = await self.person_service.sync_to_core_talent(raw_rows, self.lab)
         logger.info(
             "lab_web collect done: lab=%s raw=%d synced=%d",
-            self.lab.lab_code, len(raw_rows), sync_result.synced,
+            self.lab.lab_code,
+            len(raw_rows),
+            sync_result.synced,
         )
 
     async def _preflight(self) -> None:
@@ -128,9 +131,7 @@ class BaseLabCollector(ABC):
         """
         allowed = await self.fetcher.is_allowed_by_robots(self.lab.people_url)
         if not allowed:
-            raise PermissionError(
-                f"people_url {self.lab.people_url} disallowed by robots.txt"
-            )
+            raise PermissionError(f"people_url {self.lab.people_url} disallowed by robots.txt")
 
     # ===== Hooks =====
 
