@@ -70,6 +70,18 @@ def temp_database():
         engine.dispose()
 
 
+def alembic_env(temp_db_url: str) -> dict:
+    """Build the subprocess environment for `alembic` against a temp database.
+
+    Sets BOTH the async URL (DATABASE_URL, what migrations/env.py actually
+    uses to run migrations) and the sync URL (DATABASE_SYNC_URL, used by
+    alembic.ini and any sync tooling). Setting only one caused alembic to
+    silently connect to a different (pre-populated) database.
+    """
+    async_url = temp_db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return {**os.environ, "DATABASE_URL": async_url, "DATABASE_SYNC_URL": temp_db_url}
+
+
 # =============================================================================
 # STATIC TESTS - Always run, no database required
 # =============================================================================
@@ -222,20 +234,37 @@ class TestMigrationStaticChecks:
 
     def test_no_duplicate_table_creations(self):
         """
-        Verify that no table is created in multiple migrations.
-        This would indicate a bug in migration generation.
+        Verify that no table is created in the upgrade() body of more than one
+        migration. A duplicate create in upgrade paths means migrations fight
+        each other and the chain cannot run cleanly on a fresh database.
+
+        Only upgrade() bodies are scanned: it is legitimate for a migration
+        that drops a table to recreate it in its own downgrade() (the inverse
+        operation), so downgrade() creates are intentionally excluded.
         """
         import glob
         import re as regex
 
+        # Multi-line tolerant: op.create_table( may be followed by whitespace
+        # or a newline before the quoted table name (the form Alembic autogen
+        # emits). The old single-line regex matched nothing and hid real dupes.
+        create_re = regex.compile(r"op\.create_table\(\s*['\"](\w+)['\"]")
+
+        def extract_upgrade_body(content: str) -> str:
+            """Return the source of the upgrade() function, excluding downgrade()."""
+            m = regex.search(
+                r"\ndef upgrade\([^)]*\)[^:]*:\n(.*?)(?=\ndef \w+\([^)]*\))",
+                content,
+                regex.DOTALL,
+            )
+            return m.group(1) if m else ""
+
         backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         migrations_dir = os.path.join(backend_dir, "migrations", "versions")
 
-        migration_files = glob.glob(os.path.join(migrations_dir, "*.py"))
+        table_creates: dict[str, list[str]] = {}
 
-        table_creates = {}
-
-        for filepath in migration_files:
+        for filepath in sorted(glob.glob(os.path.join(migrations_dir, "*.py"))):
             filename = os.path.basename(filepath)
             if filename.startswith("__"):
                 continue
@@ -243,16 +272,15 @@ class TestMigrationStaticChecks:
             with open(filepath, encoding="utf-8") as f:
                 content = f.read()
 
-            creates = regex.findall(r"op\.create_table\(['\"](\w+)['\"]", content)
-
-            for table in creates:
-                if table not in table_creates:
-                    table_creates[table] = []
-                table_creates[table].append(filename)
+            upgrade_body = extract_upgrade_body(content)
+            for table in create_re.findall(upgrade_body):
+                table_creates.setdefault(table, []).append(filename)
 
         duplicates = {table: files for table, files in table_creates.items() if len(files) > 1}
 
-        assert not duplicates, f"Tables created in multiple migrations (likely bug): {duplicates}"
+        assert not duplicates, (
+            "Tables created in upgrade() of multiple migrations (likely bug): " f"{duplicates}"
+        )
 
     def test_all_migrations_have_upgrade_and_downgrade(self):
         """
@@ -340,7 +368,7 @@ class TestFreshDeployment:
         result = subprocess.run(
             ["alembic", "upgrade", "head"],
             cwd=backend_dir,
-            env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
+            env=alembic_env(temp_db_url),
             capture_output=True,
             text=True,
         )
@@ -409,7 +437,7 @@ class TestUpgradeDeployment:
         subprocess.run(
             ["alembic", "upgrade", "head"],
             cwd=backend_dir,
-            env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
+            env=alembic_env(temp_db_url),
             capture_output=True,
             check=True,
         )
@@ -429,7 +457,7 @@ class TestUpgradeDeployment:
         result = subprocess.run(
             ["alembic", "upgrade", "head"],
             cwd=backend_dir,
-            env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
+            env=alembic_env(temp_db_url),
             capture_output=True,
             text=True,
         )
@@ -473,7 +501,7 @@ class TestMigrationRollback:
         subprocess.run(
             ["alembic", "upgrade", "head"],
             cwd=backend_dir,
-            env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
+            env=alembic_env(temp_db_url),
             capture_output=True,
             check=True,
         )
@@ -481,7 +509,7 @@ class TestMigrationRollback:
         result = subprocess.run(
             ["alembic", "downgrade", "base"],
             cwd=backend_dir,
-            env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
+            env=alembic_env(temp_db_url),
             capture_output=True,
             text=True,
         )
@@ -508,7 +536,7 @@ class TestMigrationRollback:
         subprocess.run(
             ["alembic", "upgrade", "head"],
             cwd=backend_dir,
-            env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
+            env=alembic_env(temp_db_url),
             capture_output=True,
             check=True,
         )
@@ -557,7 +585,7 @@ class TestModelMigrationConsistency:
         subprocess.run(
             ["alembic", "upgrade", "head"],
             cwd=backend_dir,
-            env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
+            env=alembic_env(temp_db_url),
             capture_output=True,
             check=True,
         )
@@ -606,7 +634,7 @@ class TestMigrationIdempotency:
         result1 = subprocess.run(
             ["alembic", "upgrade", "head"],
             cwd=backend_dir,
-            env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
+            env=alembic_env(temp_db_url),
             capture_output=True,
             text=True,
         )
@@ -615,7 +643,7 @@ class TestMigrationIdempotency:
         result2 = subprocess.run(
             ["alembic", "upgrade", "head"],
             cwd=backend_dir,
-            env={**os.environ, "DATABASE_SYNC_URL": temp_db_url},
+            env=alembic_env(temp_db_url),
             capture_output=True,
             text=True,
         )
