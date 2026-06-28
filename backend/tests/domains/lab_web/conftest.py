@@ -1,4 +1,5 @@
 """Fixtures for lab_web tests."""
+
 from __future__ import annotations
 
 import pytest

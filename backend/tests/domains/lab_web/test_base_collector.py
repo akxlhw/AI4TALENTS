@@ -1,4 +1,5 @@
 """Unit test for BaseLabCollector.collect() end-to-end with a fake fetcher."""
+
 from __future__ import annotations
 
 import pytest
@@ -73,10 +74,14 @@ async def test_collect_writes_raw_and_syncs_core_talent(test_session, sample_lab
     assert raw_rows[0].name_raw == "Fake Person"
 
     talents = (
-        await test_session.execute(
-            select(Talent).where(Talent.source_type == SourceType.LAB_WEB.value)
+        (
+            await test_session.execute(
+                select(Talent).where(Talent.source_type == SourceType.LAB_WEB.value)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(talents) == 1
     assert talents[0].name == "Fake Person"
 

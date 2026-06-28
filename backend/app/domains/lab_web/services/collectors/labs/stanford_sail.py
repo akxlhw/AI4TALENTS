@@ -1,13 +1,30 @@
-"""Stanford SAIL People-page collector.
+"""Stanford SAIL faculty-page collector.
 
-Selectors target the SIMPLIFIED fixture structure in
-tests/fixtures/lab_web/stanford_sail_people.html, NOT the real ai.stanford.edu
-DOM. Success criterion §10.3 (scrape all SAIL people) is therefore NOT yet
-verified end-to-end (I3, acknowledged): before relying on this in production,
-curl the live page, commit a real snapshot as the fixture, re-derive the
-selectors below against the actual markup, and add a `slow`-marked live smoke
-test (spec §9). The parsing contract (response.css(...)) is correct; only the
-selector strings need to match the real DOM.
+Selectors now target the REAL ai.stanford.edu/faculty/ DOM, verified against a
+5-person snapshot captured from the live site on 2026-06-29
+(tests/fixtures/lab_web/stanford_sail_people.html).
+
+Real DOM structure per faculty card (a div.row containing .name + .position):
+    <div class="row">
+      <div class="col-12">
+        <div class="img-wrap"><img class="team-img" src="..."></div>
+        <div class="text-wrap">
+          <h3 class="name">Gill Bejerano</h3>
+          <div class="position">
+            <div class="category">Computational &amp; Experimental Genomics</div>
+            <a class="link-bio" href="http://bejerano.stanford.edu/">Read More</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+Field mapping caveats for SAIL specifically:
+- The listing page exposes NO job title (no "Professor" text) and NO email.
+  So title_raw and email_raw are always None for SAIL; role_type falls back to
+  UNKNOWN. The .category div is a research area, stored in extra, not a title.
+- The registry people_url for SAIL must point at /faculty/ (the /people/ path
+  403s). Title/email could be recovered later by following each link-bio into
+  the personal page — out of scope for v1.
 """
 
 from __future__ import annotations
@@ -21,14 +38,15 @@ from app.domains.lab_web.services.collectors.base_collector import (
 
 
 class StanfordSailCollector(BaseLabCollector):
-    """Collector for https://ai.stanford.edu/people/."""
+    """Collector for https://ai.stanford.edu/faculty/."""
 
     lab_code = "stanford_sail"
     request_delay = 1.0
-    max_pages = 1  # fixture is single-page; revisit if live site paginates
+    max_pages = 1  # faculty listing is single-page
 
     def parse_person_cards(self, response: Any) -> list[Any]:
-        return list(response.css("div.person-card"))
+        # A real card is a div.row that contains both a .name and a .position.
+        return [row for row in response.css("div.row") if row.css(".name") and row.css(".position")]
 
     def extract_person(self, card: Any) -> RawPersonDraft:
         def _text(selector: str) -> str | None:
@@ -45,25 +63,24 @@ class StanfordSailCollector(BaseLabCollector):
             value = nodes[0].attrib.get(attr)
             return value.strip() if value else None
 
-        name_raw = _text("a.person-name")
-        title_raw = _text("span.person-title")
-        email_raw = _text("a.person-email")
-        homepage_url = _attr("a.person-homepage", "href")
-        avatar_url = _attr("img.person-avatar", "src")
-        source_url = _attr("a.person-name", "href")
+        name_raw = _text("h3.name")
+        research_area = _text("div.category")
+        homepage_url = _attr("a.link-bio", "href")
+        avatar_url = _attr("img.team-img", "src")
 
         if not name_raw:
-            raise ValueError("person card missing name")
+            raise ValueError("faculty card missing name")
 
         return RawPersonDraft(
             name_raw=name_raw,
-            title_raw=title_raw,
-            email_raw=email_raw,
+            # SAIL listing has no job title; research_area is NOT a title.
+            title_raw=None,
+            email_raw=None,
             homepage_url=homepage_url,
             avatar_url=avatar_url,
-            source_url=source_url,
+            source_url=homepage_url,
+            extra={"research_area": research_area},
         )
 
     def get_next_page_url(self, response: Any) -> str | None:
-        # SAIL fixture is single-page; return None.
         return None

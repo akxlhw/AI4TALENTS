@@ -1,4 +1,9 @@
-"""Parsing tests for the StanfordSailCollector (offline, against fixture HTML)."""
+"""Parsing tests for the StanfordSailCollector.
+
+The fixture is a 5-card snapshot of the REAL ai.stanford.edu/faculty/ DOM
+(captured 2026-06-29), so these tests verify the selectors against actual
+markup, not a fabricated structure.
+"""
 
 from __future__ import annotations
 
@@ -32,38 +37,33 @@ def _make_collector():
     return StanfordSailCollector(fetcher=None, lab=None, repo=None, person_service=None)
 
 
-def test_parse_person_cards_finds_three(response):
+def test_parse_person_cards_finds_five(response):
     c = _make_collector()
     cards = c.parse_person_cards(response)
-    assert len(cards) == 3
+    assert len(cards) == 5
 
 
-def test_extract_professor(response):
+def test_extract_first_faculty(response):
     c = _make_collector()
     cards = c.parse_person_cards(response)
     draft = c.extract_person(cards[0])
-    assert draft.name_raw == "John Smith"
-    assert draft.title_raw == "Assistant Professor"
-    assert draft.email_raw is not None and "john" in draft.email_raw.lower()
-    assert draft.homepage_url == "https://john.cs.stanford.edu"
-    assert draft.avatar_url == "https://ai.stanford.edu/img/john.jpg"
+    assert draft.name_raw == "Gill Bejerano"
+    # SAIL listing page exposes no job title and no email.
+    assert draft.title_raw is None
+    assert draft.email_raw is None
+    assert draft.homepage_url == "http://bejerano.stanford.edu/"
+    assert draft.avatar_url is not None and draft.avatar_url.endswith("gill-bejerano.png")
+    # research area is carried in extra, not as a title.
+    assert draft.extra is not None
+    assert "Genomics" in (draft.extra.get("research_area") or "")
 
 
-def test_extract_phd_student(response):
-    c = _make_collector()
-    cards = c.parse_person_cards(response)
-    draft = c.extract_person(cards[1])
-    assert draft.name_raw == "Jane Doe"
-    assert draft.title_raw == "PhD Candidate"
-
-
-def test_extract_postdoc_missing_email(response):
+def test_extract_third_faculty_has_name_and_homepage(response):
     c = _make_collector()
     cards = c.parse_person_cards(response)
     draft = c.extract_person(cards[2])
-    assert draft.name_raw == "Bob Lee"
-    assert draft.title_raw == "Postdoctoral Researcher"
-    assert draft.email_raw is None  # no email node present
+    assert draft.name_raw == "Emma Brunskill"
+    assert draft.homepage_url  # every faculty card has a bio link
 
 
 def test_no_pagination(response):

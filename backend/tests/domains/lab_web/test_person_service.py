@@ -1,4 +1,5 @@
 """Integration tests for LWPersonService (raw -> core_talent sync)."""
+
 from __future__ import annotations
 
 import pytest

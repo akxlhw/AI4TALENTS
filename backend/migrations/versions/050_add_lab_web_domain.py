@@ -90,7 +90,7 @@ def upgrade() -> None:
         """
         INSERT INTO lw_lab_registry (lab_code, lab_name, institution, country, people_url, collector_class, fetch_mode, is_active)
         VALUES
-          ('stanford_sail', 'Stanford AI Lab', 'Stanford University', 'US', 'https://ai.stanford.edu/people/', 'labs.stanford_sail.StanfordSailCollector', 'static', true),
+          ('stanford_sail', 'Stanford AI Lab', 'Stanford University', 'US', 'https://ai.stanford.edu/faculty/', 'labs.stanford_sail.StanfordSailCollector', 'static', true),
           ('mit_csail', 'MIT CSAIL', 'MIT', 'US', 'https://www.csail.mit.edu/people/', NULL, 'static', true),
           ('deepmind', 'Google DeepMind', 'Google', 'UK', 'https://www.deepmind.com/people', NULL, 'dynamic', true),
           ('fair', 'FAIR', 'Meta', 'US', 'https://ai.meta.com/crew/', NULL, 'dynamic', true),

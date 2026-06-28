@@ -1,4 +1,5 @@
 """Tests for lab_web normalizers."""
+
 from app.domains.lab_web.constants.normalizers import (
     compute_content_hash,
     normalize_email,
@@ -51,12 +52,18 @@ class TestNormalizeName:
 class TestComputeContentHash:
     def test_stable_across_calls(self):
         h1 = compute_content_hash(
-            lab_code="stanford_sail", name="John Smith", title="PhD",
-            email="john@cs.stanford.edu", homepage="https://john.cs.stanford.edu",
+            lab_code="stanford_sail",
+            name="John Smith",
+            title="PhD",
+            email="john@cs.stanford.edu",
+            homepage="https://john.cs.stanford.edu",
         )
         h2 = compute_content_hash(
-            lab_code="stanford_sail", name="John Smith", title="PhD",
-            email="john@cs.stanford.edu", homepage="https://john.cs.stanford.edu",
+            lab_code="stanford_sail",
+            name="John Smith",
+            title="PhD",
+            email="john@cs.stanford.edu",
+            homepage="https://john.cs.stanford.edu",
         )
         assert h1 == h2
         assert len(h1) == 64  # sha256 hex

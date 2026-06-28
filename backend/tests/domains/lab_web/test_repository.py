@@ -1,4 +1,5 @@
 """Integration tests for LWRepository (uses talent_db_test)."""
+
 from __future__ import annotations
 
 import pytest
@@ -25,9 +26,7 @@ async def test_lab_crud(test_session, sample_lab):
 
 async def test_task_lifecycle(test_session, sample_lab):
     repo = LWRepository(test_session)
-    task = await repo.create_task(
-        task_name="t1", lab_id=sample_lab.lab_id, status="pending"
-    )
+    task = await repo.create_task(task_name="t1", lab_id=sample_lab.lab_id, status="pending")
     assert task.task_id is not None
     await repo.update_task(task.task_id, status="running", progress_percent=50)
     refreshed = await repo.get_task(task.task_id)
@@ -39,9 +38,7 @@ async def test_task_lifecycle(test_session, sample_lab):
 
 async def test_upsert_raw_persons_dedups_by_hash(test_session, sample_lab):
     repo = LWRepository(test_session)
-    task = await repo.create_task(
-        task_name="t1", lab_id=sample_lab.lab_id, status="running"
-    )
+    task = await repo.create_task(task_name="t1", lab_id=sample_lab.lab_id, status="running")
     drafts = [
         RawPersonDraft(name_raw="John Smith", title_raw="PhD Candidate"),
         # Duplicate of the first (same name/title/email/homepage => same hash).
@@ -89,4 +86,3 @@ async def test_raw_layer_is_append_only(test_session, sample_lab):
     rows = list(result.scalars().all())
     # Two snapshots across two tasks, even though hash is identical.
     assert len(rows) == 2
-

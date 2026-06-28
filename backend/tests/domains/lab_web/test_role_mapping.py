@@ -1,4 +1,5 @@
 """Tests for lab_web role mapping."""
+
 from app.domains.lab_web.constants.role_mapping import map_role_type
 from app.domains.shared.models.enums import RoleType
 
