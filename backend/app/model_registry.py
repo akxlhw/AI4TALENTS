@@ -53,6 +53,10 @@ from app.domains.lab_web.models.lab_web import (
     LWLabRegistry,
     LWRawPerson,
 )
+from app.domains.lab_web.models.lab_web_site import (
+    LWSiteConfig,
+    LWSiteRawPage,
+)
 from app.domains.shared.models.audit import AuditOperationLog
 from app.domains.shared.models.enums import (
     RoleType,
@@ -156,4 +160,6 @@ __all__ = [
     "LWLabRegistry",
     "LWRawPerson",
     "LWCollectTask",
+    "LWSiteConfig",
+    "LWSiteRawPage",
 ]
