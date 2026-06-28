@@ -10,14 +10,22 @@ import asyncio
 import importlib
 import logging
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.domains.lab_web.models.lab_web import LWCollectTask, LWLabRegistry
 from app.domains.lab_web.repositories.lab_web import LWRepository
-from app.domains.lab_web.services.collectors.base_collector import CollectContext
+from app.domains.lab_web.services.collectors.base_collector import (
+    BaseLabCollector,
+    CollectContext,
+)
 from app.domains.lab_web.services.lw_person_service import LWPersonService
+
+if TYPE_CHECKING:
+    from app.domains.lab_web.services.collectors.scrapling_fetcher import ScraplingFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +40,10 @@ class LWCollectionService:
         self.session = session
         self.repo = LWRepository(session)
 
-    async def list_labs(self, only_active: bool = False):
+    async def list_labs(self, only_active: bool = False) -> list[LWLabRegistry]:
         return await self.repo.list_labs(only_active=only_active)
 
-    async def get_task_status(self, task_id: int):
+    async def get_task_status(self, task_id: int) -> LWCollectTask | None:
         return await self.repo.get_task(task_id)
 
     async def cancel_collection(self, task_id: int) -> bool:
@@ -63,15 +71,15 @@ class LWCollectionService:
         # Fast-fail path for labs without a collector implementation.
         if not lab.collector_class:
             await self.repo.update_task(
-                task.task_id,
+                int(task.task_id),
                 status="failed",
                 error_message=f"Collector for lab {lab.lab_code} not implemented",
                 completed_at=datetime.now(timezone.utc).replace(tzinfo=None),
             )
-            return task.task_id
+            return int(task.task_id)
 
-        asyncio.create_task(self._run_collection(task.task_id, lab_id))
-        return task.task_id
+        asyncio.create_task(self._run_collection(int(task.task_id), lab_id))
+        return int(task.task_id)
 
     async def _run_collection(self, task_id: int, lab_id: int) -> None:
         """Background run. Uses its own session (background tasks may use
@@ -81,6 +89,8 @@ class LWCollectionService:
                 repo = LWRepository(session)
                 person_service = LWPersonService(session)
                 lab = await repo.get_lab(lab_id)
+                if lab is None:
+                    raise LookupError(f"Lab {lab_id} not found during run")
                 await repo.update_task(
                     task_id,
                     status="running",
@@ -88,8 +98,8 @@ class LWCollectionService:
                 )
                 try:
                     collector = self._load_collector(
-                        lab.collector_class,
-                        fetcher=_make_fetcher(lab.fetch_mode),
+                        str(lab.collector_class),
+                        fetcher=_make_fetcher(str(lab.fetch_mode)),
                         lab=lab,
                         repo=repo,
                         person_service=person_service,
@@ -117,7 +127,7 @@ class LWCollectionService:
                     )
 
     @staticmethod
-    def _load_collector(collector_class: str, **kwargs):
+    def _load_collector(collector_class: str, **kwargs: object) -> BaseLabCollector:
         """Dynamically import and instantiate a collector by dotted path.
 
         collector_class is stored as e.g. 'labs.stanford_sail.StanfordSailCollector'
@@ -126,10 +136,10 @@ class LWCollectionService:
         module_path, _, class_name = collector_class.rpartition(".")
         module = importlib.import_module(f"app.domains.lab_web.services.collectors.{module_path}")
         cls = getattr(module, class_name)
-        return cls(**kwargs)
+        return cls(**kwargs)  # type: ignore[no-any-return]
 
 
-def _make_fetcher(fetch_mode: str):
+def _make_fetcher(fetch_mode: str) -> ScraplingFetcher:
     from app.domains.lab_web.services.collectors.scrapling_fetcher import ScraplingFetcher
 
     return ScraplingFetcher(fetch_mode=fetch_mode)

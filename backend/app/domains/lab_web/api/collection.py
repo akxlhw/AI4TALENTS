@@ -21,7 +21,7 @@ router = APIRouter(prefix="/lab-web", tags=["Lab Web Talent"])
 async def list_labs(
     only_active: bool = False,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> list[LabBrief]:
     """List registered AI labs."""
     service = LWCollectionService(session)
     labs = await service.list_labs(only_active=only_active)
@@ -32,7 +32,7 @@ async def list_labs(
 async def collect_lab(
     lab_id: int,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> CollectStartResponse:
     """Start a background collection for one lab. Returns the task id."""
     service = LWCollectionService(session)
     try:
@@ -42,14 +42,14 @@ async def collect_lab(
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     task = await service.get_task_status(task_id)
-    return CollectStartResponse(task_id=task_id, status=task.status if task else "pending")
+    return CollectStartResponse(task_id=task_id, status=str(task.status) if task else "pending")
 
 
 @router.get("/tasks/{task_id}", response_model=CollectTaskResponse)
 async def get_task(
     task_id: int,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> CollectTaskResponse:
     """Poll a collection task's status."""
     service = LWCollectionService(session)
     task = await service.get_task_status(task_id)
@@ -62,10 +62,10 @@ async def get_task(
 async def cancel_task(
     task_id: int,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> SuccessResponse:
     """Request cancellation of a running collection task."""
     service = LWCollectionService(session)
     ok = await service.cancel_collection(task_id)
     if not ok:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=404, detail="Task not found") from None
     return SuccessResponse(message="Task cancelled")

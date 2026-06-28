@@ -78,7 +78,7 @@ class BaseLabCollector(ABC):
         await self._preflight()
         await self._guard_robots_txt()
         drafts: list[RawPersonDraft] = []
-        url: str | None = self.lab.people_url
+        url: str | None = str(self.lab.people_url)
         pages = 0
         while url and pages < self.max_pages:
             if ctx.cancelled.is_set():
@@ -107,7 +107,7 @@ class BaseLabCollector(ABC):
             lab_id=ctx.lab_id,
             drafts=drafts,
             task_id=ctx.task_id,
-            lab_code=self.lab_code or self.lab.lab_code,
+            lab_code=self.lab_code or str(self.lab.lab_code),
         )
         sync_result = await self.person_service.sync_to_core_talent(raw_rows, self.lab)
         logger.info(
@@ -129,7 +129,7 @@ class BaseLabCollector(ABC):
         Delegates the actual /robots.txt fetch+eval to ScraplingFetcher, which
         caches disallowed URLs in self.fetcher.robots_disallows.
         """
-        allowed = await self.fetcher.is_allowed_by_robots(self.lab.people_url)
+        allowed = await self.fetcher.is_allowed_by_robots(str(self.lab.people_url))
         if not allowed:
             raise PermissionError(f"people_url {self.lab.people_url} disallowed by robots.txt")
 
