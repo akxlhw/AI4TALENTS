@@ -1,9 +1,11 @@
 """Collection orchestration for lab_web_site (v2, LLM-driven)."""
+
 from __future__ import annotations
 
 import asyncio
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,10 +36,10 @@ class LWSiteCollectionService:
         self.repo = LWSiteRepository(session)
         self.task_repo = LWRepository(session)
 
-    async def list_sites(self, only_active: bool = False):
+    async def list_sites(self, only_active: bool = False) -> list:
         return await self.repo.list_sites(only_active=only_active)
 
-    async def get_task_status(self, task_id: int):
+    async def get_task_status(self, task_id: int) -> Any:
         return await self.task_repo.get_task(task_id)
 
     async def cancel_collection(self, task_id: int) -> bool:
@@ -82,14 +84,10 @@ class LWSiteCollectionService:
             },
             created_by=created_by,
         )
-        asyncio.create_task(
-            self._run_collection(int(task.task_id), site_code, force_reparse)
-        )
+        asyncio.create_task(self._run_collection(int(task.task_id), site_code, force_reparse))
         return int(task.task_id)
 
-    async def _run_collection(
-        self, task_id: int, site_code: str, force_reparse: bool
-    ) -> None:
+    async def _run_collection(self, task_id: int, site_code: str, force_reparse: bool) -> None:
         async with SITE_COLLECTION_SEMAPHORE:
             async with AsyncSessionLocal() as session:
                 site_repo = LWSiteRepository(session)
@@ -143,7 +141,7 @@ class LWSiteCollectionService:
                     )
 
     @staticmethod
-    def _make_collector(site, site_repo, person_service) -> BaseLabSiteCollector:
+    def _make_collector(site: Any, site_repo: Any, person_service: Any) -> BaseLabSiteCollector:
         from app.domains.lab_web.services.collectors.scrapling_fetcher import ScraplingFetcher
         from app.domains.shared.services.llm.llm_gateway import create_llm_gateway
 

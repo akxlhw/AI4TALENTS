@@ -1,4 +1,5 @@
 """lab_web_site domain ORM models (v2): site config + raw page snapshots."""
+
 from sqlalchemy import (
     JSON,
     Boolean,

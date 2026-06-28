@@ -15,6 +15,7 @@ Flow (collect()):
 
 All steps fixed in the base class; sites are config-driven (no subclasses).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -49,10 +50,10 @@ class BaseLabSiteCollector:
 
     def __init__(
         self,
-        fetcher: "ScraplingFetcher",
-        site: "LWSiteConfig",
-        repo: "LWSiteRepository",
-        person_service: "LWSitePersonService",
+        fetcher: ScraplingFetcher,
+        site: LWSiteConfig,
+        repo: LWSiteRepository,
+        person_service: LWSitePersonService,
         llm_gateway: Any,
     ) -> None:
         self.fetcher = fetcher
@@ -76,15 +77,17 @@ class BaseLabSiteCollector:
 
         # Step 5: cache check
         parsed_persons: list[dict] | None = None
+        site_code = str(self.site.site_code)
         if not ctx.force_reparse:
-            cached = await self.repo.find_cached_page(self.site.site_code, html_hash)
+            cached = await self.repo.find_cached_page(site_code, html_hash)
             if cached is not None and cached.parsed_persons:
-                parsed_persons = cached.parsed_persons
+                cached_persons: list[dict] = list(cached.parsed_persons)
+                parsed_persons = cached_persons
                 logger.info(
                     "lab_web_site cache hit: site=%s hash=%s -> %d persons (no LLM call)",
-                    self.site.site_code,
+                    site_code,
                     html_hash,
-                    len(parsed_persons),
+                    len(cached_persons),
                 )
 
         # Step 6+7: parse if not cached
@@ -113,7 +116,7 @@ class BaseLabSiteCollector:
 
         # Step 8: write raw page snapshot
         await self.repo.insert_raw_page(
-            site_code=self.site.site_code,
+            site_code=site_code,
             people_url=str(self.site.people_url),
             html_content=html_str,
             html_hash=html_hash,
@@ -127,7 +130,7 @@ class BaseLabSiteCollector:
         # Step 9+10: if parsed, write raw persons + sync core_talent
         if parse_status == "parsed" and parsed_persons:
             raw_rows = await self.repo.upsert_site_raw_persons(
-                site_code=self.site.site_code,
+                site_code=site_code,
                 parent_lab_code=str(self.site.parent_lab_code),
                 parsed_persons=parsed_persons,
                 task_id=ctx.task_id,
@@ -152,6 +155,4 @@ class BaseLabSiteCollector:
     async def _guard_robots_txt(self) -> None:
         allowed = await self.fetcher.is_allowed_by_robots(str(self.site.people_url))
         if not allowed:
-            raise PermissionError(
-                f"people_url {self.site.people_url} disallowed by robots.txt"
-            )
+            raise PermissionError(f"people_url {self.site.people_url} disallowed by robots.txt")

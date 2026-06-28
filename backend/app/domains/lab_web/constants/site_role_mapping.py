@@ -5,6 +5,7 @@ Students / Postdocs / Staff / Alumni). These labels are authoritative (the
 site explicitly declares the role), so confidence is high (1.0 for clear
 matches). The original section label is preserved in extra_data.role_section_raw.
 """
+
 from __future__ import annotations
 
 from app.domains.shared.models.enums import RoleType

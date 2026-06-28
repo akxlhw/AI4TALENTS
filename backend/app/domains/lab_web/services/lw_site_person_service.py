@@ -3,6 +3,7 @@
 Upserts by source_record_id (= content_hash) scoped to source_type='lab_web_site'.
 Never touches v1 (lab_web) or openalex records. Role from the site's role_section.
 """
+
 from __future__ import annotations
 
 import logging
@@ -40,7 +41,7 @@ class LWSitePersonService:
         result = SiteSyncResult()
         commit_batch = int(getattr(settings, "SYNC_COMMIT_BATCH_SIZE", 100))
         for i, raw in enumerate(raw_persons):
-            raw_data = raw.raw_data or {}
+            raw_data: dict = raw.raw_data or {}  # type: ignore[assignment]
             role_section = raw_data.get("role_section", "Unknown")
             role_type, confidence = map_site_role(role_section)
             name = normalize_name(raw.name_raw) or raw.name_raw  # type: ignore[arg-type]

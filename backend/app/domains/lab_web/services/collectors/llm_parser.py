@@ -1,9 +1,11 @@
 """LLM call + Pydantic schema validation for lab-site People-page parsing."""
+
 from __future__ import annotations
 
 import json
 import logging
 from dataclasses import dataclass
+from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
 
@@ -25,7 +27,7 @@ class ParseResult:
 
 
 async def parse_persons_from_html(
-    llm_gateway,
+    llm_gateway: Any,
     html: str,
     system_prompt: str,
 ) -> ParseResult:

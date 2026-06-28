@@ -1,4 +1,5 @@
 """Data access layer for lab_web_site tables (v2)."""
+
 from __future__ import annotations
 
 import hashlib
@@ -56,9 +57,7 @@ class LWSiteRepository:
 
     # ===== Raw page cache =====
 
-    async def find_cached_page(
-        self, site_code: str, html_hash: str
-    ) -> LWSiteRawPage | None:
+    async def find_cached_page(self, site_code: str, html_hash: str) -> LWSiteRawPage | None:
         """Return a parsed cached page for (site_code, html_hash), or None.
 
         Cache hits ONLY when parse_status='parsed' (needs_review/failed/pending
@@ -122,7 +121,7 @@ class LWSiteRepository:
             homepage = p.get("homepage")
             department = p.get("department")
             hash_ = hashlib.sha256(
-                f"{site_code}|{name}|{role_section}|{homepage or ''}".encode("utf-8")
+                f"{site_code}|{name}|{role_section}|{homepage or ''}".encode()
             ).hexdigest()
             if hash_ in seen:
                 continue

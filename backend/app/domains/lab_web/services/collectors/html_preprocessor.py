@@ -4,6 +4,7 @@ Raw People-page HTML can be large (NLP Group ~184KB) with scripts/styles/nav
 that bloat LLM tokens and distract parsing. This module strips noise, keeps
 people-relevant text, and caps size so the LLM gets a clean, focused input.
 """
+
 from __future__ import annotations
 
 import re
@@ -22,9 +23,7 @@ def preprocess_html(html: str, max_chars: int = 50000) -> str:
     """
     text = html
     for tag in ("script", "style", "nav", "footer", "header"):
-        text = re.sub(
-            rf"<{tag}\b[^>]*>.*?</{tag}>", " ", text, flags=re.DOTALL | re.IGNORECASE
-        )
+        text = re.sub(rf"<{tag}\b[^>]*>.*?</{tag}>", " ", text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", text)
     text = _WHITESPACE.sub(" ", text).strip()
     if len(text) > max_chars:

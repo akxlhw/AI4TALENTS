@@ -1,4 +1,5 @@
 """Pydantic DTOs for lab_web_site (v2)."""
+
 from __future__ import annotations
 
 from datetime import datetime

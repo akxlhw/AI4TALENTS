@@ -1,4 +1,5 @@
 """lab_web_site collection endpoints (site listing + task triggering/status)."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -44,9 +45,7 @@ async def collect_site(
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     task = await service.get_task_status(task_id)
-    return SiteCollectStartResponse(
-        task_id=task_id, status=str(task.status) if task else "pending"
-    )
+    return SiteCollectStartResponse(task_id=task_id, status=str(task.status) if task else "pending")
 
 
 @router.get("/tasks/{task_id}", response_model=SiteCollectTaskResponse)
@@ -76,7 +75,7 @@ async def cancel_site_task(
 async def review_site(
     site_code: str,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> list[dict]:
     """List needs_review parse results for manual inspection."""
     service = LWSiteCollectionService(session)
     items = await service.get_review_items(site_code)
