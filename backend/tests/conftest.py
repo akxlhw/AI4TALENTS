@@ -17,9 +17,17 @@ os.environ["ENVIRONMENT"] = "test"
 
 # Test database URL (PostgreSQL for testing - MUST be a separate database)
 # IMPORTANT: Never use production database for tests! Tests will DROP ALL TABLES after each run.
-# Create test database with: CREATE DATABASE talent_db_test OWNER talent_user;
-TEST_DATABASE_URL = "postgresql+asyncpg://talent_user:ai4recruit@localhost:5432/talent_db_test"
-TEST_DATABASE_SYNC_URL = "postgresql://talent_user:ai4recruit@localhost:5432/talent_db_test"
+# Local dev: create test database with: CREATE DATABASE talent_db_test OWNER talent_user;
+# CI: the workflow injects DATABASE_URL pointing at the GitHub Actions postgres service
+#     (user 'postgres'), which takes precedence over the local fallback below.
+TEST_DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+asyncpg://talent_user:ai4recruit@localhost:5432/talent_db_test",
+)
+TEST_DATABASE_SYNC_URL = os.environ.get(
+    "DATABASE_SYNC_URL",
+    "postgresql://talent_user:ai4recruit@localhost:5432/talent_db_test",
+)
 
 # Override database URLs so ALL sessions (including AuditService's independent session)
 # point to the test database, not the production database

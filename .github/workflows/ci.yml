@@ -41,12 +41,14 @@ jobs:
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+          DATABASE_SYNC_URL: postgresql://postgres:postgres@localhost:5432/test_db
         run: uv run pytest tests/ -v --tb=short
 
       - name: Run slow tests
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+          DATABASE_SYNC_URL: postgresql://postgres:postgres@localhost:5432/test_db
         run: uv run pytest tests/ -v --tb=short -m slow
 
   # Backend linting (mypy)
