@@ -35,6 +35,13 @@ async def parse_persons_from_html(
 
     Returns ParseResult(ok=False) on schema failure after one retry, or when the
     LLM returns zero persons (a People page should have people).
+
+    Note on retry layering (I1): this loop retries once (2 attempts), and the
+    underlying LLMGateway.complete() has its own @with_retry(max_retries=3).
+    So a transient network error can trigger up to 2*3=6 gateway calls with
+    exponential backoff before surfacing as needs_review. This is intentional
+    robustness for flaky networks; the tradeoff is higher LLM cost on failure.
+    Monitor llm_tokens_used / error rate if cost becomes a concern.
     """
     messages = [
         {"role": "system", "content": system_prompt},

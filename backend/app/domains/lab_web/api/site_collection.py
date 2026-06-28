@@ -84,6 +84,9 @@ async def review_site(
             "page_id": i.page_id,
             "parse_status": i.parse_status,
             "parse_error": i.parse_error,
+            "html_hash": i.html_hash,
+            "parsed_persons": i.parsed_persons,
+            "llm_model": i.llm_model,
             "fetched_at": i.fetched_at,
         }
         for i in items

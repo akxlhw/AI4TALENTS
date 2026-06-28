@@ -73,6 +73,11 @@ class BaseLabSiteCollector:
         if hasattr(html, "html") and not isinstance(html, str):
             html = html.html
         html_str = str(html)
+        # Cache key is the raw HTML hash (I3, acknowledged): real lab pages may
+        # embed dynamic tokens/timestamps that bust the cache, forcing a reparse.
+        # Correctness is unaffected (cache is a cost optimization); if cache-hit
+        # rates are low in production, consider hashing the preprocessed text
+        # instead so cosmetic changes don't trigger an LLM call.
         html_hash = hashlib.sha256(html_str.encode("utf-8")).hexdigest()
 
         # Step 5: cache check

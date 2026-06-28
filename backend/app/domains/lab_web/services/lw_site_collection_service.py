@@ -72,7 +72,7 @@ class LWSiteCollectionService:
         if not site.is_active:
             raise RuntimeError(f"Site {site_code} is not active")
 
-        lab_id = await self.repo._resolve_lab_id(str(site.parent_lab_code))
+        lab_id = await self.repo.resolve_lab_id(str(site.parent_lab_code))
         task = await self.task_repo.create_task(
             task_name=f"lab_web_site_collect_{site_code}",
             lab_id=lab_id,
@@ -108,17 +108,7 @@ class LWSiteCollectionService:
                     )
                     await collector.collect(ctx)
                     # Determine final status from the latest raw page.
-                    latest = (
-                        await session.execute(
-                            select(LWSiteRawPage)
-                            .where(LWSiteRawPage.site_code == site_code)
-                            .order_by(LWSiteRawPage.created_at.desc())
-                            .limit(1)
-                        )
-                    ).scalar_one_or_none()
-                    final_status = "success"
-                    if latest is not None and latest.parse_status == "needs_review":
-                        final_status = "partial"
+                    final_status = await self._latest_page_status(session, site_code)
                     await task_repo.update_task(
                         task_id,
                         status=final_status,
@@ -133,12 +123,33 @@ class LWSiteCollectionService:
                     logger.exception("lab_web_site collection failed: task=%s", task_id)
                     msg = str(exc)
                     max_len = int(getattr(settings, "COLLECT_ERROR_MAX_LENGTH", 500))
+                    # M3 fix: if a needs_review page was already written before the
+                    # exception, prefer 'partial' over 'failed' so partial results
+                    # aren't hidden. Only mark 'failed' when no page was produced.
+                    status = await self._latest_page_status(session, site_code)
+                    if status == "success":
+                        status = "failed"
                     await task_repo.update_task(
                         task_id,
-                        status="failed",
+                        status=status,
                         error_message=(msg[:max_len] if len(msg) > max_len else msg),
                         completed_at=datetime.now(timezone.utc).replace(tzinfo=None),
                     )
+
+    @staticmethod
+    async def _latest_page_status(session: AsyncSession, site_code: str) -> str:
+        """Return 'success' (or 'partial' if the latest page is needs_review)."""
+        latest = (
+            await session.execute(
+                select(LWSiteRawPage)
+                .where(LWSiteRawPage.site_code == site_code)
+                .order_by(LWSiteRawPage.created_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if latest is not None and latest.parse_status == "needs_review":
+            return "partial"
+        return "success"
 
     @staticmethod
     def _make_collector(site: Any, site_repo: Any, person_service: Any) -> BaseLabSiteCollector:

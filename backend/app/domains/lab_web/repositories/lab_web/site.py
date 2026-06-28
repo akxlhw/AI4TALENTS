@@ -39,11 +39,13 @@ class LWSiteRepository:
             site.last_collected_at = collected_at
             await self.session.commit()
 
-    async def _resolve_lab_id(self, parent_lab_code: str) -> int:
+    async def resolve_lab_id(self, parent_lab_code: str) -> int:
         """Resolve parent_lab_code -> lw_lab_registry.lab_id (for FK compliance).
 
         lw_raw_person.lab_id has a FK to lw_lab_registry.lab_id, so v2 (which
         reuses lw_raw_person) must supply a real lab_id rather than a sentinel.
+        Public so the orchestration service can resolve a task's lab_id without
+        reaching into repository internals.
         """
         stmt = select(LWLabRegistry.lab_id).where(LWLabRegistry.lab_code == parent_lab_code)
         result = await self.session.execute(stmt)
@@ -112,7 +114,7 @@ class LWSiteRepository:
 
         Dedups within this batch by content_hash. raw layer is append-only.
         """
-        lab_id = await self._resolve_lab_id(parent_lab_code)
+        lab_id = await self.resolve_lab_id(parent_lab_code)
         seen: set[str] = set()
         created: list[LWRawPerson] = []
         for p in parsed_persons:
