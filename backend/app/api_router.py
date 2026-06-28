@@ -25,6 +25,8 @@ from app.domains.academic.api import (
 )
 from app.domains.lab_web.api import collection as lab_web_collection
 from app.domains.open_source.api import open_source
+from app.domains.lab_web.api import collection as lab_web_collection
+from app.domains.lab_web.api import site_collection as lab_web_site_collection
 from app.domains.shared.api import (
     audit,
     auth,
@@ -115,3 +117,6 @@ api_router.include_router(open_source.router)
 
 # Lab Web Talent endpoints (v2.x)
 api_router.include_router(lab_web_collection.router)
+
+# Lab Web Site LLM endpoints (v2.x)
+api_router.include_router(lab_web_site_collection.router)
