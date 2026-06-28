@@ -42,7 +42,7 @@ lint-backend: ## Lint backend code (ruff + black)
 lint-backend-full: ## Full backend lint (ruff + black + mypy gate + architecture check)
 	cd backend && uv run ruff check app tests
 	cd backend && uv run black --check app tests
-	cd backend && uv run python scripts/mypy_gate.py
+	cd backend && uv run python scripts/ops/mypy_gate.py
 	cd backend && uv run python scripts/check_architecture.py
 
 lint-frontend: ## Run frontend linting
