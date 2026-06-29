@@ -1,0 +1,41 @@
+# AI 实验室人才采集清单
+# 新增实验室只需加一条：最少 name + domain；hints 全可选（降低 agent 探索成本）
+# agent 从 domain 出发自主探索入口，不依赖硬编码 URL
+
+labs:
+  # === 已验证可采集（Hermes 已跑通） ===
+  - name: "Stanford AI Lab"
+    domain: "https://ai.stanford.edu"
+    hints:
+      known_sublabs: ["NLP Group", "SNAP", "Ermon Lab"]
+      expected_roles: ["Faculty", "PhD Students", "Postdocs", "Staff", "Alumni"]
+
+  # === 候选（待 agent 首次探索验证） ===
+  - name: "MIT CSAIL"
+    domain: "https://www.csail.mit.edu"
+
+  - name: "Google DeepMind"
+    domain: "https://www.deepmind.com"
+
+  - name: "FAIR"
+    domain: "https://ai.meta.com"
+
+  - name: "OpenAI"
+    domain: "https://openai.com"
+
+  - name: "Anthropic"
+    domain: "https://www.anthropic.com"
+
+  - name: "Microsoft Research"
+    domain: "https://www.microsoft.com/en-us/research"
+
+  - name: "Berkeley AI Research"
+    domain: "https://bair.berkeley.edu"
+
+  - name: "北京智源"
+    domain: "https://www.baai.ac.cn"
+    hints:
+      expected_roles: ["研究员", "博士生", "博士后"]
+
+  - name: "清华大学人工智能研究院"
+    domain: "https://www.ai.tsinghua.edu.cn"
