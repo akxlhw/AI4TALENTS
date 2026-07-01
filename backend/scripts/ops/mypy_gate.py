@@ -22,7 +22,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePath
 
 BASELINE_FILE = Path(__file__).parent.parent.parent / ".mypy_baseline.txt"
 MYPY_ARGS = [
@@ -56,7 +56,12 @@ def run_mypy() -> set[str]:
             int(line_no)
         except ValueError:
             continue
-        fingerprints.add(f"{file_path.strip()}:{line_no.strip()}")
+        # Normalize path separators to forward slashes so fingerprints match
+        # across platforms. A baseline regenerated on Windows stores
+        # "app\domains\..." while CI's mypy on Linux emits "app/domains/...";
+        # without normalization every error looks "new" on the other OS.
+        normalized = PurePath(file_path.strip()).as_posix()
+        fingerprints.add(f"{normalized}:{line_no.strip()}")
     return fingerprints
 
 
