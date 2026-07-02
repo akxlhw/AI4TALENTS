@@ -58,6 +58,7 @@ crawler 的 `importer-contract.md` 原本预设写 `core_talent`，是站在 cra
 | `name` | String(255) | NOT NULL, indexed | `name` | 姓名（标准化去多余空白）|
 | `role_section` | String(100) | NOT NULL | `role_section` | 页面分区原始标签（Faculty/PhD Students/Postdocs/Staff/Alumni）|
 | `role_type` | String(20) | NOT NULL, indexed, default `unknown` | （由 `role_section` 映射） | 标准化角色，复用 `domains/shared/models/enums.py` 的 `RoleType` 枚举值 |
+| `academic_level` | String(20) | nullable, indexed | （由 `role_section` 映射，仅学生角色有值） | 学位层次：`phd` / `master` / `bachelor`；非学生角色为 NULL。见 §3.1 映射说明 |
 | `current_title` | String(255) | nullable | `role_raw` | bio 详情页精确头衔原文 |
 | `homepage` | String(500) | nullable | `homepage` | 个人主页 URL |
 | `email` | String(255) | nullable | `email` | 邮箱 |
@@ -80,19 +81,49 @@ crawler 的 `importer-contract.md` 原本预设写 `core_talent`，是站在 cra
 
 文件位置：`backend/app/domains/lab/constants/role_mapping.py`
 
-| role_section（原始） | role_type（枚举值） | 说明 |
-|---------------------|---------------------|------|
-| Faculty / Professors / Principal Investigators | `professor` | 教授/PI |
-| Postdocs / Postdoctoral | `graduate` | 博后归入 graduate |
-| PhD Students / Doctoral Students / PhD Candidates | `student` | 博士生 |
-| Staff / Researchers / Research Scientists | `graduate` | 研究员归入 graduate（早期研究者语义）|
-| Master Students / Undergrads | `student` | 硕士/本科归入 student |
-| Alumni / Former Members | `unknown` | 校友角色模糊，降级为 unknown |
-| 其他/Unknown | `unknown` | 兜底 |
+| role_section（原始） | role_type | academic_level | 说明 |
+|---------------------|-----------|----------------|------|
+| Faculty / Professors / Principal Investigators | `professor` | NULL | 教授/PI |
+| Postdocs / Postdoctoral | `graduate` | NULL | 博后 |
+| Staff / Researchers / Research Scientists | `graduate` | NULL | 研究员归入 graduate（早期研究者语义）|
+| PhD Students / Doctoral Students / PhD Candidates / 博士生 | `student` | `phd` | 博士生 |
+| Master Students / Master's Students / Masters / 硕士生 | `student` | `master` | 硕士生 |
+| Undergrads / Undergraduate Students / Bachelor / 本科生 | `student` | `bachelor` | 本科生 |
+| Students（未细分的泛称）| `student` | NULL | 页面未区分学位层次时，level 留空 |
+| Alumni / Former Members | `unknown` | NULL | 校友角色模糊 |
+| 其他/Unknown | `unknown` | NULL | 兜底 |
 
-> `RoleType` 枚举（`domains/shared/models/enums.py`）当前只有 `professor`/`student`/`graduate`/`unknown`
-> 四个值，**无 `researcher`**，故 Staff/Researchers 归入 `graduate`。若后续 lab 人才需要更细分的角色，
-> 可给 `RoleType` 新增值（枚举在 shared 域，新增不违反跨域隔离）。
+#### 设计说明：role_type 与 academic_level 是正交两个维度
+
+- `role_type`（复用 shared 域 `RoleType` 枚举）：粗粒度角色身份，与学术库保持一致语义
+- `academic_level`（lab 库专属字段）：学位层次细分，**仅学生角色（role_type=student）有值**，其他角色为 NULL
+- 不扩展 `RoleType` 枚举新增 phd/master 值 —— 避免污染 shared 域枚举（学术库的 student 是按论文数推断的，与 lab 的学位层次语义不同，混用会乱）
+- `academic_level` 可索引，支持前端按"博士/硕士/学士"独立筛选
+
+#### 映射实现（`constants/role_mapping.py`）
+
+映射函数同时输出 role_type 和 academic_level，基于 role_section 的关键词匹配：
+
+```python
+def map_role(role_section: str) -> tuple[str, str | None]:
+    s = role_section.lower()
+    # 学位层次优先判断（在 student 大类内细分）
+    if any(k in s for k in ["phd", "doctoral", "博士"]):
+        return ("student", "phd")
+    if any(k in s for k in ["master", "硕士"]):
+        return ("student", "master")
+    if any(k in s for k in ["undergrad", "bachelor", "本科"]):
+        return ("student", "bachelor")
+    if any(k in s for k in ["student", "学生"]):
+        return ("student", None)  # 泛称学生，未细分
+    if any(k in s for k in ["faculty", "professor", "pi", "教授"]):
+        return ("professor", None)
+    if any(k in s for k in ["postdoc", "博后"]):
+        return ("graduate", None)
+    if any(k in s for k in ["staff", "researcher", "研究员"]):
+        return ("graduate", None)
+    return ("unknown", None)
+```
 
 ### 3.2 不做的关联表（首版）
 
@@ -109,8 +140,8 @@ crawler 的 `importer-contract.md` 原本预设写 `core_talent`，是站在 cra
 - `down_revision` 指向当前 head（`049_add_genealogy_tables` 之后）
 - `op.create_table('core_lab_talent', ...)` 按上表字段
 - 索引：`ix_lab_talent_name`、`ix_lab_talent_parent_lab`、`ix_lab_talent_lab_name`、
-  `ix_lab_talent_role_type`、`ix_lab_talent_cohort_year`、`ix_lab_talent_dedup_hash`(unique)、
-  `ix_lab_talent_unified_person_id`
+  `ix_lab_talent_role_type`、`ix_lab_talent_academic_level`、`ix_lab_talent_cohort_year`、
+  `ix_lab_talent_dedup_hash`(unique)、`ix_lab_talent_unified_person_id`
 - 注册到 `backend/app/model_registry.py`：`from app.domains.lab.models.lab_talent import CoreLabTalent`
 
 ---
@@ -255,6 +286,7 @@ GET /api/v1/lab/talents                      # 列表搜索
     parent_lab                               # 顶层实验室筛选
     lab_name                                 # 子实验室筛选
     role_type                                # 角色筛选（professor/student/...）
+    academic_level                           # 学位层次筛选（phd/master/bachelor，仅学生有效）
     research_area                            # 研究方向筛选（JSON 数组包含）
     cohort_year_gte                          # 入学年份下限
     sort_by                                  # name_asc / cohort_desc / created_desc
@@ -291,7 +323,7 @@ api_router.include_router(stats.router)
 | 页面 | 路由 | 组件 | 功能 |
 |------|------|------|------|
 | 概览 | `/lab` | `LabOverviewPage` | 总人数/实验室数/角色分布统计 + 热门实验室卡片 + Top 人才 |
-| 搜索 | `/lab/search` | `LabSearchPage` | 筛选栏（parent_lab/lab_name/role/research_area/cohort_year）+ 结果列表 + 分页排序 |
+| 搜索 | `/lab/search` | `LabSearchPage` | 筛选栏（parent_lab/lab_name/role_type/academic_level[博/硕/学]/research_area/cohort_year）+ 结果列表 + 分页排序 |
 | 详情 | `/lab/talents/:id` | `LabTalentDetailPage` | 基本信息 + 研究方向 + 实验室归属 + 采集来源（无收藏按钮，首版不做）|
 
 ### 7.2 导航入口
@@ -353,7 +385,7 @@ api_router.include_router(stats.router)
 
 | 风险/待确认项 | 说明 | 处置 |
 |--------------|------|------|
-| `RoleType` 枚举值覆盖度 | 已确认现有枚举只有 `professor`/`student`/`graduate`/`unknown`，Staff/Researchers 归入 `graduate`（见 §3.1）| 设计已处置；若需更细分角色，后续给 `RoleType` 新增值 |
+| 学生角色细分（博/硕/学士）| 已用独立 `academic_level` 字段解决（见 §3.1），不扩展 shared 域 RoleType 枚举 | 设计已处置；学位层次与角色身份正交，语义清晰 |
 | 全量替换事务时长 | 单实验室 >2000 人时 DELETE+INSERT 事务较长 | lab 单实验室规模通常 <2000，可接受；若超限后续改分批提交 |
 | hermes 与 AI4Talent 的网络可达性 | 企业内网部署，hermes 需能访问 AI4Talent 的 import API | 部署时确认网络策略 |
 | JSONL 大文件上传 | multipart 上传超大文件可能超时 | 首版按现有 upload 机制；超限场景后续改流式/分片 |
