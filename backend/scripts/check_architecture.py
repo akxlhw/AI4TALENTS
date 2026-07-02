@@ -26,6 +26,7 @@ Usage:
     python scripts/check_architecture.py
     python scripts/check_architecture.py --update-baseline
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,7 +34,7 @@ import ast
 import hashlib
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePath
 
 # --- Configuration ---
 
@@ -60,7 +61,10 @@ BANNED_MODULE_RULES: list[tuple[str, str]] = [
     ("builders.", "Builder must be accessed via Service only"),
     (".models.", "Domain models must not leak into Endpoint layer"),
     ("services.llm", "LLMGateway is infrastructure — use Domain Service to encapsulate LLM calls"),
-    ("services.open_source_embedding_service", "EmbeddingService must be accessed via Service only"),
+    (
+        "services.open_source_embedding_service",
+        "EmbeddingService must be accessed via Service only",
+    ),
     ("services.embedding.embedding_service", "EmbeddingService must be accessed via Service only"),
     ("services.github_client", "HTTP client must be accessed via Service only"),
     ("services.openalex_client", "HTTP client must be accessed via Service only"),
@@ -143,8 +147,14 @@ def _is_banned(module: str, name: str) -> bool | str:
 
 
 def _file_hash(check_type: str, path: str, module: str, name: str) -> str:
-    """Stable hash for a violation entry."""
-    content = f"{check_type}:{path}:{module}:{name}"
+    """Stable hash for a violation entry.
+
+    The path is normalized to forward slashes so the hash is identical on
+    Windows and POSIX. Without this, a baseline generated on one OS fails
+    to match on the other (mypy_gate.py had the same class of bug).
+    """
+    posix_path = PurePath(path).as_posix()
+    content = f"{check_type}:{posix_path}:{module}:{name}"
     return hashlib.sha256(content.encode()).hexdigest()[:16]
 
 
@@ -155,13 +165,15 @@ def check_file(filepath: Path) -> list[dict]:
         source = filepath.read_text(encoding="utf-8")
         tree = ast.parse(source)
     except SyntaxError as exc:
-        violations.append({
-            "file": str(filepath.relative_to(PROJECT_ROOT)),
-            "line": exc.lineno or 1,
-            "module": "<syntax-error>",
-            "name": "<syntax-error>",
-            "reason": f"SyntaxError: {exc}",
-        })
+        violations.append(
+            {
+                "file": str(filepath.relative_to(PROJECT_ROOT)),
+                "line": exc.lineno or 1,
+                "module": "<syntax-error>",
+                "name": "<syntax-error>",
+                "reason": f"SyntaxError: {exc}",
+            }
+        )
         return violations
 
     for node in ast.walk(tree):
@@ -174,13 +186,15 @@ def check_file(filepath: Path) -> list[dict]:
                 name = alias.name
                 reason = _is_banned(module, name)
                 if reason:
-                    violations.append({
-                        "file": str(filepath.relative_to(PROJECT_ROOT)),
-                        "line": node.lineno,
-                        "module": module,
-                        "name": name,
-                        "reason": reason,
-                    })
+                    violations.append(
+                        {
+                            "file": str(filepath.relative_to(PROJECT_ROOT)),
+                            "line": node.lineno,
+                            "module": module,
+                            "name": name,
+                            "reason": reason,
+                        }
+                    )
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 if not alias.name.startswith("app."):
@@ -191,13 +205,15 @@ def check_file(filepath: Path) -> list[dict]:
                 name = alias.asname or alias.name.split(".")[-1]
                 reason = _is_banned(module, name)
                 if reason:
-                    violations.append({
-                        "file": str(filepath.relative_to(PROJECT_ROOT)),
-                        "line": node.lineno,
-                        "module": module,
-                        "name": name,
-                        "reason": reason,
-                    })
+                    violations.append(
+                        {
+                            "file": str(filepath.relative_to(PROJECT_ROOT)),
+                            "line": node.lineno,
+                            "module": module,
+                            "name": name,
+                            "reason": reason,
+                        }
+                    )
     return violations
 
 
@@ -225,13 +241,15 @@ def check_http_client_imports(filepath: Path) -> list[dict]:
         source = filepath.read_text(encoding="utf-8")
         tree = ast.parse(source)
     except SyntaxError as exc:
-        violations.append({
-            "file": str(relative),
-            "line": exc.lineno or 1,
-            "module": "<syntax-error>",
-            "name": "<syntax-error>",
-            "reason": f"SyntaxError: {exc}",
-        })
+        violations.append(
+            {
+                "file": str(relative),
+                "line": exc.lineno or 1,
+                "module": "<syntax-error>",
+                "name": "<syntax-error>",
+                "reason": f"SyntaxError: {exc}",
+            }
+        )
         return violations
 
     for node in ast.walk(tree):
@@ -240,26 +258,30 @@ def check_http_client_imports(filepath: Path) -> list[dict]:
             root_module = module.split(".")[0]
             if root_module in HTTP_CLIENT_MODULES:
                 for alias in node.names:
-                    violations.append({
-                        "file": str(relative),
-                        "line": node.lineno,
-                        "module": module,
-                        "name": alias.name,
-                        "reason": f"Direct import of {root_module} — "
-                                   f"all outbound HTTP must use HttpClientFactory",
-                    })
+                    violations.append(
+                        {
+                            "file": str(relative),
+                            "line": node.lineno,
+                            "module": module,
+                            "name": alias.name,
+                            "reason": f"Direct import of {root_module} — "
+                            f"all outbound HTTP must use HttpClientFactory",
+                        }
+                    )
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 root_module = alias.name.split(".")[0]
                 if root_module in HTTP_CLIENT_MODULES:
-                    violations.append({
-                        "file": str(relative),
-                        "line": node.lineno,
-                        "module": alias.name,
-                        "name": alias.asname or root_module,
-                        "reason": f"Direct import of {root_module} — "
-                                   f"all outbound HTTP must use HttpClientFactory",
-                    })
+                    violations.append(
+                        {
+                            "file": str(relative),
+                            "line": node.lineno,
+                            "module": alias.name,
+                            "name": alias.asname or root_module,
+                            "reason": f"Direct import of {root_module} — "
+                            f"all outbound HTTP must use HttpClientFactory",
+                        }
+                    )
 
     return violations
 
@@ -280,13 +302,15 @@ def check_cross_domain(filepath: Path) -> list[dict]:
         source = filepath.read_text(encoding="utf-8")
         tree = ast.parse(source)
     except SyntaxError as exc:
-        violations.append({
-            "file": str(relative),
-            "line": exc.lineno or 1,
-            "module": "<syntax-error>",
-            "name": "<syntax-error>",
-            "reason": f"SyntaxError: {exc}",
-        })
+        violations.append(
+            {
+                "file": str(relative),
+                "line": exc.lineno or 1,
+                "module": "<syntax-error>",
+                "name": "<syntax-error>",
+                "reason": f"SyntaxError: {exc}",
+            }
+        )
         return violations
 
     for node in ast.walk(tree):
@@ -297,13 +321,15 @@ def check_cross_domain(filepath: Path) -> list[dict]:
             for pattern, reason in CROSS_DOMAIN_BANNED:
                 if pattern.search(module):
                     for alias in node.names:
-                        violations.append({
-                            "file": str(relative),
-                            "line": node.lineno,
-                            "module": module,
-                            "name": alias.name,
-                            "reason": reason,
-                        })
+                        violations.append(
+                            {
+                                "file": str(relative),
+                                "line": node.lineno,
+                                "module": module,
+                                "name": alias.name,
+                                "reason": reason,
+                            }
+                        )
                     break  # only report once per import line
 
         elif isinstance(node, ast.Import):
@@ -315,13 +341,15 @@ def check_cross_domain(filepath: Path) -> list[dict]:
                 for pattern, reason in CROSS_DOMAIN_BANNED:
                     if pattern.search(alias.name):
                         name = alias.asname or alias.name.split(".")[-1]
-                        violations.append({
-                            "file": str(relative),
-                            "line": node.lineno,
-                            "module": alias.name,
-                            "name": name,
-                            "reason": reason,
-                        })
+                        violations.append(
+                            {
+                                "file": str(relative),
+                                "line": node.lineno,
+                                "module": alias.name,
+                                "name": name,
+                                "reason": reason,
+                            }
+                        )
                         break
 
     return violations
@@ -483,10 +511,7 @@ def main() -> int:
         print("Known violations (existing technical debt):")
         print("-" * 70)
         for v in endpoint_known:
-            print(
-                f"  {v['file']}:{v['line']}\n"
-                f"    from {v['module']} import {v['name']}"
-            )
+            print(f"  {v['file']}:{v['line']}\n" f"    from {v['module']} import {v['name']}")
         print()
 
     if endpoint_new:
@@ -522,14 +547,11 @@ def main() -> int:
         print("Known violations (existing technical debt):")
         print("-" * 70)
         for v in http_known:
-            if v['module'] == v['name'] or v['name'] == v['module'].split('.')[0]:
+            if v["module"] == v["name"] or v["name"] == v["module"].split(".")[0]:
                 display = f"import {v['module']}"
             else:
                 display = f"from {v['module']} import {v['name']}"
-            print(
-                f"  {v['file']}:{v['line']}\n"
-                f"    {display}"
-            )
+            print(f"  {v['file']}:{v['line']}\n" f"    {display}")
         print()
 
     if http_new:
