@@ -544,3 +544,38 @@ export interface OSRepositoryContributor {
   is_committer: boolean
   roles: string[]
 }
+
+// ===== AI Lab Talent =====
+
+export interface LabTalent {
+  talent_id: number
+  name: string
+  role_section: string
+  role_type: string
+  academic_level: string | null
+  current_title: string | null
+  homepage: string | null
+  department: string | null
+  research_areas: string[]
+  cohort_year: number | null
+  lab_name: string
+  parent_lab: string
+}
+
+export interface LabTalentDetail extends LabTalent {
+  email: string | null
+  cohort_source: string | null
+  source_url: string | null
+  source_detail_url: string | null
+  collected_at: string | null
+}
+
+export interface LabStats {
+  total_talents: number
+  total_parent_labs: number
+  total_sub_labs: number
+  parent_lab_distribution: { name: string; count: number }[]
+  role_distribution: { name: string; count: number }[]
+  academic_level_distribution: { name: string; count: number }[]
+  top_labs: { name: string; count: number }[]
+}

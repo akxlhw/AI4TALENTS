@@ -8,7 +8,7 @@
 
 import type { ThemeConfig } from 'antd'
 
-export type Domain = 'academic' | 'opensource' | 'competition' | 'industry'
+export type Domain = 'academic' | 'opensource' | 'lab' | 'competition' | 'industry'
 
 export interface DomainTheme {
   key: Domain
@@ -71,6 +71,18 @@ export const domainThemes: Record<Domain, DomainTheme> = {
     hoverBg: '#F3E8FF',
     badgeBg: '#6B46C1',
     iconColor: '#805AD5',
+  },
+  lab: {
+    key: 'lab',
+    label: 'AI 实验室',
+    shortLabel: '实验室',
+    primary: '#0D2B4E',
+    secondary: '#0EA5E9',
+    gradient: 'linear-gradient(135deg, #0D2B4E 0%, #0EA5E9 100%)',
+    lightBg: '#F0F9FF',
+    hoverBg: '#E0F2FE',
+    badgeBg: '#0EA5E9',
+    iconColor: '#0EA5E9',
   },
 }
 

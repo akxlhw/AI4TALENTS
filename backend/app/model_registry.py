@@ -34,6 +34,7 @@ from app.domains.academic.models.sync import (
 from app.domains.academic.models.talent import RoleProfile, SelectedWork, Talent
 from app.domains.academic.models.tech_domain import TalentTechTag, TechDirection, TechDomain
 from app.domains.academic.models.venue import Venue, VenueSubTask, VenueTechBinding
+from app.domains.lab.models.lab_talent import LabTalent
 from app.domains.open_source.models.open_source import (
     OSCollectTask,
     OSContribution,
@@ -137,6 +138,7 @@ __all__ = [
     # Open Source (v2.0)
     "OSRepoConfig",
     "OSDeveloper",
+    "LabTalent",
     "OSRepository",
     "OSContribution",
     "OSLanguageSkill",

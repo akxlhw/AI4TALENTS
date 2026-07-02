@@ -9,6 +9,7 @@ import {
   StarOutlined,
   BookOutlined,
   CodeOutlined,
+  ExperimentOutlined,
   TrophyOutlined,
   BuildOutlined,
   LockOutlined,
@@ -30,6 +31,7 @@ interface DomainNavItem {
 const domainNavItems: DomainNavItem[] = [
   { key: 'academic', icon: <BookOutlined /> },
   { key: 'opensource', icon: <CodeOutlined /> },
+  { key: 'lab', icon: <ExperimentOutlined /> },
   { key: 'competition', icon: <TrophyOutlined />, soon: true },
   { key: 'industry', icon: <BuildOutlined />, soon: true },
 ]

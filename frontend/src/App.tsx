@@ -17,6 +17,9 @@ import TechDomainPage from './pages/academic/academic-tech-domain-page'
 import CountrySchoolPage from './pages/academic/academic-country-school-page'
 import OpenSourcePage from './pages/open-source/open-source-page'
 import OpenSourceSearchPage from './pages/open-source/open-source-search-page'
+import LabOverviewPage from './pages/lab/lab-overview-page'
+import LabSearchPage from './pages/lab/lab-search-page'
+import LabTalentDetailPage from './pages/lab/lab-talent-detail-page'
 import DeveloperDetailPage from './pages/open-source/open-source-developer-detail-page'
 import RepoDetailPage from './pages/open-source/repo-detail-page'
 import RepoListPage from './pages/open-source/repo-list-page'
@@ -150,6 +153,9 @@ function AppRoutes() {
         <Route path="opensource/developers/:id" element={<DeveloperDetailPage />} />
         <Route path="opensource/repos" element={<RepoListPage />} />
         <Route path="opensource/repos/:owner/:name" element={<RepoDetailPage />} />
+        <Route path="lab" element={<LabOverviewPage />} />
+        <Route path="lab/search" element={<LabSearchPage />} />
+        <Route path="lab/talents/:talentId" element={<LabTalentDetailPage />} />
         <Route
           path="demo-competition"
           element={
