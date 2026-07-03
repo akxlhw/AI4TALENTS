@@ -121,9 +121,15 @@ def main() -> int:
         action="store_true",
         help="Show what would change without modifying the database",
     )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Skip interactive confirmation (for use in scripts/CI). "
+        "Only acts if the orphaned state is detected; no-ops otherwise.",
+    )
     args = parser.parse_args()
 
-    if not args.dry_run:
+    if not args.dry_run and not args.yes:
         confirm = input(
             "This will DROP lw_* tables and reset alembic_version. Type 'yes' to proceed: "
         )
