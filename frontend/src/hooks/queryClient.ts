@@ -91,6 +91,13 @@ export const queryKeys = {
     task: (id: number) => ['collect', 'task', id] as const,
     activeTasks: ['collect', 'activeTasks'] as const,
   },
+
+  // Lab
+  lab: {
+    stats: ['lab', 'stats'] as const,
+    talents: (params?: object) => ['lab', 'talents', params] as const,
+    talent: (id: number) => ['lab', 'talent', id] as const,
+  },
 }
 
 /**

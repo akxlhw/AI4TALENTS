@@ -9,7 +9,7 @@ export interface ApiResponse<T> {
 }
 
 export interface PaginatedResponse<T> {
-  data: T[]
+  items: T[]
   total: number
   page: number
   page_size: number
@@ -163,9 +163,9 @@ export interface SearchTalent {
   cited_by_count: number
   h_index: number
   topic_tags: string[]
-  openalex_topics: string[]  // OpenAlex研究主题（具体研究方向）
-  similarity_score?: number  // 语义搜索相似度分数
-  match_sources?: string[]   // 匹配来源：fulltext, semantic_research, semantic_papers
+  openalex_topics: string[] // OpenAlex研究主题（具体研究方向）
+  similarity_score?: number // 语义搜索相似度分数
+  match_sources?: string[] // 匹配来源：fulltext, semantic_research, semantic_papers
 }
 
 // Search Filter Params - 搜索筛选参数
@@ -264,7 +264,7 @@ export interface CollectTask {
   tech_domain_id: number
   tech_domain_name: string | null
   start_year: number
-  end_year: number | null  // null 表示至今
+  end_year: number | null // null 表示至今
   triggered_by: number | null
   triggered_at: string
   status: string
@@ -299,8 +299,13 @@ export interface CollectTask {
       error?: string
     }>
   } | null
-  execution_logs: Array<{ timestamp: string; level: string; message: string; details?: unknown }> | null
-  venue_snapshot: Array<{ id: string; name: string; type: string }> | null  // 创建时的顶会顶刊快照
+  execution_logs: Array<{
+    timestamp: string
+    level: string
+    message: string
+    details?: unknown
+  }> | null
+  venue_snapshot: Array<{ id: string; name: string; type: string }> | null // 创建时的顶会顶刊快照
   created_at: string
 }
 
