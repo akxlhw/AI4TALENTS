@@ -18,7 +18,13 @@ _DOCTORAL_RE = re.compile(r"\bdoctoral\b", re.IGNORECASE)
 _MASTER_KEYWORDS = ("master", "硕士")
 _BACHELOR_KEYWORDS = ("undergrad", "bachelor", "本科")
 _STUDENT_GENERIC_KEYWORDS = ("student", "学生")
-_FACULTY_KEYWORDS = ("faculty", "professor", "教授", "principal investigator")
+_FACULTY_KEYWORDS = (
+    "faculty",
+    "professor",
+    "教授",
+    "principal investigator",
+    "director",  # lab director is a professor-level role
+)
 _POSTDOC_KEYWORDS = ("postdoc", "post doctoral", "post-doctoral", "postdoctoral", "博后")
 _STAFF_KEYWORDS = ("staff", "researcher", "research scientist", "研究员")
 _ALUMNI_KEYWORDS = ("alumni", "former", "校友")

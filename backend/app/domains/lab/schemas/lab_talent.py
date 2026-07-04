@@ -32,6 +32,7 @@ class LabTalentDetail(LabTalentSummary):
     """Detail — full talent info for detail page."""
 
     email: str | None = None
+    photo_url: str | None = None
     cohort_source: str | None = None
     source_url: str | None = None
     source_detail_url: str | None = None

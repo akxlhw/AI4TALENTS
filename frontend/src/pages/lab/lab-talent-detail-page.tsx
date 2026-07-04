@@ -10,6 +10,7 @@ import {
   Space,
   Empty,
   Divider,
+  Avatar,
 } from 'antd'
 import { ArrowLeftOutlined, HomeOutlined, MailOutlined } from '@ant-design/icons'
 import { api } from '../../services/api'
@@ -83,20 +84,29 @@ const LabTalentDetailPage: React.FC = () => {
       </Button>
 
       <Card>
-        <Title level={3}>
-          {talent.name}
-          <Space style={{ marginLeft: 12 }}>
-            <Tag>{ROLE_LABELS[talent.role_type] || talent.role_type}</Tag>
-            {talent.academic_level && (
-              <Tag color="blue">{LEVEL_LABELS[talent.academic_level] || talent.academic_level}</Tag>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 8 }}>
+          {talent.photo_url && (
+            <Avatar size={72} src={talent.photo_url} />
+          )}
+          <div>
+            <Title level={3} style={{ marginBottom: 4 }}>
+              {talent.name}
+              <Space style={{ marginLeft: 12 }}>
+                <Tag>{ROLE_LABELS[talent.role_type] || talent.role_type}</Tag>
+                {talent.academic_level && (
+                  <Tag color="blue">
+                    {LEVEL_LABELS[talent.academic_level] || talent.academic_level}
+                  </Tag>
+                )}
+              </Space>
+            </Title>
+            {talent.current_title && (
+              <Text type="secondary" style={{ display: 'block' }}>
+                {talent.current_title}
+              </Text>
             )}
-          </Space>
-        </Title>
-        {talent.current_title && (
-          <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-            {talent.current_title}
-          </Text>
-        )}
+          </div>
+        </div>
 
         <Descriptions column={1} bordered size="small">
           <Descriptions.Item label="顶级实验室">{talent.parent_lab}</Descriptions.Item>

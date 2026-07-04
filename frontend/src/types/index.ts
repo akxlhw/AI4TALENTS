@@ -564,6 +564,7 @@ export interface LabTalent {
 
 export interface LabTalentDetail extends LabTalent {
   email: string | null
+  photo_url: string | null
   cohort_source: string | null
   source_url: string | null
   source_detail_url: string | null

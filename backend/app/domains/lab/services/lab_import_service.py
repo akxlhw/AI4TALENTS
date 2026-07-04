@@ -128,6 +128,7 @@ class LabImportService:
             "current_title": record.get("role_raw"),
             "homepage": record.get("homepage"),
             "email": record.get("email"),
+            "photo_url": record.get("photo_url"),
             "department": record.get("department"),
             "research_areas": record.get("research_areas") or [],
             "cohort_year": record.get("cohort_year"),

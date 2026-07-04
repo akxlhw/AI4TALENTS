@@ -18,6 +18,7 @@ class TestMapRole:
             ("Professors", ("professor", None)),
             ("Principal Investigators", ("professor", None)),
             ("教授", ("professor", None)),
+            ("Director", ("professor", None)),  # lab director is professor-level
             # Postdocs → graduate
             ("Postdocs", ("graduate", None)),
             ("Postdoctoral Researchers", ("graduate", None)),
@@ -58,6 +59,14 @@ class TestMapRole:
         """A bare 'Students' label with no degree keyword → student, None level."""
         assert map_role("Students") == ("student", None)
         assert map_role("学生") == ("student", None)
+
+    def test_graduate_student_is_not_phd(self):
+        """'Graduate Student' does NOT specify degree level — must NOT be phd.
+
+        Graduate student could be master or phd; the label alone is ambiguous,
+        so academic_level must be None (not phd).
+        """
+        assert map_role("Graduate Student") == ("student", None)
 
     def test_alumni_maps_to_unknown(self):
         assert map_role("Alumni") == ("unknown", None)
