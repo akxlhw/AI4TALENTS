@@ -92,6 +92,7 @@ backend/test-results/
 
 # Agent / tooling private state
 .superpowers/
+.worktrees/
 
 # TypeScript build cache
 *.tsbuildinfo
