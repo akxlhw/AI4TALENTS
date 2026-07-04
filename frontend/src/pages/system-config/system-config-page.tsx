@@ -5,15 +5,17 @@ import {
   ThunderboltOutlined,
   GlobalOutlined,
   GithubOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons'
 import CollectConfigTab from './components/collect-config-tab'
 import LLMConfigTab from './components/llm-config-tab'
 import ProxyConfigTab from './components/proxy-config-tab'
 import GitHubConfigTab from './components/github-config-tab'
+import LabImportTab from './components/lab-import-tab'
 
 const { Title } = Typography
 
-type TabKey = 'collect' | 'llm' | 'proxy' | 'github'
+type TabKey = 'collect' | 'llm' | 'proxy' | 'github' | 'lab'
 
 const SystemConfigPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('collect')
@@ -58,6 +60,16 @@ const SystemConfigPage: React.FC = () => {
         </span>
       ),
       children: <GitHubConfigTab />,
+    },
+    {
+      key: 'lab' as TabKey,
+      label: (
+        <span>
+          <ExperimentOutlined style={{ marginRight: 6 }} />
+          实验室人才导入
+        </span>
+      ),
+      children: <LabImportTab />,
     },
   ]
 
