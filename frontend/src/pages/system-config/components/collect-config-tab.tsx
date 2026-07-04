@@ -37,6 +37,7 @@ import {
   CloudUploadOutlined,
   CheckCircleOutlined,
   GithubOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
 import { queryClient, queryKeys } from '../../../hooks/queryClient'
@@ -53,6 +54,7 @@ import { formatNumber } from '../../../utils/format'
 import { getErrorMessage } from './utils'
 import OSRepoConfigSubTab from './os-repo-config-sub-tab'
 import OSCollectTaskSubTab from './os-collect-task-sub-tab'
+import LabImportTab from './lab-import-tab'
 
 const { Text } = Typography
 
@@ -780,6 +782,11 @@ const CollectConfigTab: React.FC = () => {
             key: 'opensource-tasks',
             label: <span><PlayCircleOutlined /> 开源采集任务</span>,
             children: <OSCollectTaskSubTab />,
+          },
+          {
+            key: 'lab-import',
+            label: <span><ExperimentOutlined /> AI实验室人才导入</span>,
+            children: <LabImportTab />,
           },
           {
             key: 'embeddings',

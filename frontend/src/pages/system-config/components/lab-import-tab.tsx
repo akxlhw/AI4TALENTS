@@ -80,7 +80,7 @@ const LabImportTab: React.FC = () => {
       <Card>
         <Title level={5}>
           <ExperimentOutlined style={{ marginRight: 8 }} />
-          AI 实验室人才导入
+          AI实验室人才导入
         </Title>
         <Text type="secondary">
           上传 ai-lab-talent-crawler 产出的 JSONL 文件，按实验室全量替换。
