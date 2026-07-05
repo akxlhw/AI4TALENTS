@@ -15,7 +15,7 @@ const LabStatCard: React.FC<LabStatCardProps> = ({ title, value, icon }) => {
         borderRadius: 12,
         transition: 'all 0.2s ease',
       }}
-      bodyStyle={{ display: 'flex', alignItems: 'center', gap: 16 }}
+      styles={{ body: { display: 'flex', alignItems: 'center', gap: 16 } }}
       hoverable
     >
       <div
