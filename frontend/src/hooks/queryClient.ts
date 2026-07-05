@@ -52,10 +52,8 @@ export const queryKeys = {
       ['techDomains', 'schools', domainId, params] as const,
     talents: (domainId: number, params?: object) =>
       ['techDomains', 'talents', domainId, params] as const,
-    overallTalents: (params?: object) =>
-      ['techDomains', 'overallTalents', params] as const,
-    overallSchools: (params?: object) =>
-      ['techDomains', 'overallSchools', params] as const,
+    overallTalents: (params?: object) => ['techDomains', 'overallTalents', params] as const,
+    overallSchools: (params?: object) => ['techDomains', 'overallSchools', params] as const,
   },
 
   // Talents
@@ -72,8 +70,7 @@ export const queryKeys = {
     all: ['schools'] as const,
     list: (params?: object) => ['schools', 'list', params] as const,
     detail: (id: number) => ['schools', 'detail', id] as const,
-    talents: (id: number, params?: object) =>
-      ['schools', 'talents', id, params] as const,
+    talents: (id: number, params?: object) => ['schools', 'talents', id, params] as const,
   },
 
   // Favorites

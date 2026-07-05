@@ -26,7 +26,8 @@ const LabHero: React.FC = () => {
           position: 'absolute',
           inset: 0,
           opacity: 0.06,
-          backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.8) 1px, transparent 0)',
+          backgroundImage:
+            'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.8) 1px, transparent 0)',
           backgroundSize: '28px 28px',
         }}
       />
@@ -51,7 +52,11 @@ const LabHero: React.FC = () => {
           {isAdmin && (
             <Button
               size="large"
-              style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}
+              style={{
+                background: 'rgba(255,255,255,0.15)',
+                color: '#fff',
+                borderColor: 'rgba(255,255,255,0.3)',
+              }}
               icon={<UploadOutlined />}
               onClick={() => navigate('/system-config?tab=lab-import')}
             >

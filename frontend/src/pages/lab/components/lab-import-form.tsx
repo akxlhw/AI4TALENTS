@@ -1,5 +1,16 @@
 import { useState } from 'react'
-import { Card, Typography, Space, Input, Button, Upload, Descriptions, Tag, Alert, message } from 'antd'
+import {
+  Card,
+  Typography,
+  Space,
+  Input,
+  Button,
+  Upload,
+  Descriptions,
+  Tag,
+  Alert,
+  message,
+} from 'antd'
 import { InboxOutlined, ExperimentOutlined, UploadOutlined } from '@ant-design/icons'
 import type { UploadProps } from 'antd'
 import { api } from '../../../services/api'
@@ -27,8 +38,9 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
   const [uploading, setUploading] = useState(false)
   const [report, setReport] = useState<ImportReport | null>(null)
 
-  const beforeUpload: UploadProps['beforeUpload'] = (file) => {
-    const isJsonl = file.name.endsWith('.jsonl') || file.type === 'application/jsonl' || file.type === ''
+  const beforeUpload: UploadProps['beforeUpload'] = file => {
+    const isJsonl =
+      file.name.endsWith('.jsonl') || file.type === 'application/jsonl' || file.type === ''
     if (!isJsonl) {
       message.error('请上传 .jsonl 文件')
       return Upload.LIST_IGNORE
@@ -82,7 +94,7 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
           <Input
             placeholder="如：Stanford AI Lab"
             value={parentLab}
-            onChange={(e) => setParentLab(e.target.value)}
+            onChange={e => setParentLab(e.target.value)}
             style={{ marginTop: 4, maxWidth: 400 }}
           />
           <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
@@ -96,13 +108,11 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
             maxCount={1}
             beforeUpload={beforeUpload}
             onRemove={onRemove}
-            fileList={
-              selectedFile
-                ? [{ uid: '-1', name: selectedFile.name, status: 'done' }]
-                : []
-            }
+            fileList={selectedFile ? [{ uid: '-1', name: selectedFile.name, status: 'done' }] : []}
           >
-            <p className="ant-upload-drag-icon"><InboxOutlined /></p>
+            <p className="ant-upload-drag-icon">
+              <InboxOutlined />
+            </p>
             <p className="ant-upload-text">点击或拖拽 JSONL 文件到此区域上传</p>
             <p className="ant-upload-hint">仅支持单个 .jsonl 文件（crawler 输出格式）</p>
           </Dragger>
@@ -126,9 +136,15 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
           <Descriptions column={2} bordered size="small">
             <Descriptions.Item label="实验室">{report.parent_lab}</Descriptions.Item>
             <Descriptions.Item label="总行数">{report.total_lines}</Descriptions.Item>
-            <Descriptions.Item label="成功解析"><Tag color="green">{report.total_parsed}</Tag></Descriptions.Item>
-            <Descriptions.Item label="写入"><Tag color="blue">{report.inserted}</Tag></Descriptions.Item>
-            <Descriptions.Item label="跳过"><Tag color={report.skipped > 0 ? 'warning' : 'default'}>{report.skipped}</Tag></Descriptions.Item>
+            <Descriptions.Item label="成功解析">
+              <Tag color="green">{report.total_parsed}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="写入">
+              <Tag color="blue">{report.inserted}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="跳过">
+              <Tag color={report.skipped > 0 ? 'warning' : 'default'}>{report.skipped}</Tag>
+            </Descriptions.Item>
           </Descriptions>
 
           {report.skip_reasons.length > 0 && (

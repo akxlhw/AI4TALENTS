@@ -31,7 +31,13 @@ const LabTalentHeader: React.FC<LabTalentHeaderProps> = ({ talent }) => {
       <Avatar
         size={120}
         src={talent.photo_url || undefined}
-        style={{ background: dt.gradient, color: '#fff', fontSize: 48, fontWeight: 700, marginBottom: 16 }}
+        style={{
+          background: dt.gradient,
+          color: '#fff',
+          fontSize: 48,
+          fontWeight: 700,
+          marginBottom: 16,
+        }}
       >
         {initials}
       </Avatar>

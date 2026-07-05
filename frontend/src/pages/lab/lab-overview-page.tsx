@@ -49,22 +49,36 @@ const LabOverviewPage: React.FC = () => {
     )
   }
 
-  const roleData = stats.role_distribution.map((r) => ({ name: r.name, value: r.count }))
-  const labData = stats.parent_lab_distribution.map((l) => ({ name: l.name, value: l.count }))
+  const roleData = stats.role_distribution.map(r => ({ name: r.name, value: r.count }))
+  const labData = stats.parent_lab_distribution.map(l => ({ name: l.name, value: l.count }))
 
   return (
     <div>
       <LabHero />
-      <div style={{ padding: 24, background: 'var(--color-bg-gray-light)', minHeight: 'calc(100vh - 300px)' }}>
+      <div
+        style={{
+          padding: 24,
+          background: 'var(--color-bg-gray-light)',
+          minHeight: 'calc(100vh - 300px)',
+        }}
+      >
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           <Col xs={24} sm={8}>
             <LabStatCard title="人才总数" value={stats.total_talents} icon={<UserOutlined />} />
           </Col>
           <Col xs={24} sm={8}>
-            <LabStatCard title="顶级实验室" value={stats.total_parent_labs} icon={<ExperimentOutlined />} />
+            <LabStatCard
+              title="顶级实验室"
+              value={stats.total_parent_labs}
+              icon={<ExperimentOutlined />}
+            />
           </Col>
           <Col xs={24} sm={8}>
-            <LabStatCard title="子实验室/研究组" value={stats.total_sub_labs} icon={<TeamOutlined />} />
+            <LabStatCard
+              title="子实验室/研究组"
+              value={stats.total_sub_labs}
+              icon={<TeamOutlined />}
+            />
           </Col>
         </Row>
 
@@ -73,7 +87,7 @@ const LabOverviewPage: React.FC = () => {
             <Card title="实验室分布" style={{ borderRadius: 12, height: '100%' }}>
               <LabDistributionChart
                 data={labData}
-                onBarClick={(name) => navigate(`/lab/search?parent_lab=${encodeURIComponent(name)}`)}
+                onBarClick={name => navigate(`/lab/search?parent_lab=${encodeURIComponent(name)}`)}
               />
             </Card>
           </Col>
@@ -81,7 +95,7 @@ const LabOverviewPage: React.FC = () => {
             <Card title="角色分布" style={{ borderRadius: 12, height: '100%' }}>
               <RoleDistributionChart
                 data={roleData}
-                onSliceClick={(name) => navigate(`/lab/search?role_type=${encodeURIComponent(name)}`)}
+                onSliceClick={name => navigate(`/lab/search?role_type=${encodeURIComponent(name)}`)}
               />
             </Card>
           </Col>
@@ -90,8 +104,11 @@ const LabOverviewPage: React.FC = () => {
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col xs={24} lg={12}>
             <Card title="学位层次" style={{ borderRadius: 12 }}>
-              {stats.academic_level_distribution.map((l) => (
-                <div key={l.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+              {stats.academic_level_distribution.map(l => (
+                <div
+                  key={l.name}
+                  style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}
+                >
                   <Text>{l.name}</Text>
                   <Tag color="blue">{l.count}</Tag>
                 </div>
@@ -100,7 +117,7 @@ const LabOverviewPage: React.FC = () => {
           </Col>
           <Col xs={24} lg={12}>
             <Card title="热门研究组" style={{ borderRadius: 12 }}>
-              {stats.top_labs.map((lab) => (
+              {stats.top_labs.map(lab => (
                 <Tag
                   key={lab.name}
                   style={{ marginBottom: 8, cursor: 'pointer', fontSize: 13 }}

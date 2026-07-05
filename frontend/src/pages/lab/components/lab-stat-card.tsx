@@ -33,7 +33,11 @@ const LabStatCard: React.FC<LabStatCardProps> = ({ title, value, icon }) => {
       >
         {icon}
       </div>
-      <Statistic title={title} value={value} valueStyle={{ fontSize: 32, fontWeight: 700, color: '#1a202c' }} />
+      <Statistic
+        title={title}
+        value={value}
+        valueStyle={{ fontSize: 32, fontWeight: 700, color: '#1a202c' }}
+      />
     </Card>
   )
 }

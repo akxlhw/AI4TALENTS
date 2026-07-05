@@ -11,11 +11,11 @@ const LabDistributionChart: React.FC<LabDistributionChartProps> = ({ data, onBar
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
     xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: data.map((d) => d.name), inverse: true },
+    yAxis: { type: 'category', data: data.map(d => d.name), inverse: true },
     series: [
       {
         type: 'bar',
-        data: data.map((d) => d.value),
+        data: data.map(d => d.value),
         itemStyle: {
           color: 'var(--domain-secondary)',
           borderRadius: [0, 4, 4, 0],
@@ -31,7 +31,13 @@ const LabDistributionChart: React.FC<LabDistributionChartProps> = ({ data, onBar
     },
   }
 
-  return <ReactECharts option={option} style={{ height: Math.max(200, data.length * 40 + 80) }} onEvents={onEvents} />
+  return (
+    <ReactECharts
+      option={option}
+      style={{ height: Math.max(200, data.length * 40 + 80) }}
+      onEvents={onEvents}
+    />
+  )
 }
 
 export default LabDistributionChart

@@ -22,7 +22,12 @@ export interface LabSearchState {
   pageSize: number
   advancedOpen: boolean
 
-  setFilter: <K extends keyof Omit<LabSearchState, 'setFilter' | 'resetFilters' | 'toggleAdvanced' | 'syncFromUrl' | 'toQuery'>>(
+  setFilter: <
+    K extends keyof Omit<
+      LabSearchState,
+      'setFilter' | 'resetFilters' | 'toggleAdvanced' | 'syncFromUrl' | 'toQuery'
+    >,
+  >(
     key: K,
     value: LabSearchState[K]
   ) => void
@@ -47,7 +52,10 @@ const SORT_OPTIONS: LabSortBy[] = ['default', 'name_asc', 'cohort_desc', 'create
 const DEFAULT_PAGE = 1
 const DEFAULT_PAGE_SIZE = 20
 
-const initialState: Omit<LabSearchState, 'setFilter' | 'resetFilters' | 'toggleAdvanced' | 'syncFromUrl' | 'toQuery'> = {
+const initialState: Omit<
+  LabSearchState,
+  'setFilter' | 'resetFilters' | 'toggleAdvanced' | 'syncFromUrl' | 'toQuery'
+> = {
   keyword: '',
   parentLab: '',
   labName: '',
@@ -86,10 +94,10 @@ export const useLabSearchStore = create<LabSearchState>((set, get) => ({
   },
 
   toggleAdvanced: () => {
-    set((state) => ({ advancedOpen: !state.advancedOpen }))
+    set(state => ({ advancedOpen: !state.advancedOpen }))
   },
 
-  syncFromUrl: (query) => {
+  syncFromUrl: query => {
     set({
       keyword: query.get('keyword') || '',
       parentLab: query.get('parent_lab') || '',

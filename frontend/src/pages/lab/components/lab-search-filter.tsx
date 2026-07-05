@@ -36,7 +36,7 @@ const LabSearchFilter: React.FC<LabSearchFilterProps> = ({ state }) => {
             placeholder="输入姓名关键词..."
             prefix={<SearchOutlined />}
             value={state.keyword}
-            onChange={(e) => state.setFilter('keyword', e.target.value)}
+            onChange={e => state.setFilter('keyword', e.target.value)}
             allowClear
           />
         </Col>
@@ -45,7 +45,7 @@ const LabSearchFilter: React.FC<LabSearchFilterProps> = ({ state }) => {
             placeholder="角色"
             style={{ width: '100%' }}
             value={state.roleType || undefined}
-            onChange={(v) => state.setFilter('roleType', v || '')}
+            onChange={v => state.setFilter('roleType', v || '')}
             options={ROLE_OPTIONS}
             allowClear
           />
@@ -55,7 +55,7 @@ const LabSearchFilter: React.FC<LabSearchFilterProps> = ({ state }) => {
             placeholder="学位层次"
             style={{ width: '100%' }}
             value={state.academicLevel || undefined}
-            onChange={(v) => state.setFilter('academicLevel', v || '')}
+            onChange={v => state.setFilter('academicLevel', v || '')}
             options={LEVEL_OPTIONS}
             allowClear
           />
@@ -65,7 +65,7 @@ const LabSearchFilter: React.FC<LabSearchFilterProps> = ({ state }) => {
             placeholder="排序"
             style={{ width: '100%' }}
             value={state.sortBy}
-            onChange={(v) => state.setFilter('sortBy', v)}
+            onChange={v => state.setFilter('sortBy', v)}
             options={SORT_OPTIONS}
           />
         </Col>
@@ -87,7 +87,7 @@ const LabSearchFilter: React.FC<LabSearchFilterProps> = ({ state }) => {
             <Input
               placeholder="顶级实验室"
               value={state.parentLab}
-              onChange={(e) => state.setFilter('parentLab', e.target.value)}
+              onChange={e => state.setFilter('parentLab', e.target.value)}
               allowClear
             />
           </Col>
@@ -95,7 +95,7 @@ const LabSearchFilter: React.FC<LabSearchFilterProps> = ({ state }) => {
             <Input
               placeholder="研究组"
               value={state.labName}
-              onChange={(e) => state.setFilter('labName', e.target.value)}
+              onChange={e => state.setFilter('labName', e.target.value)}
               allowClear
             />
           </Col>
@@ -103,7 +103,7 @@ const LabSearchFilter: React.FC<LabSearchFilterProps> = ({ state }) => {
             <Input
               placeholder="研究方向"
               value={state.researchArea}
-              onChange={(e) => state.setFilter('researchArea', e.target.value)}
+              onChange={e => state.setFilter('researchArea', e.target.value)}
               allowClear
             />
           </Col>

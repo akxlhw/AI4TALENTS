@@ -43,7 +43,11 @@ const LabTalentDetailPage: React.FC = () => {
         ]}
       />
 
-      <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ marginBottom: 16 }}>
+      <Button
+        icon={<ArrowLeftOutlined />}
+        onClick={() => navigate(-1)}
+        style={{ marginBottom: 16 }}
+      >
         返回
       </Button>
 
@@ -55,13 +59,17 @@ const LabTalentDetailPage: React.FC = () => {
         </Col>
         <Col xs={24} md={16} lg={17} xl={18}>
           <Card style={{ borderRadius: 12 }}>
-            <Title level={4} style={{ marginTop: 0 }}>基本信息</Title>
+            <Title level={4} style={{ marginTop: 0 }}>
+              基本信息
+            </Title>
             <Descriptions column={1} bordered size="small" labelStyle={{ width: 140 }}>
               <Descriptions.Item label="顶级实验室">{talent.parent_lab}</Descriptions.Item>
               {talent.lab_name && talent.lab_name !== talent.parent_lab && (
                 <Descriptions.Item label="研究组">{talent.lab_name}</Descriptions.Item>
               )}
-              {talent.department && <Descriptions.Item label="院系">{talent.department}</Descriptions.Item>}
+              {talent.department && (
+                <Descriptions.Item label="院系">{talent.department}</Descriptions.Item>
+              )}
               {talent.cohort_year && (
                 <Descriptions.Item label="入学/加入年份">{talent.cohort_year}</Descriptions.Item>
               )}
@@ -80,7 +88,9 @@ const LabTalentDetailPage: React.FC = () => {
                 <Descriptions.Item label="个人主页">
                   <Space>
                     <HomeOutlined />
-                    <Link href={talent.homepage} target="_blank">{talent.homepage}</Link>
+                    <Link href={talent.homepage} target="_blank">
+                      {talent.homepage}
+                    </Link>
                   </Space>
                 </Descriptions.Item>
               )}
@@ -91,8 +101,10 @@ const LabTalentDetailPage: React.FC = () => {
                 <Divider />
                 <Title level={4}>研究方向</Title>
                 <Space size={8} wrap>
-                  {talent.research_areas.map((a) => (
-                    <Tag key={a} color="geekblue">{a}</Tag>
+                  {talent.research_areas.map(a => (
+                    <Tag key={a} color="geekblue">
+                      {a}
+                    </Tag>
                   ))}
                 </Space>
               </>

@@ -5,7 +5,7 @@ const PageSkeleton: React.FC = () => {
     <div style={{ padding: 24 }}>
       <Skeleton active paragraph={{ rows: 0 }} title={{ width: 300 }} />
       <Row gutter={16} style={{ marginTop: 24 }}>
-        {[1, 2, 3].map((i) => (
+        {[1, 2, 3].map(i => (
           <Col xs={24} sm={8} key={i}>
             <Card>
               <Skeleton active avatar paragraph={{ rows: 1 }} />

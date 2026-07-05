@@ -56,7 +56,9 @@ const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
             <Space size={4} wrap>
               <Tag>{ROLE_LABELS[talent.role_type] || talent.role_type}</Tag>
               {talent.academic_level && (
-                <Tag color="blue">{LEVEL_LABELS[talent.academic_level] || talent.academic_level}</Tag>
+                <Tag color="blue">
+                  {LEVEL_LABELS[talent.academic_level] || talent.academic_level}
+                </Tag>
               )}
             </Space>
           </div>
@@ -80,7 +82,7 @@ const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
 
         {talent.research_areas && talent.research_areas.length > 0 && (
           <Space size={4} wrap style={{ minHeight: 44 }}>
-            {talent.research_areas.slice(0, 4).map((area) => (
+            {talent.research_areas.slice(0, 4).map(area => (
               <Tag key={area} color="geekblue" style={{ fontSize: 11, maxWidth: 160 }}>
                 {decodeHtmlEntities(area)}
               </Tag>

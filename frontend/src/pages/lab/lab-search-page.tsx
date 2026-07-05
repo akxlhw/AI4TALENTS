@@ -76,7 +76,14 @@ const LabSearchPage: React.FC = () => {
 
       <Spin spinning={isLoading}>
         <Card style={{ borderRadius: 12 }}>
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            style={{
+              marginBottom: 16,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <Text type="secondary">共 {total} 人</Text>
           </div>
 
@@ -89,7 +96,7 @@ const LabSearchPage: React.FC = () => {
           ) : (
             <>
               <Row gutter={[16, 16]}>
-                {items.map((t) => (
+                {items.map(t => (
                   <Col xs={24} sm={12} md={8} lg={6} key={t.talent_id}>
                     <LabTalentCard talent={t} />
                   </Col>
@@ -100,8 +107,8 @@ const LabSearchPage: React.FC = () => {
                   current={state.page}
                   total={total}
                   pageSize={state.pageSize}
-                  onChange={(p) => state.setFilter('page', p)}
-                  showTotal={(t) => `共 ${t} 人`}
+                  onChange={p => state.setFilter('page', p)}
+                  showTotal={t => `共 ${t} 人`}
                 />
               </div>
             </>
