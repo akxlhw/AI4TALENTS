@@ -1,226 +1,112 @@
-import { useEffect, useState, useCallback } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import {
-  Card,
-  Row,
-  Col,
-  Input,
-  Select,
-  Spin,
-  Empty,
-  Typography,
-  Pagination,
-  Tag,
-  Space,
-} from 'antd'
-import { SearchOutlined } from '@ant-design/icons'
-import { api } from '../../services/api'
-import { getErrorMessage } from '../../utils'
-import type { LabTalent } from '../../types'
+import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Row, Col, Card, Pagination, Typography, Spin } from 'antd'
+import { useLabTalents } from '../../hooks/useLabQueries'
+import { useLabSearchStore } from '../../stores/labSearchStore'
+import { applyDomainCssVars } from '../../theme'
+import LabSearchFilter from './components/lab-search-filter'
+import LabTalentCard from './components/lab-talent-card'
+import EmptyPlaceholder from '../../components/EmptyPlaceholder'
+import BreadcrumbNav from '../../components/BreadcrumbNav'
 
 const { Text } = Typography
 
-const ROLE_OPTIONS = [
-  { label: '全部角色', value: '' },
-  { label: '教授', value: 'professor' },
-  { label: '学生', value: 'student' },
-  { label: '博后/研究员', value: 'graduate' },
-]
-
-const LEVEL_OPTIONS = [
-  { label: '全部学位', value: '' },
-  { label: '博士', value: 'phd' },
-  { label: '硕士', value: 'master' },
-  { label: '学士', value: 'bachelor' },
-]
-
-const ROLE_LABELS: Record<string, string> = {
-  professor: '教授',
-  student: '学生',
-  graduate: '博后/研究员',
-  unknown: '其他',
-}
-
-const LEVEL_LABELS: Record<string, string> = {
-  phd: '博士',
-  master: '硕士',
-  bachelor: '学士',
-}
-
 const LabSearchPage: React.FC = () => {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [items, setItems] = useState<LabTalent[]>([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [keyword, setKeyword] = useState(searchParams.get('keyword') || '')
-  const [parentLab, setParentLab] = useState(searchParams.get('parent_lab') || '')
-  const [labName, setLabName] = useState(searchParams.get('lab_name') || '')
-  const [roleType, setRoleType] = useState(searchParams.get('role_type') || '')
-  const [academicLevel, setAcademicLevel] = useState(searchParams.get('academic_level') || '')
-  const [page, setPage] = useState(1)
-  const pageSize = 20
-
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true)
-      const params: Record<string, unknown> = { page, page_size: pageSize }
-      if (keyword) params.keyword = keyword
-      if (parentLab) params.parent_lab = parentLab
-      if (labName) params.lab_name = labName
-      if (roleType) params.role_type = roleType
-      if (academicLevel) params.academic_level = academicLevel
-      const res = await api.lab.listTalents(params)
-      setItems(res.data.items || [])
-      setTotal(res.data.total || 0)
-    } catch (e) {
-      import('antd').then(({ message }) => message.error(getErrorMessage(e, '加载失败')))
-    } finally {
-      setLoading(false)
-    }
-  }, [keyword, parentLab, labName, roleType, academicLevel, page])
+  const state = useLabSearchStore()
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    applyDomainCssVars('lab')
+  }, [])
 
-  // Sync filters to URL
   useEffect(() => {
-    const params: Record<string, string> = {}
-    if (keyword) params.keyword = keyword
-    if (parentLab) params.parent_lab = parentLab
-    if (labName) params.lab_name = labName
-    if (roleType) params.role_type = roleType
-    if (academicLevel) params.academic_level = academicLevel
-    setSearchParams(params, { replace: true })
-  }, [keyword, parentLab, labName, roleType, academicLevel, setSearchParams])
+    state.syncFromUrl(searchParams)
+    // Only run once on mount to avoid loops with the URL sync effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const query = state.toQuery()
+    setSearchParams(query, { replace: true })
+    // State object is stable; list individual fields to avoid excessive re-syncs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    state.keyword,
+    state.parentLab,
+    state.labName,
+    state.roleType,
+    state.academicLevel,
+    state.researchArea,
+    state.sortBy,
+    state.page,
+    state.pageSize,
+    state.advancedOpen,
+    setSearchParams,
+  ])
+
+  const { data, isLoading, error, refetch } = useLabTalents({
+    keyword: state.keyword || undefined,
+    parent_lab: state.parentLab || undefined,
+    lab_name: state.labName || undefined,
+    role_type: state.roleType || undefined,
+    academic_level: state.academicLevel || undefined,
+    research_area: state.researchArea || undefined,
+    sort_by: state.sortBy === 'default' ? undefined : state.sortBy,
+    page: state.page,
+    page_size: state.pageSize,
+  })
+
+  if (error) {
+    return (
+      <EmptyPlaceholder
+        title="加载失败"
+        description={error.message || '请稍后重试'}
+        action={{ label: '重试', onClick: () => refetch() }}
+      />
+    )
+  }
+
+  const items = data?.items || []
+  const total = data?.total || 0
 
   return (
-    <div style={{ padding: 24 }}>
-      <Card style={{ marginBottom: 16 }}>
-        <Row gutter={16}>
-          <Col xs={24} sm={6}>
-            <Input
-              placeholder="姓名关键词"
-              prefix={<SearchOutlined />}
-              value={keyword}
-              onChange={(e) => {
-                setKeyword(e.target.value)
-                setPage(1)
-              }}
-              allowClear
-            />
-          </Col>
-          <Col xs={12} sm={6}>
-            <Input
-              placeholder="顶级实验室"
-              value={parentLab}
-              onChange={(e) => {
-                setParentLab(e.target.value)
-                setPage(1)
-              }}
-              allowClear
-            />
-          </Col>
-          <Col xs={12} sm={6}>
-            <Input
-              placeholder="研究组"
-              value={labName}
-              onChange={(e) => {
-                setLabName(e.target.value)
-                setPage(1)
-              }}
-              allowClear
-            />
-          </Col>
-          <Col xs={12} sm={6}>
-            <Select
-              placeholder="角色"
-              style={{ width: '100%' }}
-              value={roleType || undefined}
-              onChange={(v) => {
-                setRoleType(v || '')
-                setPage(1)
-              }}
-              options={ROLE_OPTIONS}
-              allowClear
-            />
-          </Col>
-          <Col xs={12} sm={6}>
-            <Select
-              placeholder="学位层次"
-              style={{ width: '100%' }}
-              value={academicLevel || undefined}
-              onChange={(v) => {
-                setAcademicLevel(v || '')
-                setPage(1)
-              }}
-              options={LEVEL_OPTIONS}
-              allowClear
-            />
-          </Col>
-        </Row>
-      </Card>
+    <div style={{ padding: 24, background: 'var(--color-bg-gray-light)', minHeight: '100vh' }}>
+      <BreadcrumbNav items={[{ label: '实验室', path: '/lab' }, { label: '搜索' }]} />
+      <LabSearchFilter state={state} />
 
-      <Spin spinning={loading}>
-        {items.length === 0 && !loading ? (
-          <Empty description="未找到匹配的人才" />
-        ) : (
-          <>
-            <Row gutter={[16, 16]}>
-              {items.map((t) => (
-                <Col xs={24} sm={12} md={8} lg={6} key={t.talent_id}>
-                  <Card
-                    hoverable
-                    size="small"
-                    onClick={() => navigate(`/lab/talents/${t.talent_id}`)}
-                  >
-                    <Space direction="vertical" size={4} style={{ width: '100%' }}>
-                      <Text strong>{t.name}</Text>
-                      <Space size={4} wrap>
-                        <Tag>{ROLE_LABELS[t.role_type] || t.role_type}</Tag>
-                        {t.academic_level && (
-                          <Tag color="blue">{LEVEL_LABELS[t.academic_level] || t.academic_level}</Tag>
-                        )}
-                      </Space>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {t.parent_lab}
-                      </Text>
-                      {t.lab_name && t.lab_name !== t.parent_lab && (
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {t.lab_name}
-                        </Text>
-                      )}
-                      {t.current_title && (
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {t.current_title}
-                        </Text>
-                      )}
-                      {t.research_areas && t.research_areas.length > 0 && (
-                        <Space size={4} wrap>
-                          {t.research_areas.slice(0, 3).map((a) => (
-                            <Tag key={a} color="geekblue" style={{ fontSize: 11 }}>
-                              {a}
-                            </Tag>
-                          ))}
-                        </Space>
-                      )}
-                    </Space>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
-            <div style={{ textAlign: 'center', marginTop: 24 }}>
-              <Pagination
-                current={page}
-                total={total}
-                pageSize={pageSize}
-                onChange={(p) => setPage(p)}
-                showTotal={(t) => `共 ${t} 人`}
-              />
-            </div>
-          </>
-        )}
+      <Spin spinning={isLoading}>
+        <Card style={{ borderRadius: 12 }}>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text type="secondary">共 {total} 人</Text>
+          </div>
+
+          {items.length === 0 && !isLoading ? (
+            <EmptyPlaceholder
+              title="未找到匹配的人才"
+              description="尝试调整筛选条件"
+              action={{ label: '清除筛选', onClick: () => state.resetFilters() }}
+            />
+          ) : (
+            <>
+              <Row gutter={[16, 16]}>
+                {items.map((t) => (
+                  <Col xs={24} sm={12} md={8} lg={6} key={t.talent_id}>
+                    <LabTalentCard talent={t} />
+                  </Col>
+                ))}
+              </Row>
+              <div style={{ textAlign: 'center', marginTop: 24 }}>
+                <Pagination
+                  current={state.page}
+                  total={total}
+                  pageSize={state.pageSize}
+                  onChange={(p) => state.setFilter('page', p)}
+                  showTotal={(t) => `共 ${t} 人`}
+                />
+              </div>
+            </>
+          )}
+        </Card>
       </Spin>
     </div>
   )
