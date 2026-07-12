@@ -115,9 +115,9 @@ const LabCard: React.FC<React.PropsWithChildren<LabCardProps>> = ({ lab }) => {
             {lab.name}
           </Title>
         </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ color: '#fff', fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{lab.count}</div>
-          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>人</div>
+        <div style={{ textAlign: 'right', flexShrink: 0, whiteSpace: 'nowrap' }}>
+          <span style={{ color: '#fff', fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{lab.count}</span>
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginLeft: 2 }}>人</span>
         </div>
       </div>
 
