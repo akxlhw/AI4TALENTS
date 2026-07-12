@@ -18,11 +18,14 @@ class LabTalentSummary(BaseModel):
     academic_level: str | None = None
     current_title: str | None = None
     homepage: str | None = None
+    email: str | None = None
+    photo_url: str | None = None
     department: str | None = None
     research_areas: list[str] = Field(default_factory=list)
     cohort_year: int | None = None
     lab_name: str
     parent_lab: str
+    lab_logo_url: str | None = None
 
     class Config:
         from_attributes = True
@@ -31,12 +34,20 @@ class LabTalentSummary(BaseModel):
 class LabTalentDetail(LabTalentSummary):
     """Detail — full talent info for detail page."""
 
-    email: str | None = None
-    photo_url: str | None = None
     cohort_source: str | None = None
     source_url: str | None = None
     source_detail_url: str | None = None
     collected_at: datetime | None = None
+
+
+class LabWithTalents(BaseModel):
+    """A parent lab with a preview of its talents."""
+
+    name: str
+    count: int
+    logo_url: str | None = None
+    talents: list[LabTalentSummary] = Field(default_factory=list)
+    role_distribution: dict[str, int] = Field(default_factory=dict)
 
 
 class LabStatsResponse(BaseModel):
