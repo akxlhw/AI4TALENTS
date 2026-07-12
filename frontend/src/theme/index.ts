@@ -74,8 +74,8 @@ export const domainThemes: Record<Domain, DomainTheme> = {
   },
   lab: {
     key: 'lab',
-    label: 'AI 实验室',
-    shortLabel: '实验室',
+    label: 'AI Native',
+    shortLabel: 'AI Native',
     primary: '#0D2B4E',
     secondary: '#0EA5E9',
     gradient: 'linear-gradient(135deg, #0D2B4E 0%, #0EA5E9 100%)',
