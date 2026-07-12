@@ -343,7 +343,7 @@ const RepoDetailPage: React.FC = () => {
       <Button
         type="text"
         icon={<ArrowLeftOutlined />}
-        onClick={() => navigate('/opensource')}
+        onClick={() => navigate(-1)}
         style={{ marginBottom: 16 }}
       >
         返回

@@ -311,7 +311,7 @@ const DeveloperDetailPage: React.FC = () => {
   return (
     <div style={{ padding: '88px 32px 80px' }}>
       {/* Breadcrumb */}
-      <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/opensource')} style={{ marginBottom: 16 }}>
+      <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ marginBottom: 16 }}>
         返回
       </Button>
 
