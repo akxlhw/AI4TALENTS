@@ -560,20 +560,29 @@ export interface LabTalent {
   academic_level: string | null
   current_title: string | null
   homepage: string | null
+  email: string | null
+  photo_url: string | null
   department: string | null
   research_areas: string[]
   cohort_year: number | null
   lab_name: string
   parent_lab: string
+  lab_logo_url: string | null
 }
 
 export interface LabTalentDetail extends LabTalent {
-  email: string | null
-  photo_url: string | null
   cohort_source: string | null
   source_url: string | null
   source_detail_url: string | null
   collected_at: string | null
+}
+
+export interface LabWithTalents {
+  name: string
+  count: number
+  logo_url: string | null
+  talents: LabTalent[]
+  role_distribution: Record<string, number>
 }
 
 export interface LabStats {

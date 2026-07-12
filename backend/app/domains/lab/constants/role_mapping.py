@@ -35,7 +35,7 @@ def map_role(role_section: str) -> tuple[str, str | None]:
 
     Returns:
         (role_type, academic_level) where academic_level is None for non-students.
-        role_type is one of: professor / student / graduate / unknown
+        role_type is one of: professor / student / graduate / alumni / unknown
         academic_level is one of: phd / master / bachelor / None
     """
     if not role_section:
@@ -52,7 +52,7 @@ def map_role(role_section: str) -> tuple[str, str | None]:
     if any(k in s for k in _STAFF_KEYWORDS):
         return ("graduate", None)
     if any(k in s for k in _ALUMNI_KEYWORDS):
-        return ("unknown", None)
+        return ("alumni", None)
 
     # Student degree levels (fine grain first, then generic student)
     if any(k in s for k in _PHD_KEYWORDS) or _DOCTORAL_RE.search(s):

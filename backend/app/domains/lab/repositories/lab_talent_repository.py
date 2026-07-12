@@ -108,6 +108,50 @@ class LabTalentRepository:
         await self.session.flush()
         return inserted
 
+    async def list_labs_with_talents(
+        self, *, preview_limit: int = 6
+    ) -> list[dict[str, Any]]:
+        """Return parent labs ordered by headcount, each with a talent preview."""
+        base_filter = LabTalent.is_visible.is_(True)
+
+        lab_result = await self.session.execute(
+            select(LabTalent.parent_lab.label("name"), func.count().label("count"))
+            .where(base_filter)
+            .group_by(LabTalent.parent_lab)
+            .order_by(func.count().desc())
+        )
+        labs = [{"name": row.name, "count": row.count} for row in lab_result.all()]
+
+        for lab in labs:
+            talent_result = await self.session.execute(
+                select(LabTalent)
+                .where(base_filter, LabTalent.parent_lab == lab["name"])
+                .order_by(LabTalent.created_at.desc())
+                .limit(preview_limit)
+            )
+            talents = talent_result.scalars().all()
+            lab["talents"] = [t.to_summary_dict() for t in talents]
+            # Use the first talent's lab_logo_url as the lab's logo.
+            for t in talents:
+                if t.lab_logo_url:
+                    lab["logo_url"] = t.lab_logo_url
+                    break
+
+            # Role distribution for the mini composition bar (all members)
+            role_result = await self.session.execute(
+                select(
+                    LabTalent.role_type.label("role"),
+                    func.count().label("count"),
+                )
+                .where(base_filter, LabTalent.parent_lab == lab["name"])
+                .group_by(LabTalent.role_type)
+            )
+            lab["role_distribution"] = {
+                row.role: row.count for row in role_result.all()
+            }
+
+        return labs
+
     async def get_stats(self) -> dict[str, Any]:
         """Compute overview statistics."""
         base_filter = LabTalent.is_visible.is_(True)

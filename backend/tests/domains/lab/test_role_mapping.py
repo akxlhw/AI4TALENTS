@@ -68,9 +68,9 @@ class TestMapRole:
         """
         assert map_role("Graduate Student") == ("student", None)
 
-    def test_alumni_maps_to_unknown(self):
-        assert map_role("Alumni") == ("unknown", None)
-        assert map_role("Former Members") == ("unknown", None)
+    def test_alumni_maps_to_alumni(self):
+        assert map_role("Alumni") == ("alumni", None)
+        assert map_role("Former Members") == ("alumni", None)
 
     def test_unknown_section_falls_back(self):
         assert map_role("Visitors") == ("unknown", None)
