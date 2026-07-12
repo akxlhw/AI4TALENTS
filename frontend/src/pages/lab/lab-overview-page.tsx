@@ -1,14 +1,12 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Row, Col, Card, Tag, Typography } from 'antd'
-import { UserOutlined, TeamOutlined } from '@ant-design/icons'
-import { useLabStats } from '../../hooks/useLabQueries'
+import { Row, Col, Card, Tag, Typography, Spin } from 'antd'
+import { useLabStats, useLabList } from '../../hooks/useLabQueries'
 import { applyDomainCssVars } from '../../theme'
-import LabIcon from '../../components/lab-icon'
 import LabHero from './components/lab-hero'
-import LabStatCard from './components/lab-stat-card'
 import LabDistributionChart from './components/lab-distribution-chart'
 import RoleDistributionChart from './components/role-distribution-chart'
+import LabCard from './components/lab-card'
 import PageSkeleton from '../../components/PageSkeleton'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import { useAuth } from '../../contexts/AuthContext'
@@ -19,6 +17,7 @@ const LabOverviewPage: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { data: stats, isLoading, error, refetch } = useLabStats()
+  const { data: labs, isLoading: labsLoading, error: labsError } = useLabList()
 
   useEffect(() => {
     applyDomainCssVars('lab')
@@ -63,25 +62,29 @@ const LabOverviewPage: React.FC = () => {
           minHeight: 'calc(100vh - 300px)',
         }}
       >
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={8}>
-            <LabStatCard title="人才总数" value={stats.total_talents} icon={<UserOutlined />} />
-          </Col>
-          <Col xs={24} sm={8}>
-            <LabStatCard
-              title="顶级实验室"
-              value={stats.total_parent_labs}
-              icon={<LabIcon style={{ fontSize: 32 }} />}
-            />
-          </Col>
-          <Col xs={24} sm={8}>
-            <LabStatCard
-              title="子实验室/研究组"
-              value={stats.total_sub_labs}
-              icon={<TeamOutlined />}
-            />
-          </Col>
-        </Row>
+        <Card
+          title="收录实验室"
+          style={{ borderRadius: 12, marginBottom: 24 }}
+          bodyStyle={{ padding: 20 }}
+        >
+          <Spin spinning={labsLoading}>
+            {labsError ? (
+              <EmptyPlaceholder
+                title="加载失败"
+                description={labsError.message || '请稍后重试'}
+                action={{ label: '重试', onClick: () => window.location.reload() }}
+              />
+            ) : (
+              <Row gutter={[16, 16]}>
+                {labs?.map(lab => (
+                  <Col key={lab.name} xs={24} sm={12} lg={8} xl={6}>
+                    <LabCard lab={lab} />
+                  </Col>
+                ))}
+              </Row>
+            )}
+          </Spin>
+        </Card>
 
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
