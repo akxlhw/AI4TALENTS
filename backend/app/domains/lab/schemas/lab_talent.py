@@ -50,6 +50,20 @@ class LabWithTalents(BaseModel):
     role_distribution: dict[str, int] = Field(default_factory=dict)
 
 
+class LabProfileResponse(BaseModel):
+    """Lab profile with metadata and aggregated stats for the search banner."""
+
+    parent_lab: str
+    description: str | None = None
+    research_focus: str | None = None
+    research_directions: list[str] = Field(default_factory=list)
+    homepage: str | None = None
+    logo_url: str | None = None
+    total_talents: int = 0
+    role_distribution: dict[str, int] = Field(default_factory=dict)
+    sub_labs: list[str] = Field(default_factory=list)
+
+
 class LabStatsResponse(BaseModel):
     """Overview statistics for the lab talent library."""
 

@@ -6,7 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
 from app.domains.lab.repositories.lab_talent_repository import LabTalentRepository
-from app.domains.lab.schemas.lab_talent import LabTalentDetail, LabTalentSummary
+from app.domains.lab.schemas.lab_talent import (
+    LabProfileResponse,
+    LabTalentDetail,
+    LabTalentSummary,
+    LabWithTalents,
+)
 
 
 class LabTalentService:
@@ -52,3 +57,15 @@ class LabTalentService:
         if not talent:
             raise NotFoundError("LabTalent", talent_id)
         return LabTalentDetail(**talent.to_detail_dict())
+
+    async def list_labs(self, *, preview_limit: int = 6) -> list[LabWithTalents]:
+        """List parent labs with a preview of their talents."""
+        labs = await self.repo.list_labs_with_talents(preview_limit=preview_limit)
+        return [LabWithTalents(**lab) for lab in labs]
+
+    async def get_lab_profile(self, parent_lab: str) -> LabProfileResponse:
+        """Get lab profile (metadata + aggregated stats). Raises NotFoundError."""
+        profile = await self.repo.get_lab_profile(parent_lab)
+        if not profile:
+            raise NotFoundError("Lab", parent_lab)
+        return LabProfileResponse(**profile)

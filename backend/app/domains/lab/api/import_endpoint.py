@@ -69,7 +69,10 @@ async def _read_upload(file: UploadFile) -> tuple[str, str]:
     summary="Import lab talent JSONL (hermes push, API Key auth)",
 )
 async def import_lab_talents_push(
-    parent_lab: str = Form(..., description="Top-level lab name being replaced"),
+    parent_lab: str | None = Form(
+        None,
+        description="Top-level lab name being replaced (optional when JSONL contains a lab metadata header)",
+    ),
     file: UploadFile = File(..., description="JSONL file from ai-lab-talent-crawler"),
     session: AsyncSession = Depends(get_async_session),
     _caller: dict = Depends(require_lab_import_api_key),
@@ -80,7 +83,7 @@ async def import_lab_talents_push(
         raise HTTPException(status_code=400, detail=err)
 
     service = LabImportService(session)
-    return await service.import_jsonl(content, parent_lab)
+    return await service.import_jsonl(content, parent_lab or "")
 
 
 @router.post(
@@ -89,7 +92,10 @@ async def import_lab_talents_push(
     summary="Import lab talent JSONL (admin upload, super_admin)",
 )
 async def import_lab_talents_upload(
-    parent_lab: str = Form(..., description="Top-level lab name being replaced"),
+    parent_lab: str | None = Form(
+        None,
+        description="Top-level lab name being replaced (optional when JSONL contains a lab metadata header)",
+    ),
     file: UploadFile = File(..., description="JSONL file from ai-lab-talent-crawler"),
     session: AsyncSession = Depends(get_async_session),
     _admin: dict = Depends(require_super_admin),
@@ -100,4 +106,4 @@ async def import_lab_talents_upload(
         raise HTTPException(status_code=400, detail=err)
 
     service = LabImportService(session)
-    return await service.import_jsonl(content, parent_lab)
+    return await service.import_jsonl(content, parent_lab or "")

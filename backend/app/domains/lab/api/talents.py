@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.lab.schemas.lab_talent import LabTalentDetail, LabTalentSummary
+from app.domains.lab.schemas.lab_talent import (
+    LabProfileResponse,
+    LabTalentDetail,
+    LabTalentSummary,
+    LabWithTalents,
+)
 from app.domains.lab.services.lab_talent_service import LabTalentService
 from app.domains.shared.api.auth import get_current_user
 from app.domains.shared.schemas.common import PaginatedResponse
@@ -59,6 +64,35 @@ async def list_lab_talents(
         page_size=page_size,
     )
     return PaginatedResponse.create(items=items, total=total, page=page, page_size=page_size)
+
+
+@router.get(
+    "/labs",
+    response_model=list[LabWithTalents],
+    summary="List parent labs with talent previews",
+)
+async def list_lab_groups(
+    session: AsyncSession = Depends(get_async_session),
+    _user: dict = Depends(get_current_user),
+) -> list[LabWithTalents]:
+    """Return parent labs ordered by headcount, each with a preview of talents."""
+    service = LabTalentService(session)
+    return await service.list_labs(preview_limit=6)
+
+
+@router.get(
+    "/labs/{parent_lab}/profile",
+    response_model=LabProfileResponse,
+    summary="Get lab profile (metadata + aggregated stats)",
+)
+async def get_lab_profile(
+    parent_lab: str,
+    session: AsyncSession = Depends(get_async_session),
+    _user: dict = Depends(get_current_user),
+) -> LabProfileResponse:
+    """Return lab-level metadata and aggregated role/sub-lab stats."""
+    service = LabTalentService(session)
+    return await service.get_lab_profile(parent_lab)
 
 
 @router.get(

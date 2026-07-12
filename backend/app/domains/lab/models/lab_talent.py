@@ -46,6 +46,7 @@ class LabTalent(Base, TimestampMixin):
     parent_lab = Column(
         String(255), nullable=False, index=True
     )  # top-level lab (e.g. Stanford AI Lab)
+    lab_logo_url = Column(String(1000), nullable=True)  # copied from lab metadata header
 
     # Provenance
     source_url = Column(String(1000), nullable=True)
@@ -79,6 +80,8 @@ class LabTalent(Base, TimestampMixin):
             "cohort_year": self.cohort_year,
             "lab_name": self.lab_name,
             "parent_lab": self.parent_lab,
+            "lab_logo_url": self.lab_logo_url,
+            "photo_url": self.photo_url,
             "is_visible": self.is_visible,
         }
 
@@ -96,3 +99,26 @@ class LabTalent(Base, TimestampMixin):
             }
         )
         return data
+
+
+class LabInfo(Base, TimestampMixin):
+    """Lab-level metadata (one row per parent lab).
+
+    Populated from the ``type: lab`` header line in crawler JSONL output.
+    Stores description, research focus, homepage, logo etc. for display
+    on the search page context banner.
+    """
+
+    __tablename__ = "lab_info"
+
+    lab_info_id = Column(Integer, primary_key=True, autoincrement=True)
+    parent_lab = Column(String(255), nullable=False, unique=True, index=True)
+    lab_slug = Column(String(100), nullable=True, index=True)
+    description = Column(String(2000), nullable=True)
+    research_focus = Column(String(1000), nullable=True)
+    research_directions = Column(JSON, default=list)  # current_research_directions from crawler
+    homepage = Column(String(500), nullable=True)
+    logo_url = Column(String(1000), nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<LabInfo(parent_lab={self.parent_lab})>"

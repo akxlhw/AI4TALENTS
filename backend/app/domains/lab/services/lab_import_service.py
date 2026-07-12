@@ -107,6 +107,7 @@ class LabImportService:
         skip_reasons: list[SkipReason] = []
         resolved_parent_lab = parent_lab
         lab_logo_url: str | None = None
+        lab_metadata: dict[str, Any] | None = None
 
         for idx, raw_line in enumerate(lines, start=1):
             line = raw_line.strip()
@@ -127,6 +128,8 @@ class LabImportService:
                     resolved_parent_lab = record.get("lab_name") or record.get("name") or ""
                 if record.get("logo_url"):
                     lab_logo_url = record.get("logo_url")
+                # Capture lab metadata for lab_info upsert (done after the loop)
+                lab_metadata = record
                 continue
 
             if record_type != "person":
@@ -155,10 +158,14 @@ class LabImportService:
         deduped = list(seen.values())
 
         # Atomic replace: delete + insert in one transaction
-        # (the surrounding API endpoint does NOT auto-commit; we commit here)
         deleted = await self.repo.delete_by_parent_lab(resolved_parent_lab)
         await self.session.flush()
         inserted = await self.repo.bulk_insert(deduped)
+
+        # Upsert lab-level metadata (from the type:lab header line)
+        if lab_metadata and resolved_parent_lab:
+            await self._upsert_lab_info(lab_metadata, resolved_parent_lab)
+
         await self.session.commit()
 
         logger.info(
@@ -179,6 +186,36 @@ class LabImportService:
             inserted=inserted,
             skipped=len(skip_reasons),
             skip_reasons=skip_reasons[:50],  # cap reasons to avoid huge payloads
+        )
+
+    async def _upsert_lab_info(self, lab_record: dict[str, Any], parent_lab: str) -> None:
+        """Upsert lab-level metadata into lab_info table."""
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+        from app.domains.lab.models.lab_talent import LabInfo
+
+        values = {
+            "parent_lab": parent_lab,
+            "lab_slug": lab_record.get("lab_slug"),
+            "description": lab_record.get("description"),
+            "research_focus": lab_record.get("research_focus"),
+            "research_directions": lab_record.get("current_research_directions") or [],
+            "homepage": lab_record.get("homepage"),
+            "logo_url": lab_record.get("logo_url"),
+        }
+        stmt = pg_insert(LabInfo).values(values)
+        await self.session.execute(
+            stmt.on_conflict_do_update(
+                index_elements=["parent_lab"],
+                set_={
+                    "lab_slug": stmt.excluded.lab_slug,
+                    "description": stmt.excluded.description,
+                    "research_focus": stmt.excluded.research_focus,
+                    "research_directions": stmt.excluded.research_directions,
+                    "homepage": stmt.excluded.homepage,
+                    "logo_url": stmt.excluded.logo_url,
+                },
+            )
         )
 
     @staticmethod

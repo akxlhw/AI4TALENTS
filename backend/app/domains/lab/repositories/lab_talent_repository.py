@@ -108,9 +108,7 @@ class LabTalentRepository:
         await self.session.flush()
         return inserted
 
-    async def list_labs_with_talents(
-        self, *, preview_limit: int = 6
-    ) -> list[dict[str, Any]]:
+    async def list_labs_with_talents(self, *, preview_limit: int = 6) -> list[dict[str, Any]]:
         """Return parent labs ordered by headcount, each with a talent preview."""
         base_filter = LabTalent.is_visible.is_(True)
 
@@ -146,11 +144,51 @@ class LabTalentRepository:
                 .where(base_filter, LabTalent.parent_lab == lab["name"])
                 .group_by(LabTalent.role_type)
             )
-            lab["role_distribution"] = {
-                row.role: row.count for row in role_result.all()
-            }
+            lab["role_distribution"] = {row.role: row.count for row in role_result.all()}
 
         return labs
+
+    async def get_lab_profile(self, parent_lab: str) -> dict[str, Any] | None:
+        """Aggregate lab profile: metadata from lab_info + stats from lab_talent."""
+        from app.domains.lab.models.lab_talent import LabInfo
+
+        base_filter = LabTalent.is_visible.is_(True)
+
+        # Lab metadata
+        info_result = await self.session.execute(
+            select(LabInfo).where(LabInfo.parent_lab == parent_lab)
+        )
+        info = info_result.scalar_one_or_none()
+
+        # Role distribution
+        role_result = await self.session.execute(
+            select(LabTalent.role_type, func.count())
+            .where(base_filter, LabTalent.parent_lab == parent_lab)
+            .group_by(LabTalent.role_type)
+        )
+        role_dist = {row[0]: row[1] for row in role_result.all()}
+
+        # Sub-labs
+        sub_result = await self.session.execute(
+            select(func.distinct(LabTalent.lab_name)).where(
+                base_filter, LabTalent.parent_lab == parent_lab
+            )
+        )
+        sub_labs = [row[0] for row in sub_result.all() if row[0]]
+
+        total = sum(role_dist.values())
+
+        return {
+            "parent_lab": parent_lab,
+            "description": info.description if info else None,
+            "research_focus": info.research_focus if info else None,
+            "research_directions": (info.research_directions if info else []) or [],
+            "homepage": info.homepage if info else None,
+            "logo_url": info.logo_url if info else None,
+            "total_talents": total,
+            "role_distribution": role_dist,
+            "sub_labs": sub_labs,
+        }
 
     async def get_stats(self) -> dict[str, Any]:
         """Compute overview statistics."""
