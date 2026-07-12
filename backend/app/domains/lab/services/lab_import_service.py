@@ -8,8 +8,10 @@ upload) share this single service.
 from __future__ import annotations
 
 import hashlib
+import html
 import json
 import logging
+import re
 from datetime import datetime
 from typing import Any
 
@@ -20,6 +22,65 @@ from app.domains.lab.repositories.lab_talent_repository import LabTalentReposito
 from app.domains.lab.schemas.lab_talent import LabImportReport, SkipReason
 
 logger = logging.getLogger(__name__)
+
+# Patterns for cleaning research_areas extracted from lab websites
+_HTML_ENTITY_RE = re.compile(r"&[a-zA-Z]+;|&#\d+;")
+_PERSON_NAME_RE = re.compile(r"^[A-Z][a-z]+[-\s][A-Z][a-z]+")  # e.g. "Jun-Peng Jiang"
+_MULTILINE_SENTENCE_RE = re.compile(r"[.!?]\s+[A-Z]")  # sentence boundary inside one item
+# Fragments that are clearly not research areas
+_NOISE_FRAGMENTS = {
+    "more specifically",
+    "i am interested in",
+    "text",
+    "&nbsp",
+}
+
+
+def _clean_research_area(raw: str) -> str | None:
+    """Clean a single research_areas item extracted from a lab website.
+
+    Returns None if the item is not a valid research area (HTML entity,
+    sentence fragment, person name, or too short).
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+    # Decode HTML entities and strip residual tags
+    cleaned = html.unescape(raw).strip()
+    cleaned = _HTML_ENTITY_RE.sub("", cleaned).strip()
+    cleaned = cleaned.replace("&nbsp", "").strip()
+    # Remove leading punctuation/colons
+    cleaned = cleaned.lstrip(":.,;- ").strip()
+    if not cleaned:
+        return None
+    # Skip if it's a known noise fragment
+    lower = cleaned.lower()
+    if lower in _NOISE_FRAGMENTS:
+        return None
+    if any(lower.startswith(nf) for nf in _NOISE_FRAGMENTS):
+        return None
+    # Skip person names (e.g. "Jun-Peng Jiang", "Si-Yang Liu")
+    if _PERSON_NAME_RE.match(cleaned):
+        return None
+    # Skip if it's a full sentence (contains sentence boundary or > 80 chars)
+    if len(cleaned) > 80:
+        return None
+    if _MULTILINE_SENTENCE_RE.search(cleaned):
+        return None
+    return cleaned
+
+
+def _clean_research_areas(raw_areas: list[Any] | None) -> list[str]:
+    """Clean and deduplicate a list of research_areas items."""
+    if not raw_areas:
+        return []
+    result: list[str] = []
+    seen: set[str] = set()
+    for item in raw_areas:
+        cleaned = _clean_research_area(str(item) if item else "")
+        if cleaned and cleaned.lower() not in seen:
+            seen.add(cleaned.lower())
+            result.append(cleaned)
+    return result
 
 
 class LabImportService:
@@ -35,12 +96,17 @@ class LabImportService:
         Strategy: per-lab full replace (DELETE existing parent_lab rows, then
         INSERT parsed rows) within a single transaction — atomic, no partial
         state on failure.
+
+        Supports the v2 JSONL format where the first line is a ``type: lab``
+        metadata record and subsequent lines are ``type: person`` talent records.
         """
         lines = jsonl_content.splitlines()
         total_lines = len(lines)
 
         parsed: list[dict[str, Any]] = []
         skip_reasons: list[SkipReason] = []
+        resolved_parent_lab = parent_lab
+        lab_logo_url: str | None = None
 
         for idx, raw_line in enumerate(lines, start=1):
             line = raw_line.strip()
@@ -53,44 +119,72 @@ class LabImportService:
                 skip_reasons.append(SkipReason(line=idx, reason="invalid JSON"))
                 continue
 
+            record_type = (record.get("type") or "person").lower()
+
+            if record_type == "lab":
+                # Metadata header: derive parent_lab and lab logo if available.
+                if not resolved_parent_lab:
+                    resolved_parent_lab = record.get("lab_name") or record.get("name") or ""
+                if record.get("logo_url"):
+                    lab_logo_url = record.get("logo_url")
+                continue
+
+            if record_type != "person":
+                skip_reasons.append(SkipReason(line=idx, reason=f"unknown type: {record_type}"))
+                continue
+
             if not record.get("name"):
                 skip_reasons.append(SkipReason(line=idx, reason="missing name"))
                 continue
-            if not record.get("parent_lab"):
+            if not resolved_parent_lab and not record.get("parent_lab"):
                 skip_reasons.append(SkipReason(line=idx, reason="missing parent_lab"))
                 continue
 
-            mapped = self._map_record(record, parent_lab)
+            mapped = self._map_record(record, resolved_parent_lab, lab_logo_url)
             if mapped is not None:
                 parsed.append(mapped)
 
+        if not resolved_parent_lab:
+            resolved_parent_lab = "unknown"
+
+        # Deduplicate within the incoming batch so duplicate JSONL lines do not
+        # violate the unique constraint. Keep the last occurrence.
+        seen: dict[str, dict[str, Any]] = {}
+        for row in parsed:
+            seen[row["dedup_hash"]] = row
+        deduped = list(seen.values())
+
         # Atomic replace: delete + insert in one transaction
         # (the surrounding API endpoint does NOT auto-commit; we commit here)
-        deleted = await self.repo.delete_by_parent_lab(parent_lab)
-        inserted = await self.repo.bulk_insert(parsed)
+        deleted = await self.repo.delete_by_parent_lab(resolved_parent_lab)
+        await self.session.flush()
+        inserted = await self.repo.bulk_insert(deduped)
         await self.session.commit()
 
         logger.info(
-            "[LabImport] parent_lab=%s lines=%d parsed=%d deleted=%d inserted=%d skipped=%d",
-            parent_lab,
+            "[LabImport] parent_lab=%s lines=%d parsed=%d deduped=%d deleted=%d inserted=%d skipped=%d",
+            resolved_parent_lab,
             total_lines,
             len(parsed),
+            len(deduped),
             deleted,
             inserted,
             len(skip_reasons),
         )
 
         return LabImportReport(
-            parent_lab=parent_lab,
+            parent_lab=resolved_parent_lab,
             total_lines=total_lines,
-            total_parsed=len(parsed),
+            total_parsed=len(deduped),
             inserted=inserted,
             skipped=len(skip_reasons),
             skip_reasons=skip_reasons[:50],  # cap reasons to avoid huge payloads
         )
 
     @staticmethod
-    def _map_record(record: dict[str, Any], fallback_parent_lab: str) -> dict[str, Any] | None:
+    def _map_record(
+        record: dict[str, Any], fallback_parent_lab: str, lab_logo_url: str | None = None
+    ) -> dict[str, Any] | None:
         """Map a JSONL record to a lab_talent row dict.
 
         Field mapping per docs/lab-talent-v1.0-design.md §3.1.
@@ -130,11 +224,12 @@ class LabImportService:
             "email": record.get("email"),
             "photo_url": record.get("photo_url"),
             "department": record.get("department"),
-            "research_areas": record.get("research_areas") or [],
+            "research_areas": _clean_research_areas(record.get("research_areas")),
             "cohort_year": record.get("cohort_year"),
             "cohort_source": record.get("cohort_source"),
             "lab_name": lab_name,
             "parent_lab": parent_lab,
+            "lab_logo_url": record.get("lab_logo_url") or lab_logo_url,
             "source_url": record.get("source_url"),
             "source_detail_url": record.get("source_detail_url"),
             "collected_at": collected_at,
