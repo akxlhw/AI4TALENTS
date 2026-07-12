@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Row, Col, Pagination, Typography, Spin, Breadcrumb } from 'antd'
-import { Link } from 'react-router-dom'
-import { useLabTalents } from '../../hooks/useLabQueries'
+import { useSearchParams, Link } from 'react-router-dom'
+import { Row, Col, Pagination, Typography, Spin, Breadcrumb, Tag } from 'antd'
+import { HomeOutlined } from '@ant-design/icons'
+import { useLabTalents, useLabProfile } from '../../hooks/useLabQueries'
 import { useLabSearchStore } from '../../stores/labSearchStore'
 import { applyDomainCssVars } from '../../theme'
+import LabIcon from '../../components/lab-icon'
 import LabSearchFilter from './components/lab-search-filter'
 import LabTalentCard from './components/lab-talent-card'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
@@ -45,6 +46,8 @@ const LabSearchPage: React.FC = () => {
     setSearchParams,
   ])
 
+  const { data: profile } = useLabProfile(state.parentLab || undefined)
+
   const { data, isLoading, error, refetch } = useLabTalents({
     keyword: state.keyword || undefined,
     parent_lab: state.parentLab || undefined,
@@ -72,16 +75,16 @@ const LabSearchPage: React.FC = () => {
 
   return (
     <div style={{ paddingTop: 64, background: 'var(--color-bg-gray-light)', minHeight: '100vh' }}>
-      {/* Context header — show which lab we're browsing */}
+      {/* Context header — show lab profile when browsing a specific lab */}
       {state.parentLab && (
         <div
           style={{
             background: 'var(--domain-gradient, linear-gradient(135deg,#0D2B4E,#0EA5E9))',
-            padding: '20px 24px 16px',
+            padding: '20px 24px 20px',
           }}
         >
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <Breadcrumb style={{ marginBottom: 8 }}>
+            <Breadcrumb style={{ marginBottom: 12 }}>
               <Breadcrumb.Item>
                 <Link to="/lab" style={{ color: 'rgba(255,255,255,0.7)' }}>
                   AI Native
@@ -91,22 +94,112 @@ const LabSearchPage: React.FC = () => {
                 <span style={{ color: '#fff' }}>{state.parentLab}</span>
               </Breadcrumb.Item>
             </Breadcrumb>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 8 }}>
-              <Text
+
+            {/* Lab identity row */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+              <div
                 style={{
-                  color: '#fff',
-                  fontSize: 22,
-                  fontWeight: 700,
+                  width: 56,
+                  height: 56,
+                  borderRadius: 14,
+                  background: 'rgba(255,255,255,0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  overflow: 'hidden',
                 }}
               >
-                {state.parentLab}
-              </Text>
-              {!isLoading && (
-                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
-                  · 共 {total} 人
-                </Text>
-              )}
+                {profile?.logo_url ? (
+                  <img
+                    src={profile.logo_url}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <LabIcon style={{ fontSize: 28, color: '#fff' }} />
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                  <Text style={{ color: '#fff', fontSize: 24, fontWeight: 700 }}>
+                    {state.parentLab}
+                  </Text>
+                  {!isLoading && (
+                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
+                      共 {total} 人
+                    </Text>
+                  )}
+                  {profile?.homepage && (
+                    <a
+                      href={profile.homepage}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: 'rgba(255,255,255,0.8)',
+                        fontSize: 13,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <HomeOutlined /> 官网
+                    </a>
+                  )}
+                </div>
+
+                {/* Description */}
+                {profile?.description && (
+                  <Text
+                    style={{
+                      color: 'rgba(255,255,255,0.85)',
+                      fontSize: 13,
+                      display: 'block',
+                      marginTop: 6,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {profile.description}
+                  </Text>
+                )}
+
+                {/* Research focus */}
+                {profile?.research_focus && (
+                  <Text
+                    style={{
+                      color: 'rgba(255,255,255,0.65)',
+                      fontSize: 12,
+                      display: 'block',
+                      marginTop: 4,
+                    }}
+                  >
+                    研究领域：{profile.research_focus}
+                  </Text>
+                )}
+              </div>
             </div>
+
+            {/* Research directions as tags */}
+            {profile?.research_directions && profile.research_directions.length > 0 && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
+                {profile.research_directions.slice(0, 10).map(dir => (
+                  <Tag
+                    key={dir}
+                    style={{
+                      background: 'rgba(255,255,255,0.15)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: 12,
+                      color: 'rgba(255,255,255,0.9)',
+                      fontSize: 11,
+                      margin: 0,
+                      padding: '2px 10px',
+                    }}
+                  >
+                    {dir}
+                  </Tag>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

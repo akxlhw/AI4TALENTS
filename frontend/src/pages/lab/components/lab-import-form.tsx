@@ -60,14 +60,13 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
       message.warning('请先选择 JSONL 文件')
       return
     }
-    if (!parentLab.trim()) {
-      message.warning('请填写实验室名称')
-      return
-    }
     setUploading(true)
     setReport(null)
     try {
-      const res = await api.lab.importUpload(selectedFile, parentLab.trim())
+      const res = await api.lab.importUpload(
+        selectedFile,
+        parentLab.trim() || undefined
+      )
       setReport(res.data as ImportReport)
       setSelectedFile(null)
       message.success(`导入完成：${res.data.inserted} 人入库，${res.data.skipped} 行跳过`)
@@ -93,13 +92,13 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
         <div style={{ marginTop: 16 }}>
           <Text strong>实验室名称（parent_lab）</Text>
           <Input
-            placeholder="如：Stanford AI Lab"
+            placeholder="如：南京大学LAMDA实验室；若 JSONL 首行包含 lab 元数据则可留空"
             value={parentLab}
             onChange={e => setParentLab(e.target.value)}
             style={{ marginTop: 4, maxWidth: 400 }}
           />
           <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
-            必填，对应 labs.yaml 里的实验室 name；本次导入会替换该实验室的全部人才数据
+            可选。当 JSONL 第一行包含 type=lab 的实验室元数据时会自动读取；填写时优先使用此处值
           </Text>
         </div>
 
@@ -125,7 +124,7 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
             icon={<UploadOutlined />}
             loading={uploading}
             onClick={handleImport}
-            disabled={!selectedFile || !parentLab.trim()}
+            disabled={!selectedFile}
           >
             开始导入
           </Button>

@@ -1,5 +1,12 @@
 import { apiClient } from './client'
-import type { LabStats, LabTalent, LabTalentDetail, PaginatedResponse } from '../../types'
+import type {
+  LabProfile,
+  LabStats,
+  LabTalent,
+  LabTalentDetail,
+  LabWithTalents,
+  PaginatedResponse,
+} from '../../types'
 
 export interface LabTalentSearchParams {
   keyword?: string
@@ -25,15 +32,22 @@ export interface LabImportReport {
 export const labApi = {
   getStats: () => apiClient.get<LabStats>('/lab/stats'),
 
+  listLabs: () => apiClient.get<LabWithTalents[]>('/lab/labs'),
+
+  getLabProfile: (parentLab: string) =>
+    apiClient.get<LabProfile>(`/lab/labs/${encodeURIComponent(parentLab)}/profile`),
+
   listTalents: (params?: LabTalentSearchParams) =>
     apiClient.get<PaginatedResponse<LabTalent>>('/lab/talents', { params }),
 
   getTalent: (id: number) => apiClient.get<LabTalentDetail>(`/lab/talents/${id}`),
 
-  importUpload: (file: File, parentLab: string) => {
+  importUpload: (file: File, parentLab?: string) => {
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('parent_lab', parentLab)
+    if (parentLab) {
+      formData.append('parent_lab', parentLab)
+    }
     return apiClient.post<LabImportReport>('/lab/import/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })

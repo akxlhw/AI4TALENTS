@@ -20,6 +20,21 @@ export function useLabStats() {
 }
 
 /**
+ * Get parent labs with a preview of their talents.
+ * Cached for 3 minutes.
+ */
+export function useLabList() {
+  return useQuery({
+    queryKey: queryKeys.lab.labs,
+    queryFn: async () => {
+      const response = await api.lab.listLabs()
+      return response.data
+    },
+    staleTime: staleTimes.list,
+  })
+}
+
+/**
  * Get lab talent list with filtering and pagination.
  * Cached for 3 minutes; keeps previous data while fetching new page.
  */
@@ -49,6 +64,26 @@ export function useLabTalent(id?: number) {
     },
     staleTime: staleTimes.detail,
     enabled: !!id,
+    retry: (failureCount, error: AxiosError) => {
+      if (error.response?.status === 404) return false
+      return failureCount < 1
+    },
+  })
+}
+
+/**
+ * Get lab profile (metadata + aggregated stats).
+ * Cached for 5 minutes; skips retry on 404.
+ */
+export function useLabProfile(parentLab?: string) {
+  return useQuery({
+    queryKey: ['lab', 'profile', parentLab],
+    queryFn: async () => {
+      const response = await api.lab.getLabProfile(parentLab!)
+      return response.data
+    },
+    staleTime: staleTimes.detail,
+    enabled: !!parentLab,
     retry: (failureCount, error: AxiosError) => {
       if (error.response?.status === 404) return false
       return failureCount < 1

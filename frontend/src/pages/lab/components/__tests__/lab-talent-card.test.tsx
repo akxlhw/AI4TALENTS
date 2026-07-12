@@ -12,11 +12,14 @@ const mockTalent: LabTalent = {
   academic_level: 'phd',
   current_title: '南京大学特聘教授',
   homepage: null,
+  email: null,
+  photo_url: null,
   department: null,
   research_areas: ['machine learning', 'data mining'],
   cohort_year: null,
   lab_name: 'LAMDA',
   parent_lab: '南京大学LAMDA实验室',
+  lab_logo_url: null,
 }
 
 describe('LabTalentCard', () => {

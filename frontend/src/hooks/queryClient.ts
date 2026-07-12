@@ -92,6 +92,7 @@ export const queryKeys = {
   // Lab
   lab: {
     stats: ['lab', 'stats'] as const,
+    labs: ['lab', 'labs'] as const,
     talents: (params?: object) => ['lab', 'talents', params] as const,
     talent: (id: number) => ['lab', 'talent', id] as const,
   },

@@ -585,6 +585,18 @@ export interface LabWithTalents {
   role_distribution: Record<string, number>
 }
 
+export interface LabProfile {
+  parent_lab: string
+  description: string | null
+  research_focus: string | null
+  research_directions: string[]
+  homepage: string | null
+  logo_url: string | null
+  total_talents: number
+  role_distribution: Record<string, number>
+  sub_labs: string[]
+}
+
 export interface LabStats {
   total_talents: number
   total_parent_labs: number
