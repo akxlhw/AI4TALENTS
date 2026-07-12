@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Dropdown, Avatar, Space, Typography, Tag, Tooltip, Button } from 'antd'
 import {
   UserOutlined,
@@ -9,7 +9,6 @@ import {
   StarOutlined,
   BookOutlined,
   CodeOutlined,
-  ExperimentOutlined,
   TrophyOutlined,
   BuildOutlined,
   LockOutlined,
@@ -18,6 +17,7 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import { useDomainStore } from '../stores/domainStore'
 import { domainThemes, semanticColors, type Domain } from '../theme'
+import LabIcon from '../components/lab-icon'
 import Footer from '../components/Footer'
 
 const { Text } = Typography
@@ -31,13 +31,20 @@ interface DomainNavItem {
 const domainNavItems: DomainNavItem[] = [
   { key: 'academic', icon: <BookOutlined /> },
   { key: 'opensource', icon: <CodeOutlined /> },
-  { key: 'lab', icon: <ExperimentOutlined /> },
+  { key: 'lab', icon: <LabIcon style={{ fontSize: 18 }} /> },
   { key: 'competition', icon: <TrophyOutlined />, soon: true },
   { key: 'industry', icon: <BuildOutlined />, soon: true },
 ]
 
+const DOMAIN_PATH_PREFIXES: Record<string, Domain> = {
+  '/academic': 'academic',
+  '/opensource': 'opensource',
+  '/lab': 'lab',
+}
+
 const MainLayout: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, logout } = useAuth()
   const { currentDomain, setDomain, isDomainAvailable } = useDomainStore()
   const [scrolled, setScrolled] = useState(false)
@@ -47,6 +54,18 @@ const MainLayout: React.FC = () => {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  useEffect(() => {
+    const path = location.pathname
+    for (const [prefix, domain] of Object.entries(DOMAIN_PATH_PREFIXES)) {
+      if (path === prefix || path.startsWith(`${prefix}/`)) {
+        if (currentDomain !== domain) {
+          setDomain(domain)
+        }
+        break
+      }
+    }
+  }, [location.pathname, currentDomain, setDomain])
 
   const handleLogout = async () => {
     await logout()
@@ -91,7 +110,13 @@ const MainLayout: React.FC = () => {
   const handleDomainSwitch = (domain: Domain) => {
     if (isDomainAvailable(domain)) {
       setDomain(domain)
-      navigate('/')
+      if (domain === 'lab') {
+        navigate('/lab')
+      } else if (domain === 'opensource') {
+        navigate('/opensource')
+      } else {
+        navigate('/')
+      }
     } else {
       navigate(`/demo-${domain}`)
     }

@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Row, Col, Card, Tag, Typography } from 'antd'
-import { UserOutlined, ExperimentOutlined, TeamOutlined } from '@ant-design/icons'
+import { UserOutlined, TeamOutlined } from '@ant-design/icons'
 import { useLabStats } from '../../hooks/useLabQueries'
 import { applyDomainCssVars } from '../../theme'
+import LabIcon from '../../components/lab-icon'
 import LabHero from './components/lab-hero'
 import LabStatCard from './components/lab-stat-card'
 import LabDistributionChart from './components/lab-distribution-chart'
@@ -53,7 +54,7 @@ const LabOverviewPage: React.FC = () => {
   const labData = stats.parent_lab_distribution.map(l => ({ name: l.name, value: l.count }))
 
   return (
-    <div>
+    <div style={{ paddingTop: 64 }}>
       <LabHero />
       <div
         style={{
@@ -70,7 +71,7 @@ const LabOverviewPage: React.FC = () => {
             <LabStatCard
               title="顶级实验室"
               value={stats.total_parent_labs}
-              icon={<ExperimentOutlined />}
+              icon={<LabIcon style={{ fontSize: 32 }} />}
             />
           </Col>
           <Col xs={24} sm={8}>

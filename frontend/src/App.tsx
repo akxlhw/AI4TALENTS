@@ -154,6 +154,7 @@ function AppRoutes() {
         <Route path="opensource/repos" element={<RepoListPage />} />
         <Route path="opensource/repos/:owner/:name" element={<RepoDetailPage />} />
         <Route path="lab" element={<LabOverviewPage />} />
+        <Route path="lab/overview" element={<Navigate to="/lab" replace />} />
         <Route path="lab/search" element={<LabSearchPage />} />
         <Route path="lab/talents/:talentId" element={<LabTalentDetailPage />} />
         <Route

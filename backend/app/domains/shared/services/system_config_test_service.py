@@ -229,6 +229,7 @@ async def _test_chat_model(
             error_data.get("error", {}).get("message", "")
             or error_data.get("message", "")
             or error_data.get("error_message", "")
+            or error_data.get("base_resp", {}).get("status_msg", "")
         )
 
         logger.warning(
@@ -240,10 +241,12 @@ async def _test_chat_model(
             response.status_code == 401
             or "unauthorized" in error_msg.lower()
             or "invalid" in error_msg.lower()
+            or "login fail" in error_msg.lower()
         ):
             return TestLLMResponse(
                 success=False,
-                message="API Key 无效或已过期",
+                message=f"API Key 无效或认证失败: {error_msg or '请检查 API Key 是否正确'}".strip(),
+                details={"error": error_msg} if error_msg else None,
             )
 
         # Model not found

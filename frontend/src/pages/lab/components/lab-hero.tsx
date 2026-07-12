@@ -1,14 +1,23 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Typography, Space } from 'antd'
-import { ExperimentOutlined, ArrowRightOutlined, UploadOutlined } from '@ant-design/icons'
+import { Button, Typography, Space, Input } from 'antd'
+import { ArrowRightOutlined, UploadOutlined, SearchOutlined } from '@ant-design/icons'
 import { useAuth } from '../../../contexts/AuthContext'
 
 const { Title, Paragraph } = Typography
+const { Search } = Input
 
 const LabHero: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isAdmin = user?.role === 'super_admin'
+  const [searchValue, setSearchValue] = useState('')
+
+  const handleSearch = (value: string) => {
+    if (value.trim()) {
+      navigate(`/lab/search?keyword=${encodeURIComponent(value.trim())}`)
+    }
+  }
 
   return (
     <div
@@ -31,15 +40,46 @@ const LabHero: React.FC = () => {
           backgroundSize: '28px 28px',
         }}
       />
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 800, margin: '0 auto' }}>
-        <Title level={1} style={{ color: '#fff', margin: 0, marginBottom: 12, fontWeight: 800 }}>
-          <ExperimentOutlined style={{ marginRight: 12 }} />
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 880, margin: '0 auto' }}>
+        <Title
+          level={1}
+          style={{
+            margin: 0,
+            marginBottom: 16,
+            color: '#fff',
+            fontWeight: 800,
+            fontSize: 46,
+            letterSpacing: '-0.5px',
+          }}
+        >
           AI 实验室人才库
         </Title>
-        <Paragraph style={{ color: 'rgba(255,255,255,0.85)', fontSize: 16, marginBottom: 32 }}>
-          汇聚全球顶尖 AI 实验室的研究人才
+        <Paragraph
+          style={{
+            margin: 0,
+            marginBottom: 40,
+            color: 'rgba(255,255,255,0.85)',
+            fontSize: 16,
+          }}
+        >
+          基于全球 AI 实验室公开信息的人才发现平台 · 汇聚连接顶尖 AI 原生人才
         </Paragraph>
-        <Space size={16}>
+
+        <Search
+          placeholder="输入姓名、实验室、研究方向等关键词搜索人才..."
+          enterButton={
+            <span style={{ fontWeight: 500 }}>
+              <SearchOutlined /> 搜索
+            </span>
+          }
+          size="large"
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          onSearch={handleSearch}
+          style={{ width: '100%', margin: '0 auto' }}
+        />
+
+        <Space size={16} style={{ marginTop: 24 }}>
           <Button
             type="primary"
             size="large"

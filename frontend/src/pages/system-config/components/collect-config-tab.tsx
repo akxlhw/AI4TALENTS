@@ -37,8 +37,8 @@ import {
   CloudUploadOutlined,
   CheckCircleOutlined,
   GithubOutlined,
-  ExperimentOutlined,
 } from '@ant-design/icons'
+import LabIcon from '../../../components/lab-icon'
 import { api } from '../../../services/api'
 import { queryClient, queryKeys } from '../../../hooks/queryClient'
 import {
@@ -58,7 +58,11 @@ import LabImportTab from './lab-import-tab'
 
 const { Text } = Typography
 
-const CollectConfigTab: React.FC = () => {
+interface CollectConfigTabProps {
+  initialSubTab?: string
+}
+
+const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) => {
   // ========== State ==========
   const [techDomains, setTechDomains] = useState<TechDomainCollect[]>([])
   const [venueModalVisible, setVenueModalVisible] = useState(false)
@@ -75,7 +79,7 @@ const CollectConfigTab: React.FC = () => {
   const [taskDetailVisible, setTaskDetailVisible] = useState(false)
   const [selectedTask, setSelectedTask] = useState<CollectTask | null>(null)
   const [loading, setLoading] = useState(false)
-  const [collectSubTab, setCollectSubTab] = useState('tech-domains')
+  const [collectSubTab, setCollectSubTab] = useState(initialSubTab ?? 'tech-domains')
   const runningTaskIdsRef = useRef<Set<number>>(new Set())
   const [collabSyncStatus, setCollabSyncStatus] = useState<{
     status: string
@@ -785,7 +789,7 @@ const CollectConfigTab: React.FC = () => {
           },
           {
             key: 'lab-import',
-            label: <span><ExperimentOutlined /> AI实验室人才导入</span>,
+            label: <span><LabIcon style={{ fontSize: 16, marginRight: 4 }} /> AI实验室人才导入</span>,
             children: <LabImportTab />,
           },
           {

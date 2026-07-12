@@ -102,7 +102,17 @@ const LabTalentDetailPage: React.FC = () => {
                 <Title level={4}>研究方向</Title>
                 <Space size={8} wrap>
                   {talent.research_areas.map(a => (
-                    <Tag key={a} color="geekblue">
+                    <Tag
+                      key={a}
+                      color="geekblue"
+                      style={{
+                        maxWidth: 400,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title={a}
+                    >
                       {a}
                     </Tag>
                   ))}

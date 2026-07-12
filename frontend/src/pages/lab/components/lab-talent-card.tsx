@@ -83,7 +83,18 @@ const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
         {talent.research_areas && talent.research_areas.length > 0 && (
           <Space size={4} wrap style={{ minHeight: 44 }}>
             {talent.research_areas.slice(0, 4).map(area => (
-              <Tag key={area} color="geekblue" style={{ fontSize: 11, maxWidth: 160 }}>
+              <Tag
+                key={area}
+                color="geekblue"
+                style={{
+                  fontSize: 11,
+                  maxWidth: 160,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={decodeHtmlEntities(area)}
+              >
                 {decodeHtmlEntities(area)}
               </Tag>
             ))}

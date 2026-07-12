@@ -1,11 +1,7 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Tabs, Typography } from 'antd'
-import {
-  ApiOutlined,
-  ThunderboltOutlined,
-  GlobalOutlined,
-  GithubOutlined,
-} from '@ant-design/icons'
+import { ApiOutlined, ThunderboltOutlined, GlobalOutlined, GithubOutlined } from '@ant-design/icons'
+import { useSearchParams } from 'react-router-dom'
 import CollectConfigTab from './components/collect-config-tab'
 import LLMConfigTab from './components/llm-config-tab'
 import ProxyConfigTab from './components/proxy-config-tab'
@@ -15,8 +11,40 @@ const { Title } = Typography
 
 type TabKey = 'collect' | 'llm' | 'proxy' | 'github'
 
+const MAIN_TAB_KEYS: TabKey[] = ['collect', 'llm', 'proxy', 'github']
+
+const COLLECT_SUB_TAB_KEYS = [
+  'tech-domains',
+  'tasks',
+  'collaborations',
+  'genealogy',
+  'opensource-repos',
+  'opensource-tasks',
+  'lab-import',
+  'embeddings',
+]
+
 const SystemConfigPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabKey>('collect')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const { initialActiveTab, initialCollectSubTab } = useMemo(() => {
+    const tabParam = searchParams.get('tab') || ''
+    if ((MAIN_TAB_KEYS as string[]).includes(tabParam)) {
+      return { initialActiveTab: tabParam as TabKey, initialCollectSubTab: undefined }
+    }
+    if (COLLECT_SUB_TAB_KEYS.includes(tabParam)) {
+      return { initialActiveTab: 'collect' as TabKey, initialCollectSubTab: tabParam }
+    }
+    return { initialActiveTab: 'collect' as TabKey, initialCollectSubTab: undefined }
+  }, [searchParams])
+
+  const [activeTab, setActiveTab] = useState<TabKey>(initialActiveTab)
+
+  const handleTabChange = (key: string) => {
+    const next = key as TabKey
+    setActiveTab(next)
+    setSearchParams({ tab: next })
+  }
 
   const tabItems = [
     {
@@ -27,7 +55,7 @@ const SystemConfigPage: React.FC = () => {
           采集配置
         </span>
       ),
-      children: <CollectConfigTab />,
+      children: <CollectConfigTab initialSubTab={initialCollectSubTab} />,
     },
     {
       key: 'llm' as TabKey,
@@ -66,7 +94,7 @@ const SystemConfigPage: React.FC = () => {
       <Title level={4}>系统配置</Title>
       <Tabs
         activeKey={activeTab}
-        onChange={(key) => setActiveTab(key as TabKey)}
+        onChange={handleTabChange}
         items={tabItems}
         destroyInactiveTabPane={false}
       />

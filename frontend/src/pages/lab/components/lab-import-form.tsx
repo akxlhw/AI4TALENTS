@@ -11,7 +11,8 @@ import {
   Alert,
   message,
 } from 'antd'
-import { InboxOutlined, ExperimentOutlined, UploadOutlined } from '@ant-design/icons'
+import { InboxOutlined, UploadOutlined } from '@ant-design/icons'
+import LabIcon from '../../../components/lab-icon'
 import type { UploadProps } from 'antd'
 import { api } from '../../../services/api'
 import { getErrorMessage } from '../../../utils'
@@ -82,7 +83,7 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Card>
         <Title level={5}>
-          <ExperimentOutlined style={{ marginRight: 8 }} />
+          <LabIcon style={{ fontSize: 20, marginRight: 8 }} />
           AI 实验室人才导入
         </Title>
         <Text type="secondary">
