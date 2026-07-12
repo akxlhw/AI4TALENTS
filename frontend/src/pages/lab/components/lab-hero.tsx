@@ -1,16 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Typography, Space, Input } from 'antd'
-import { ArrowRightOutlined, UploadOutlined, SearchOutlined } from '@ant-design/icons'
-import { useAuth } from '../../../contexts/AuthContext'
+import { Typography, Input } from 'antd'
+import { SearchOutlined } from '@ant-design/icons'
 
 const { Title, Paragraph } = Typography
 const { Search } = Input
 
 const LabHero: React.FC = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
-  const isAdmin = user?.role === 'super_admin'
   const [searchValue, setSearchValue] = useState('')
 
   const handleSearch = (value: string) => {
@@ -52,7 +49,7 @@ const LabHero: React.FC = () => {
             letterSpacing: '-0.5px',
           }}
         >
-          AI 实验室人才库
+          AI Native人才库
         </Title>
         <Paragraph
           style={{
@@ -78,32 +75,6 @@ const LabHero: React.FC = () => {
           onSearch={handleSearch}
           style={{ width: '100%', margin: '0 auto' }}
         />
-
-        <Space size={16} style={{ marginTop: 24 }}>
-          <Button
-            type="primary"
-            size="large"
-            style={{ background: '#fff', color: 'var(--domain-primary)', fontWeight: 600 }}
-            icon={<ArrowRightOutlined />}
-            onClick={() => navigate('/lab/search')}
-          >
-            浏览全部人才
-          </Button>
-          {isAdmin && (
-            <Button
-              size="large"
-              style={{
-                background: 'rgba(255,255,255,0.15)',
-                color: '#fff',
-                borderColor: 'rgba(255,255,255,0.3)',
-              }}
-              icon={<UploadOutlined />}
-              onClick={() => navigate('/system-config?tab=lab-import')}
-            >
-              导入数据
-            </Button>
-          )}
-        </Space>
       </div>
     </div>
   )
