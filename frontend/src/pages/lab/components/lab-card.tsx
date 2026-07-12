@@ -15,7 +15,7 @@ const ROLE_CONFIG: { key: string; label: string; color: string }[] = [
   { key: 'professor', label: '教授', color: '#0D2B4E' },
   { key: 'student', label: '在读学生', color: '#0EA5E9' },
   { key: 'graduate', label: '博后/研究员', color: '#F59E0B' },
-  { key: 'alumni', label: '往届生', color: '#94A3B8' },
+  { key: 'alumni', label: '已毕业', color: '#94A3B8' },
   { key: 'unknown', label: '其他', color: '#CBD5E1' },
 ]
 
