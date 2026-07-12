@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Row, Col, Card, Pagination, Typography, Spin } from 'antd'
+import { Row, Col, Pagination, Typography, Spin, Breadcrumb } from 'antd'
+import { Link } from 'react-router-dom'
 import { useLabTalents } from '../../hooks/useLabQueries'
 import { useLabSearchStore } from '../../stores/labSearchStore'
 import { applyDomainCssVars } from '../../theme'
@@ -70,23 +71,55 @@ const LabSearchPage: React.FC = () => {
   const total = data?.total || 0
 
   return (
-    <div style={{ padding: 24, background: 'var(--color-bg-gray-light)', minHeight: '100vh' }}>
-      <BreadcrumbNav items={[{ label: '实验室', path: '/lab' }, { label: '搜索' }]} />
-      <LabSearchFilter state={state} />
-
-      <Spin spinning={isLoading}>
-        <Card style={{ borderRadius: 12 }}>
-          <div
-            style={{
-              marginBottom: 16,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <Text type="secondary">共 {total} 人</Text>
+    <div style={{ paddingTop: 64, background: 'var(--color-bg-gray-light)', minHeight: '100vh' }}>
+      {/* Context header — show which lab we're browsing */}
+      {state.parentLab && (
+        <div
+          style={{
+            background: 'var(--domain-gradient, linear-gradient(135deg,#0D2B4E,#0EA5E9))',
+            padding: '20px 24px 16px',
+          }}
+        >
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <Breadcrumb style={{ marginBottom: 8 }}>
+              <Breadcrumb.Item>
+                <Link to="/lab" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                  AI Native
+                </Link>
+              </Breadcrumb.Item>
+              <Breadcrumb.Item>
+                <span style={{ color: '#fff' }}>{state.parentLab}</span>
+              </Breadcrumb.Item>
+            </Breadcrumb>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 8 }}>
+              <Text
+                style={{
+                  color: '#fff',
+                  fontSize: 22,
+                  fontWeight: 700,
+                }}
+              >
+                {state.parentLab}
+              </Text>
+              {!isLoading && (
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
+                  · 共 {total} 人
+                </Text>
+              )}
+            </div>
           </div>
+        </div>
+      )}
+      {!state.parentLab && (
+        <div style={{ padding: '20px 24px 0' }}>
+          <BreadcrumbNav items={[{ label: 'AI Native', path: '/lab' }, { label: '全部人才' }]} />
+        </div>
+      )}
 
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px 48px' }}>
+        <LabSearchFilter state={state} />
+
+        <Spin spinning={isLoading}>
           {items.length === 0 && !isLoading ? (
             <EmptyPlaceholder
               title="未找到匹配的人才"
@@ -95,6 +128,11 @@ const LabSearchPage: React.FC = () => {
             />
           ) : (
             <>
+              {!state.parentLab && (
+                <div style={{ marginBottom: 12 }}>
+                  <Text type="secondary">共 {total} 人</Text>
+                </div>
+              )}
               <Row gutter={[16, 16]}>
                 {items.map(t => (
                   <Col xs={24} sm={12} md={8} lg={6} key={t.talent_id}>
@@ -102,7 +140,7 @@ const LabSearchPage: React.FC = () => {
                   </Col>
                 ))}
               </Row>
-              <div style={{ textAlign: 'center', marginTop: 24 }}>
+              <div style={{ textAlign: 'center', marginTop: 32 }}>
                 <Pagination
                   current={state.page}
                   total={total}
@@ -113,8 +151,8 @@ const LabSearchPage: React.FC = () => {
               </div>
             </>
           )}
-        </Card>
-      </Spin>
+        </Spin>
+      </div>
     </div>
   )
 }

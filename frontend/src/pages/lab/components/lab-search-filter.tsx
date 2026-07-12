@@ -9,8 +9,9 @@ interface LabSearchFilterProps {
 const ROLE_OPTIONS = [
   { label: '全部角色', value: '' },
   { label: '教授', value: 'professor' },
-  { label: '学生', value: 'student' },
+  { label: '在读学生', value: 'student' },
   { label: '博后/研究员', value: 'graduate' },
+  { label: '已毕业', value: 'alumni' },
 ]
 
 const LEVEL_OPTIONS = [
