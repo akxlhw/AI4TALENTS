@@ -92,8 +92,9 @@ class HomepagePreviewService:
             if src and not src.startswith(("http://", "https://", "data:")):
                 img["src"] = urljoin(base_url, src)
             # Remove lazy-loading attributes that break inline display
-            img.pop("loading", None)
-            img.pop("srcset", None)
+            for attr in ("loading", "srcset"):
+                if attr in img.attrs:
+                    del img[attr]
 
         # Fix relative link URLs + open in new tab
         for a in body.find_all("a"):
