@@ -15,7 +15,7 @@ const ROLE_CONFIG: { key: string; label: string; color: string }[] = [
   { key: 'professor', label: '教授', color: '#0D2B4E' },
   { key: 'student', label: '在读学生', color: '#0EA5E9' },
   { key: 'graduate', label: '博后/研究员', color: '#F59E0B' },
-  { key: 'alumni', label: '已毕业', color: '#94A3B8' },
+  { key: 'alumni', label: '已毕业', color: '#0284C7' },
   { key: 'unknown', label: '其他', color: '#CBD5E1' },
 ]
 
@@ -23,7 +23,7 @@ const ROLE_AVATAR_COLORS: Record<string, string> = {
   professor: '#0D2B4E',
   student: '#0EA5E9',
   graduate: '#F59E0B',
-  alumni: '#94A3B8',
+  alumni: '#0284C7',
   unknown: '#CBD5E1',
 }
 

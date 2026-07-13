@@ -9,7 +9,7 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; dot: string }>
   professor: { label: '教授', color: 'var(--domain-primary, #0D2B4E)', dot: '#0D2B4E' },
   student: { label: '在读', color: 'var(--domain-secondary, #0EA5E9)', dot: '#0EA5E9' },
   graduate: { label: '博后/研究员', color: '#F59E0B', dot: '#F59E0B' },
-  alumni: { label: '已毕业', color: '#94A3B8', dot: '#94A3B8' },
+  alumni: { label: '已毕业', color: '#0284C7', dot: '#0284C7' },
   unknown: { label: '其他', color: '#CBD5E1', dot: '#CBD5E1' },
 }
 
