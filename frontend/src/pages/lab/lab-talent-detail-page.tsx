@@ -34,7 +34,7 @@ const LabTalentDetailPage: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: 24, background: 'var(--color-bg-gray-light)', minHeight: '100vh' }}>
+    <div style={{ padding: '80px 24px 24px', background: 'var(--color-bg-gray-light)', minHeight: '100vh' }}>
       <BreadcrumbNav
         items={[
           { label: '实验室', path: '/lab' },
