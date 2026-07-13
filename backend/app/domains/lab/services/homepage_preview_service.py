@@ -63,7 +63,21 @@ class HomepagePreviewService:
                 "status": f"http_{resp.status_code}",
             }
 
-        return self._clean_html(resp.text, homepage_url)
+        # Handle encoding: some academic sites return UTF-16 or other non-UTF-8
+        # encodings. httpx may detect this via Content-Type charset or BOM.
+        # Use resp.text (which respects encoding) instead of raw bytes.
+        content = resp.content
+        # Detect BOM and fix encoding if httpx didn't
+        if content.startswith(b"\xff\xfe") or content.startswith(b"\xfe\xff"):
+            # UTF-16 BOM — decode explicitly
+            try:
+                raw_html = content.decode("utf-16")
+            except Exception:
+                raw_html = resp.text
+        else:
+            raw_html = resp.text
+
+        return self._clean_html(raw_html, homepage_url)
 
     @staticmethod
     def _clean_html(raw_html: str, base_url: str) -> dict:
