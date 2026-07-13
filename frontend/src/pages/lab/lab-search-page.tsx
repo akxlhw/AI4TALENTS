@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import { useSearchParams, Link, useNavigate } from 'react-router-dom'
-import { Row, Col, Pagination, Typography, Spin, Breadcrumb, Tag, Tabs, Button } from 'antd'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { Row, Col, Pagination, Typography, Spin, Tag, Tabs, Button } from 'antd'
 import { HomeOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import { useLabTalents, useLabProfile } from '../../hooks/useLabQueries'
 import { useLabSearchStore } from '../../stores/labSearchStore'
@@ -76,36 +76,34 @@ const LabSearchPage: React.FC = () => {
 
   return (
     <div style={{ paddingTop: 64, background: 'var(--color-bg-gray-light)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '8px 24px 0' }}>
-        <Button
-          type="text"
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(-1)}
-          style={{ color: 'var(--domain-primary, #0D2B4E)', fontWeight: 500 }}
-        >
-          返回
-        </Button>
-      </div>
-
       {/* Context header — show lab profile when browsing a specific lab */}
       {state.parentLab && (
         <div
           style={{
             background: 'var(--domain-gradient, linear-gradient(135deg,#0D2B4E,#0EA5E9))',
-            padding: '20px 24px 20px',
+            padding: '16px 24px 20px',
           }}
         >
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <Breadcrumb style={{ marginBottom: 12 }}>
-              <Breadcrumb.Item>
-                <Link to="/lab" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                  AI Native
-                </Link>
-              </Breadcrumb.Item>
-              <Breadcrumb.Item>
-                <span style={{ color: '#fff' }}>{state.parentLab}</span>
-              </Breadcrumb.Item>
-            </Breadcrumb>
+            {/* Back + breadcrumb on same line, inside banner */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <span
+                onClick={() => navigate(-1)}
+                style={{
+                  color: 'rgba(255,255,255,0.7)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
+              >
+                <ArrowLeftOutlined style={{ fontSize: 12 }} /> 返回
+              </span>
+            </div>
 
             {/* Lab identity row */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
@@ -216,7 +214,15 @@ const LabSearchPage: React.FC = () => {
         </div>
       )}
       {!state.parentLab && (
-        <div style={{ padding: '20px 24px 0' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '12px 24px 0' }}>
+          <Button
+            type="text"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate(-1)}
+            style={{ color: 'var(--domain-primary, #0D2B4E)', fontWeight: 500, marginBottom: 4 }}
+          >
+            返回
+          </Button>
           <BreadcrumbNav items={[{ label: 'AI Native', path: '/lab' }, { label: '全部人才' }]} />
         </div>
       )}
