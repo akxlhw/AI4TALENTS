@@ -77,7 +77,9 @@ class HomepagePreviewService:
         else:
             raw_html = resp.text
 
-        return self._clean_html(raw_html, homepage_url)
+        # Use the final URL after redirects as base for resolving relative URLs
+        final_url = str(resp.url)
+        return self._clean_html(raw_html, final_url)
 
     @staticmethod
     def _clean_html(raw_html: str, base_url: str) -> dict:
