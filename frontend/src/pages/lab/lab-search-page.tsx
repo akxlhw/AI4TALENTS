@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
-import { Row, Col, Pagination, Typography, Spin, Breadcrumb, Tag, Tabs, Statistic, Card } from 'antd'
+import { Row, Col, Pagination, Typography, Spin, Breadcrumb, Tag, Tabs } from 'antd'
 import { HomeOutlined } from '@ant-design/icons'
 import { useLabTalents, useLabProfile } from '../../hooks/useLabQueries'
 import { useLabSearchStore } from '../../stores/labSearchStore'
@@ -210,29 +210,6 @@ const LabSearchPage: React.FC = () => {
       )}
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px 48px' }}>
-        {/* Stats row — only when viewing a specific lab */}
-        {state.parentLab && profile && (
-          <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-            {[
-              { label: '总人数', value: profile.total_talents, color: '#0D2B4E' },
-              { label: '教授', value: profile.role_distribution?.professor || 0, color: '#0D2B4E' },
-              { label: '在读学生', value: profile.role_distribution?.student || 0, color: '#0EA5E9' },
-              { label: '已毕业', value: profile.role_distribution?.alumni || 0, color: '#94A3B8' },
-              { label: '博后/研究员', value: profile.role_distribution?.graduate || 0, color: '#F59E0B' },
-            ].map(stat => (
-              <Col xs={12} sm={8} md={6} lg={4} xl={4} key={stat.label}>
-                <Card size="small" style={{ borderRadius: 10, textAlign: 'center' }}>
-                  <Statistic
-                    title={stat.label}
-                    value={stat.value}
-                    valueStyle={{ color: stat.color, fontSize: 22, fontWeight: 700 }}
-                  />
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        )}
-
         {/* Role Tabs — only when viewing a specific lab */}
         {state.parentLab && profile ? (
           <RoleTabs
