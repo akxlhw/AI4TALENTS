@@ -44,7 +44,7 @@ class HomepagePreviewService:
         """
         try:
             async with HttpClientFactory.create_client_for_url(
-                homepage_url, timeout=15.0
+                homepage_url, timeout=15.0, follow_redirects=True
             ) as client:
                 resp = await client.get(
                     homepage_url,
