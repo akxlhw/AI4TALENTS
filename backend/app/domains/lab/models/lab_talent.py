@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String
+from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, Text
 
 from app.core.database import Base
 from app.domains.shared.models.base import TimestampMixin
@@ -58,6 +58,10 @@ class LabTalent(Base, TimestampMixin):
     unified_person_id = Column(
         String(100), nullable=True, index=True
     )  # reserved for future cross-library identity
+
+    # Homepage preview cache (cleaned HTML, fetched by HomepagePreviewService)
+    homepage_cache = Column(Text, nullable=True)
+    homepage_cached_at = Column(DateTime, nullable=True)
 
     # Visibility
     is_visible = Column(Boolean, default=True, nullable=False)

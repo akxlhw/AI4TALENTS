@@ -47,6 +47,14 @@ export const labApi = {
       `/lab/talents/${id}/homepage-preview`
     ),
 
+  triggerPrefetch: (parentLab: string) =>
+    apiClient.post('/lab/prefetch-homepages', null, { params: { parent_lab: parentLab } }),
+
+  getPrefetchStatus: () =>
+    apiClient.get<{ status: string; processed: number; total: number; current: string; errors: number }>(
+      '/lab/prefetch-homepages/status'
+    ),
+
   importUpload: (file: File, parentLab?: string) => {
     const formData = new FormData()
     formData.append('file', file)

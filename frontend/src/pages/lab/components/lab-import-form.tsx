@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Card,
   Typography,
@@ -9,9 +9,10 @@ import {
   Descriptions,
   Tag,
   Alert,
+  Progress,
   message,
 } from 'antd'
-import { InboxOutlined, UploadOutlined } from '@ant-design/icons'
+import { InboxOutlined, UploadOutlined, CloudSyncOutlined } from '@ant-design/icons'
 import LabIcon from '../../../components/lab-icon'
 import type { UploadProps } from 'antd'
 import { api } from '../../../services/api'
@@ -38,6 +39,34 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [report, setReport] = useState<ImportReport | null>(null)
+  const [prefetchStatus, setPrefetchStatus] = useState<{
+    status: string
+    processed: number
+    total: number
+    current: string
+    errors: number
+  } | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Poll prefetch progress
+  useEffect(() => {
+    if (prefetchStatus?.status === 'running' || prefetchStatus?.status === 'pending') {
+      pollRef.current = setInterval(async () => {
+        try {
+          const res = await api.lab.getPrefetchStatus()
+          setPrefetchStatus(res.data)
+          if (res.data.status === 'completed' || res.data.status === 'error') {
+            if (pollRef.current) clearInterval(pollRef.current)
+          }
+        } catch {
+          // ignore poll errors
+        }
+      }, 3000)
+    }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [prefetchStatus?.status])
 
   const beforeUpload: UploadProps['beforeUpload'] = file => {
     const isJsonl =
@@ -71,6 +100,17 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
       setSelectedFile(null)
       message.success(`导入完成：${res.data.inserted} 人入库，${res.data.skipped} 行跳过`)
       onSuccess?.(res.data as ImportReport)
+
+      // Auto-trigger homepage prefetch
+      const labName = (res.data as ImportReport).parent_lab
+      if (labName) {
+        try {
+          await api.lab.triggerPrefetch(labName)
+          setPrefetchStatus({ status: 'pending', processed: 0, total: 0, current: '启动中...', errors: 0 })
+        } catch {
+          // prefetch trigger failed silently — user can still use on-demand preview
+        }
+      }
     } catch (e) {
       message.error(getErrorMessage(e, '导入失败'))
     } finally {
@@ -164,6 +204,39 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
               }
             />
           )}
+        </Card>
+      )}
+
+      {prefetchStatus && (
+        <Card title={<Space><CloudSyncOutlined spin={prefetchStatus.status === 'running'} /> 主页预抓取</Space>}>
+          {prefetchStatus.status === 'pending' || prefetchStatus.status === 'running' ? (
+            <>
+              <Text type="secondary">
+                正在批量抓取个人主页并缓存... ({prefetchStatus.processed}/{prefetchStatus.total})
+              </Text>
+              {prefetchStatus.current && prefetchStatus.current !== 'starting' && prefetchStatus.current !== 'initializing' && (
+                <div style={{ marginTop: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    当前：{prefetchStatus.current}
+                  </Text>
+                </div>
+              )}
+              <Progress
+                percent={prefetchStatus.total > 0 ? Math.round((prefetchStatus.processed / prefetchStatus.total) * 100) : 0}
+                status="active"
+                style={{ marginTop: 12 }}
+              />
+            </>
+          ) : prefetchStatus.status === 'completed' ? (
+            <Alert
+              type="success"
+              showIcon
+              message={`预抓取完成：共 ${prefetchStatus.total} 人${prefetchStatus.errors > 0 ? `，${prefetchStatus.errors} 个失败` : ''}`}
+              description={'个人主页已缓存，详情页的"加载预览"将秒开。'}
+            />
+          ) : prefetchStatus.status === 'error' ? (
+            <Alert type="error" showIcon message="预抓取失败，请稍后重试" />
+          ) : null}
         </Card>
       )}
     </Space>

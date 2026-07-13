@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.domains.lab.api import import_endpoint, stats, talents
+from app.domains.lab.api import import_endpoint, prefetch, stats, talents
 
 router = APIRouter()
 router.include_router(import_endpoint.router)
 router.include_router(talents.router)
 router.include_router(stats.router)
+router.include_router(prefetch.router)
 
 __all__ = ["router"]

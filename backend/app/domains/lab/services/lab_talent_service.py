@@ -72,7 +72,9 @@ class LabTalentService:
         return LabProfileResponse(**profile)
 
     async def get_homepage_preview(self, talent_id: int) -> HomepagePreviewResponse:
-        """Fetch and clean the talent's homepage for inline preview."""
+        """Get talent's homepage preview — cache-first, fetch on miss."""
+        from datetime import datetime
+
         from app.domains.lab.services.homepage_preview_service import HomepagePreviewService
 
         talent = await self.repo.get_by_id(talent_id)
@@ -82,6 +84,20 @@ class LabTalentService:
         if not talent.homepage:
             return HomepagePreviewResponse(html="", base_url="", status="no_homepage")
 
+        # Cache hit — return immediately
+        if talent.homepage_cache:
+            return HomepagePreviewResponse(
+                html=talent.homepage_cache,
+                base_url=talent.homepage,
+                title="",
+                status="ok",
+            )
+
+        # Cache miss — fetch, clean, and persist
         preview_svc = HomepagePreviewService()
         result = await preview_svc.fetch_preview(talent.homepage)
+        if result["status"] == "ok" and result["html"]:
+            talent.homepage_cache = result["html"]
+            talent.homepage_cached_at = datetime.now()
+            await self.session.commit()
         return HomepagePreviewResponse(**result)

@@ -115,3 +115,82 @@ class HomepagePreviewService:
             "title": title,
             "status": "ok",
         }
+
+    async def prefetch_all(
+        self,
+        session,
+        parent_lab: str,
+        progress_callback=None,
+    ) -> dict:
+        """Batch-fetch and cache homepage HTML for all talents in a lab.
+
+        Only processes talents that have a homepage URL and no cached HTML yet.
+        Failed fetches are skipped (not fatal). Progress is reported via callback.
+
+        Args:
+            session: AsyncSession for DB operations.
+            parent_lab: The parent lab to scope the prefetch.
+            progress_callback: Optional callable(processed, total, current_name).
+
+        Returns:
+            dict with keys: total, fetched, skipped, errors
+        """
+        from datetime import datetime
+
+        from sqlalchemy import select
+
+        from app.domains.lab.models.lab_talent import LabTalent
+
+        # Find talents with homepage but no cache
+        result = await session.execute(
+            select(LabTalent.talent_id, LabTalent.name, LabTalent.homepage).where(
+                LabTalent.parent_lab == parent_lab,
+                LabTalent.is_visible.is_(True),
+                LabTalent.homepage.isnot(None),
+                LabTalent.homepage != "",
+                LabTalent.homepage_cache.is_(None),
+            )
+        )
+        pending = result.all()
+        total = len(pending)
+        fetched = 0
+        errors = 0
+        logger.info("[HomepagePrefetch] Starting: %d talents to fetch for %s", total, parent_lab)
+
+        for idx, (talent_id, name, homepage_url) in enumerate(pending, start=1):
+            if progress_callback:
+                progress_callback(idx, total, name or f"talent_{talent_id}")
+
+            try:
+                preview = await self.fetch_preview(homepage_url)
+                if preview["status"] == "ok" and preview["html"]:
+                    # Update cache
+                    talent = await session.get(LabTalent, talent_id)
+                    if talent:
+                        talent.homepage_cache = preview["html"]
+                        talent.homepage_cached_at = datetime.now()
+                        await session.flush()
+                    fetched += 1
+                else:
+                    errors += 1
+                    logger.debug(
+                        "[HomepagePrefetch] Skipped %s: status=%s", name, preview["status"]
+                    )
+            except Exception as e:
+                errors += 1
+                logger.warning(
+                    "[HomepagePrefetch] Error fetching %s (%s): %s",
+                    name,
+                    homepage_url,
+                    str(e)[:200],
+                )
+
+            # Commit every 5 items (balance between progress persistence and perf)
+            if idx % 5 == 0:
+                await session.commit()
+
+        await session.commit()
+        logger.info(
+            "[HomepagePrefetch] Done: total=%d fetched=%d errors=%d", total, fetched, errors
+        )
+        return {"total": total, "fetched": fetched, "skipped": total - fetched, "errors": errors}
