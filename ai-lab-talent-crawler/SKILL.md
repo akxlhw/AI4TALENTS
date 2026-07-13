@@ -52,12 +52,24 @@ description: |
 3. 基于结构形成采集计划（哪些页要采、跳转链路、预计人数）
 
 ### 阶段三：数据提取（循环每个目标页）
-1. 浏览器 snapshot → LLM 按 `references/extraction-prompt.md` 提取人员 JSON
-2. 每个人记录：name / role_section / homepage / department（列表页字段）
-3. **bio 详情全量跟进**：每个人的 bio 链接都跟进，补充 role_raw / cohort_year / email / research_areas（详见 extraction-prompt.md 的 bio 提取部分）
-4. 有分页 → 浏览器翻页 → 继续
-5. 有子实验室 → 跟进其 people 页 → 继续
-6. 累积所有人员
+
+**执行优先级（重要）**：先扫完所有列表页拿到全员基础字段，剩余预算再进 bio。
+不要边扫列表边进 bio——470 人的站如果每人都先进 bio，可能列表都没扫完就超时。
+
+1. **先扫所有列表页**（最高优先级）：
+   - 浏览器 snapshot → LLM 按 `references/extraction-prompt.md` 提取人员 JSON
+   - 每个人记录：name / role_section / homepage / department（列表页字段）
+   - 有分页 → 浏览器翻页 → 继续（agent 自己从 snapshot 找 "Next"/"page 2" 链接判定分页）
+   - 有子实验室 → 跟进其 people 页 → 继续
+   - 目标：在预算内拿到**全员的基础字段**
+
+2. **列表页全部扫完后，用剩余预算进 bio 详情**（次优先级）：
+   - **resume 去重**：先用 `scripts/crawl.py` 的 `load_existing_persons` 读取上次该 lab 的 JSONL，
+     已有 role_raw / cohort_year 的人（上次进过 bio）跳过，不重复跟进（#2 增量机制）
+   - 对剩余的人，逐个跟进 bio 链接，补充 role_raw / cohort_year / email / research_areas
+   - 预算耗尽时停止——未进 bio 的人保留列表页字段，下次 resume 继续补充
+
+3. 累积所有人员
 
 ### 输出
 1. 写 JSONL：`output/<lab_slug>/_YYYY-MM-DD.jsonl`（schema 见 `references/output-schema.md`）
@@ -81,7 +93,7 @@ description: |
 | 探索深度上限 5 跳 | 从主域名最多跟随 5 层链接，防止无限爬 |
 | 单次时间预算 30min | 超限时停止，已采集的数据正常输出 |
 | 跳过非人员页面 | twitter/github/会议/PDF/新闻/博客 → LLM 判定后跳过 |
-| bio 详情全量跟进 | 列表页每个人都跟进其 bio 详情页；不采样、不限制；靠 30min 预算自然约束 |
+| bio 详情全量跟进（列表优先） | 先扫完所有列表页（拿全员基础字段），剩余预算再逐个进 bio；resume 时跳过上次已进 bio 的人；靠 30min 预算自然约束 |
 | 不伪造字段 | 提取不到的字段直接省略（不写 null/空串/猜测值） |
 | 每页提取校验 | LLM 输出的每人 JSON 必须含 name 字段，否则丢弃该条 |
 | robots.txt 遵守 | 访问前检查，disallow 则跳过该路径 |

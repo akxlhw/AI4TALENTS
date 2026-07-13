@@ -3,21 +3,23 @@
 These are utilities the agent (or a human) can call to:
 - load_labs: read labs.yaml and optionally filter by name/domain
 - write_jsonl: write persons to a validated JSONL file
+- load_existing_persons: read a prior JSONL for resume/dedup (#2)
 - generate_report: write a human-readable collection report
-- check_browser_service: probe Camofox/kimi-webbridge availability
+- check_browser_service: async probe Camofox/kimi-webbridge availability (#6)
 
 The agent's core logic (explore + extract) is driven by the LLM reading
 SKILL.md + references; this script handles the mechanical I/O parts.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import re
-import urllib.request
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
+import httpx
 import yaml
 
 
@@ -65,6 +67,37 @@ def write_jsonl(
             f.write(json.dumps(person, ensure_ascii=False))
             f.write("\n")
     return str(path)
+
+
+def load_existing_persons(
+    output_dir: str, lab_slug: str
+) -> list[dict[str, Any]]:
+    """Read the most recent prior JSONL for this lab, for resume/dedup (#2).
+
+    Returns a list of person dicts from the newest _*.jsonl file in
+    output/<lab_slug>/. Returns [] if no prior file exists.
+
+    The agent uses this to skip bio follow-up for persons already collected
+    in a prior run (matched by name + lab_name), enabling multi-session
+    collection of large labs without re-visiting every bio.
+    """
+    lab_dir = Path(output_dir) / lab_slug
+    if not lab_dir.exists():
+        return []
+    jsonl_files = sorted(lab_dir.glob("_*.jsonl"), key=lambda p: p.name, reverse=True)
+    if not jsonl_files:
+        return []
+    persons: list[dict[str, Any]] = []
+    with open(jsonl_files[0], encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                persons.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return persons
 
 
 def generate_report(
@@ -115,20 +148,22 @@ def generate_report(
     return report
 
 
-def check_browser_service() -> str | None:
-    """Probe browser automation services. Returns which one is available, or None.
+async def check_browser_service() -> str | None:
+    """Async probe browser automation services. Returns which one is available, or None.
 
-    Tries Camofox first (:9377), then kimi-webbridge (:10086).
+    Tries Camofox first (:9377), then kimi-webbridge (:10086). Uses httpx async
+    to avoid blocking the event loop in async agent runtimes (#6).
     """
-    for name, url in [
+    targets = [
         ("camofox", "http://localhost:9377/tabs?userId=probe"),
         ("kimi-webbridge", "http://127.0.0.1:10086"),
-    ]:
-        try:
-            req = urllib.request.Request(url, method="GET")
-            with urllib.request.urlopen(req, timeout=3) as resp:
-                if resp.status < 500:
+    ]
+    async with httpx.AsyncClient(timeout=3.0) as client:
+        for name, url in targets:
+            try:
+                resp = await client.get(url)
+                if resp.status_code < 500:
                     return name
-        except Exception:
-            continue
+            except Exception:
+                continue
     return None

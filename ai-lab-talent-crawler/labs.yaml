@@ -9,6 +9,8 @@ labs:
     hints:
       known_sublabs: ["NLP Group", "SNAP", "Ermon Lab"]
       expected_roles: ["Faculty", "PhD Students", "Postdocs", "Staff", "Alumni"]
+      # /people/ 已废弃（返回 403），真实入口是 /faculty/
+      avoid_paths: ["/people/"]
 
   # === 候选（待 agent 首次探索验证） ===
   - name: "MIT CSAIL"

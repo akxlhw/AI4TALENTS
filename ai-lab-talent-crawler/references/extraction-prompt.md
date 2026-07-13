@@ -28,12 +28,11 @@
 4. department：从卡片提取的院系/专业（如有，如 "Computer Science"）。没有则省略。
 5. 跳过已毕业/校友，除非分区明确标注为 "Alumni"（此时 role_section 填 "Alumni"）。
 6. 不要编造任何字段——提取不到的字段直接省略，不要填 null 或空字符串。
-
-如果页面包含"下一页"、"Next"、"Load more" 或分页控件，在 JSON 数组末尾追加一个
-特殊对象（不计入人员数）：
-  {"_next_page": true}
-以便 agent 决定是否翻页继续提取。
 ```
+
+> **分页判定由 agent 负责，不靠 LLM 输出**：agent 在拿到提取结果后，自己检查
+> snapshot 里是否有 "Next"/"下一页"/"page 2"/"Load more" 等链接或分页控件，
+> 有则翻页继续，无则结束本页。不要依赖 LLM 在 JSON 里输出分页信号（它可能漏判或幻觉）。
 
 ### 用户消息
 
