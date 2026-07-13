@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
-import { Row, Col, Pagination, Typography, Spin, Breadcrumb, Tag, Tabs } from 'antd'
-import { HomeOutlined } from '@ant-design/icons'
+import { useSearchParams, Link, useNavigate } from 'react-router-dom'
+import { Row, Col, Pagination, Typography, Spin, Breadcrumb, Tag, Tabs, Button } from 'antd'
+import { HomeOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import { useLabTalents, useLabProfile } from '../../hooks/useLabQueries'
 import { useLabSearchStore } from '../../stores/labSearchStore'
 import { applyDomainCssVars } from '../../theme'
@@ -15,6 +15,7 @@ const { Text } = Typography
 
 const LabSearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const state = useLabSearchStore()
 
   useEffect(() => {
@@ -75,6 +76,17 @@ const LabSearchPage: React.FC = () => {
 
   return (
     <div style={{ paddingTop: 64, background: 'var(--color-bg-gray-light)', minHeight: '100vh' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '8px 24px 0' }}>
+        <Button
+          type="text"
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate(-1)}
+          style={{ color: 'var(--domain-primary, #0D2B4E)', fontWeight: 500 }}
+        >
+          返回
+        </Button>
+      </div>
+
       {/* Context header — show lab profile when browsing a specific lab */}
       {state.parentLab && (
         <div
