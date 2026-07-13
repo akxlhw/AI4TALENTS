@@ -146,6 +146,15 @@ class LabTalentRepository:
             )
             lab["role_distribution"] = {row.role: row.count for row in role_result.all()}
 
+            # Lab description from lab_info table
+            from app.domains.lab.models.lab_talent import LabInfo
+
+            info_result = await self.session.execute(
+                select(LabInfo.description).where(LabInfo.parent_lab == lab["name"])
+            )
+            info_row = info_result.fetchone()
+            lab["description"] = info_row[0] if info_row else None
+
         return labs
 
     async def get_lab_profile(self, parent_lab: str) -> dict[str, Any] | None:

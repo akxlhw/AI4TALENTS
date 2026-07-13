@@ -581,6 +581,7 @@ export interface LabWithTalents {
   name: string
   count: number
   logo_url: string | null
+  description: string | null
   talents: LabTalent[]
   role_distribution: Record<string, number>
 }

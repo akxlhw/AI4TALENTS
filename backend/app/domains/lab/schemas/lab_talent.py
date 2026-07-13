@@ -46,6 +46,7 @@ class LabWithTalents(BaseModel):
     name: str
     count: int
     logo_url: str | None = None
+    description: str | None = None
     talents: list[LabTalentSummary] = Field(default_factory=list)
     role_distribution: dict[str, int] = Field(default_factory=dict)
 

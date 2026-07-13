@@ -32,10 +32,6 @@ const LabCard: React.FC<React.PropsWithChildren<LabCardProps>> = ({ lab }) => {
   const previewTalents = lab.talents.slice(0, 5)
   const overflow = Math.max(0, lab.count - previewTalents.length)
 
-  const researchAreas = Array.from(
-    new Set(lab.talents.flatMap(t => t.research_areas).filter(Boolean))
-  ).slice(0, 3)
-
   // Build mini composition bar segments
   const dist = lab.role_distribution || {}
   const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1
@@ -123,26 +119,21 @@ const LabCard: React.FC<React.PropsWithChildren<LabCardProps>> = ({ lab }) => {
 
       {/* === Body === */}
       <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
-        {/* Research areas */}
-        {researchAreas.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {researchAreas.map(area => (
-              <span
-                key={area}
-                style={{
-                  fontSize: 11,
-                  padding: '2px 10px',
-                  borderRadius: 12,
-                  background: 'var(--domain-light-bg, #F0F9FF)',
-              color: 'var(--domain-secondary, #0EA5E9)',
-                  fontWeight: 500,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {area}
-              </span>
-            ))}
-          </div>
+        {/* Lab description */}
+        {lab.description && (
+          <Text
+            style={{
+              fontSize: 12,
+              color: '#64748b',
+              lineHeight: 1.6,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {lab.description}
+          </Text>
         )}
 
         {/* Avatar stack */}
