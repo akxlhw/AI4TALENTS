@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
-import { Row, Col, Pagination, Typography, Spin, Breadcrumb, Tag } from 'antd'
+import { Row, Col, Pagination, Typography, Spin, Breadcrumb, Tag, Tabs, Statistic, Card } from 'antd'
 import { HomeOutlined } from '@ant-design/icons'
 import { useLabTalents, useLabProfile } from '../../hooks/useLabQueries'
 import { useLabSearchStore } from '../../stores/labSearchStore'
@@ -210,43 +210,147 @@ const LabSearchPage: React.FC = () => {
       )}
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px 48px' }}>
-        <LabSearchFilter state={state} />
+        {/* Stats row — only when viewing a specific lab */}
+        {state.parentLab && profile && (
+          <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+            {[
+              { label: '总人数', value: profile.total_talents, color: '#0D2B4E' },
+              { label: '教授', value: profile.role_distribution?.professor || 0, color: '#0D2B4E' },
+              { label: '在读学生', value: profile.role_distribution?.student || 0, color: '#0EA5E9' },
+              { label: '已毕业', value: profile.role_distribution?.alumni || 0, color: '#94A3B8' },
+              { label: '博后/研究员', value: profile.role_distribution?.graduate || 0, color: '#F59E0B' },
+            ].map(stat => (
+              <Col xs={12} sm={8} md={6} lg={4} xl={4} key={stat.label}>
+                <Card size="small" style={{ borderRadius: 10, textAlign: 'center' }}>
+                  <Statistic
+                    title={stat.label}
+                    value={stat.value}
+                    valueStyle={{ color: stat.color, fontSize: 22, fontWeight: 700 }}
+                  />
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        )}
 
-        <Spin spinning={isLoading}>
-          {items.length === 0 && !isLoading ? (
-            <EmptyPlaceholder
-              title="未找到匹配的人才"
-              description="尝试调整筛选条件"
-              action={{ label: '清除筛选', onClick: () => state.resetFilters() }}
+        {/* Role Tabs — only when viewing a specific lab */}
+        {state.parentLab && profile ? (
+          <RoleTabs
+            roleDist={profile.role_distribution || {}}
+            activeRole={state.roleType}
+            onRoleChange={r => state.setFilter('roleType', r)}
+          >
+            <LabSearchFilter state={state} />
+            <SearchResults
+              isLoading={isLoading}
+              items={items}
+              total={total}
+              page={state.page}
+              pageSize={state.pageSize}
+              onPageChange={p => state.setFilter('page', p)}
+              onReset={() => state.resetFilters()}
             />
-          ) : (
-            <>
-              {!state.parentLab && (
-                <div style={{ marginBottom: 12 }}>
-                  <Text type="secondary">共 {total} 人</Text>
-                </div>
-              )}
-              <Row gutter={[16, 16]}>
-                {items.map(t => (
-                  <Col xs={24} sm={12} md={8} lg={6} key={t.talent_id}>
-                    <LabTalentCard talent={t} />
-                  </Col>
-                ))}
-              </Row>
-              <div style={{ textAlign: 'center', marginTop: 32 }}>
-                <Pagination
-                  current={state.page}
-                  total={total}
-                  pageSize={state.pageSize}
-                  onChange={p => state.setFilter('page', p)}
-                  showTotal={t => `共 ${t} 人`}
-                />
-              </div>
-            </>
-          )}
-        </Spin>
+          </RoleTabs>
+        ) : (
+          <>
+            <LabSearchFilter state={state} />
+            <SearchResults
+              isLoading={isLoading}
+              items={items}
+              total={total}
+              page={state.page}
+              pageSize={state.pageSize}
+              onPageChange={p => state.setFilter('page', p)}
+              onReset={() => state.resetFilters()}
+            />
+          </>
+        )}
       </div>
     </div>
+  )
+}
+
+// --- Sub components ---
+
+const ROLE_TAB_CONFIG: { key: string; label: string; distKey: string }[] = [
+  { key: '', label: '全部', distKey: '_all' },
+  { key: 'professor', label: '教授', distKey: 'professor' },
+  { key: 'student', label: '在读学生', distKey: 'student' },
+  { key: 'graduate', label: '博后/研究员', distKey: 'graduate' },
+  { key: 'alumni', label: '已毕业', distKey: 'alumni' },
+]
+
+const RoleTabs: React.FC<
+  React.PropsWithChildren<{
+    roleDist: Record<string, number>
+    activeRole: string
+    onRoleChange: (role: string) => void
+  }>
+> = ({ roleDist, activeRole, onRoleChange, children }) => {
+  const total = Object.values(roleDist).reduce((a, b) => a + b, 0)
+  const tabItems = ROLE_TAB_CONFIG.filter(r => {
+    if (r.key === '') return true // always show "全部"
+    return (roleDist[r.distKey] || 0) > 0
+  }).map(r => ({
+    key: r.key,
+    label: (
+      <span>
+        {r.label}
+        <span style={{ marginLeft: 6, fontSize: 12, color: '#94a3b8' }}>
+          {r.key === '' ? total : roleDist[r.distKey] || 0}
+        </span>
+      </span>
+    ),
+  }))
+
+  return (
+    <Tabs
+      activeKey={activeRole}
+      onChange={k => onRoleChange(k)}
+      items={tabItems.map(t => ({ ...t, children }))}
+      style={{ marginBottom: 16 }}
+    />
+  )
+}
+
+const SearchResults: React.FC<{
+  isLoading: boolean
+  items: import('../../types').LabTalent[]
+  total: number
+  page: number
+  pageSize: number
+  onPageChange: (p: number) => void
+  onReset: () => void
+}> = ({ isLoading, items, total, page, pageSize, onPageChange, onReset }) => {
+  return (
+    <Spin spinning={isLoading}>
+      {items.length === 0 && !isLoading ? (
+        <EmptyPlaceholder
+          title="未找到匹配的人才"
+          description="尝试调整筛选条件"
+          action={{ label: '清除筛选', onClick: onReset }}
+        />
+      ) : (
+        <>
+          <Row gutter={[16, 16]}>
+            {items.map(t => (
+              <Col xs={24} sm={12} md={8} lg={6} key={t.talent_id}>
+                <LabTalentCard talent={t} />
+              </Col>
+            ))}
+          </Row>
+          <div style={{ textAlign: 'center', marginTop: 32 }}>
+            <Pagination
+              current={page}
+              total={total}
+              pageSize={pageSize}
+              onChange={onPageChange}
+              showTotal={t => `共 ${t} 人`}
+            />
+          </div>
+        </>
+      )}
+    </Spin>
   )
 }
 
