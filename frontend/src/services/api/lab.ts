@@ -42,6 +42,11 @@ export const labApi = {
 
   getTalent: (id: number) => apiClient.get<LabTalentDetail>(`/lab/talents/${id}`),
 
+  getHomepagePreview: (id: number) =>
+    apiClient.get<{ html: string; base_url: string; title: string; status: string }>(
+      `/lab/talents/${id}/homepage-preview`
+    ),
+
   importUpload: (file: File, parentLab?: string) => {
     const formData = new FormData()
     formData.append('file', file)

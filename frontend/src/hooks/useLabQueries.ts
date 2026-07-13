@@ -90,3 +90,20 @@ export function useLabProfile(parentLab?: string) {
     },
   })
 }
+
+/**
+ * Get cleaned homepage HTML for inline preview.
+ * Not cached (always fresh fetch).
+ */
+export function useHomepagePreview(talentId?: number, enabled = false) {
+  return useQuery({
+    queryKey: ['lab', 'homepage-preview', talentId],
+    queryFn: async () => {
+      const response = await api.lab.getHomepagePreview(talentId!)
+      return response.data
+    },
+    enabled: !!talentId && enabled,
+    staleTime: 0,
+    retry: 0,
+  })
+}

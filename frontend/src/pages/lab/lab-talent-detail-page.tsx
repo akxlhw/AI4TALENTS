@@ -1,8 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Row, Col, Card, Descriptions, Tag, Typography, Button, Space, Divider } from 'antd'
-import { ArrowLeftOutlined, HomeOutlined, MailOutlined } from '@ant-design/icons'
-import { useLabTalent } from '../../hooks/useLabQueries'
+import { Row, Col, Card, Descriptions, Tag, Typography, Button, Space, Divider, Spin } from 'antd'
+import { ArrowLeftOutlined, HomeOutlined, MailOutlined, EyeOutlined } from '@ant-design/icons'
+import { useLabTalent, useHomepagePreview } from '../../hooks/useLabQueries'
 import { applyDomainCssVars } from '../../theme'
 import PageSkeleton from '../../components/PageSkeleton'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
@@ -16,6 +16,11 @@ const LabTalentDetailPage: React.FC = () => {
   const navigate = useNavigate()
   const id = talentId ? Number(talentId) : undefined
   const { data: talent, isLoading, error } = useLabTalent(id)
+  const [showPreview, setShowPreview] = useState(false)
+  const { data: preview, isLoading: previewLoading, error: previewError } = useHomepagePreview(
+    id,
+    showPreview
+  )
 
   useEffect(() => {
     applyDomainCssVars('lab')
@@ -133,6 +138,75 @@ const LabTalentDetailPage: React.FC = () => {
               </div>
             )}
           </Card>
+
+          {/* Homepage preview — lazy loaded on user request */}
+          {talent.homepage && (
+            <Card
+              style={{ borderRadius: 12, marginTop: 24 }}
+              title={
+                <Space>
+                  <HomeOutlined />
+                  <span>个人主页预览</span>
+                </Space>
+              }
+              extra={
+                !showPreview && (
+                  <Button
+                    type="primary"
+                    ghost
+                    icon={<EyeOutlined />}
+                    onClick={() => setShowPreview(true)}
+                  >
+                    加载预览
+                  </Button>
+                )
+              }
+            >
+              {!showPreview && (
+                <Text type="secondary">
+                  点击"加载预览"在此页面内查看该人才的个人主页内容
+                </Text>
+              )}
+              {showPreview && previewLoading && (
+                <div style={{ textAlign: 'center', padding: 48 }}>
+                  <Spin tip="正在抓取个人主页..." />
+                </div>
+              )}
+              {showPreview && !previewLoading && preview?.status === 'ok' && (
+                <iframe
+                  title="homepage-preview"
+                  srcDoc={preview.html}
+                  style={{
+                    width: '100%',
+                    minHeight: 500,
+                    border: '1px solid #e8e8e8',
+                    borderRadius: 8,
+                  }}
+                  sandbox="allow-same-origin allow-popups"
+                />
+              )}
+              {showPreview && !previewLoading && preview?.status === 'fetch_error' && (
+                <Text type="secondary">
+                  无法抓取该主页，可能是网络问题或目标网站限制访问。
+                </Text>
+              )}
+              {showPreview && !previewLoading && preview?.status?.startsWith('http_') && (
+                <Text type="secondary">
+                  目标网站返回了 {preview.status}，暂时无法预览。
+                </Text>
+              )}
+              {showPreview && !previewLoading && previewError && (
+                <Text type="danger">预览加载失败，请稍后重试。</Text>
+              )}
+              {showPreview && preview && (
+                <div style={{ marginTop: 12, textAlign: 'right' }}>
+                  <Link href={talent.homepage} target="_blank" style={{ fontSize: 12 }}>
+                    在新标签页打开完整主页 →
+                  </Link>
+                </div>
+              )}
+            </Card>
+          )}
         </Col>
       </Row>
     </div>

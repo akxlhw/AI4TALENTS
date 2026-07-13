@@ -93,3 +93,12 @@ class LabImportReport(BaseModel):
     inserted: int
     skipped: int
     skip_reasons: list[SkipReason] = Field(default_factory=list)
+
+
+class HomepagePreviewResponse(BaseModel):
+    """Cleaned personal homepage HTML for inline preview."""
+
+    html: str
+    base_url: str
+    title: str = ""
+    status: str  # ok / fetch_error / http_XXX / no_homepage

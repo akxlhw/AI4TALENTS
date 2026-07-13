@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import NotFoundError
 from app.domains.lab.repositories.lab_talent_repository import LabTalentRepository
 from app.domains.lab.schemas.lab_talent import (
+    HomepagePreviewResponse,
     LabProfileResponse,
     LabTalentDetail,
     LabTalentSummary,
@@ -69,3 +70,18 @@ class LabTalentService:
         if not profile:
             raise NotFoundError("Lab", parent_lab)
         return LabProfileResponse(**profile)
+
+    async def get_homepage_preview(self, talent_id: int) -> HomepagePreviewResponse:
+        """Fetch and clean the talent's homepage for inline preview."""
+        from app.domains.lab.services.homepage_preview_service import HomepagePreviewService
+
+        talent = await self.repo.get_by_id(talent_id)
+        if not talent:
+            raise NotFoundError("LabTalent", talent_id)
+
+        if not talent.homepage:
+            return HomepagePreviewResponse(html="", base_url="", status="no_homepage")
+
+        preview_svc = HomepagePreviewService()
+        result = await preview_svc.fetch_preview(talent.homepage)
+        return HomepagePreviewResponse(**result)

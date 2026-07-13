@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.domains.lab.schemas.lab_talent import (
+    HomepagePreviewResponse,
     LabProfileResponse,
     LabTalentDetail,
     LabTalentSummary,
@@ -108,3 +109,18 @@ async def get_lab_talent_detail(
     """Get full detail for a single lab talent."""
     service = LabTalentService(session)
     return await service.get_talent_detail(talent_id)
+
+
+@router.get(
+    "/talents/{talent_id}/homepage-preview",
+    response_model=HomepagePreviewResponse,
+    summary="Get inline preview of talent's personal homepage",
+)
+async def get_homepage_preview(
+    talent_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    _user: dict = Depends(get_current_user),
+) -> HomepagePreviewResponse:
+    """Fetch and clean the talent's homepage HTML for inline display."""
+    service = LabTalentService(session)
+    return await service.get_homepage_preview(talent_id)

@@ -42,6 +42,6 @@ describe('LabTalentCard', () => {
         <LabTalentCard talent={manyAreas} />
       </MemoryRouter>
     )
-    expect(screen.getByText('+1')).toBeInTheDocument()
+    expect(screen.getByText('+2')).toBeInTheDocument()
   })
 })

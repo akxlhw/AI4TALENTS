@@ -6,13 +6,26 @@ interface LabIconProps {
 }
 
 /**
- * AI Lab domain icon.
+ * AI Lab domain icon — "future star" motif.
  *
- * A microchip/processor glyph drawn in the same outlined stroke style as
- * Ant Design icons (BookOutlined, CodeOutlined, TrophyOutlined, BuildOutlined)
- * so the domain switcher feels visually consistent.
+ * Two outlined four-point sparkles of different sizes, evoking emerging AI
+ * talent and generative sparkle. Drawn with the same stroke style as Ant
+ * Design icons so the domain switcher stays visually consistent.
  */
 const LabIcon: React.FC<LabIconProps> = ({ className, style }) => {
+  const sparkle = (cx: number, cy: number, s: number) => {
+    // Four-point star: top, right, bottom, left with curved inset corners.
+    const t = `${cx},${cy - s}`
+    const r = `${cx + s},${cy}`
+    const b = `${cx},${cy + s}`
+    const l = `${cx - s},${cy}`
+    const it = `${cx},${cy - s * 0.35}`
+    const ir = `${cx + s * 0.35},${cy}`
+    const ib = `${cx},${cy + s * 0.35}`
+    const il = `${cx - s * 0.35},${cy}`
+    return `M${t} Q${ir} ${r} Q${ib} ${b} Q${il} ${l} Q${it} ${t} Z`
+  }
+
   return (
     <svg
       viewBox="0 0 24 24"
@@ -26,12 +39,10 @@ const LabIcon: React.FC<LabIconProps> = ({ className, style }) => {
       aria-hidden="true"
       focusable="false"
     >
-      {/* Chip body */}
-      <rect x="7.5" y="7.5" width="9" height="9" rx="1.6" />
-      {/* Chip pins */}
-      <path d="M7.5 10.5h-2M7.5 13.5h-2M16.5 10.5h2M16.5 13.5h2M10.5 7.5v-2M13.5 7.5v-2M10.5 16.5v2M13.5 16.5v2" />
-      {/* Core dot */}
-      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      {/* Larger star, lower-left */}
+      <path d={sparkle(10, 15, 6)} />
+      {/* Smaller star, upper-right */}
+      <path d={sparkle(17, 7, 3.5)} />
     </svg>
   )
 }
