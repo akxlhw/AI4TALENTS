@@ -836,6 +836,8 @@ app/domains/academic/services/venue_service.py:176
 app/domains/academic/services/venue_service.py:194
 app/domains/academic/services/venue_service.py:215
 app/domains/academic/services/venue_service.py:270
+app/domains/lab/services/homepage_preview_service.py:208
+app/domains/lab/services/lab_talent_service.py:103
 app/domains/open_source/api/collection.py:104
 app/domains/open_source/api/collection.py:121
 app/domains/open_source/api/collection.py:141
@@ -1281,8 +1283,8 @@ app/domains/shared/services/llm/llm_gateway.py:293
 app/domains/shared/services/llm/llm_gateway.py:54
 app/domains/shared/services/suggestion_service.py:58
 app/domains/shared/services/suggestion_service.py:66
-app/domains/shared/services/system_config_test_service.py:427
 app/domains/shared/services/system_config_test_service.py:430
+app/domains/shared/services/system_config_test_service.py:433
 app/domains/shared/services/user_activity_service.py:48
 app/domains/shared/services/user_activity_service.py:50
 app/domains/shared/services/user_activity_service.py:55

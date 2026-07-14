@@ -8,9 +8,12 @@ fragment for inline display in the detail page.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from typing import Any
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.shared.services.common.http_client import HttpClientFactory
 
@@ -105,7 +108,11 @@ class HomepagePreviewService:
         # Fix relative image URLs
         for img in body.find_all("img"):
             src = img.get("src", "")
-            if src and not src.startswith(("http://", "https://", "data:")):
+            if (
+                isinstance(src, str)
+                and src
+                and not src.startswith(("http://", "https://", "data:"))
+            ):
                 img["src"] = urljoin(base_url, src)
             # Remove lazy-loading attributes that break inline display
             for attr in ("loading", "srcset"):
@@ -115,7 +122,11 @@ class HomepagePreviewService:
         # Fix relative link URLs + open in new tab
         for a in body.find_all("a"):
             href = a.get("href", "")
-            if href and not href.startswith(("http://", "https://", "#", "mailto:", "tel:")):
+            if (
+                isinstance(href, str)
+                and href
+                and not href.startswith(("http://", "https://", "#", "mailto:", "tel:"))
+            ):
                 a["href"] = urljoin(base_url, href)
             a["target"] = "_blank"
             a["rel"] = "noopener noreferrer"
@@ -124,7 +135,9 @@ class HomepagePreviewService:
         for tag in body.find_all(["a", "img", "iframe", "embed", "object"]):
             for attr in ("href", "src", "xlink:href"):
                 val = tag.get(attr, "")
-                if val and val.lower().lstrip().startswith(("javascript:", "vbscript:", "data:text/html")):
+                if isinstance(val, str) and val.lower().lstrip().startswith(
+                    ("javascript:", "vbscript:", "data:text/html")
+                ):
                     del tag[attr]
 
         html = str(body)
@@ -142,9 +155,9 @@ class HomepagePreviewService:
 
     async def prefetch_all(
         self,
-        session,
+        session: AsyncSession,
         parent_lab: str,
-        progress_callback=None,
+        progress_callback: Callable[[int, int, str], Any] | None = None,
     ) -> dict:
         """Batch-fetch and cache homepage HTML for all talents in a lab.
 

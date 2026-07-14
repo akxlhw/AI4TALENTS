@@ -84,18 +84,20 @@ class LabTalentService:
         if not talent.homepage:
             return HomepagePreviewResponse(html="", base_url="", status="no_homepage")
 
+        homepage_url: str = str(talent.homepage)
+
         # Cache hit — return immediately
         if talent.homepage_cache:
             return HomepagePreviewResponse(
-                html=talent.homepage_cache,
-                base_url=talent.homepage,
+                html=str(talent.homepage_cache),
+                base_url=homepage_url,
                 title="",
                 status="ok",
             )
 
         # Cache miss — fetch, clean, and persist
         preview_svc = HomepagePreviewService()
-        result = await preview_svc.fetch_preview(talent.homepage)
+        result = await preview_svc.fetch_preview(homepage_url)
         if result["status"] == "ok" and result["html"]:
             talent.homepage_cache = result["html"]
             talent.homepage_cached_at = datetime.now()
