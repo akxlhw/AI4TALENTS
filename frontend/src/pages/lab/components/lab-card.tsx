@@ -3,28 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { Avatar, Typography } from 'antd'
 import LabIcon from '../../../components/lab-icon'
 import type { LabWithTalents } from '../../../types'
+import { ROLE_CONFIG, ROLE_COLORS } from '../constants/lab-role'
 
 const { Title, Text } = Typography
 
 interface LabCardProps {
   lab: LabWithTalents
-}
-
-// Role display config: label + color for the mini composition bar
-const ROLE_CONFIG: { key: string; label: string; color: string }[] = [
-  { key: 'professor', label: '教授', color: '#0D2B4E' },
-  { key: 'student', label: '在读学生', color: '#0EA5E9' },
-  { key: 'graduate', label: '博后/研究员', color: '#F59E0B' },
-  { key: 'alumni', label: '已毕业', color: '#0284C7' },
-  { key: 'unknown', label: '其他', color: '#CBD5E1' },
-]
-
-const ROLE_AVATAR_COLORS: Record<string, string> = {
-  professor: '#0D2B4E',
-  student: '#0EA5E9',
-  graduate: '#F59E0B',
-  alumni: '#0284C7',
-  unknown: '#CBD5E1',
 }
 
 const LabCard: React.FC<React.PropsWithChildren<LabCardProps>> = ({ lab }) => {
@@ -147,7 +131,7 @@ const LabCard: React.FC<React.PropsWithChildren<LabCardProps>> = ({ lab }) => {
                 style={{
                   marginLeft: i === 0 ? 0 : -10,
                   border: '2px solid #fff',
-                  backgroundColor: ROLE_AVATAR_COLORS[talent.role_type] || ROLE_AVATAR_COLORS.unknown,
+                  backgroundColor: ROLE_COLORS[talent.role_type] || ROLE_COLORS.unknown,
                   fontSize: 12,
                   zIndex: previewTalents.length - i,
                 }}

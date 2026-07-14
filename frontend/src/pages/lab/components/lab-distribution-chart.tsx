@@ -1,5 +1,6 @@
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
+import { domainThemes } from '../../../theme'
 
 interface LabDistributionChartProps {
   data: { name: string; value: number }[]
@@ -17,7 +18,8 @@ const LabDistributionChart: React.FC<LabDistributionChartProps> = ({ data, onBar
         type: 'bar',
         data: data.map(d => d.value),
         itemStyle: {
-          color: 'var(--domain-secondary)',
+          // ECharts renders to canvas — CSS variables don't work, use hex
+          color: domainThemes.lab.secondary,
           borderRadius: [0, 4, 4, 0],
         },
         barWidth: '60%',
@@ -26,7 +28,7 @@ const LabDistributionChart: React.FC<LabDistributionChartProps> = ({ data, onBar
   }
 
   const onEvents = {
-    click: (params: any) => {
+    click: (params: { name: string }) => {
       if (onBarClick) onBarClick(params.name)
     },
   }

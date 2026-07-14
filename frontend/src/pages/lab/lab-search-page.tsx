@@ -10,6 +10,7 @@ import LabSearchFilter from './components/lab-search-filter'
 import LabTalentCard from './components/lab-talent-card'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import BreadcrumbNav from '../../components/BreadcrumbNav'
+import { ROLE_TAB_CONFIG } from './constants/lab-role'
 
 const { Text } = Typography
 
@@ -267,14 +268,6 @@ const LabSearchPage: React.FC = () => {
 
 // --- Sub components ---
 
-const ROLE_TAB_CONFIG: { key: string; label: string; distKey: string }[] = [
-  { key: '', label: '全部', distKey: '_all' },
-  { key: 'professor', label: '教授', distKey: 'professor' },
-  { key: 'student', label: '在读学生', distKey: 'student' },
-  { key: 'graduate', label: '博后/研究员', distKey: 'graduate' },
-  { key: 'alumni', label: '已毕业', distKey: 'alumni' },
-]
-
 const RoleTabs: React.FC<
   React.PropsWithChildren<{
     roleDist: Record<string, number>
@@ -285,14 +278,14 @@ const RoleTabs: React.FC<
   const total = Object.values(roleDist).reduce((a, b) => a + b, 0)
   const tabItems = ROLE_TAB_CONFIG.filter(r => {
     if (r.key === '') return true // always show "全部"
-    return (roleDist[r.distKey] || 0) > 0
+    return (roleDist[r.key] || 0) > 0
   }).map(r => ({
     key: r.key,
     label: (
       <span>
         {r.label}
         <span style={{ marginLeft: 6, fontSize: 12, color: '#94a3b8' }}>
-          {r.key === '' ? total : roleDist[r.distKey] || 0}
+          {r.key === '' ? total : roleDist[r.key] || 0}
         </span>
       </span>
     ),

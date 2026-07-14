@@ -1,24 +1,15 @@
 import { Card, Row, Col, Input, Select, Button } from 'antd'
 import { SearchOutlined, FilterOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { LabSearchState } from '../../../stores/labSearchStore'
+import { ROLE_FILTER_OPTIONS, LEVEL_LABELS } from '../constants/lab-role'
 
 interface LabSearchFilterProps {
   state: LabSearchState
 }
 
-const ROLE_OPTIONS = [
-  { label: '全部角色', value: '' },
-  { label: '教授', value: 'professor' },
-  { label: '在读学生', value: 'student' },
-  { label: '博后/研究员', value: 'graduate' },
-  { label: '已毕业', value: 'alumni' },
-]
-
 const LEVEL_OPTIONS = [
   { label: '全部学位', value: '' },
-  { label: '博士', value: 'phd' },
-  { label: '硕士', value: 'master' },
-  { label: '学士', value: 'bachelor' },
+  ...Object.entries(LEVEL_LABELS).map(([value, label]) => ({ label, value })),
 ]
 
 const SORT_OPTIONS = [
@@ -47,7 +38,7 @@ const LabSearchFilter: React.FC<LabSearchFilterProps> = ({ state }) => {
             style={{ width: '100%' }}
             value={state.roleType || undefined}
             onChange={v => state.setFilter('roleType', v || '')}
-            options={ROLE_OPTIONS}
+            options={ROLE_FILTER_OPTIONS}
             allowClear
           />
         </Col>

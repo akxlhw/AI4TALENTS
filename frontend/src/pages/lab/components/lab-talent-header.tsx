@@ -2,22 +2,10 @@ import { Avatar, Tag, Typography, Space, Button } from 'antd'
 import { MailOutlined, HomeOutlined } from '@ant-design/icons'
 import type { LabTalentDetail } from '../../../types'
 import { domainThemes } from '../../../theme'
+import { ROLE_LABELS, LEVEL_LABELS } from '../constants/lab-role'
 
 const { Title, Text } = Typography
 const dt = domainThemes.lab
-
-const ROLE_LABELS: Record<string, string> = {
-  professor: '教授',
-  student: '学生',
-  graduate: '博后/研究员',
-  unknown: '其他',
-}
-
-const LEVEL_LABELS: Record<string, string> = {
-  phd: '博士',
-  master: '硕士',
-  bachelor: '学士',
-}
 
 interface LabTalentHeaderProps {
   talent: LabTalentDetail

@@ -1,20 +1,27 @@
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
+import { ROLE_COLORS, ROLE_LABELS } from '../constants/lab-role'
 
 interface RoleDistributionChartProps {
   data: { name: string; value: number }[]
   onSliceClick?: (name: string) => void
 }
 
-const ROLE_COLORS = ['#0D2B4E', '#0EA5E9', '#60A5FA', '#93C5FD']
-
 const RoleDistributionChart: React.FC<RoleDistributionChartProps> = ({ data, onSliceClick }) => {
   const total = data.reduce((sum, item) => sum + item.value, 0)
+
+  // Map raw role_type keys to Chinese labels + correct colors
+  const chartData = data.map(item => ({
+    name: ROLE_LABELS[item.name] || item.name,
+    value: item.value,
+    itemStyle: { color: ROLE_COLORS[item.name] || '#CBD5E1' },
+    // keep raw key for click callback
+    _rawKey: item.name,
+  }))
 
   const option: EChartsOption = {
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
     legend: { bottom: 0, left: 'center' },
-    color: ROLE_COLORS,
     series: [
       {
         type: 'pie',
@@ -27,7 +34,7 @@ const RoleDistributionChart: React.FC<RoleDistributionChartProps> = ({ data, onS
           label: { show: true, fontSize: 18, fontWeight: 'bold', formatter: `{b}\n{c}` },
         },
         labelLine: { show: false },
-        data,
+        data: chartData,
       },
     ],
     graphic: [
@@ -53,8 +60,12 @@ const RoleDistributionChart: React.FC<RoleDistributionChartProps> = ({ data, onS
   }
 
   const onEvents = {
-    click: (params: any) => {
-      if (onSliceClick) onSliceClick(params.name)
+    click: (params: { name: string }) => {
+      if (onSliceClick) {
+        // Find the raw role_type key from chartData
+        const matched = chartData.find(d => d.name === params.name)
+        onSliceClick(matched?._rawKey || params.name)
+      }
     },
   }
 

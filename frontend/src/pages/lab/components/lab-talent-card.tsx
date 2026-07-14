@@ -1,23 +1,9 @@
 import { Tag, Typography, Space, Avatar } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import type { LabTalent } from '../../../types'
+import { ROLE_LABELS, ROLE_COLORS, LEVEL_LABELS } from '../constants/lab-role'
 
 const { Text } = Typography
-
-// Role display config: Chinese label + color for visual distinction
-const ROLE_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
-  professor: { label: '教授', color: 'var(--domain-primary, #0D2B4E)', dot: '#0D2B4E' },
-  student: { label: '在读', color: 'var(--domain-secondary, #0EA5E9)', dot: '#0EA5E9' },
-  graduate: { label: '博后/研究员', color: '#F59E0B', dot: '#F59E0B' },
-  alumni: { label: '已毕业', color: '#0284C7', dot: '#0284C7' },
-  unknown: { label: '其他', color: '#CBD5E1', dot: '#CBD5E1' },
-}
-
-const LEVEL_LABELS: Record<string, string> = {
-  phd: '博士',
-  master: '硕士',
-  bachelor: '学士',
-}
 
 interface LabTalentCardProps {
   talent: LabTalent
@@ -26,7 +12,8 @@ interface LabTalentCardProps {
 const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
   const navigate = useNavigate()
   const initials = talent.name.slice(0, 1)
-  const role = ROLE_CONFIG[talent.role_type] || ROLE_CONFIG.unknown
+  const roleColor = ROLE_COLORS[talent.role_type] || ROLE_COLORS.unknown
+  const roleLabel = ROLE_LABELS[talent.role_type] || ROLE_LABELS.unknown
 
   return (
     <div
@@ -46,7 +33,7 @@ const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
       onMouseEnter={e => {
         e.currentTarget.style.transform = 'translateY(-3px)'
         e.currentTarget.style.boxShadow = '0 8px 24px rgba(13,43,78,0.10)'
-        e.currentTarget.style.borderColor = role.dot
+        e.currentTarget.style.borderColor = roleColor
       }}
       onMouseLeave={e => {
         e.currentTarget.style.transform = ''
@@ -61,7 +48,7 @@ const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
             size={44}
             src={talent.photo_url || undefined}
             style={{
-              background: `linear-gradient(135deg, ${role.dot}, ${role.dot}dd)`,
+              background: `linear-gradient(135deg, ${roleColor}, ${roleColor}dd)`,
               color: '#fff',
               fontWeight: 600,
             }}
@@ -78,7 +65,7 @@ const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
               height: 14,
               borderRadius: '50%',
               border: '2.5px solid #fff',
-              background: role.dot,
+              background: roleColor,
             }}
           />
         </div>
@@ -99,12 +86,12 @@ const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
                 lineHeight: '20px',
                 borderRadius: 10,
                 border: 'none',
-                background: `${role.color}15`,
-                color: role.color,
+                background: `${roleColor}15`,
+                color: roleColor,
                 fontWeight: 500,
               }}
             >
-              {role.label}
+              {roleLabel}
             </Tag>
             {talent.academic_level && (
               <Tag
