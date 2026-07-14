@@ -17,7 +17,15 @@ const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={() => navigate(`/lab/talents/${talent.talent_id}`)}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          navigate(`/lab/talents/${talent.talent_id}`)
+        }
+      }}
       style={{
         borderRadius: 14,
         background: '#fff',

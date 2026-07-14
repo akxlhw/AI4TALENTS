@@ -27,7 +27,15 @@ const LabCard: React.FC<React.PropsWithChildren<LabCardProps>> = ({ lab }) => {
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={() => navigate(`/lab/search?parent_lab=${encodeURIComponent(lab.name)}`)}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          navigate(`/lab/search?parent_lab=${encodeURIComponent(lab.name)}`)
+        }
+      }}
       style={{
         borderRadius: 14,
         overflow: 'hidden',

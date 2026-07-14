@@ -15,6 +15,10 @@ from app.domains.shared.services.config_service import ConfigService
 
 logger = logging.getLogger(__name__)
 
+# Keep references to background tasks to prevent GC (Python docs:
+# "Save a reference to the result of this function")
+_background_tasks: set[asyncio.Task] = set()
+
 router = APIRouter(prefix="/lab", tags=["AI Lab Talent"])
 
 PREFETCH_STATUS_KEY = "lab_homepage_prefetch_status"
@@ -61,6 +65,7 @@ async def trigger_prefetch(
     await _save_status(config_service, status)
 
     task = asyncio.create_task(_run_prefetch(parent_lab), name="lab_homepage_prefetch")
+    _background_tasks.add(task)
     task.add_done_callback(_on_task_done)
     return TaskStartResponse(message=f"Homepage prefetch started for {parent_lab}")
 
@@ -78,6 +83,7 @@ async def get_prefetch_status(
 
 
 def _on_task_done(task: asyncio.Task) -> None:
+    _background_tasks.discard(task)
     try:
         task.result()
     except asyncio.CancelledError:
