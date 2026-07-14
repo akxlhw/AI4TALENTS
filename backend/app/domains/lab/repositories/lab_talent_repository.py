@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy.dialects.postgresql import JSONB
-
 from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -69,9 +68,7 @@ class LabTalentRepository:
             conditions.append(LabTalent.cohort_year >= cohort_year_gte)
         # research_area: JSONB containment (@> requires jsonb, not json)
         if research_area:
-            conditions.append(
-                LabTalent.research_areas.cast(JSONB).op("@>")(str([research_area]))
-            )
+            conditions.append(LabTalent.research_areas.cast(JSONB).op("@>")(str([research_area])))
 
         stmt = select(LabTalent).where(*conditions)
         order_expr = _SORT_MAP.get(sort_by, LabTalent.created_at.desc())

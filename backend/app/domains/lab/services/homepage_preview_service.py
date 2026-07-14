@@ -120,6 +120,13 @@ class HomepagePreviewService:
             a["target"] = "_blank"
             a["rel"] = "noopener noreferrer"
 
+        # Security: strip javascript: / data: protocol URLs from href and src
+        for tag in body.find_all(["a", "img", "iframe", "embed", "object"]):
+            for attr in ("href", "src", "xlink:href"):
+                val = tag.get(attr, "")
+                if val and val.lower().lstrip().startswith(("javascript:", "vbscript:", "data:text/html")):
+                    del tag[attr]
+
         html = str(body)
 
         # Truncate if too large

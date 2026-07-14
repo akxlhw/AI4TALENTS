@@ -1,7 +1,7 @@
 # AI 实验室人才库 — 架构设计方案
 
 > 版本: v1.0 | 日期: 2026-07-02
-> 状态: 设计已确认，待实施
+> 状态: 已实现（v3.0.0，2026-07-14 发布）
 
 ---
 
@@ -27,8 +27,8 @@
 | 维度 | 决策 | 依据 |
 |------|------|------|
 | 产品定位 | 独立第四库（独立入口 + 独立页面） | 用户选择 |
-| 架构方向 | 新建 `domains/lab/` 独立域 + 独立 `core_lab_talent` 表 | **跨域隔离铁律**：新域不得 import `domains.academic`，故无法复用 `core_talent` |
-| crawler 契约 | 同步修订 | importer-contract.md 原假设写 `core_talent`，需改为 `core_lab_talent` |
+| 架构方向 | 新建 `domains/lab/` 独立域 + 独立 `lab_talent` 表 | **跨域隔离铁律**：新域不得 import `domains.academic`，故无法复用 `core_talent` |
+| crawler 契约 | 同步修订 | importer-contract.md 原假设写 `core_talent`，需改为 `lab_talent` |
 | 导入链路 | hermes 推送 API + 管理员手动上传，两者都支持 | 用户选择 |
 | 导入策略 | 按实验室全量替换（先 DELETE 再 INSERT，单事务原子性） | 用户选择 |
 | 跨库同人 | 现阶段不识别，预留 `unified_person_id` 字段 | 用户选择（MVP） |
@@ -48,7 +48,7 @@ crawler 的 `importer-contract.md` 原本预设写 `core_talent`，是站在 cra
 
 ## 3. 数据模型
 
-### 3.1 核心表：`core_lab_talent`
+### 3.1 核心表：`lab_talent`
 
 文件位置：`backend/app/domains/lab/models/lab_talent.py`（新建）
 
@@ -90,7 +90,7 @@ crawler 的 `importer-contract.md` 原本预设写 `core_talent`，是站在 cra
 | Master Students / Master's Students / Masters / 硕士生 | `student` | `master` | 硕士生 |
 | Undergrads / Undergraduate Students / Bachelor / 本科生 | `student` | `bachelor` | 本科生 |
 | Students（未细分的泛称）| `student` | NULL | 页面未区分学位层次时，level 留空 |
-| Alumni / Former Members | `unknown` | NULL | 校友角色模糊 |
+| Alumni / Former Members | `alumni` | NULL | 已毕业（独立 role_type，v3.0.0 变更）|
 | 其他/Unknown | `unknown` | NULL | 兜底 |
 
 #### 设计说明：role_type 与 academic_level 是正交两个维度
@@ -138,7 +138,7 @@ def map_role(role_section: str) -> tuple[str, str | None]:
 文件：`backend/migrations/versions/050_add_lab_talent_table.py`（新建）
 
 - `down_revision` 指向当前 head（`049_add_genealogy_tables` 之后）
-- `op.create_table('core_lab_talent', ...)` 按上表字段
+- `op.create_table('lab_talent', ...)` 按上表字段
 - 索引：`ix_lab_talent_name`、`ix_lab_talent_parent_lab`、`ix_lab_talent_lab_name`、
   `ix_lab_talent_role_type`、`ix_lab_talent_academic_level`、`ix_lab_talent_cohort_year`、
   `ix_lab_talent_dedup_hash`(unique)、`ix_lab_talent_unified_person_id`
@@ -160,7 +160,7 @@ backend/app/domains/lab/
 │   └── stats.py               # 概览统计 API
 ├── models/
 │   ├── __init__.py
-│   └── lab_talent.py          # core_lab_talent ORM
+│   └── lab_talent.py          # lab_talent ORM
 ├── schemas/
 │   ├── __init__.py
 │   └── lab_talent.py          # Pydantic DTO
@@ -350,7 +350,7 @@ api_router.include_router(stats.router)
 
 | 原内容 | 修订为 |
 |--------|--------|
-| 字段映射目标 `core_talent` | 改为 `core_lab_talent` |
+| 字段映射目标 `core_talent` | 改为 `lab_talent` |
 | `source_type = 'lab_web_site'` 隔离机制 | 删除（lab 库是独立表，不再用 source_type 隔离）|
 | upsert 查询 `WHERE source_type='lab_web_site'` | 改为按 `parent_lab` 全量替换（DELETE + INSERT）|
 | `(name+lab_name+role_section 的 sha256) → source_record_id` | 改为 `→ dedup_hash` |
@@ -371,7 +371,7 @@ api_router.include_router(stats.router)
 
 ## 10. 实施顺序建议
 
-1. **后端数据层**：模型 + 迁移 + 注册（`core_lab_talent` 表）
+1. **后端数据层**：模型 + 迁移 + 注册（`lab_talent` 表）
 2. **导入服务**：`LabImportService` + 导入 API（hermes 推送 + 管理员上传）+ API Key 鉴权
 3. **crawler 契约修订**：同步改 `importer-contract.md`
 4. **端到端导入验证**：用 crawler 产出的真实 JSONL 跑通一次导入
