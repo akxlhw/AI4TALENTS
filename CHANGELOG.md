@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-07-14
+
+### Added
+
+- **AI Native 人才库**（`domains/lab/`）：全新独立第四域，覆盖全球顶尖 AI 实验室（Stanford AI Lab、MIT CSAIL、LAMDA 等）的研究人员
+  - 独立 `lab_talent` 表 + `lab_info` 实验室元数据表（跨域隔离铁律，不复用 `core_talent`）
+  - 数据来源：通过 hermes agent 调用 `ai-lab-talent-crawler` skill 采集实验室官网人员数据，产出 JSONL
+  - 双导入入口：hermes API 推送（静态 API Key 鉴权）+ 管理员手动上传（super_admin）
+  - 导入策略：按实验室全量替换（单事务原子性），支持新版 JSONL 格式（`type: lab` 元数据头 + `type: person` 人才行）
+  - 角色映射：`role_section` → `role_type`（教授/在读学生/博后/已毕业）+ `academic_level`（博士/硕士/学士）双维度
+  - 主页预览：详情页内嵌个人主页（后端代理抓取+清洗 HTML，绕过 X-Frame-Options）；批量预抓取+缓存+进度显示
+  - 前端：概览页（实验室卡片+角色构成条）、实验室详情页（Profile Header + 角色 Tabs + 人才卡片网格）、人才详情页（Tabs 分区 + 主页内嵌预览）
+  - 导航：`AI Native` 域入口，与学术人才/开源人才并列
+
+### Changed
+
+- 版本号更新至 3.0.0（pyproject.toml、package.json、config.py、AGENTS.md）
+- 开源人才详情页返回按钮：`navigate('/opensource')` → `navigate(-1)`，保持搜索状态
+- 导航栏域标签：实验室域从"AI 实验室"改为"AI Native"
+- 研究方向导入清洗：过滤 HTML 实体（`&nbsp`）、句子碎片、人名、超长项
+
+### Fixed
+
+- 测试套件全量通过（CI 修复链路）：httpx API 适配、测试 DATABASE_URL 注入、mypy baseline 跨平台路径归一化、架构 baseline 跨平台哈希、mypy_gate 路径漂移、npm audit 9 个依赖漏洞
+- 族谱计算 PostgreSQL 堆栈溢出（超大 IN 子句 → 临时表 + anti-join）
+- 开源人才库管理员访问权限（repo_config 只读接口降权）
+- 迁移链冲突（废弃 lw_* 表清理脚本 + migrate.bat 自动检测）
+- 主页预览 UTF-16 编码、重定向跟随、bs4 Tag API 兼容
+
 ## [2.2.0] - 2026-06-16
 
 ### Added
