@@ -25,7 +25,9 @@ logger = logging.getLogger(__name__)
 
 # Patterns for cleaning research_areas extracted from lab websites
 _HTML_ENTITY_RE = re.compile(r"&[a-zA-Z]+;|&#\d+;")
-_PERSON_NAME_RE = re.compile(r"^[A-Z][a-z]+[-\s][A-Z][a-z]+")  # e.g. "Jun-Peng Jiang"
+# Person name pattern: only match hyphenated names (e.g. "Jun-Peng Jiang")
+# or 3+ word names. Two-word "Machine Learning" must NOT match.
+_PERSON_NAME_RE = re.compile(r"^[A-Z][a-z]+-[A-Z][a-z]+\s[A-Z][a-z]+")
 _MULTILINE_SENTENCE_RE = re.compile(r"[.!?]\s+[A-Z]")  # sentence boundary inside one item
 # Fragments that are clearly not research areas
 _NOISE_FRAGMENTS = {
