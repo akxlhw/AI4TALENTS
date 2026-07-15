@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Card,
   Typography,
@@ -48,25 +48,45 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
   } | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Poll prefetch progress
-  useEffect(() => {
-    if (prefetchStatus?.status === 'running' || prefetchStatus?.status === 'pending') {
-      pollRef.current = setInterval(async () => {
-        try {
-          const res = await api.lab.getPrefetchStatus()
-          setPrefetchStatus(res.data)
-          if (res.data.status === 'completed' || res.data.status === 'error') {
-            if (pollRef.current) clearInterval(pollRef.current)
+  // Start polling when prefetch is running
+  const startPolling = useCallback(() => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await api.lab.getPrefetchStatus()
+        setPrefetchStatus(res.data)
+        if (res.data.status === 'completed' || res.data.status === 'error' || res.data.status === 'cancelled') {
+          if (pollRef.current) {
+            clearInterval(pollRef.current)
+            pollRef.current = null
           }
-        } catch {
-          // ignore poll errors
         }
-      }, 3000)
+      } catch {
+        // ignore poll errors
+      }
+    }, 3000)
+  }, [])
+
+  // On mount: check if a prefetch is already running (e.g. after page switch)
+  useEffect(() => {
+    let cancelled = false
+    async function checkRunning() {
+      try {
+        const res = await api.lab.getPrefetchStatus()
+        if (!cancelled && (res.data.status === 'running' || res.data.status === 'pending')) {
+          setPrefetchStatus(res.data)
+          startPolling()
+        }
+      } catch {
+        // ignore — no prior prefetch state
+      }
     }
+    checkRunning()
     return () => {
+      cancelled = true
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [prefetchStatus?.status])
+  }, [startPolling])
 
   const beforeUpload: UploadProps['beforeUpload'] = file => {
     const isJsonl =
@@ -107,8 +127,22 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
         try {
           await api.lab.triggerPrefetch(labName)
           setPrefetchStatus({ status: 'pending', processed: 0, total: 0, current: '启动中...', errors: 0 })
-        } catch {
-          // prefetch trigger failed silently — user can still use on-demand preview
+          startPolling()
+        } catch (e: unknown) {
+          // 409 = already running — recover by polling existing progress
+          const status = (e as { response?: { status?: number } }).response?.status
+          if (status === 409) {
+            try {
+              const res = await api.lab.getPrefetchStatus()
+              setPrefetchStatus(res.data)
+              if (res.data.status === 'running' || res.data.status === 'pending') {
+                startPolling()
+              }
+            } catch {
+              // give up silently
+            }
+          }
+          // other errors: prefetch not started, user can still use on-demand preview
         }
       }
     } catch (e) {
@@ -236,6 +270,8 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
             />
           ) : prefetchStatus.status === 'error' ? (
             <Alert type="error" showIcon message="预抓取失败，请稍后重试" />
+          ) : prefetchStatus.status === 'cancelled' ? (
+            <Alert type="warning" showIcon message="预抓取已取消" />
           ) : null}
         </Card>
       )}
