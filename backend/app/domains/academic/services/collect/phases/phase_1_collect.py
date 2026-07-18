@@ -50,6 +50,10 @@ class PhaseCollectHandler(PhaseHandler):
         MAX_SUBTASK_RETRIES = 3
 
         for sub_task in sub_tasks:
+            # Skip already-completed sub-tasks on rerun (saves API quota)
+            if sub_task.status == "completed":
+                continue
+
             venue_name = None
             works_fetched = 0
             last_error = None

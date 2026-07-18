@@ -39,7 +39,7 @@ const LabOverviewPage: React.FC = () => {
     return (
       <EmptyPlaceholder
         title="暂无 AI 实验室人才数据"
-        description="请通过 hermes 推送或管理员上传导入实验室人才数据"
+        description="请通过管理员上传导入实验室人才数据"
         action={
           user?.role === 'super_admin'
             ? { label: '去导入', onClick: () => navigate('/system-config?tab=lab-import') }

@@ -201,7 +201,7 @@ class GitHubClient:
 
         if response.status_code == 404:
             logger.warning(f"GitHub API 404: {path}")
-            return {}
+            return None  # explicit None distinguishes "not found" from "success empty"
 
         if response.status_code in (401, 403, 429):
             reset_at = response.headers.get("X-RateLimit-Reset")

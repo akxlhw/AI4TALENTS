@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # ============ Data Version Schemas ============
 
@@ -31,8 +31,7 @@ class DataVersionResponse(BaseModel):
     description: str | None = Field(default=None, description="版本描述")
     created_at: datetime = Field(description="创建时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DataVersionListResponse(BaseModel):
@@ -77,8 +76,7 @@ class PublishRecordResponse(BaseModel):
     operated_at: datetime = Field(description="操作时间")
     notes: str | None = Field(default=None, description="备注")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PublishRecordListResponse(BaseModel):
@@ -122,8 +120,7 @@ class CorrectionResponse(BaseModel):
     status: str = Field(description="状态: pending/applied/reverted")
     created_at: datetime = Field(description="创建时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CorrectionListResponse(BaseModel):
@@ -175,8 +172,7 @@ class QualitySummaryResponse(BaseModel):
     details: dict | None = Field(default=None, description="详细数据")
     created_at: datetime = Field(description="创建时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class QualityMetricsResponse(BaseModel):

@@ -2,10 +2,12 @@
 OpenAlex utility functions.
 """
 
-# OpenAlex API base URL
 from __future__ import annotations
 
-OPENALEX_API_BASE = "https://api.openalex.org"
+from app.core.config import settings
+
+# OpenAlex API base URL — single source of truth from settings
+OPENALEX_API_BASE = settings.OPENALEX_BASE_URL
 
 # Rate limiting: 10 requests per second for polite pool
 REQUEST_DELAY = 0.1  # 100ms between requests

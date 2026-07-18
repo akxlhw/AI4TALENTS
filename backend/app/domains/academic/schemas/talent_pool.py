@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CreatePoolRequest(BaseModel):
@@ -47,8 +47,7 @@ class TalentPoolResponse(BaseModel):
     member_count: int = Field(default=0, description="成员数量")
     created_at: datetime = Field(description="创建时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PoolMemberResponse(BaseModel):

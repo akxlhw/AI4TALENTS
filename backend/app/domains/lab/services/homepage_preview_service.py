@@ -49,6 +49,56 @@ _MAX_HTML_LENGTH = 100_000
 # Maximum response body to download before giving up
 _MAX_CONTENT_LENGTH = 2 * 1024 * 1024
 
+# Banned IP ranges for SSRF protection (RFC1918 + link-local + loopback)
+_BANNED_IP_PREFIXES = (
+    "10.",
+    "172.16.",
+    "172.17.",
+    "172.18.",
+    "172.19.",
+    "172.20.",
+    "172.21.",
+    "172.22.",
+    "172.23.",
+    "172.24.",
+    "172.25.",
+    "172.26.",
+    "172.27.",
+    "172.28.",
+    "172.29.",
+    "172.30.",
+    "172.31.",
+    "192.168.",
+    "169.254.",
+    "127.",
+)
+
+
+def _is_ssrf_url(url: str) -> bool:
+    """Check if URL points to a private/loopback/link-local address."""
+    import ipaddress
+    import socket
+    from urllib.parse import urlparse
+
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname or ""
+        # Quick string check for obvious private ranges
+        if hostname.startswith(_BANNED_IP_PREFIXES):
+            return True
+        # DNS resolution check
+        try:
+            ip = socket.getaddrinfo(hostname, None)[0][4][0]
+            ip_obj = ipaddress.ip_address(ip)
+            if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local:
+                return True
+        except (socket.gaierror, ValueError):
+            pass  # can't resolve — allow (may be an internal hostname)
+    except Exception:
+        pass
+    return False
+
+
 # Concurrent fetch limit for batch prefetch
 _MAX_CONCURRENT_FETCHES = 5
 
@@ -92,6 +142,11 @@ class HomepagePreviewService:
         Returns:
             dict with keys: html, base_url, title, status
         """
+        # SSRF protection: refuse to fetch private/loopback/link-local addresses
+        if _is_ssrf_url(homepage_url):
+            logger.warning("[HomepagePreview] SSRF blocked: %s", homepage_url)
+            return {"html": "", "base_url": homepage_url, "title": "", "status": "ssrf_blocked"}
+
         parsed = urlparse(homepage_url)
         if parsed.scheme not in ("http", "https") or not parsed.netloc:
             logger.warning("[HomepagePreview] Invalid URL scheme for %s", homepage_url)

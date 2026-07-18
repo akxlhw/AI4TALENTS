@@ -10,7 +10,7 @@ import warnings
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 def _generate_secret_key() -> str:
@@ -159,10 +159,11 @@ class Settings(BaseSettings):
     RECOMMEND_TAG_WEIGHT: float = 0.5  # Weight for tag overlap in fallback similarity
     RECOMMEND_RESEARCH_WEIGHT: float = 0.5  # Weight for research overlap in fallback similarity
 
-    class Config:
-        env_file = str(Path(__file__).resolve().parent.parent.parent / ".env")
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=str(Path(__file__).resolve().parent.parent.parent / ".env"),
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

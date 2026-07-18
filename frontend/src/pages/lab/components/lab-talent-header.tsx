@@ -1,11 +1,45 @@
-import { Avatar, Tag, Typography, Space, Button } from 'antd'
-import { MailOutlined, HomeOutlined } from '@ant-design/icons'
+import { Avatar, Tag, Typography, Space, Button, Tooltip } from 'antd'
+import {
+  MailOutlined,
+  HomeOutlined,
+  GithubOutlined,
+  LinkedinOutlined,
+  TwitterOutlined,
+  BookOutlined,
+  IdcardOutlined,
+  LinkOutlined,
+} from '@ant-design/icons'
 import type { LabTalentDetail } from '../../../types'
 import { domainThemes } from '../../../theme'
 import { ROLE_LABELS, LEVEL_LABELS } from '../constants/lab-role'
 
 const { Title, Text } = Typography
 const dt = domainThemes.lab
+
+// Platform key (lowercase, as stored in social_links) → icon + display label
+const SOCIAL_ICONS: Record<string, React.ReactNode> = {
+  linkedin: <LinkedinOutlined />,
+  github: <GithubOutlined />,
+  twitter: <TwitterOutlined />,
+  x: <TwitterOutlined />,
+  scholar: <BookOutlined />,
+  google_scholar: <BookOutlined />,
+  orcid: <IdcardOutlined />,
+}
+
+const SOCIAL_LABELS: Record<string, string> = {
+  linkedin: 'LinkedIn',
+  github: 'GitHub',
+  twitter: 'Twitter',
+  x: 'X',
+  scholar: 'Google Scholar',
+  google_scholar: 'Google Scholar',
+  orcid: 'ORCID',
+}
+
+// Backend-generated Google search URLs stand in for profiles the crawler
+// did not find — label them as search links so users can tell the difference.
+const isSearchFallback = (url: string) => url.includes('google.com/search')
 
 interface LabTalentHeaderProps {
   talent: LabTalentDetail
@@ -55,6 +89,23 @@ const LabTalentHeader: React.FC<LabTalentHeaderProps> = ({ talent }) => {
           </Button>
         )}
       </Space>
+      {talent.social_links && Object.keys(talent.social_links).length > 0 && (
+        <Space size={8} wrap style={{ justifyContent: 'center', marginTop: 12 }}>
+          {Object.entries(talent.social_links).map(([platform, url]) => {
+            const label = SOCIAL_LABELS[platform] || platform
+            return (
+              <Tooltip key={platform} title={isSearchFallback(url) ? `${label}（搜索）` : label}>
+                <Button
+                  shape="circle"
+                  icon={SOCIAL_ICONS[platform] || <LinkOutlined />}
+                  href={url}
+                  target="_blank"
+                />
+              </Tooltip>
+            )
+          })}
+        </Space>
+      )}
     </div>
   )
 }

@@ -13,7 +13,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 def get_current_year() -> int:
@@ -56,8 +56,7 @@ class TechDomainCollectResponse(BaseModel):
     is_enabled: bool = Field(description="是否启用")
     venue_count: int = Field(default=0, description="关联顶会顶刊数量")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TechDomainCollectListResponse(BaseModel):
@@ -110,8 +109,7 @@ class CollectTaskResponse(BaseModel):
     venue_snapshot: list[VenueItem] | None = Field(default=None, description="创建时的顶会顶刊快照")
     created_at: datetime = Field(description="创建时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CollectTaskListResponse(BaseModel):

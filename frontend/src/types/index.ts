@@ -574,6 +574,7 @@ export interface LabTalentDetail extends LabTalent {
   cohort_source: string | null
   source_url: string | null
   source_detail_url: string | null
+  social_links: Record<string, string>
   collected_at: string | null
 }
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # ============= Repo Config =============
 
@@ -57,8 +57,7 @@ class OSRepoConfigResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============= Developer =============
@@ -80,8 +79,7 @@ class OSDeveloperSummary(BaseModel):
     is_visible: bool
     roles: list[str] = Field(default_factory=list, description="角色标签 (Owner, Committer)")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OSRepositoryItem(BaseModel):
@@ -97,8 +95,7 @@ class OSRepositoryItem(BaseModel):
     topics: list[str]
     is_fork: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OSContributionItem(BaseModel):
@@ -115,8 +112,7 @@ class OSContributionItem(BaseModel):
     is_maintainer: bool
     is_committer: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OSLanguageSkillItem(BaseModel):
@@ -128,8 +124,7 @@ class OSLanguageSkillItem(BaseModel):
     total_commits: int
     proficiency_score: float
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OSDeveloperDetail(OSDeveloperSummary):
@@ -216,8 +211,7 @@ class OSFavoriteResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OSFavoriteIdsResponse(BaseModel):
@@ -257,8 +251,7 @@ class OSTalentPoolResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OSPoolMemberResponse(BaseModel):
@@ -271,8 +264,7 @@ class OSPoolMemberResponse(BaseModel):
     notes: str | None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============= Collect Task =============
@@ -309,8 +301,7 @@ class OSCollectTaskResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OSBatchCollectRequest(BaseModel):
@@ -430,8 +421,7 @@ class OSRepositoryDetailResponse(BaseModel):
     tech_element: str
     contributor_count: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OSRepositoryContributor(BaseModel):
@@ -450,5 +440,4 @@ class OSRepositoryContributor(BaseModel):
     is_committer: bool
     roles: list[str] = Field(default_factory=list)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

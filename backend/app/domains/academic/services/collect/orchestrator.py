@@ -15,6 +15,11 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.metrics import (
+    COLLECTION_ERRORS_TOTAL,
+    COLLECTION_TASKS_ACTIVE,
+    COLLECTION_TASKS_TOTAL,
+)
 from app.domains.academic.models.sync import CollectTask
 from app.domains.academic.repositories.venue_repository import (
     VenueRepository,
@@ -141,6 +146,10 @@ class CollectionOrchestrator:
         self.progress_tracker.add_log("info", "任务开始执行")
         await self.session.flush()
 
+        # Metrics: task started
+        COLLECTION_TASKS_TOTAL.inc()
+        COLLECTION_TASKS_ACTIVE.inc()
+
         try:
             # Phase 0: Estimate (kept in orchestrator — lightweight pre-check)
             await self.progress_tracker.update_progress(
@@ -235,11 +244,13 @@ class CollectionOrchestrator:
             await self.progress_tracker.update_task_status(task, "completed")
             progress.status = "completed"
             self.progress_tracker.add_log("info", "任务执行完成")
+            COLLECTION_TASKS_ACTIVE.dec()
 
         except asyncio.CancelledError:
             await self.progress_tracker.update_task_status(task, "cancelled")
             progress.status = "cancelled"
             self.progress_tracker.add_log("info", "任务被取消")
+            COLLECTION_TASKS_ACTIVE.dec()
 
         except Exception as e:
             error_detail = {
@@ -253,6 +264,8 @@ class CollectionOrchestrator:
             progress.errors.append(error_detail)
             self.progress_tracker.add_log("error", f"任务执行失败: {str(e)}", error_detail)
             logger.error(f"Task {task_id} failed:\n{traceback.format_exc()}")
+            COLLECTION_TASKS_ACTIVE.dec()
+            COLLECTION_ERRORS_TOTAL.inc()
 
         await self.progress_tracker.save_logs(task)
         await self.session.commit()

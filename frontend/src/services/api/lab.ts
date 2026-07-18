@@ -50,9 +50,10 @@ export const labApi = {
   triggerPrefetch: (parentLab: string) =>
     apiClient.post('/lab/prefetch-homepages', null, { params: { parent_lab: parentLab } }),
 
-  getPrefetchStatus: () =>
-    apiClient.get<{ status: string; processed: number; total: number; current: string; errors: number }>(
-      '/lab/prefetch-homepages/status'
+  getPrefetchStatus: (parentLab: string) =>
+    apiClient.get<{ status: string; processed: number; total: number; current: string; errors: number; stale?: boolean }>(
+      '/lab/prefetch-homepages/status',
+      { params: { parent_lab: parentLab } }
     ),
 
   importUpload: (file: File, parentLab?: string) => {

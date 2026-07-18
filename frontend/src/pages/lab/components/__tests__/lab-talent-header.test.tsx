@@ -22,6 +22,7 @@ const mockTalent: LabTalentDetail = {
   cohort_source: null,
   source_url: null,
   source_detail_url: null,
+  social_links: {},
   collected_at: null,
 }
 
@@ -32,5 +33,28 @@ describe('LabTalentHeader', () => {
     expect(screen.getByText('教授')).toBeInTheDocument()
     expect(screen.getByText('zhouzh@nju.edu.cn')).toBeInTheDocument()
     expect(screen.getByText('个人主页')).toBeInTheDocument()
+  })
+
+  it('renders no social anchors when social_links is empty', () => {
+    const { container } = render(<LabTalentHeader talent={mockTalent} />)
+    // only email (mailto:) + homepage anchors
+    expect(container.querySelectorAll('a')).toHaveLength(2)
+  })
+
+  it('renders social link anchors opening in new tab', () => {
+    const talent: LabTalentDetail = {
+      ...mockTalent,
+      social_links: {
+        linkedin: 'https://www.linkedin.com/in/zhouzh',
+        github: 'https://github.com/zhouzh',
+        homepage_blog: 'https://blog.example.com', // unknown platform → fallback icon
+      },
+    }
+    const { container } = render(<LabTalentHeader talent={talent} />)
+    const linkedin = container.querySelector('a[href="https://www.linkedin.com/in/zhouzh"]')
+    expect(linkedin).not.toBeNull()
+    expect(linkedin).toHaveAttribute('target', '_blank')
+    expect(container.querySelector('a[href="https://github.com/zhouzh"]')).not.toBeNull()
+    expect(container.querySelector('a[href="https://blog.example.com"]')).not.toBeNull()
   })
 })

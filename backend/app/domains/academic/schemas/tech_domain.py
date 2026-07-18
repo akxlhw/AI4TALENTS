@@ -5,7 +5,7 @@ Tech Domain Schemas.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TechDirectionResponse(BaseModel):
@@ -18,8 +18,7 @@ class TechDirectionResponse(BaseModel):
     tech_domain_id: int = Field(description="所属技术领域ID")
     sort_order: int = Field(default=0, description="排序顺序")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TechDomainResponse(BaseModel):
@@ -33,8 +32,7 @@ class TechDomainResponse(BaseModel):
     sort_order: int = Field(default=0, description="排序顺序")
     directions: list[TechDirectionResponse] = Field(default=[], description="包含的技术方向列表")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TechDomainSummary(BaseModel):
@@ -120,5 +118,4 @@ class TalentInTechDomain(BaseModel):
     topic_tags: list[str] = Field(default=[], description="技术标签")
     openalex_topics: list[str] = Field(default=[], description="OpenAlex研究主题")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

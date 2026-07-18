@@ -21,6 +21,8 @@ import { getErrorMessage } from '../../../utils'
 const { Dragger } = Upload
 const { Text, Title } = Typography
 
+const PREFETCH_LAB_KEY = 'lab_prefetch_lab'
+
 export interface ImportReport {
   parent_lab: string
   total_lines: number
@@ -45,37 +47,58 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
     total: number
     current: string
     errors: number
+    stale?: boolean
   } | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Start polling when prefetch is running
-  const startPolling = useCallback(() => {
-    if (pollRef.current) clearInterval(pollRef.current)
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }, [])
+
+  const startPolling = useCallback((labName: string) => {
+    stopPolling()
     pollRef.current = setInterval(async () => {
       try {
-        const res = await api.lab.getPrefetchStatus()
+        const res = await api.lab.getPrefetchStatus(labName)
         setPrefetchStatus(res.data)
-        if (res.data.status === 'completed' || res.data.status === 'error' || res.data.status === 'cancelled') {
-          if (pollRef.current) {
-            clearInterval(pollRef.current)
-            pollRef.current = null
+        if (
+          res.data.status === 'completed' ||
+          res.data.status === 'error' ||
+          res.data.status === 'cancelled'
+        ) {
+          stopPolling()
+          try {
+            sessionStorage.removeItem(PREFETCH_LAB_KEY)
+          } catch {
+            // ignore
           }
         }
       } catch {
         // ignore poll errors
       }
     }, 3000)
-  }, [])
+  }, [stopPolling])
 
   // On mount: check if a prefetch is already running (e.g. after page switch)
   useEffect(() => {
     let cancelled = false
     async function checkRunning() {
+      let labName: string | null = null
       try {
-        const res = await api.lab.getPrefetchStatus()
+        labName = sessionStorage.getItem(PREFETCH_LAB_KEY)
+      } catch {
+        // ignore
+      }
+      if (!labName) return
+
+      try {
+        const res = await api.lab.getPrefetchStatus(labName)
         if (!cancelled && (res.data.status === 'running' || res.data.status === 'pending')) {
           setPrefetchStatus(res.data)
-          startPolling()
+          startPolling(labName)
         }
       } catch {
         // ignore — no prior prefetch state
@@ -84,9 +107,9 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
     checkRunning()
     return () => {
       cancelled = true
-      if (pollRef.current) clearInterval(pollRef.current)
+      stopPolling()
     }
-  }, [startPolling])
+  }, [startPolling, stopPolling])
 
   const beforeUpload: UploadProps['beforeUpload'] = file => {
     const isJsonl =
@@ -112,10 +135,7 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
     setUploading(true)
     setReport(null)
     try {
-      const res = await api.lab.importUpload(
-        selectedFile,
-        parentLab.trim() || undefined
-      )
+      const res = await api.lab.importUpload(selectedFile, parentLab.trim() || undefined)
       setReport(res.data as ImportReport)
       setSelectedFile(null)
       message.success(`导入完成：${res.data.inserted} 人入库，${res.data.skipped} 行跳过`)
@@ -125,18 +145,29 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
       const labName = (res.data as ImportReport).parent_lab
       if (labName) {
         try {
+          sessionStorage.setItem(PREFETCH_LAB_KEY, labName)
+        } catch {
+          // ignore
+        }
+        try {
           await api.lab.triggerPrefetch(labName)
-          setPrefetchStatus({ status: 'pending', processed: 0, total: 0, current: '启动中...', errors: 0 })
-          startPolling()
+          setPrefetchStatus({
+            status: 'pending',
+            processed: 0,
+            total: 0,
+            current: '启动中...',
+            errors: 0,
+          })
+          startPolling(labName)
         } catch (e: unknown) {
           // 409 = already running — recover by polling existing progress
           const status = (e as { response?: { status?: number } }).response?.status
           if (status === 409) {
             try {
-              const res = await api.lab.getPrefetchStatus()
+              const res = await api.lab.getPrefetchStatus(labName)
               setPrefetchStatus(res.data)
               if (res.data.status === 'running' || res.data.status === 'pending') {
-                startPolling()
+                startPolling(labName)
               }
             } catch {
               // give up silently
@@ -242,21 +273,35 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
       )}
 
       {prefetchStatus && (
-        <Card title={<Space><CloudSyncOutlined spin={prefetchStatus.status === 'running'} /> 主页预抓取</Space>}>
+        <Card
+          title={
+            <Space>
+              <CloudSyncOutlined spin={prefetchStatus.status === 'running'} />
+              主页预抓取
+            </Space>
+          }
+        >
           {prefetchStatus.status === 'pending' || prefetchStatus.status === 'running' ? (
             <>
               <Text type="secondary">
                 正在批量抓取个人主页并缓存... ({prefetchStatus.processed}/{prefetchStatus.total})
+                {prefetchStatus.stale && '（心跳超时，可重新触发）'}
               </Text>
-              {prefetchStatus.current && prefetchStatus.current !== 'starting' && prefetchStatus.current !== 'initializing' && (
-                <div style={{ marginTop: 4 }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    当前：{prefetchStatus.current}
-                  </Text>
-                </div>
-              )}
+              {prefetchStatus.current &&
+                prefetchStatus.current !== 'starting' &&
+                prefetchStatus.current !== 'initializing' && (
+                  <div style={{ marginTop: 4 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      当前：{prefetchStatus.current}
+                    </Text>
+                  </div>
+                )}
               <Progress
-                percent={prefetchStatus.total > 0 ? Math.round((prefetchStatus.processed / prefetchStatus.total) * 100) : 0}
+                percent={
+                  prefetchStatus.total > 0
+                    ? Math.round((prefetchStatus.processed / prefetchStatus.total) * 100)
+                    : 0
+                }
                 status="active"
                 style={{ marginTop: 12 }}
               />
@@ -265,7 +310,9 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
             <Alert
               type="success"
               showIcon
-              message={`预抓取完成：共 ${prefetchStatus.total} 人${prefetchStatus.errors > 0 ? `，${prefetchStatus.errors} 个失败` : ''}`}
+              message={`预抓取完成：共 ${prefetchStatus.total} 人${
+                prefetchStatus.errors > 0 ? `，${prefetchStatus.errors} 个失败` : ''
+              }`}
               description={'个人主页已缓存，详情页的"加载预览"将秒开。'}
             />
           ) : prefetchStatus.status === 'error' ? (

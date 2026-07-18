@@ -45,6 +45,10 @@ class OpenAlexRateLimitError(OpenAlexAPIError):
         self.retry_after = retry_after
 
 
+class OpenAlexServerError(OpenAlexAPIError):
+    """Exception raised when OpenAlex returns a 5xx error (retryable)."""
+
+
 class OpenAlexClient:
     """
     Client for interacting with OpenAlex API.
@@ -52,7 +56,7 @@ class OpenAlexClient:
     Documentation: https://docs.openalex.org/
     """
 
-    BASE_URL = "https://api.openalex.org"
+    BASE_URL = settings.OPENALEX_BASE_URL
 
     # Endpoints
     WORKS = "/works"
@@ -124,7 +128,12 @@ class OpenAlexClient:
         stop=stop_after_attempt(5),
         wait=_retry_wait,
         retry=retry_if_exception_type(
-            (httpx.TimeoutException, httpx.NetworkError, OpenAlexRateLimitError)
+            (
+                httpx.TimeoutException,
+                httpx.NetworkError,
+                OpenAlexRateLimitError,
+                OpenAlexServerError,
+            )
         ),
         reraise=True,
     )
@@ -156,6 +165,8 @@ class OpenAlexClient:
                     f"Rate limit exceeded (retry_after={retry_after})",
                     retry_after=retry_after,
                 ) from e
+            if e.response.status_code >= 500:
+                raise OpenAlexServerError(f"Server error: {e.response.status_code}") from e
             raise OpenAlexAPIError(
                 f"API error: {e.response.status_code} - {e.response.text}"
             ) from e
