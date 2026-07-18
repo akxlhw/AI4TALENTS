@@ -203,12 +203,12 @@ class GitHubClient:
             logger.warning(f"GitHub API 404: {path}")
             return {}
 
-        if response.status_code in (403, 429):
+        if response.status_code in (401, 403, 429):
             reset_at = response.headers.get("X-RateLimit-Reset")
             remaining = response.headers.get("X-RateLimit-Remaining")
             logger.warning(
-                f"GitHub rate limit hit for {path}, remaining={remaining}, "
-                f"reset_at={reset_at}, token_idx={self.current_token_idx}"
+                f"GitHub auth/rate limit hit for {path} (HTTP {response.status_code}), "
+                f"remaining={remaining}, reset_at={reset_at}, token_idx={self.current_token_idx}"
             )
 
             # Try switching to the best alternative token (not round-robin)

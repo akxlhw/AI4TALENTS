@@ -396,6 +396,57 @@ async def execute_task(
 
 
 @router.post(
+    "/tasks/{task_id}/rerun",
+    response_model=TaskActionResponse,
+    summary="重跑失败的采集任务（保留 checkpoint）",
+    description="将 failed 任务重置为 pending 并从 last_completed_phase 继续，无需全量重跑",
+)
+async def rerun_failed_task(
+    task_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_super_admin),
+):
+    """Reset a failed task to pending, preserving its checkpoint."""
+    service = CollectService(session)
+    task = await service.get_task_by_id(task_id)
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if task.status not in ("failed", "cancelled"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only failed or cancelled tasks can be rerun (current: {task.status})",
+        )
+
+    # Check if there's already a running task
+    active_tasks = await service.get_active_tasks()
+    for t in active_tasks:
+        if t.task_id != task_id and t.status == "running":
+            raise HTTPException(
+                status_code=400,
+                detail=f"There is already a running task (#{t.task_id}). Please wait for it to complete.",
+            )
+
+    # Reset to pending, keep last_completed_phase for checkpoint resume
+    task.status = "pending"
+    task.error_message = None
+    await session.commit()
+    logger.info(
+        f"Task #{task_id} reset to pending for rerun (checkpoint: phase {task.last_completed_phase})"
+    )
+
+    # Start background execution (orchestrator will resume from checkpoint)
+    asyncio.create_task(run_collect_task_background(task_id))
+    logger.info(f"Background task started for rerun of task #{task_id}")
+
+    return TaskActionResponse(
+        message=f"Task rerun started from phase {task.last_completed_phase or 0}",
+        task_id=task_id,
+    )
+
+
+@router.post(
     "/tasks/{task_id}/cancel",
     response_model=SuccessResponse,
     summary="取消采集任务",

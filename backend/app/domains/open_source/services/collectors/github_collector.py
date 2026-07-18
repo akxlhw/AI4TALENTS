@@ -151,6 +151,7 @@ class GitHubCollector:
                         await session.commit()
                 except Exception as e:
                     logger.exception(f"Failed to process contributor {login}: {e}")
+                    ctx.failed_contributors = getattr(ctx, "failed_contributors", 0) + 1
                     # Continue with next contributor; partial failures are logged but not fatal.
 
                 processed += 1

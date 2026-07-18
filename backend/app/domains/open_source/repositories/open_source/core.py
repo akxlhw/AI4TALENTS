@@ -12,8 +12,6 @@ from typing import Any
 from sqlalchemy import and_, cast, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import array as pg_array
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.open_source.models.open_source import (
     OSCollectTask,
@@ -30,22 +28,6 @@ from app.domains.open_source.models.open_source import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Global cache for database type
-_is_postgres_cache: bool | None = None
-
-
-def _is_postgres(session: AsyncSession) -> bool:
-    """Check if the database is PostgreSQL."""
-    global _is_postgres_cache
-    if _is_postgres_cache is not None:
-        return _is_postgres_cache
-    try:
-        bind = session.get_bind()
-        _is_postgres_cache = bind.dialect.name == "postgresql"
-        return _is_postgres_cache
-    except SQLAlchemyError:
-        return True
 
 
 class OpenSourceCoreRepository:

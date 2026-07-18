@@ -37,6 +37,7 @@ class LabTalentDetail(LabTalentSummary):
     cohort_source: str | None = None
     source_url: str | None = None
     source_detail_url: str | None = None
+    social_links: dict[str, str] = Field(default_factory=dict)
     collected_at: datetime | None = None
 
 

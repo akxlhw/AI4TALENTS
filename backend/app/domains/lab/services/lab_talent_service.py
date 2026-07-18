@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import quote_plus
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
@@ -13,6 +15,21 @@ from app.domains.lab.schemas.lab_talent import (
     LabTalentSummary,
     LabWithTalents,
 )
+
+
+def _linkedin_search_url(name: str, affiliation: str) -> str:
+    """Build a Google search URL as a LinkedIn-discovery fallback link.
+
+    Combines the person's quoted name with their lab affiliation and the
+    "linkedin" keyword, e.g. "Joshua Aduol" Princeton CS / ML linkedin.
+    Used only when the crawler found no real LinkedIn profile URL — a real
+    link in social_links always takes precedence over this fallback.
+    """
+    parts = [f'"{name.strip()}"']
+    if affiliation.strip():
+        parts.append(affiliation.strip())
+    parts.append("linkedin")
+    return "https://www.google.com/search?q=" + quote_plus(" ".join(parts))
 
 
 class LabTalentService:
@@ -57,7 +74,15 @@ class LabTalentService:
         talent = await self.repo.get_by_id(talent_id)
         if not talent:
             raise NotFoundError("LabTalent", talent_id)
-        return LabTalentDetail(**talent.to_detail_dict())
+        data = talent.to_detail_dict()
+        # LinkedIn fallback: without a crawler-found real profile URL, expose a
+        # Google search URL instead. A real link always takes precedence.
+        links = dict(data.get("social_links") or {})
+        if "linkedin" not in links:
+            affiliation = data.get("lab_name") or data.get("parent_lab") or ""
+            links["linkedin"] = _linkedin_search_url(data["name"], affiliation)
+        data["social_links"] = links
+        return LabTalentDetail(**data)
 
     async def list_labs(self, *, preview_limit: int = 6) -> list[LabWithTalents]:
         """List parent labs with a preview of their talents."""
@@ -72,10 +97,13 @@ class LabTalentService:
         return LabProfileResponse(**profile)
 
     async def get_homepage_preview(self, talent_id: int) -> HomepagePreviewResponse:
-        """Get talent's homepage preview — cache-first, fetch on miss."""
-        from datetime import datetime
+        """Get talent's homepage preview — cache-first, fetch on miss/expiry."""
+        from datetime import datetime, timedelta
 
-        from app.domains.lab.services.homepage_preview_service import HomepagePreviewService
+        from app.domains.lab.services.homepage_preview_service import (
+            _HOMEPAGE_CACHE_TTL_SECONDS,
+            HomepagePreviewService,
+        )
 
         talent = await self.repo.get_by_id(talent_id)
         if not talent:
@@ -86,20 +114,22 @@ class LabTalentService:
 
         homepage_url: str = str(talent.homepage)
 
-        # Cache hit — return immediately
-        if talent.homepage_cache:
-            return HomepagePreviewResponse(
-                html=str(talent.homepage_cache),
-                base_url=homepage_url,
-                title="",
-                status="ok",
-            )
+        # Cache hit and still fresh — return immediately
+        if talent.homepage_cache and talent.homepage_cached_at:
+            age = datetime.utcnow() - talent.homepage_cached_at
+            if age < timedelta(seconds=_HOMEPAGE_CACHE_TTL_SECONDS):
+                return HomepagePreviewResponse(
+                    html=str(talent.homepage_cache),
+                    base_url=homepage_url,
+                    title="",
+                    status="ok",
+                )
 
-        # Cache miss — fetch, clean, and persist
+        # Cache miss or expired — fetch, clean, and persist
         preview_svc = HomepagePreviewService()
         result = await preview_svc.fetch_preview(homepage_url)
         if result["status"] == "ok" and result["html"]:
             talent.homepage_cache = result["html"]
-            talent.homepage_cached_at = datetime.now()
+            talent.homepage_cached_at = datetime.utcnow()
             await self.session.commit()
         return HomepagePreviewResponse(**result)

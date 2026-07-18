@@ -150,3 +150,37 @@ class TestLabImportService:
         talent_service = LabTalentService(test_session)
         items, _ = await talent_service.list_talents(parent_lab="Stanford AI Lab")
         assert items[0].research_areas == ["NLP", "Machine Learning"]
+
+    @pytest.mark.asyncio
+    async def test_import_social_links_cleaned(self, test_session: AsyncSession):
+        """social_links keeps only valid http(s) entries, lowercases platform keys."""
+        jsonl = _person(
+            "Kate",
+            social_links={
+                "LinkedIn": "https://www.linkedin.com/in/kate",
+                "github": "https://github.com/kate",
+                "bad": "not-a-url",
+                "": "https://empty-key.example.com",
+                "broken": None,
+            },
+        )
+        service = LabImportService(test_session)
+        await service.import_jsonl(jsonl, "Stanford AI Lab")
+
+        result = await test_session.execute(select(LabTalent).where(LabTalent.name == "Kate"))
+        talent = result.scalar_one()
+        assert talent.social_links == {
+            "linkedin": "https://www.linkedin.com/in/kate",
+            "github": "https://github.com/kate",
+        }
+
+    @pytest.mark.asyncio
+    async def test_import_social_links_defaults_to_empty(self, test_session: AsyncSession):
+        """Records without social_links import with an empty dict, not NULL/None."""
+        jsonl = _person("Leo")
+        service = LabImportService(test_session)
+        await service.import_jsonl(jsonl, "Stanford AI Lab")
+
+        result = await test_session.execute(select(LabTalent).where(LabTalent.name == "Leo"))
+        talent = result.scalar_one()
+        assert talent.social_links == {}

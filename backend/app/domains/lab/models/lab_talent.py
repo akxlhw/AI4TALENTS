@@ -33,6 +33,9 @@ class LabTalent(Base, TimestampMixin):
     # Contact & affiliation
     homepage = Column(String(500), nullable=True)
     email = Column(String(255), nullable=True)
+    social_links = Column(
+        JSON, nullable=True
+    )  # {platform: url}, e.g. {"linkedin": "...", "github": "..."}
     photo_url = Column(String(1000), nullable=True)  # person photo URL
     department = Column(String(255), nullable=True)
     research_areas = Column(JSON, default=list)
@@ -95,6 +98,7 @@ class LabTalent(Base, TimestampMixin):
         data.update(
             {
                 "email": self.email,
+                "social_links": self.social_links or {},
                 "photo_url": self.photo_url,
                 "cohort_source": self.cohort_source,
                 "source_url": self.source_url,

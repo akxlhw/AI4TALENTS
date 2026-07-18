@@ -82,7 +82,7 @@ async def list_lab_groups(
 
 
 @router.get(
-    "/labs/{parent_lab}/profile",
+    "/labs/{parent_lab:path}/profile",
     response_model=LabProfileResponse,
     summary="Get lab profile (metadata + aggregated stats)",
 )

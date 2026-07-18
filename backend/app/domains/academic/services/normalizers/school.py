@@ -226,6 +226,12 @@ class SchoolNormalizer:
                     )
 
             except Exception:
+                logger.warning(
+                    "School normalization failed for institution %s (raw_id=%s)",
+                    getattr(raw_inst, "display_name", "?"),
+                    raw_inst.raw_institution_id,
+                    exc_info=True,
+                )
                 result.failed += 1
                 await raw_repo.mark_processed(raw_inst.raw_institution_id, "failed")
 

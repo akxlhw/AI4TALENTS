@@ -1,8 +1,8 @@
 """Lab import service — parse crawler JSONL and load into lab_talent.
 
 Consumes the JSONL output format defined by ai-lab-talent-crawler's
-references/output-schema.md. Two HTTP entry points (hermes push + admin
-upload) share this single service.
+references/output-schema.md. The admin upload endpoint is the only HTTP
+entry point that uses this service.
 """
 
 from __future__ import annotations
@@ -85,6 +85,25 @@ def _clean_research_areas(raw_areas: list[Any] | None) -> list[str]:
     return result
 
 
+def _clean_social_links(raw_links: Any) -> dict[str, str]:
+    """Normalize social_links to a {platform: url} dict.
+
+    Keeps only entries with non-empty string platform keys and http(s) URLs.
+    Platform keys are lowercased for consistent frontend icon mapping.
+    """
+    if not isinstance(raw_links, dict):
+        return {}
+    result: dict[str, str] = {}
+    for key, url in raw_links.items():
+        if not isinstance(key, str) or not isinstance(url, str):
+            continue
+        platform = key.strip().lower()
+        link = url.strip()
+        if platform and link.startswith(("http://", "https://")):
+            result[platform] = link
+    return result
+
+
 class LabImportService:
     """Parse JSONL and replace a parent lab's talent data atomically."""
 
@@ -158,6 +177,24 @@ class LabImportService:
         for row in parsed:
             seen[row["dedup_hash"]] = row
         deduped = list(seen.values())
+
+        # Safety guard: refuse to delete existing data if the import produced
+        # zero valid records (all lines were empty/invalid). This prevents
+        # a malformed JSONL from wiping out an entire lab's data.
+        if not deduped:
+            logger.warning(
+                "[LabImport] Refusing to replace %s: 0 valid records parsed from %d lines",
+                resolved_parent_lab,
+                total_lines,
+            )
+            return LabImportReport(
+                parent_lab=resolved_parent_lab,
+                total_lines=total_lines,
+                total_parsed=0,
+                inserted=0,
+                skipped=len(skip_reasons),
+                skip_reasons=skip_reasons[:50],
+            )
 
         # Atomic replace: delete + insert in one transaction
         deleted = await self.repo.delete_by_parent_lab(resolved_parent_lab)
@@ -261,6 +298,7 @@ class LabImportService:
             "current_title": record.get("role_raw"),
             "homepage": record.get("homepage"),
             "email": record.get("email"),
+            "social_links": _clean_social_links(record.get("social_links")),
             "photo_url": record.get("photo_url"),
             "department": record.get("department"),
             "research_areas": _clean_research_areas(record.get("research_areas")),

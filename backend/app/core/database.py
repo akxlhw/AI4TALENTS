@@ -9,10 +9,30 @@ from collections.abc import AsyncGenerator, Generator
 from typing import Any
 
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.core.config import settings
+
+# Cached dialect check (shared across all repositories)
+_is_postgres_cache: bool | None = None
+
+
+def is_postgres(session: AsyncSession) -> bool:
+    """Check if the database is PostgreSQL. Result is cached on first call."""
+    global _is_postgres_cache
+
+    if _is_postgres_cache is not None:
+        return _is_postgres_cache
+
+    try:
+        bind = session.get_bind()
+        _is_postgres_cache = bind.dialect.name == "postgresql"
+        return _is_postgres_cache
+    except SQLAlchemyError:
+        return True
+
 
 # Async engine for application
 async_engine = create_async_engine(

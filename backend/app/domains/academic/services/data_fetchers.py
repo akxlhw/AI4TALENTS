@@ -662,7 +662,7 @@ class AuthorFetcher:
         openalex_url = f"{OPENALEX_API_BASE}/authors"
         proxy = self.client.get_proxy_for_request(openalex_url)
         async with self.client.create_session() as http_session:
-            batch_size = settings.EMBEDDING_BATCH_SIZE
+            batch_size = min(settings.EMBEDDING_BATCH_SIZE, 50)
             total_batches = (len(ids_to_fetch) + batch_size - 1) // batch_size
 
             for i in range(0, len(ids_to_fetch), batch_size):
@@ -805,7 +805,7 @@ class InstitutionFetcher:
         openalex_url = f"{OPENALEX_API_BASE}/institutions"
         proxy = self.client.get_proxy_for_request(openalex_url)
         async with self.client.create_session() as http_session:
-            batch_size = settings.EMBEDDING_BATCH_SIZE
+            batch_size = min(settings.EMBEDDING_BATCH_SIZE, 50)
             total_batches = (len(missing_ids) + batch_size - 1) // batch_size
 
             for i in range(0, len(missing_ids), batch_size):

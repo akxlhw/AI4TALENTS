@@ -19,32 +19,12 @@ import logging
 from datetime import datetime, timezone
 
 from sqlalchemy import delete, select, text
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import is_postgres as _is_postgres
 from app.domains.academic.models.embedding import TalentEmbedding
 
 logger = logging.getLogger(__name__)
-
-# 全局缓存数据库类型
-_is_postgres_cache: bool | None = None
-
-
-def _is_postgres(session: AsyncSession) -> bool:
-    """Check if the database is PostgreSQL."""
-    global _is_postgres_cache
-
-    if _is_postgres_cache is not None:
-        return _is_postgres_cache
-
-    try:
-        # 获取连接并检查方言
-        bind = session.get_bind()
-        _is_postgres_cache = bind.dialect.name == "postgresql"
-        return _is_postgres_cache
-    except SQLAlchemyError:
-        # 如果无法获取 bind，默认为 PostgreSQL（生产环境）
-        return True
 
 
 class EmbeddingRepository:

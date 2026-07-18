@@ -351,16 +351,18 @@ async def _test_proxy_connection(
         # If no specific URL provided, try to infer from no_proxy patterns
         if not internal_url:
             patterns = [p.strip() for p in no_proxy.split(",") if p.strip()]
+            # Backend port: Docker = 8000, local dev = 8003 (from config)
+            backend_port = "8003"
             for pattern in patterns:
                 if "*" not in pattern and not pattern.startswith("."):
                     if pattern == "localhost":
-                        internal_url = "http://localhost:8003/health"
+                        internal_url = f"http://localhost:{backend_port}/health"
                         break
                     elif pattern == "127.0.0.1":
-                        internal_url = "http://127.0.0.1:8003/health"
+                        internal_url = f"http://127.0.0.1:{backend_port}/health"
                         break
                     elif pattern.replace(".", "").isdigit():
-                        internal_url = f"http://{pattern}:8003/health"
+                        internal_url = f"http://{pattern}:{backend_port}/health"
                         break
 
         if internal_url:
