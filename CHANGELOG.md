@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-07-19
+
+### Added
+
+- **竞赛人才域**（`domains/competition/`，M1 首发源 Codeforces 官方 API）：
+  - **数据模型**：`comp_series / comp_contest / comp_talent / comp_team / comp_result` 五表族（跨域隔离铁律，不复用其他域表）；个人/团队赛双归属 result + PostgreSQL 部分唯一索引（团队行仅 `talent_id IS NULL` 时唯一）
+  - **爬虫 skill `comp-talent-crawler`**（`~/.agents/skills/`）：官方 API 匿名采集（指定赛事/近年轮次按 Div 过滤/全站榜快照三种模式），2.2s 限流 + 指数退避、画像分批补全、断点续采（`_progress.json`）、国家名→ISO 映射；配套 schema v1.0 校验器与 13 源注册表
+  - **JSONL 契约 v1.0**（meta→series→contest→team→person）：个人赛与团队赛（`type: team` 行 + members 明细）统一承载，契约见 `docs/competition-v1.0/02`
+  - **CompImportService**：按单场赛事全量替换（单事务先删后插 + 聚合重算 rating/奖牌/场次）；空文件/全无效行硬守卫（绝不触发 DELETE，继承 lab V3.1.0 教训）；批内去重、`person.team_name` 自动补建 team、11 条验收用例全绿
+  - **查询 API**：`/comp/talents`（keyword/国家/学校/最低积分/段位/5 种排序/分页）、`/comp/talents/{id}`（画像+参赛史）、`/comp/contests`、`/comp/contests/{id}`（个人+团队双榜单）、`/comp/overview`、`/comp/series`、`POST /comp/import/upload`（super_admin，20MB 上限）
+  - **前端 4 页面**：概览（统计卡+积分榜 Top10+最近赛事）、搜索（URL 全字段双向同步+400ms 防抖）、选手详情（身份卡+参赛史+积分趋势 ECharts）、赛事详情（个人/团队榜单）；导航接入（competition 解锁、橙系主题、域路径映射）；`system-config` 新增「竞赛人才导入」Tab（拖拽上传+导入报告）
+  - **设计文档** `docs/competition-v1.0/`（总览/架构与数据模型/数据源与爬虫Schema/导入接口与标准/API与前端设计 5 份）
+  - series 种子 13 个赛事系列（codeforces 启用；用户关注清单 ICPC/IOI/IMO/IPhO/IMC/CTF/Kaggle/RoboCup/ASC/SC/ISC 按 M2/M3 分期放开）
+- 后端测试 16 个（导入验收 11 + API 5），全量 827 通过
+
+### Changed
+
+- `AGENTS.md`：竞赛域结构与关键文件、BACKEND_PORT、HTTP 例外清单、V4.0.0 版本说明
+- `README.md` 版本号 V4.0.0
+- mypy 基线再生（竞赛域 SQLAlchemy Column 类噪音与存量同类模式一并入线，gate 1377 通过）
+- 版本号 3.1.0 → 4.0.0（pyproject.toml、package.json、config.py、uv.lock）
+
+### Removed
+
+- 竞赛演示页（`competition-demo-page.tsx` 及其路由）：正式页面上线后退役
+
 ## [3.1.0] - 2026-07-18
 
 ### Added

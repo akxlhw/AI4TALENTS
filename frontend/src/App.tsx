@@ -20,6 +20,10 @@ import OpenSourceSearchPage from './pages/open-source/open-source-search-page'
 import LabOverviewPage from './pages/lab/lab-overview-page'
 import LabSearchPage from './pages/lab/lab-search-page'
 import LabTalentDetailPage from './pages/lab/lab-talent-detail-page'
+import CompetitionOverviewPage from './pages/competition/competition-overview-page'
+import CompetitionSearchPage from './pages/competition/competition-search-page'
+import CompetitionTalentDetailPage from './pages/competition/competition-talent-detail-page'
+import CompetitionContestDetailPage from './pages/competition/competition-contest-detail-page'
 import DeveloperDetailPage from './pages/open-source/open-source-developer-detail-page'
 import RepoDetailPage from './pages/open-source/repo-detail-page'
 import RepoListPage from './pages/open-source/repo-list-page'
@@ -34,7 +38,6 @@ const DataVersionPage = lazy(() => import('./pages/admin/data-version-page'))
 const SuggestionAdminPage = lazy(() => import('./pages/admin/suggestion-admin-page'))
 const SystemConfigPage = lazy(() => import('./pages/system-config/system-config-page'))
 const OpenSourceDemoPage = lazy(() => import('./pages/open-source/open-source-demo-page'))
-const CompetitionDemoPage = lazy(() => import('./pages/competition/competition-demo-page'))
 const IndustryDemoPage = lazy(() => import('./pages/industry/industry-demo-page'))
 
 // Protected Route component
@@ -164,14 +167,10 @@ function AppRoutes() {
         <Route path="lab/overview" element={<Navigate to="/lab" replace />} />
         <Route path="lab/search" element={<LabSearchPage />} />
         <Route path="lab/talents/:talentId" element={<LabTalentDetailPage />} />
-        <Route
-          path="demo-competition"
-          element={
-            <Suspense fallback={<LazyFallback />}>
-              <CompetitionDemoPage />
-            </Suspense>
-          }
-        />
+        <Route path="competition" element={<CompetitionOverviewPage />} />
+        <Route path="competition/search" element={<CompetitionSearchPage />} />
+        <Route path="competition/talents/:id" element={<CompetitionTalentDetailPage />} />
+        <Route path="competition/contests/:id" element={<CompetitionContestDetailPage />} />
         <Route
           path="demo-industry"
           element={

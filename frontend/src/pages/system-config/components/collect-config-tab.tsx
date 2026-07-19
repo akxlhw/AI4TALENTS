@@ -6,11 +6,13 @@ import {
   TeamOutlined,
   CloudUploadOutlined,
   GithubOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons'
 import LabIcon from '../../../components/lab-icon'
 import OSRepoConfigSubTab from './os-repo-config-sub-tab'
 import OSCollectTaskSubTab from './os-collect-task-sub-tab'
 import LabImportTab from './lab-import-tab'
+import CompImportTab from './comp-import-tab'
 import { useCollectConfig } from './collect-config-tab/useCollectConfig'
 import TechDomainPanel from './collect-config-tab/tech-domain-panel'
 import TaskListPanel from './collect-config-tab/task-list-panel'
@@ -130,6 +132,15 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
               </span>
             ),
             children: <LabImportTab />,
+          },
+          {
+            key: 'comp-import',
+            label: (
+              <span>
+                <TrophyOutlined style={{ marginRight: 4 }} /> 竞赛人才导入
+              </span>
+            ),
+            children: <CompImportTab />,
           },
           {
             key: 'embeddings',

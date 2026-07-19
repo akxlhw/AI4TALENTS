@@ -33,7 +33,7 @@ const domainNavItems: DomainNavItem[] = [
   { key: 'academic', icon: <BookOutlined /> },
   { key: 'opensource', icon: <CodeOutlined /> },
   { key: 'lab', icon: <LabIcon style={{ fontSize: 18 }} /> },
-  { key: 'competition', icon: <TrophyOutlined />, soon: true },
+  { key: 'competition', icon: <TrophyOutlined /> },
   { key: 'industry', icon: <BuildOutlined />, soon: true },
 ]
 
@@ -41,6 +41,7 @@ const DOMAIN_PATH_PREFIXES: Record<string, Domain> = {
   '/academic': 'academic',
   '/opensource': 'opensource',
   '/lab': 'lab',
+  '/competition': 'competition',
   // Academic pages live at root-level paths (no /academic prefix)
   '/talents': 'academic',
   '/schools': 'academic',
@@ -137,6 +138,8 @@ const MainLayout: React.FC = () => {
         navigate('/lab')
       } else if (domain === 'opensource') {
         navigate('/opensource')
+      } else if (domain === 'competition') {
+        navigate('/competition')
       } else {
         navigate('/')
       }

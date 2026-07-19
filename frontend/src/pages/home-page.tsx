@@ -2,6 +2,7 @@ import { useDomainStore } from '../stores/domainStore'
 import AcademicHomePage from './academic/academic-home-page'
 import OpenSourcePage from './open-source/open-source-page'
 import LabOverviewPage from './lab/lab-overview-page'
+import CompetitionOverviewPage from './competition/competition-overview-page'
 
 /* ── Home Page Dispatcher ── */
 const HomePage: React.FC = () => {
@@ -13,6 +14,10 @@ const HomePage: React.FC = () => {
 
   if (currentDomain === 'lab') {
     return <LabOverviewPage />
+  }
+
+  if (currentDomain === 'competition') {
+    return <CompetitionOverviewPage />
   }
 
   return <AcademicHomePage />

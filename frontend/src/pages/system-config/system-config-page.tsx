@@ -21,6 +21,7 @@ const COLLECT_SUB_TAB_KEYS = [
   'opensource-repos',
   'opensource-tasks',
   'lab-import',
+  'comp-import',
   'embeddings',
 ]
 

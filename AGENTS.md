@@ -8,13 +8,14 @@
 
 **智能人才库（AI4TALENTS）** 是一套面向招聘团队的多维度人才发现平台。
 
-- **当前版本**：**V3.1.0**（以 `backend/pyproject.toml`、`frontend/package.json`、`backend/app/core/config.py` 中的版本号为准；`CHANGELOG.md` 记录了各版本变更）。
+- **当前版本**：**V4.0.0**（以 `backend/pyproject.toml`、`frontend/package.json`、`backend/app/core/config.py` 中的版本号为准；`CHANGELOG.md` 记录了各版本变更，最新发布为 3.1.0，4.0.0 为竞赛人才域开发中版本）。
 - **项目定位**：整合公开学术数据与开源社区数据，帮助招聘团队发现、筛选、对比和管理高端技术人才。
 - **已实现的人才数据源**：
   - **学术人才**（`domains/academic/`）：基于 OpenAlex 学术数据库，功能完整。
   - **开源人才**（`domains/open_source/`）：基于 GitHub API，功能完整。
   - **实验室人才**（`domains/lab/`，V3.0.0 新增）：AI 实验室人才（Stanford AI Lab、MIT CSAIL、LAMDA 等），通过 `ai-lab-talent-crawler` skill 采集官网人员数据，产出 JSONL 由 `LabImportService` 导入。导入方式为管理员手动上传。使用独立的 `lab_talent` 表 + `lab_info` 实验室元数据表（不复用 `core_talent`，因跨域隔离铁律）。
-- **规划中的人才数据源**：竞赛人才、行业人才（前端目前仅有 `demo-competition` / `demo-industry` 演示页）。
+  - **竞赛人才**（`domains/competition/`，V4.0.0 新增，M1）：竞赛选手与队伍（ICPC、IOI/IMO/IPhO、Kaggle、CTF、RoboCup、超算等为目标清单，M1 首发源 Codeforces 官方 API），通过 `comp-talent-crawler` skill 采集赛事榜单与选手画像，产出 schema v1.0 JSONL 由 `CompImportService` 按单场赛事全量替换导入。独立 `comp_series / comp_contest / comp_talent / comp_team / comp_result` 五表族（不复用其他域表，跨域隔离铁律）。设计文档见 `docs/competition-v1.0/`。
+- **规划中的人才数据源**：行业人才（前端目前仅有 `demo-industry` 演示页）；竞赛清单内其余源（ICPC/奥赛/Kaggle 等，M2/M3 接入）。
 
 主要功能包括：学术/开源/实验室人才搜索与发现、人才画像查看、候选人筛选/排序/对比、重点人才导出、收藏与人才池管理、三维权限控制（学校/国家/技术要素）、采集任务管理、语义搜索、JD 岗位匹配、相似人才推荐、学术谱系（genealogy）、实验室人才主页预取与预览、用户注册审批与审计日志等。
 
@@ -119,6 +120,14 @@ talent-platform/
 │   │       │   ├── schemas/
 │   │       │   └── services/  # lab_import_service, lab_talent_service, lab_stats_service,
 │   │       │                  #   homepage_preview_service（抓取并清洗人才个人主页 HTML）
+│   │       ├── competition/   # 竞赛人才域（V4.0.0 M1，Codeforces 首发）
+│   │       │   ├── api/       # import_endpoint, talents, contests, stats（__init__.py 聚合）
+│   │       │   ├── constants/ # series（13 个赛事系列注册表 + CF 段位表）
+│   │       │   ├── models/    # competition.py（CompSeries/CompContest/CompTalent/CompTeam/CompResult）
+│   │       │   ├── repositories/  # competition_repository（单类，upsert + 查询）
+│   │       │   ├── schemas/
+│   │       │   └── services/  # comp_import_service, comp_talent_service,
+│   │       │                  #   comp_contest_service, comp_stats_service
 │   │       └── shared/        # 共享域
 │   │           ├── api/       # auth, audit, health, metrics, permissions, privacy, suggestion, system_config
 │   │           ├── models/    # base, enums, iam, audit, system_config, suggestion
@@ -531,7 +540,7 @@ make dev-frontend
 | `CIRCUIT_BREAKER_ENABLED` / `CIRCUIT_BREAKER_FAILURE_THRESHOLD` / `CIRCUIT_BREAKER_RECOVERY_TIMEOUT` / `CIRCUIT_BREAKER_WINDOW_SIZE` | 熔断器配置 | `true`, `5`, `30.0`, `10` |
 | `GITHUB_TOKENS` / `GITHUB_BASE_URL` / `GITHUB_RATE_LIMIT` / `GITHUB_PER_PAGE` / `GITHUB_BATCH_SIZE` | GitHub API 配置（开源人才采集，token 逗号分隔） | `ghp_xxx`, `https://api.github.com`, `5000`, `100`, `5` |
 | `OPENALEX_BASE_URL` / `OPENALEX_EMAIL` / `OPENALEX_RATE_LIMIT` | OpenAlex API 配置 | `https://api.openalex.org`, `10` req/s |
-| `APP_NAME` / `APP_VERSION` / `ENVIRONMENT` / `DEBUG` | 应用基础配置 | 智能人才库 API, 3.1.0, development, false |
+| `APP_NAME` / `APP_VERSION` / `ENVIRONMENT` / `DEBUG` | 应用基础配置 | 智能人才库 API, 4.0.0, development, false |
 | `BACKEND_PORT` | 后端服务端口（本地开发 8003；Docker 部署应设为 8000，用于代理自检推导） | `8003` |
 | `DEFAULT_PAGE_SIZE` / `MAX_PAGE_SIZE` | 分页 | `20`, `100` |
 | `BATCH_SIZE` / `SYNC_TIMEOUT` / `SYNC_COMMIT_BATCH_SIZE` | 批量处理 | `1000`, `3600`, `100` |
@@ -596,6 +605,8 @@ make dev-frontend
 | HTTP 客户端工厂 | `backend/app/domains/shared/services/common/http_client.py` |
 | 实验室人才导入 | `backend/app/domains/lab/services/lab_import_service.py` |
 | 实验室主页预览 | `backend/app/domains/lab/services/homepage_preview_service.py` |
+| 竞赛人才导入 | `backend/app/domains/competition/services/comp_import_service.py` |
+| 竞赛爬虫 skill | `~/.agents/skills/comp-talent-crawler/`（scripts/crawl_codeforces.py） |
 | 架构合规检查 | `backend/scripts/check_architecture.py` |
 | mypy 门禁 | `backend/scripts/ops/mypy_gate.py` |
 | 前端 API 客户端 | `frontend/src/services/api/client.ts` |
