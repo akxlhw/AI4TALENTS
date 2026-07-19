@@ -155,16 +155,13 @@ class RecommendService:
         """
         start_time = time.time()
 
-        # 验证参考列表
         if not reference_talent_ids:
             raise EmptyReferenceError()
 
-        # 获取参考人才
         reference_talents = await self._get_reference_talents(reference_talent_ids)
         if not reference_talents:
             raise InvalidReferenceError(reference_talent_ids[0])
 
-        # 获取相似人才
         items = await self._find_similar(reference_talents, limit, filters)
 
         took_ms = (time.time() - start_time) * 1000
@@ -197,7 +194,6 @@ class RecommendService:
         """
         reference_ids = {t.talent_id for t in reference_talents}
 
-        # 构建排除条件
         exclude_ids = list(reference_ids)
         if filters and "exclude_ids" in filters:
             exclude_ids.extend(filters["exclude_ids"])
@@ -233,7 +229,6 @@ class RecommendService:
     ) -> list[RecommendResultItem]:
         """使用向量相似度查找相似人才"""
         try:
-            # 获取参考人才的嵌入向量（使用 research 类型）
             reference_ids = [t.talent_id for t in reference_talents]
             query = (
                 select(TalentEmbedding.talent_id, TalentEmbedding.embedding)
@@ -247,7 +242,6 @@ class RecommendService:
                 logger.warning("No embeddings found for reference talents")
                 return []
 
-            # 计算平均向量作为查询向量
             import numpy as np
 
             vectors = []
@@ -289,7 +283,6 @@ class RecommendService:
                 vector_type="research",
             )
 
-            # 转换为 RecommendResultItem
             results = []
             for item in items:
                 results.append(
@@ -343,7 +336,6 @@ class RecommendService:
         # 使用 GIN 索引在数据库层面预筛选候选人
         exclude_ids = filters.get("exclude_ids", [])
 
-        # 构建参数字典与筛选条件
         params: dict[str, Any] = {}
         extra_where: list[str] = []
         extra_joins: list[str] = []
@@ -431,7 +423,6 @@ class RecommendService:
         if not candidates:
             return []
 
-        # 计算精确相似度并排序
         items = []
         for row in candidates:
             # 计算 Jaccard 相似度
@@ -459,7 +450,6 @@ class RecommendService:
                 except (json.JSONDecodeError, TypeError):
                     pass
 
-            # 计算相似度
             score = 0.0
             if ref_topics and cand_topics:
                 topic_overlap = len(ref_topics & cand_topics) / len(ref_topics)

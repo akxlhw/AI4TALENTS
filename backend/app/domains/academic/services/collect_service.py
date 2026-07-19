@@ -153,6 +153,12 @@ class CollectService:
         """Get all active (pending or running) tasks."""
         return await self.task_repo.get_active_tasks()
 
+    async def reset_task_for_rerun(self, task: CollectTask) -> None:
+        """Reset a failed/cancelled task to pending, preserving its checkpoint."""
+        task.status = "pending"
+        task.error_message = None
+        await self.session.commit()
+
     async def get_task_sub_tasks(self, task_id: int) -> list[VenueSubTask]:
         """Get venue sub-tasks for a task."""
         return await self.sub_task_repo.get_by_task(task_id)

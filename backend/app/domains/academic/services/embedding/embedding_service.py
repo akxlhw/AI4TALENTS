@@ -87,19 +87,15 @@ class EmbeddingService:
             TalentNotFoundError: 人才不存在
             EmbeddingError: 生成失败
         """
-        # 检查人才是否存在
         talent = await self.session.get(Talent, talent_id)
         if not talent:
             raise TalentNotFoundError(talent_id)
 
-        # 检查数据库
         record = await self.repository.get_by_talent_id(talent_id, vector_type)
         if record:
-            # 检查模型是否匹配
             if record.model_name == self.model_name:
                 return self.repository.get_embedding_vector(record)
 
-        # 检查缓存
         if self.cache:
             cached = await self.cache.get_embedding(talent_id, vector_type)
             if cached:
@@ -171,7 +167,6 @@ class EmbeddingService:
             "failed_ids": [],
         }
 
-        # 检查是否有 LLM 网关（生成嵌入需要）
         if self.llm_gateway is None:
             logger.error("Cannot generate embeddings: no LLM gateway configured")
             stats["failed"] = stats["total"]
@@ -186,7 +181,6 @@ class EmbeddingService:
 
         talent_map = {t.talent_id: t for t in talents}
 
-        # 获取论文标题（如果需要生成 papers 向量）
         papers_map: dict[int, list[str]] = {}
         if self.VECTOR_TYPE_PAPERS in vector_types:
             from app.domains.academic.repositories.talent_repository import TalentRepository
@@ -227,7 +221,6 @@ class EmbeddingService:
         """对单个向量类型进行批量生成"""
         stats = {"processed": 0, "skipped": 0, "failed": 0, "failed_ids": []}
 
-        # 获取已有嵌入的人才（如果不强制重新生成）
         if not force_regenerate:
             missing_ids = await self.repository.get_missing_talent_ids(
                 talent_ids, self.model_name, vector_type
@@ -245,7 +238,6 @@ class EmbeddingService:
             batch_num = i // batch_size + 1
 
             try:
-                # 构建文本
                 texts = []
                 valid_talent_ids = []
                 for tid in batch:
@@ -275,7 +267,6 @@ class EmbeddingService:
 
                 logger.info(f"Batch {batch_num}: Received {len(results)} embedding results")
 
-                # 验证结果数量
                 result_count = len(results)
                 if result_count != len(texts):
                     logger.error(
@@ -354,7 +345,6 @@ class EmbeddingService:
         # 批量获取 embeddings（避免 N+1 查询）
         records = await self.repository.get_by_talent_ids(talent_ids, vector_type)
 
-        # 构建 talent_id -> embedding 的映射
         embedding_map = {r.talent_id: r.embedding for r in records if r.embedding}
 
         # 收集存在的 embeddings
@@ -375,7 +365,6 @@ class EmbeddingService:
             dim = self.dimension or settings.EMBEDDING_DIMENSION
             return [0.0] * dim
 
-        # 计算平均
         avg = np.mean(embeddings, axis=0)
         return avg.tolist()
 

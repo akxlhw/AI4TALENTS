@@ -183,16 +183,13 @@ class JDMatchService:
         Returns:
             JDFeatures: 解析出的特征
         """
-        # 检查缓存
         if self.cache:
             cached = await self.cache.get_jd_features(jd_text)
             if cached:
                 return cached
 
-        # 调用 LLM 解析
         features = await self.llm_gateway.parse_jd(jd_text)
 
-        # 写入缓存
         if self.cache:
             await self.cache.set_jd_features(jd_text, features)
 
@@ -220,11 +217,9 @@ class JDMatchService:
         """
         start_time = time.time()
 
-        # 验证 JD
         if not jd_text or not jd_text.strip():
             raise EmptyJDError()
 
-        # 创建数据库会话记录
         db_session = JDMatchSession(
             user_id=user_id,
             jd_text=jd_text,
@@ -236,10 +231,8 @@ class JDMatchService:
         session_id = db_session.session_id
 
         try:
-            # 解析 JD
             jd_features = await self.parse_jd(jd_text)
 
-            # 更新会话特征
             db_session.jd_features = (
                 jd_features.to_dict()
                 if hasattr(jd_features, "to_dict")
@@ -248,10 +241,8 @@ class JDMatchService:
                 }
             )
 
-            # 获取候选人及其论文标题
             candidates = await self._get_candidates_with_papers(jd_features, config)
 
-            # 计算分数
             items = await self._calculate_scores(jd_features, candidates, config)
 
             # 按分数排序并限制数量
@@ -273,7 +264,6 @@ class JDMatchService:
                 )
                 self.session.add(result)
 
-            # 更新会话状态
             db_session.status = "completed"
             db_session.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -291,7 +281,6 @@ class JDMatchService:
 
         except Exception as e:
             logger.error(f"JD match failed: {e}")
-            # 更新会话状态为失败
             db_session.status = "failed"
             db_session.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             await self.session.commit()  # 保存失败状态
@@ -355,12 +344,10 @@ class JDMatchService:
                 f"paper_titles_count={len(paper_titles)}"
             )
 
-            # 计算研究方向匹配分数
             research_score = self._scorer.calculate_research_score(
                 jd_features.research_areas, all_matchable
             )
 
-            # 计算综合分数（研究方向 + h-index 影响力加权）
             overall_score, impact_score = self._scorer.calculate_overall_score(
                 research_score, h_index=talent.h_index or 0
             )
@@ -373,7 +360,6 @@ class JDMatchService:
                 f"overall={overall_score:.1f}"
             )
 
-            # 生成匹配原因
             match_reasons = self._scorer.generate_match_reasons(
                 jd_features,
                 {
@@ -414,7 +400,6 @@ class JDMatchService:
         Returns:
             会话信息字典，包含结果列表
         """
-        # 查询会话
         result = await self.session.execute(
             select(JDMatchSession).where(JDMatchSession.session_id == session_id)
         )
@@ -423,7 +408,6 @@ class JDMatchService:
         if not db_session:
             return None
 
-        # 查询结果
         results_result = await self.session.execute(
             select(JDMatchResult)
             .where(JDMatchResult.session_id == session_id)

@@ -180,7 +180,6 @@ class CollaborationService:
                         processed += 1
                         continue
 
-                    # 获取发表年份
                     pub_year = work.publication_year
                     if not pub_year and work.raw_json:
                         pub_year = self._extract_publication_year(work.raw_json)
@@ -218,7 +217,6 @@ class CollaborationService:
                 f"已处理 {processed}/{total_works} 篇论文，创建 {collaborations_created} 条合作关系"
             )
 
-        # 保存同步时间
         await self.save_sync_time()
         logger.info("合作网络同步完成，已保存同步时间")
 
@@ -270,7 +268,6 @@ class CollaborationService:
                 if t1 == t2:
                     continue
 
-                # 检查合作关系是否已存在
                 stmt = select(Collaboration).where(
                     and_(Collaboration.talent_id_1 == t1, Collaboration.talent_id_2 == t2)
                 )
@@ -278,11 +275,9 @@ class CollaborationService:
                 collab = result.scalar_one_or_none()
 
                 if collab:
-                    # 更新现有合作关系
                     collab.collaboration_count += 1
                     self._update_collaboration_years(collab, publication_year)
                 else:
-                    # 创建新的合作关系
                     collab = Collaboration(
                         talent_id_1=t1,
                         talent_id_2=t2,
@@ -336,7 +331,6 @@ class CollaborationService:
                         collab.collaboration_count += 1
                         self._update_collaboration_years(collab, publication_year)
                     else:
-                        # 创建新的合作关系
                         collab = Collaboration(
                             talent_id_1=t1,
                             talent_id_2=t2,
@@ -347,7 +341,6 @@ class CollaborationService:
                         self.session.add(collab)
                         collaborations_created += 1
 
-                    # 添加到缓存
                     cache.add(cache_key)
 
         return collaborations_created
@@ -378,7 +371,6 @@ class CollaborationService:
             logger.info(f"学者 {talent.name} 没有找到关联论文")
             return 0
 
-        # 构建 ID 映射
         talent_id_map = await self._build_talent_id_map()
 
         collaborations_created = 0
@@ -419,7 +411,6 @@ class CollaborationService:
         """
         from sqlalchemy.orm import selectinload
 
-        # 获取该学者的所有合作关系
         stmt = (
             select(Collaboration)
             .where(
@@ -439,7 +430,6 @@ class CollaborationService:
                 "message": "暂无合作网络数据，请先在采集配置页面执行合作网络同步",
             }
 
-        # 获取主学者信息（预加载 school 关系）
         main_talent_stmt = (
             select(Talent).options(selectinload(Talent.school)).where(Talent.talent_id == talent_id)
         )
@@ -466,7 +456,6 @@ class CollaborationService:
         result = await self.session.execute(stmt)
         collaborators = {t.talent_id: t for t in result.scalars().all()}
 
-        # 构建节点列表
         nodes = [
             {
                 "id": str(talent_id),
@@ -501,7 +490,6 @@ class CollaborationService:
                     }
                 )
 
-        # 构建连接列表
         links = []
         for collab in collaborations:
             other_id = collab.talent_id_2 if collab.talent_id_1 == talent_id else collab.talent_id_1
@@ -525,7 +513,6 @@ class CollaborationService:
         """
         import random
 
-        # 获取所有学者 ID
         stmt = select(Talent.talent_id)
         result = await self.session.execute(stmt)
         talent_ids = [row[0] for row in result.fetchall()]
@@ -539,7 +526,6 @@ class CollaborationService:
             t1, t2 = random.sample(talent_ids, 2)
             t1, t2 = min(t1, t2), max(t1, t2)
 
-            # 检查是否已存在
             stmt = select(Collaboration).where(
                 and_(Collaboration.talent_id_1 == t1, Collaboration.talent_id_2 == t2)
             )
@@ -547,7 +533,6 @@ class CollaborationService:
             if result.scalar_one_or_none():
                 continue
 
-            # 创建合作关系
             collab = Collaboration(
                 talent_id_1=t1,
                 talent_id_2=t2,
@@ -585,7 +570,6 @@ class CollaborationService:
         result = await self.session.execute(work_count_stmt)
         total_works = result.scalar() or 0
 
-        # 获取最后同步时间
         config_service = ConfigService(self.session)
         last_sync = await config_service.get_value("COLLABORATION_LAST_SYNC", None)
 

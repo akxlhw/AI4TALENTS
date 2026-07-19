@@ -15,6 +15,11 @@ from app.domains.academic.schemas.genealogy import (
     InfluenceRankingItem,
     SyncStatusResponse,
 )
+from app.domains.academic.services.genealogy_background_service import (
+    load_sync_status,
+    run_genealogy_sync,
+    save_sync_status,
+)
 from app.domains.academic.services.genealogy_service import GenealogyService
 from app.domains.academic.services.influence_service import InfluenceService
 from app.domains.shared.api.auth import require_admin
@@ -27,35 +32,6 @@ from app.domains.shared.services.config_service import ConfigService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/talents", tags=["Genealogy"])
-
-GENEALOGY_SYNC_STATUS_KEY = "genealogy_sync_status"
-DEFAULT_SYNC_STATUS = {
-    "status": "idle",
-    "processed": 0,
-    "total": 0,
-    "edges": 0,
-    "current_phase": "",
-}
-
-
-async def _load_sync_status(config_service: ConfigService) -> dict:
-    """Load sync status from persistent config store."""
-    status = await config_service.get_value(
-        GENEALOGY_SYNC_STATUS_KEY, default=None, use_cache=False
-    )
-    if status is None:
-        return DEFAULT_SYNC_STATUS.copy()
-    return {**DEFAULT_SYNC_STATUS, **status}
-
-
-async def _save_sync_status(config_service: ConfigService, status: dict) -> None:
-    """Persist sync status to config store."""
-    await config_service.set_value(
-        GENEALOGY_SYNC_STATUS_KEY,
-        status,
-        config_type="json",
-    )
-    await config_service.session.commit()
 
 
 @router.get(
@@ -98,7 +74,7 @@ async def sync_genealogy(
 ) -> TaskStartResponse:
     """Trigger influence score + genealogy inference (admin only)."""
     config_service = ConfigService(session)
-    status = await _load_sync_status(config_service)
+    status = await load_sync_status(config_service)
     if status["status"] == "running":
         raise HTTPException(status_code=409, detail="Genealogy sync already in progress")
 
@@ -111,7 +87,7 @@ async def sync_genealogy(
             "current_phase": "initializing",
         }
     )
-    await _save_sync_status(config_service, status)
+    await save_sync_status(config_service, status)
 
     # Use asyncio.create_task with timeout wrapper
     task = asyncio.create_task(_run_with_timeout(), name="genealogy_sync")
@@ -129,7 +105,7 @@ async def get_genealogy_sync_status(
 ) -> SyncStatusResponse:
     """Get current genealogy sync progress."""
     config_service = ConfigService(session)
-    status = await _load_sync_status(config_service)
+    status = await load_sync_status(config_service)
     return SyncStatusResponse(**status)
 
 
@@ -166,7 +142,7 @@ async def _run_with_timeout() -> None:
 
     for attempt in range(1, max_retries + 1):
         try:
-            await asyncio.wait_for(_run_genealogy_sync(), timeout=sync_timeout)
+            await asyncio.wait_for(run_genealogy_sync(), timeout=sync_timeout)
             return
         except TimeoutError:
             logger.warning(f"[GenealogySync] Timeout on attempt {attempt}/{max_retries}")
@@ -189,54 +165,3 @@ def _on_genealogy_task_done(task: asyncio.Task) -> None:
         logger.warning("[GenealogySync] Background task was cancelled")
     except Exception:
         logger.exception("[GenealogySync] Background task failed")
-
-
-async def _run_genealogy_sync() -> None:
-    """Background task: compute influence scores then infer genealogy."""
-    from app.core.database import AsyncSessionLocal
-
-    async with AsyncSessionLocal() as session:
-        config_service = ConfigService(session)
-        status = await _load_sync_status(config_service)
-        status.update(
-            {
-                "status": "running",
-                "processed": 0,
-                "total": 0,
-                "edges": 0,
-                "current_phase": "starting",
-            }
-        )
-        await _save_sync_status(config_service, status)
-        logger.info("[GenealogySync] Background task started")
-
-        async def _update_progress(processed: int, total: int, edges: int) -> None:
-            status.update({"processed": processed, "total": total, "edges": edges})
-            await _save_sync_status(config_service, status)
-
-        try:
-            status["current_phase"] = "influence_scores"
-            await _save_sync_status(config_service, status)
-
-            result = await GenealogyService.run_background_sync(progress_callback=_update_progress)
-            inf_result = result["influence"]
-            gen_result = result["genealogy"]
-            status.update(
-                {
-                    "status": "completed",
-                    "processed": gen_result["total_raw_works"],
-                    "total": inf_result.get("total", 0),
-                    "edges": gen_result["edges_upserted"],
-                    "current_phase": "done",
-                }
-            )
-            await _save_sync_status(config_service, status)
-        except asyncio.CancelledError:
-            status.update({"status": "cancelled", "current_phase": "cancelled"})
-            await _save_sync_status(config_service, status)
-            raise
-        except Exception:
-            logger.exception("[GenealogySync] Background task failed")
-            status.update({"status": "error", "current_phase": "failed"})
-            await _save_sync_status(config_service, status)
-            raise

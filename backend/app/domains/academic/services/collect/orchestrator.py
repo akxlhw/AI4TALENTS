@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging_context import current_task_id
 from app.core.metrics import (
     COLLECTION_ERRORS_TOTAL,
     COLLECTION_TASKS_ACTIVE,
@@ -39,7 +40,10 @@ from app.domains.academic.services.collect.phases import (
     PhaseTechBelongHandler,
     PhaseTopicTagsHandler,
 )
-from app.domains.academic.services.collect.progress_tracker import ProgressTracker
+from app.domains.academic.services.collect.progress_tracker import (
+    CollectionProgress,
+    ProgressTracker,
+)
 from app.domains.academic.services.collect.venue_executor import VenueSubTaskExecutor
 from app.domains.academic.services.data_fetchers import (
     AuthorFetcher,
@@ -129,8 +133,16 @@ class CollectionOrchestrator:
         await self.progress_tracker.save_logs(task)
         await self.session.commit()
 
-    async def execute_task(self, task_id: int):
-        """Execute a collection task through all phases."""
+    async def execute_task(self, task_id: int) -> CollectionProgress:
+        """Execute a collection task (wraps phases with task_id log context)."""
+        task_id_token = current_task_id.set(task_id)
+        try:
+            return await self._execute_task_phases(task_id)
+        finally:
+            current_task_id.reset(task_id_token)
+
+    async def _execute_task_phases(self, task_id: int) -> CollectionProgress:
+        """Execute all collection phases for the task."""
 
         progress = self.progress_tracker.create_progress(task_id)
         self.progress_tracker.reset_logs()

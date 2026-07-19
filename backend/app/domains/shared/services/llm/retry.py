@@ -55,11 +55,9 @@ def with_retry(
                     last_error = e
 
                     if isinstance(e, LLMError):
-                        # 检查是否可重试
                         if not e.is_retryable():
                             raise
 
-                        # 计算延迟
                         if e.error_type == LLMErrorType.RATE_LIMIT and e.retry_after:
                             delay = float(e.retry_after)
                         else:

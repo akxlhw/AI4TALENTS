@@ -147,7 +147,6 @@ async def trigger_generation(
             status_code=400, detail="LLM API Key 未配置。请在系统配置中设置 API Key。"
         )
 
-    # 检查嵌入模型配置
     if not llm_config.embedding_model:
         raise HTTPException(
             status_code=400,

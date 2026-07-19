@@ -203,7 +203,6 @@ class EmbeddingRepository:
 
         if _is_postgres(self.session):
             # PostgreSQL: 使用原生 SQL 批量 UPSERT
-            # 构建多行 VALUES 子句
             values_clauses = []
             params = {}
             for i, item in enumerate(items):
@@ -462,7 +461,6 @@ class EmbeddingRepository:
             for row in result.fetchall():
                 existing_ids.add(row[0])
 
-        # 返回缺失的 ID
         return [tid for tid in talent_ids if tid not in existing_ids]
 
     async def get_existing_talent_ids(self, vector_type: str | None = None) -> set[int]:

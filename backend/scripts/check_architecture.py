@@ -151,6 +151,18 @@ def _is_banned(module: str, name: str) -> bool | str:
     return False
 
 
+def _matches_banned_name(name: str) -> bool:
+    """Return True if an imported symbol matches a banned name pattern.
+
+    Banned names (AsyncSessionLocal, *Collector, LLMGateway, ...) are violations
+    even when imported from an allow-listed module such as app.core.* — the
+    module allow-list must not short-circuit the name check.
+    """
+    if name in ALLOWED_NAMES:
+        return False
+    return any(pattern in name for pattern, _ in BANNED_NAME_PATTERNS)
+
+
 def _file_hash(check_type: str, path: str, module: str, name: str) -> str:
     """Stable hash for a violation entry.
 
@@ -184,11 +196,15 @@ def check_file(filepath: Path) -> list[dict]:
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
             module = node.module or ""
-            if _is_allowed_module(module):
-                continue
+            allowed_module = _is_allowed_module(module)
 
             for alias in node.names:
                 name = alias.name
+                # Allow-listed modules skip the module-level rules, but banned
+                # names are still violations (e.g. AsyncSessionLocal from
+                # app.core.database) — name check precedes the allow-list.
+                if allowed_module and not _matches_banned_name(name):
+                    continue
                 reason = _is_banned(module, name)
                 if reason:
                     violations.append(
@@ -205,9 +221,9 @@ def check_file(filepath: Path) -> list[dict]:
                 if not alias.name.startswith("app."):
                     continue
                 module = alias.name
-                if _is_allowed_module(module):
-                    continue
                 name = alias.asname or alias.name.split(".")[-1]
+                if _is_allowed_module(module) and not _matches_banned_name(name):
+                    continue
                 reason = _is_banned(module, name)
                 if reason:
                     violations.append(

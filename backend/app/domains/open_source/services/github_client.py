@@ -62,7 +62,11 @@ class GitHubClient:
         }
         self._client: httpx.AsyncClient | None = None
         self._last_request_time: float = 0.0
-        self._min_interval: float = 0.2  # 200ms between requests
+        # Pace requests from the configured per-token hourly limit
+        # (GITHUB_RATE_LIMIT, default 5000/h); the token pool multiplies
+        # aggregate throughput, so the interval shrinks with pool size.
+        token_count = max(len(self.tokens), 1)
+        self._min_interval: float = 3600.0 / (max(settings.GITHUB_RATE_LIMIT, 1) * token_count)
         # Track per-token rate limit state for intelligent token selection
         self._token_remaining: dict[int, int] = {}
         self._token_reset_at: dict[int, int] = {}
@@ -128,7 +132,9 @@ class GitHubClient:
         if best_idx is None:
             return False
         # Only switch if the alternative has meaningful quota left
-        if self._token_remaining.get(best_idx, 0) <= 0:
+        # (unknown quota = assume full, consistent with _pick_best_token;
+        # tokens blacklisted on 401 are recorded as 0 and thus refused)
+        if self._token_remaining.get(best_idx, 5000) <= 0:
             return False
         self.current_token_idx = best_idx
         self._update_auth_header()
@@ -211,6 +217,11 @@ class GitHubClient:
                 f"remaining={remaining}, reset_at={reset_at}, token_idx={self.current_token_idx}"
             )
 
+            if response.status_code == 401:
+                # Bad credentials: blacklist this token so neither
+                # _pick_best_token nor _switch_to_best_alternative selects it again.
+                self._token_remaining[self.current_token_idx] = 0
+
             # Try switching to the best alternative token (not round-robin)
             if self._switch_to_best_alternative():
                 logger.info(
@@ -219,8 +230,9 @@ class GitHubClient:
                 )
                 await self._rebuild_client()
                 response = await self._do_get_request(path, params)
-            elif reset_at:
-                # No more tokens; wait until rate limit resets
+            elif reset_at and response.status_code != 401:
+                # Rate-limited (403/429) with no tokens left; wait for the reset
+                # window. Skipped for 401: bad credentials won't heal by waiting.
                 wait_seconds = max(0, int(reset_at) - int(time.time()) + 1)
                 wait_seconds = min(wait_seconds, 3600)  # Cap at 1 hour
                 logger.warning(

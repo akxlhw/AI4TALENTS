@@ -291,7 +291,7 @@ async def _test_proxy_connection(
     results = []
 
     # Test 1: External API through proxy
-    openalex_base = settings.OPENALEX_BASE_URL or "https://api.openalex.org"
+    openalex_base = settings.OPENALEX_BASE_URL
     external_url = f"{openalex_base}/works?per_page=1"
     try:
         async with HttpClientFactory.create_client_for_url(external_url, timeout=30.0) as client:
@@ -351,8 +351,8 @@ async def _test_proxy_connection(
         # If no specific URL provided, try to infer from no_proxy patterns
         if not internal_url:
             patterns = [p.strip() for p in no_proxy.split(",") if p.strip()]
-            # Backend port: Docker = 8000, local dev = 8003 (from config)
-            backend_port = "8003"
+            # Backend port from config (local dev 8003; Docker sets BACKEND_PORT=8000)
+            backend_port = str(settings.BACKEND_PORT)
             for pattern in patterns:
                 if "*" not in pattern and not pattern.startswith("."):
                     if pattern == "localhost":

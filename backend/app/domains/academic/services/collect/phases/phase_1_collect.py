@@ -7,6 +7,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.domains.academic.repositories.venue_repository import VenueSubTaskRepository
 from app.domains.academic.services.collect.phases.base import PhaseContext, PhaseHandler
 from app.domains.academic.services.collect.progress_tracker import ProgressTracker
@@ -47,7 +48,7 @@ class PhaseCollectHandler(PhaseHandler):
         progress.total_venues = len(sub_tasks)
 
         estimated_total = context.estimated_total
-        MAX_SUBTASK_RETRIES = 3
+        max_retries = settings.COLLECT_SUBTASK_RETRY_COUNT
 
         for sub_task in sub_tasks:
             # Skip already-completed sub-tasks on rerun (saves API quota)
@@ -58,7 +59,7 @@ class PhaseCollectHandler(PhaseHandler):
             works_fetched = 0
             last_error = None
 
-            for attempt in range(MAX_SUBTASK_RETRIES):
+            for attempt in range(max_retries):
                 try:
                     if venue_name is None:
                         venue_name = await self.venue_executor.get_venue_name(sub_task.venue_id)
@@ -68,8 +69,8 @@ class PhaseCollectHandler(PhaseHandler):
                     break  # Success — exit retry loop
                 except Exception as e:
                     last_error = e
-                    if attempt < MAX_SUBTASK_RETRIES - 1:
-                        wait_seconds = 2**attempt  # 1s, 2s, 4s
+                    if attempt < max_retries - 1:
+                        wait_seconds = settings.COLLECT_SUBTASK_RETRY_BASE_WAIT * (2**attempt)
                         self.progress_tracker.add_log(
                             "warning",
                             f"Venue {sub_task.venue_id} 第 {attempt + 1} 次采集失败，"

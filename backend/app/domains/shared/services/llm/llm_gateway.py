@@ -170,7 +170,6 @@ class LLMGateway(LLMEmbeddingMixin, LLMGatewayProtocol):
         Raises:
             LLMError: LLM API 调用失败
         """
-        # 检查缓存
         if self.cache:
             cached = await self.cache.get_jd_features(jd_text)
             if cached:
@@ -199,7 +198,6 @@ class LLMGateway(LLMEmbeddingMixin, LLMGatewayProtocol):
             elapsed = time.time() - start_time
             logger.info(f"JD parsing completed in {elapsed:.2f}s")
 
-            # 解析响应
             content = response.choices[0].message.content
             logger.info(
                 f"LLM raw response (first 500 chars): {content[:500] if content else 'None'}"
@@ -224,7 +222,6 @@ class LLMGateway(LLMEmbeddingMixin, LLMGatewayProtocol):
             logger.info(f"Parsed JSON data: {data}")
             features = JDFeatures.from_dict(data)
 
-            # 写入缓存
             if self.cache:
                 await self.cache.set_jd_features(jd_text, features)
 
@@ -316,7 +313,6 @@ def create_llm_gateway(
     Returns:
         LLMGateway | None: LLM 网关实例，如果未配置则返回 None
     """
-    # 检查是否启用 LLM
     if not settings.LLM_ENABLED and not api_key:
         logger.info("LLM features are disabled")
         return None

@@ -29,6 +29,8 @@ class Settings(BaseSettings):
 
     # API
     API_V1_PREFIX: str = "/api/v1"
+    # Backend service port (local dev 8003; Docker deployments should set BACKEND_PORT=8000)
+    BACKEND_PORT: int = 8003
 
     # Database
     DATABASE_URL: str = ""

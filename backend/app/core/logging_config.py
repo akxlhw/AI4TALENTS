@@ -11,10 +11,28 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import settings
+from app.core.logging_context import current_task_id
 
 # 日志文件目录
 LOG_DIR = Path(__file__).parent.parent.parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
+
+
+class TaskIdPrefixFilter(logging.Filter):
+    """Prefix log records with [task_id=N] while a collection task context is active.
+
+    The orchestrator sets `logging_context.current_task_id` at task start; the
+    contextvar propagates through awaits and asyncio.gather children, so phase
+    handlers and fetchers get a uniform, greppable task_id field for free.
+    Works with every formatter (dev "simple" and production JSON alike) because
+    the prefix is merged into the message itself.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        task_id = current_task_id.get()
+        if task_id is not None:
+            record.msg = f"[task_id={task_id}] {record.msg}"
+        return True
 
 
 def get_logging_config() -> dict[str, Any]:
@@ -52,12 +70,16 @@ def get_logging_config() -> dict[str, Any]:
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": formatters,
+        "filters": {
+            "task_id_prefix": {"()": "app.core.logging_config.TaskIdPrefixFilter"},
+        },
         "handlers": {
             # 控制台输出
             "console": {
                 "class": "logging.StreamHandler",
                 "stream": sys.stdout,
                 "formatter": default_formatter,
+                "filters": ["task_id_prefix"],
             },
             # 主日志文件（轮转，最大 10MB，保留 5 个备份）
             "file": {
@@ -67,6 +89,7 @@ def get_logging_config() -> dict[str, Any]:
                 "backupCount": 5,
                 "formatter": "detailed",
                 "encoding": "utf-8",
+                "filters": ["task_id_prefix"],
             },
             # 采集任务专用日志文件
             "collect_file": {
@@ -76,6 +99,7 @@ def get_logging_config() -> dict[str, Any]:
                 "backupCount": 3,
                 "formatter": "detailed",
                 "encoding": "utf-8",
+                "filters": ["task_id_prefix"],
             },
         },
         "loggers": {

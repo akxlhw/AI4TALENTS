@@ -314,7 +314,6 @@ class LLMEmbeddingMixin:
                         vectors = data["vectors"]
                         total_tokens = data.get("total_tokens", 0)
 
-                        # 验证向量数量与请求数量一致
                         if len(vectors) != len(batch):
                             logger.error(
                                 f"MiniMax returned {len(vectors)} vectors for {len(batch)} texts. "

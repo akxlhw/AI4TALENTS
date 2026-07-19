@@ -429,9 +429,7 @@ async def rerun_failed_task(
             )
 
     # Reset to pending, keep last_completed_phase for checkpoint resume
-    task.status = "pending"
-    task.error_message = None
-    await session.commit()
+    await service.reset_task_for_rerun(task)
     logger.info(
         f"Task #{task_id} reset to pending for rerun (checkpoint: phase {task.last_completed_phase})"
     )

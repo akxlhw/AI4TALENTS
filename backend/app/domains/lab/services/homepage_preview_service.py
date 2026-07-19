@@ -142,11 +142,6 @@ class HomepagePreviewService:
         Returns:
             dict with keys: html, base_url, title, status
         """
-        # SSRF protection: refuse to fetch private/loopback/link-local addresses
-        if _is_ssrf_url(homepage_url):
-            logger.warning("[HomepagePreview] SSRF blocked: %s", homepage_url)
-            return {"html": "", "base_url": homepage_url, "title": "", "status": "ssrf_blocked"}
-
         parsed = urlparse(homepage_url)
         if parsed.scheme not in ("http", "https") or not parsed.netloc:
             logger.warning("[HomepagePreview] Invalid URL scheme for %s", homepage_url)
@@ -156,6 +151,11 @@ class HomepagePreviewService:
                 "title": "",
                 "status": "invalid_url",
             }
+
+        # SSRF protection: refuse to fetch private/loopback/link-local addresses
+        if _is_ssrf_url(homepage_url):
+            logger.warning("[HomepagePreview] SSRF blocked: %s", homepage_url)
+            return {"html": "", "base_url": homepage_url, "title": "", "status": "ssrf_blocked"}
 
         try:
             raw = await self._fetch_raw_with_retry(homepage_url)

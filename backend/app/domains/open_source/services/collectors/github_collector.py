@@ -29,6 +29,7 @@ class CollectContext:
     repo_full_name: str
     tech_element: str
     contributors_per_repo: int
+    failed_contributors: int = 0
     cancelled: asyncio.Event = field(default_factory=asyncio.Event)
 
 
@@ -151,7 +152,7 @@ class GitHubCollector:
                         await session.commit()
                 except Exception as e:
                     logger.exception(f"Failed to process contributor {login}: {e}")
-                    ctx.failed_contributors = getattr(ctx, "failed_contributors", 0) + 1
+                    ctx.failed_contributors += 1
                     # Continue with next contributor; partial failures are logged but not fatal.
 
                 processed += 1
@@ -165,15 +166,33 @@ class GitHubCollector:
 
         await asyncio.gather(*[_process_one(c) for c in contributors])
 
-        # Step 6: Done
+        # Step 6: Done — report honestly when some/all contributors failed
+        failed = ctx.failed_contributors
+        succeeded = processed - failed
+        final_status = "completed"
+        error_message = None
+        if failed:
+            error_message = f"{failed}/{total} contributors failed to process"
+            logger.warning(
+                f"Collection for {ctx.repo_full_name} finished with failures: "
+                f"{error_message} (succeeded={succeeded})"
+            )
+            if succeeded == 0 and total > 0:
+                # A zero-output run is a failure, not a "completed" task
+                final_status = "failed"
+
         await self._update_task(
             ctx.task_id,
-            status="completed",
+            status=final_status,
             progress_percent=100,
-            current_step="completed",
+            current_step=final_status,
             completed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            error_message=error_message,
         )
-        logger.info(f"Collection completed for repo {ctx.repo_full_name}, task={ctx.task_id}")
+        logger.info(
+            f"Collection finished for repo {ctx.repo_full_name}, task={ctx.task_id}, "
+            f"status={final_status}, succeeded={succeeded}/{total}"
+        )
 
     async def _process_contributor(
         self,
@@ -336,9 +355,10 @@ class GitHubCollector:
             # Flush ④: persist language skills
             await sync.session.flush()
 
-        except Exception as e:
-            logger.exception(f"Failed to process contributor {login}: {e}")
-            # Continue with next contributor; individual failures should not stop the whole task
+        except Exception:
+            # Re-raise so the caller counts the failure (ctx.failed_contributors);
+            # per-contributor isolation is provided by the session in _process_one.
+            raise
 
     @staticmethod
     def _build_developer_data(user: dict[str, Any], tech_element: str) -> dict[str, Any]:
