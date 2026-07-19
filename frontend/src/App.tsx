@@ -24,6 +24,7 @@ import DeveloperDetailPage from './pages/open-source/open-source-developer-detai
 import RepoDetailPage from './pages/open-source/repo-detail-page'
 import RepoListPage from './pages/open-source/repo-list-page'
 import FeedbackPage from './pages/feedback/feedback-page'
+import AcademicThemeScope from './theme/AcademicThemeScope'
 import { useAuth } from './contexts/AuthContext'
 
 // Lazy-loaded admin/demo pages to reduce main bundle size
@@ -113,7 +114,9 @@ function AppRoutes() {
         path="/login"
         element={
           <PublicRoute>
-            <LoginPage />
+            <AcademicThemeScope>
+              <LoginPage />
+            </AcademicThemeScope>
           </PublicRoute>
         }
       />
@@ -121,7 +124,9 @@ function AppRoutes() {
         path="/register"
         element={
           <PublicRoute>
-            <RegisterPage />
+            <AcademicThemeScope>
+              <RegisterPage />
+            </AcademicThemeScope>
           </PublicRoute>
         }
       />
