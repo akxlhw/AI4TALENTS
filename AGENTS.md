@@ -8,15 +8,15 @@
 
 **智能人才库（AI4TALENTS）** 是一套面向招聘团队的多维度人才发现平台。
 
-- **当前版本**：**V3.0.0**（以 `backend/pyproject.toml`、`frontend/package.json`、`backend/app/core/config.py` 中的版本号为准）。
+- **当前版本**：**V3.0.0**（以 `backend/pyproject.toml`、`frontend/package.json`、`backend/app/core/config.py` 中的版本号为准；`CHANGELOG.md` 记录了 3.0.0 的变更。注意根目录 `README.md` 仍写着 V2.1.0，已过时，不要以它为准）。
 - **项目定位**：整合公开学术数据与开源社区数据，帮助招聘团队发现、筛选、对比和管理高端技术人才。
 - **已实现的人才数据源**：
   - **学术人才**（`domains/academic/`）：基于 OpenAlex 学术数据库，功能完整。
   - **开源人才**（`domains/open_source/`）：基于 GitHub API，功能完整。
-  - **实验室人才**（`domains/lab/`）：AI 实验室人才（如 Stanford AI Lab、MIT CSAIL），通过 hermes agent 调用 `ai-lab-talent-crawler` skill 采集官网人员数据，产出 JSONL 由 `LabImportService` 导入。支持 hermes API 推送 + 管理员手动上传两种导入方式。独立 `lab_talent` 表（不复用 `core_talent`，因跨域隔离铁律）。
-- **规划中的人才数据源**：竞赛人才、行业人才。
+  - **实验室人才**（`domains/lab/`，V3.0.0 新增）：AI 实验室人才（Stanford AI Lab、MIT CSAIL、LAMDA 等），通过 `ai-lab-talent-crawler` skill 采集官网人员数据，产出 JSONL 由 `LabImportService` 导入。导入方式为管理员手动上传。使用独立的 `lab_talent` 表 + `lab_info` 实验室元数据表（不复用 `core_talent`，因跨域隔离铁律）。
+- **规划中的人才数据源**：竞赛人才、行业人才（前端目前仅有 `demo-competition` / `demo-industry` 演示页）。
 
-主要功能包括：学术/开源人才搜索与发现、人才画像查看、候选人筛选/排序/对比、重点人才导出、收藏与人才池管理、三维权限控制（学校/国家/技术要素）、采集任务管理、语义搜索、JD 岗位匹配、相似人才推荐、用户注册审批与审计日志等。
+主要功能包括：学术/开源/实验室人才搜索与发现、人才画像查看、候选人筛选/排序/对比、重点人才导出、收藏与人才池管理、三维权限控制（学校/国家/技术要素）、采集任务管理、语义搜索、JD 岗位匹配、相似人才推荐、学术谱系（genealogy）、实验室人才主页预取与预览、用户注册审批与审计日志等。
 
 ---
 
@@ -26,7 +26,7 @@
 
 - **Python 3.11+**
 - **FastAPI 0.115.0** — Web 框架
-- **Pydantic v2 + pydantic-settings** — 配置与校验
+- **Pydantic v2 (2.11.0) + pydantic-settings** — 配置与校验
 - **SQLAlchemy 2.0.35 + Alembic 1.13.3** — 异步 ORM 与数据库迁移
 - **asyncpg 0.29.0 + psycopg2-binary 2.9.9** — PostgreSQL 异步/同步驱动
 - **PostgreSQL 16+** — 主数据库（开发与生产均使用 PostgreSQL，无 SQLite 降级）
@@ -36,6 +36,7 @@
 - **tenacity 9.0.0** — 重试策略
 - **bcrypt 4.2.0 + PyJWT 2.9.0** — 认证
 - **openai / tiktoken / numpy** — LLM 与嵌入相关
+- **beautifulsoup4** — HTML 清洗（实验室人才主页预览）
 - **uv (Astral)** — Python 包管理与运行（取代 pip）
 
 ### 前端
@@ -54,7 +55,7 @@
 ### 基础设施
 
 - **Docker & Docker Compose** — 容器化部署
-- **Nginx** — 前端生产环境托管
+- **Nginx** — 前端生产环境托管（前端 Dockerfile 多阶段构建的 production target）
 - **GitHub Actions** — CI/CD
 - **Pre-commit** — 本地提交前轻量架构检查
 - **Prometheus** — 指标采集（`/api/v1/metrics`）
@@ -67,11 +68,11 @@
 talent-platform/
 ├── backend/                    # 后端服务
 │   ├── app/                   # 应用代码
-│   │   ├── api_router.py      # FastAPI 路由注册表（聚合所有域路由到 /api/v1）
+│   │   ├── api_router.py      # FastAPI 路由注册表（聚合全部 26 个域路由到 /api/v1）
 │   │   ├── model_registry.py  # Alembic 模型注册表（聚合所有域模型）
-│   │   ├── main.py            # FastAPI 入口与生命周期管理
+│   │   ├── main.py            # FastAPI 入口与生命周期管理（lifespan、中间件、/uploads 静态托管）
 │   │   ├── core/              # 核心基础设施
-│   │   │   ├── config.py      # 环境变量配置（pydantic-settings）
+│   │   │   ├── config.py      # 环境变量配置（pydantic-settings，含生产安全校验）
 │   │   │   ├── database.py    # 异步 SQLAlchemy engine / session factory
 │   │   │   ├── auth.py        # JWT、密码哈希、当前用户依赖
 │   │   │   ├── exceptions.py  # 全局异常类与异常处理器
@@ -81,69 +82,83 @@ talent-platform/
 │   │   ├── middleware/        # 限流、请求日志、指标采集
 │   │   └── domains/           # 领域驱动核心
 │   │       ├── academic/      # 学术人才域
-│   │       │   ├── api/       # FastAPI routers（collect, countries, data_version, embeddings, favorites, genealogy, homepage, jd_match, overview, recommend, schools, search, talent_pool, talents, tech_domain, venue）
+│   │       │   ├── api/       # FastAPI routers（16 个模块：collect, countries, data_version,
+│   │       │   │              #   embeddings, favorites, genealogy, homepage, jd_match,
+│   │       │   │              #   overview, recommend, schools, search, talent_pool,
+│   │       │   │              #   talents, tech_domain, venue）
 │   │       │   ├── builders/  # 查询构建器（search_builder, stat_builder）
-│   │       │   ├── constants/ # 域内常量
-│   │       │   ├── models/    # SQLAlchemy ORM 模型
+│   │       │   ├── constants/ # 域内常量（collect_task, countries, role_type）
+│   │       │   ├── models/    # SQLAlchemy ORM 模型（talent, school, venue, raw_data,
+│   │       │   │              #   standardized, sync, embedding, jd_match, genealogy,
+│   │       │   │              #   collaboration, statistics, tech_domain, search）
 │   │       │   ├── repositories/  # 数据访问层（含 talent/ 子目录）
 │   │       │   ├── schemas/   # Pydantic DTO
 │   │       │   └── services/  # 业务逻辑层
-│   │       │       ├── collect/       # 12 阶段采集流水线
-│   │       │       ├── common/        # CS 背景分、公共工具
+│   │       │       ├── collect/       # 采集流水线（orchestrator + phases/ 下 11 个阶段处理器）
+│   │       │       ├── common/        # CS 背景分（cs_concepts）、公共工具
 │   │       │       ├── embedding/     # 向量嵌入服务
 │   │       │       ├── jd_match/      # JD 岗位匹配
-│   │       │       ├── normalizers/   # 数据标准化
+│   │       │       ├── normalizers/   # 数据标准化（author, school, tech_belong）
 │   │       │       ├── recommend/     # 相似人才推荐
-│   │       │       ├── search/        # 搜索服务
-│   │       │       └── sync/          # 同步服务
+│   │       │       ├── search/        # 搜索服务（含 strategies/ 子目录）
+│   │       │       ├── sync/          # 同步服务（author/school/tech_tag sync）
+│   │       │       └── ...            # 以及 talent/school/venue/genealogy/homepage 等领域服务
 │   │       ├── open_source/   # 开源人才域
-│   │       │   ├── api/
-│   │       │   ├── models/
+│   │       │   ├── api/       # auth, collection, developers, favourites, open_source,
+│   │       │   │              #   repo_config, stats（__init__.py 聚合为单个 router）
+│   │       │   ├── models/    # open_source.py（developer, repository, contribution）
 │   │       │   ├── repositories/open_source/
 │   │       │   ├── schemas/
-│   │       │   └── services/  # 含 collectors/（github_collector, sync_service）
-│   │       ├── lab/           # AI 实验室人才域（JSONL 导入，独立 lab_talent 表）
-│   │       │   ├── api/       # import_endpoint, talents, stats
+│   │       │   └── services/  # 含 collectors/（github_collector, sync_service）、
+│   │       │                  #   github_client、os_* 领域服务、嵌入服务
+│   │       ├── lab/           # AI 实验室人才域（V3.0.0，JSONL 导入）
+│   │       │   ├── api/       # import_endpoint, talents, stats, prefetch（__init__.py 聚合）
 │   │       │   ├── constants/ # role_mapping（role_section → role_type + academic_level）
-│   │       │   ├── models/    # lab_talent
+│   │       │   ├── models/    # lab_talent.py（含 LabTalent 与 LabInfo 两个模型）
 │   │       │   ├── repositories/
 │   │       │   ├── schemas/
-│   │       │   └── services/  # lab_import_service, lab_talent_service, lab_stats_service
+│   │       │   └── services/  # lab_import_service, lab_talent_service, lab_stats_service,
+│   │       │                  #   homepage_preview_service（抓取并清洗人才个人主页 HTML）
 │   │       └── shared/        # 共享域
 │   │           ├── api/       # auth, audit, health, metrics, permissions, privacy, suggestion, system_config
 │   │           ├── models/    # base, enums, iam, audit, system_config, suggestion
 │   │           ├── repositories/
-│   │           └── services/  # cache, common/http_client, llm, config_service, audit_service, user_service 等
-│   ├── migrations/            # Alembic 数据库迁移脚本
+│   │           └── services/  # cache*, llm/, common/（含 http_client）、config_service、
+│   │                          #   audit_service、user_service、suggestion_service、privacy_service 等
+│   ├── migrations/            # Alembic 数据库迁移脚本（编号序列 001~054，另有若干 hash 命名的历史脚本）
 │   ├── tests/                 # pytest 测试
 │   ├── scripts/               # 运维与数据脚本
+│   │   ├── check_architecture.py  # 架构合规检查（CI 门禁）
 │   │   ├── collect/           # 采集相关脚本
-│   │   ├── data/              # 数据/种子脚本
+│   │   ├── data/              # 数据/种子脚本（init_system.py、seed_tech_domains.py 等）
 │   │   ├── fix/               # 修复/维护脚本
 │   │   └── ops/               # 运维脚本（mypy_gate.py, verify_indexes.py 等）
-│   ├── pyproject.toml         # Python 依赖与工具配置
+│   ├── pyproject.toml         # Python 依赖与工具配置（black/ruff/mypy/pytest）
 │   ├── uv.lock                # uv 锁定文件
 │   ├── alembic.ini            # Alembic 配置
 │   └── pytest.ini             # pytest 配置（运行时优先于 pyproject.toml 中的 pytest 配置）
 ├── frontend/                   # 前端应用
 │   ├── src/
 │   │   ├── App.tsx            # 路由定义与路由守卫
-│   │   ├── pages/             # 页面级组件
+│   │   ├── pages/             # 页面级组件（academic, open-source, lab, admin, auth, user,
+│   │   │                      #   system-config, feedback, legal, competition/industry 演示页）
 │   │   ├── components/        # 可复用组件
+│   │   ├── layouts/           # 布局组件
 │   │   ├── contexts/          # React Context（AuthContext, FavoritesContext，Zustand 的兼容包装）
 │   │   ├── services/          # API 客户端
 │   │   │   ├── api.ts         # 聚合导出
 │   │   │   └── api/           # 域拆分模块（client.ts, shared.ts, academic.ts, openSource.ts, lab.ts）
-│   │   ├── stores/            # Zustand 状态管理（authStore, domainStore, favoritesStore）
+│   │   ├── stores/            # Zustand 状态管理（authStore, domainStore, favoritesStore, labSearchStore）
 │   │   ├── hooks/             # 自定义 React Hooks
 │   │   ├── types/             # TypeScript 类型定义
 │   │   ├── constants/         # 前端常量
 │   │   ├── utils/             # 工具函数
 │   │   ├── theme/             # 主题配置
 │   │   └── test/setup.ts      # Vitest 测试初始化
-│   ├── tests/                 # Playwright E2E 测试（*.spec.ts）
+│   ├── tests/                 # Playwright E2E 测试（*.spec.ts：homepage, search, collect,
+│   │                          #   open_source, v13_cache）
 │   ├── package.json
-│   ├── vite.config.ts
+│   ├── vite.config.ts         # 开发端口 2012（strictPort），/api 与 /uploads 代理到 8003
 │   ├── vitest.config.ts
 │   ├── playwright.config.ts
 │   ├── tsconfig.json
@@ -154,10 +169,16 @@ talent-platform/
 │   ├── init-db.sql             # 数据库初始化脚本（uuid-ossp + pg_trgm）
 │   ├── schema.sql
 │   └── .env.example
-├── docs/                       # 项目文档
+├── docs/                       # 项目文档（academic-v1.0~v1.4、open-source-v2.0、lab-v1.0、
+│                             #   audit、superpowers、各设计文档、部署指南.md）
 ├── outputs/                    # 输出/日志（gitignored）
-├── scripts/                    # 根级脚本
+├── scripts/                    # 根级脚本（dev.sh、pre-push.sh、local_ci.ps1、local_test.ps1、
+│                             #   precommit_backend.py、precommit_frontend.py、restart_services.py、
+│                             #   bump_version.py）
 ├── Makefile                    # 统一命令入口
+├── .pre-commit-config.yaml     # pre-commit 钩子（后端架构合规检查）
+├── CLAUDE.md                   # Claude 专用指南（与本文件内容相近，改动时同步更新）
+├── CHANGELOG.md                # 版本变更记录（最新 3.0.0）
 └── .github/workflows/ci.yml    # GitHub Actions CI 配置
 ```
 
@@ -165,7 +186,7 @@ talent-platform/
 
 ## 构建与运行命令
 
-项目使用 **Makefile** 作为统一命令入口。Windows 环境无 `make` 时，可参照 Makefile 中的命令手动执行。
+项目使用 **Makefile** 作为统一命令入口。Windows 环境无 `make` 时，可参照 Makefile 中的命令手动执行（根目录还有 `scripts/local_ci.ps1` / `local_test.ps1` 可供 Windows 使用）。
 
 ### 安装依赖
 
@@ -179,7 +200,7 @@ make install-frontend     # 仅安装前端依赖
 
 ```bash
 make dev-backend          # 启动后端开发服务器（uvicorn，端口 8003，--reload，host 0.0.0.0）
-make dev-frontend         # 启动前端开发服务器（vite，端口 2012）
+make dev-frontend         # 启动前端开发服务器（vite，端口 2012，strictPort）
 make dev                  # docker-compose up（全栈容器模式，前台运行）
 ```
 
@@ -222,11 +243,13 @@ make docker-logs          # docker-compose logs -f
 
 ### 访问地址
 
-- 前端: http://localhost:2012
+- 前端: http://localhost:2012（Vite dev server，`/api` 与 `/uploads` 代理到后端 8003）
 - 后端 API: http://localhost:8003
 - API 文档 (Swagger UI): http://localhost:8003/docs
 - API 文档 (ReDoc): http://localhost:8003/redoc
 - 默认账号: `admin` / `admin123`
+
+> 注意：Docker Compose 模式（`deploy/docker-compose.yml`）中后端容器端口为 **8000**，与本地开发的 8003 不同；前端容器仍为 2012。
 
 ---
 
@@ -237,21 +260,23 @@ make docker-logs          # docker-compose logs -f
 - **`domains/academic/`、`domains/open_source/`、`domains/lab/` 三个业务域之间不得互相导入内部模块**
 - **`domains/shared/` 不得导入任何业务域内部模块**（`models.enums` 除外）
 - **各域仅可通过 `domains/shared/` 和 `app/core/` 共享能力**
-- 违反此规则会导致 CI 构建失败（`scripts/check_architecture.py` 零容忍）
+- 违反此规则会导致 CI 构建失败（`backend/scripts/check_architecture.py` 对跨域违规零容忍，无基线）
 
 ### 目录放置规则
 
 | 代码类型 | 应放置位置 | 禁止放置位置 |
 |----------|-----------|-------------|
-| 学术域 API 路由 | `domains/academic/api/` | `app/api/v1/endpoints/`（已废弃） |
-| 学术域模型 | `domains/academic/models/` | `app/models/`（已废弃） |
-| 学术域 Service | `domains/academic/services/` | `app/services/`（已废弃） |
-| 学术域 Repository | `domains/academic/repositories/` | `app/repositories/`（已废弃） |
-| 学术域常量 | `domains/academic/constants/` | `app/constants/`（已废弃） |
+| 业务域 API 路由 | `domains/<域>/api/` | `app/api/v1/endpoints/`（已废弃） |
+| 业务域模型 | `domains/<域>/models/` | `app/models/`（已废弃） |
+| 业务域 Service | `domains/<域>/services/` | `app/services/`（已废弃） |
+| 业务域 Repository | `domains/<域>/repositories/` | `app/repositories/`（已废弃） |
+| 业务域常量 | `domains/<域>/constants/` | `app/constants/`（已废弃） |
 | 共享基础设施 | `app/core/` | 任何 domain 内部 |
 | 中间件 | `app/middleware/` | 任何 domain 内部 |
 | 全局路由注册 | `app/api_router.py` | 任何其他位置 |
 | 全局模型注册 | `app/model_registry.py` | 任何其他位置 |
+
+`open_source` 与 `lab` 域的多个子路由由各自 `api/__init__.py` 聚合成单个 router 后，再在 `app/api_router.py` 中统一挂载。
 
 ### Endpoint 分层导入铁律
 
@@ -261,20 +286,17 @@ make docker-logs          # docker-compose logs -f
 - 同域 Service
 - shared Service
 - 任意 schemas
-- shared enums
-- `app.core.*`
-- 第三方库
+- shared enums（`*.models.enums`）
+- `app.core.*`、`fastapi`、`sqlalchemy`、`pydantic`、`typing` 等第三方库
 
 **Endpoint 禁止直接 import**：
-- `*Repository`
-- `*Collector`
+- `*Repository`（`repositories.`）
+- `*Collector`（`collectors.`）
 - `LLMGateway`
 - `*EmbeddingService`
-- `GitHubClient` / `OpenAlexClient`
+- `GitHubClient` / `OpenAlexClient` 等底层 HTTP Client
 - `AsyncSessionLocal`
-- 同域 `models/`
-- 同域 `builders/`
-- `CollectionOrchestrator`
+- 同域 `models/`、`builders/`、`CollectionOrchestrator`
 
 ### HTTP 客户端统一规则
 
@@ -282,7 +304,7 @@ make docker-logs          # docker-compose logs -f
 
 - 正确做法：`HttpClientFactory.create_client_for_url(target_url, timeout=...)`
 - 禁止做法：`import httpx`、`from aiohttp import ClientSession` 等
-- 例外文件（已基线化）：`domains/shared/services/common/http_client.py`、`domains/shared/services/github_client.py`、`domains/shared/services/openalex_client.py`、`domains/shared/services/common/data_fetchers.py`、`domains/shared/api/system_config.py`
+- 例外文件（已基线化）：`domains/shared/services/common/http_client.py`（HttpClientFactory 本身）、`domains/academic/services/data_fetchers.py`（aiohttp）、`domains/academic/services/openalex_client.py`（httpx）、`domains/open_source/services/github_client.py`（httpx）、`domains/shared/services/system_config_test_service.py`（函数内 httpx）
 
 ### 三层数据架构（学术域）
 
@@ -296,24 +318,26 @@ make docker-logs          # docker-compose logs -f
 
 **CS 背景过滤**：在 Standardized → Serving 阶段，仅 `cs_concepts_score >= 0.5` 的作者会被同步到 Talent 表。配置见 `domains/academic/services/common/cs_concepts.py`。
 
-### 12 阶段采集流水线
+### 采集流水线（学术域）
 
-`CollectionOrchestrator` (`domains/academic/services/collect/orchestrator.py`) 执行完整采集：
+`CollectionOrchestrator`（`domains/academic/services/collect/orchestrator.py`）本身是瘦编排器：Phase 0（估算任务规模）保留在编排器中，其余 11 个阶段各自由 `collect/phases/` 下的独立处理器实现：
 
-1. Phase 0: 估算任务规模
-2. Phase 1: 执行 Venue 子任务（获取论文）
-3. Phase 2: 获取作者数据
-4. Phase 3: 获取机构数据
-5. Phase 4: 标准化学校（RawInstitution → StdSchool）
-6. Phase 5: 标准化作者（RawAuthor → StdAuthor）
-7. Phase 6: 计算技术归属（AuthorTechBelong）
-8. Phase 7: 同步到服务层（StdAuthor → Talent）
-9. Phase 8: 获取精选论文
-10. Phase 9: 更新技术标签
-11. Phase 10: 更新学校统计
-12. Phase 11: 构建首页统计
+1. Phase 0: 估算任务规模（orchestrator 内）
+2. Phase 1: 执行 Venue 子任务采集（`phase_1_collect.py`）
+3. Phase 2: 获取作者数据（`phase_2_fetch_authors.py`）
+4. Phase 3: 获取机构数据（`phase_3_fetch_institutions.py`）
+5. Phase 4: 标准化学校（`phase_4_normalize_schools.py`）
+6. Phase 5: 标准化作者（`phase_5_normalize_authors.py`）
+7. Phase 6: 计算技术归属（`phase_6_tech_belong.py`）
+8. Phase 7: 同步到服务层（`phase_7_sync_serving.py`）
+9. Phase 8: 获取精选论文（`phase_8_fetch_works.py`）
+10. Phase 9: 更新技术标签（`phase_9_topic_tags.py`）
+11. Phase 10: 更新学校统计（`phase_10_school_stats.py`）
+12. Phase 11: 构建首页统计（`phase_11_build_stats.py`）
 
 ### 六大技术要素
+
+技术领域存于数据库表 `core_tech_domain`（模型见 `domains/academic/models/tech_domain.py`），种子数据由 `backend/scripts/data/init_system.py` 写入：
 
 | 编码 | 英文名 | 中文名 |
 |------|--------|--------|
@@ -330,27 +354,28 @@ make docker-logs          # docker-compose logs -f
 
 ### Python（后端）
 
-- **格式化**: Black，`line-length = 100`
+- **格式化**: Black，`line-length = 100`，target `py311`
 - **Lint**: Ruff，目标 Python 3.11
   - 启用规则: E, W, F, I, B, C4, UP
   - 忽略: E501（Black 已处理）、B008、UP017、UP038
-- **类型检查**: mypy，`disallow_untyped_defs = true`
-  - `migrations/` 与 `tests/` 被排除
+  - `migrations/` 被排除
+- **类型检查**: mypy，`disallow_untyped_defs = true`，`ignore_missing_imports = true`
+  - `migrations/` 与 `tests/` 被排除；`app.models.*`、`app.repositories.*`、`app.services.*`、`app.builders.*` 放宽 `disallow_untyped_defs`
   - CI 使用 **mypy gate** (`scripts/ops/mypy_gate.py`) 与基线文件 `.mypy_baseline.txt` 对比，新增类型错误会导致构建失败
   - 基线再生命令：`cd backend && uv run python scripts/ops/mypy_gate.py --regenerate`
 - **导入排序**: Ruff 内置 isort 规则处理
 
 ### TypeScript / React（前端）
 
-- **Lint**: ESLint（`typescript-eslint` + `react-hooks` + `react-refresh`）
+- **Lint**: ESLint 9（`typescript-eslint` + `react-hooks` + `react-refresh`，flat config `eslint.config.js`）
   - `@typescript-eslint/no-explicit-any`: `off`
   - `@typescript-eslint/no-unused-vars`: 允许 `_` 前缀的未使用变量
-  - `no-case-declarations`: `off`
 - **格式化**: Prettier
   - `semi: false`, `singleQuote: true`, `trailingComma: es5`
   - `tabWidth: 2`, `printWidth: 100`, `endOfLine: lf`
+  - 命令：`npm run format` / `npm run format:check`
 - **TypeScript**: `strict: true`，启用 `noUnusedLocals` / `noUnusedParameters`
-- **路径别名**: `@/` 映射到 `src/`
+- **路径别名**: `@/` 映射到 `src/`（见 `vite.config.ts`）
 
 ---
 
@@ -359,7 +384,8 @@ make docker-logs          # docker-compose logs -f
 ### 后端测试
 
 - **框架**: pytest + pytest-asyncio + pytest-cov + httpx (AsyncClient)
-- **测试数据库**: 必须使用独立的 PostgreSQL 测试库（默认 `talent_db_test`，配置在 `tests/conftest.py`）。每个测试函数结束后会 `TRUNCATE` 所有表（首次运行会 `DROP` 后重建）。**切勿将 `TEST_DATABASE_URL` 指向生产数据库！**
+- **配置文件**: `backend/pytest.ini` 生效（优先于 `pyproject.toml` 中的 `[tool.pytest.ini_options]`），默认 `addopts = -v --tb=short --strict-markers -m "not slow"`
+- **测试数据库**: 必须使用独立的 PostgreSQL 测试库（默认 `talent_db_test`，配置在 `tests/conftest.py`）。`conftest.py` 会用环境变量 `DATABASE_URL` / `DATABASE_SYNC_URL` 覆盖全局配置（CI 注入指向 GitHub Actions postgres 服务的连接串，本地回落到 `talent_db_test`）。每个测试函数结束后会 `TRUNCATE` 所有表（首次运行会 `DROP` 后重建）。**切勿将 `TEST_DATABASE_URL` 指向生产数据库！**
 - **启动前准备**:
   ```bash
   psql -U postgres -c "CREATE DATABASE talent_db_test OWNER talent_user;"
@@ -374,7 +400,7 @@ make docker-logs          # docker-compose logs -f
   - `unit` — 单元测试
   - `integration` — 集成测试
   - `e2e` — 端到端测试
-  - `slow` — 慢速测试（默认被跳过，需显式运行）
+  - `slow` — 慢速测试（默认被跳过，需显式 `-m slow` 运行）
   - `requires_pgvector` — 需要 pgvector 扩展（不可用时自动跳过）
 - **运行命令**:
   ```bash
@@ -392,8 +418,8 @@ make docker-logs          # docker-compose logs -f
   - 命令: `npm run test` / `npm run test:watch`
 - **E2E 测试**: Playwright
   - 测试目录: `frontend/tests/`（`*.spec.ts`）
-  - 仅 Chromium 浏览器
-  - 开发环境复用已有服务器 (`reuseExistingServer: true`)
+  - 仅 Chromium 浏览器；`workers: 1`，`fullyParallel: false`
+  - 开发环境复用已有服务器 (`reuseExistingServer: true`)，baseURL `http://localhost:2012`
   - 命令:
     ```bash
     cd frontend
@@ -405,15 +431,15 @@ make docker-logs          # docker-compose logs -f
 
 ## CI/CD
 
-GitHub Actions 工作流 `.github/workflows/ci.yml`：
+GitHub Actions 工作流 `.github/workflows/ci.yml`（触发：push/PR 到 `main`、`develop`）：
 
-1. **backend-test** — 在 Ubuntu 上启动 PostgreSQL 15 + pgvector 服务，运行常规测试与慢速测试
-2. **backend-lint** — 运行 mypy gate 与架构合规检查
-3. **frontend-lint** — 安装 Node 20 依赖，执行 ESLint、npm audit、Vitest 单元测试、生产构建
+1. **backend-test** — 在 Ubuntu 上启动 PostgreSQL 15 + pgvector 服务（`pgvector/pgvector:pg15`），用 uv 安装依赖后运行常规测试与慢速测试（`-m slow`）
+2. **backend-lint** — 运行 mypy gate（`scripts/ops/mypy_gate.py`）与架构合规检查（`scripts/check_architecture.py`）
+3. **frontend-lint** — 安装 Node 20 依赖（`npm ci`），执行 ESLint、npm audit、Vitest 单元测试、生产构建（`tsc -b && vite build`）
 
 ### 架构合规检查
 
-项目已配置 `backend/scripts/check_architecture.py`，在每次 PR 时自动扫描三层规则：
+`backend/scripts/check_architecture.py` 在每次 PR 时自动扫描三条规则：
 
 ```bash
 # 本地检查
@@ -423,10 +449,15 @@ cd backend && uv run python scripts/check_architecture.py
 cd backend && uv run python scripts/check_architecture.py --update-baseline
 ```
 
-该脚本执行以下检查：
 1. **跨域依赖检查（零容忍，无基线）**：`shared/` 禁止导入业务域
 2. **Endpoint 分层检查（基线容忍）**：`domains/*/api/*.py` 禁止直接导入底层
 3. **HTTP 客户端统一检查（基线容忍）**：`app/**/*.py` 禁止直接导入 `httpx`/`aiohttp`/`requests`
+
+基线文件为 `.architecture_baseline.txt`；新增违规会失败，已在基线中的历史违规暂不阻塞。
+
+### Pre-commit
+
+`.pre-commit-config.yaml` 配置了一个本地钩子：对 `backend/app/domains/*/api/*.py` 的变更执行后端架构合规检查（入口 `scripts/precommit_backend.py`，<1s）。安装：`cd backend && uv run pre-commit install`。完整 CI 复刻：Windows 用 `scripts/local_ci.ps1`，Linux/Mac 用 `make lint-full`。
 
 ---
 
@@ -441,10 +472,12 @@ make docker-down    # 停止服务
 ```
 
 服务组成（见 `deploy/docker-compose.yml`）：
-- `postgres` — PostgreSQL 16-alpine（含 init-db.sql 初始化）
-- `redis` — Redis 7-alpine（可选，带 `production` profile）
-- `backend` — FastAPI（端口 8000，开发模式带 `--reload`）
-- `frontend` — Vite dev server（端口 2012）
+- `postgres` — PostgreSQL 16-alpine（含 init-db.sql 初始化 uuid-ossp + pg_trgm）
+- `redis` — Redis 7-alpine（可选，带 `production` profile，需 `--profile production` 启动）
+- `backend` — FastAPI（容器端口 8000，开发模式带 `--reload`，挂载源码目录）
+- `frontend` — Vite dev server（端口 2012，development target）
+
+数据库密码等敏感值通过环境变量注入（`POSTGRES_PASSWORD` 默认为占位符 `CHANGE_ME_IN_PRODUCTION`）；生产环境应复制为 `docker-compose.override.yml` 或使用 docker secrets，不要把真实密码提交进 git。
 
 ### 本地开发（非 Docker）
 
@@ -471,18 +504,18 @@ make dev-frontend
 
 ### 容器构建说明
 
-- **后端 Dockerfile**: 基于 `python:3.11-slim`，使用 `uv` 安装依赖，`uv sync --frozen --no-dev`，非 root 用户运行，暴露 8000 端口
+- **后端 Dockerfile**: 基于 `python:3.11-slim`，使用 `uv` 安装依赖（`uv sync --frozen --no-dev`），非 root 用户运行，暴露 8000 端口
 - **前端 Dockerfile**: 多阶段构建（development → build → production/nginx）
 
 ---
 
 ## 环境变量与配置
 
-### 后端关键配置（`backend/.env`）
+### 后端关键配置（`backend/.env`，模板见 `backend/.env.example`）
 
 | 变量 | 说明 | 典型值 |
 |------|------|--------|
-| `DATABASE_URL` | 异步数据库连接 | `postgresql+asyncpg://...` |
+| `DATABASE_URL` | 异步数据库连接（必填，缺失直接抛错） | `postgresql+asyncpg://...` |
 | `DATABASE_SYNC_URL` | 同步数据库连接（用于 Alembic 等） | `postgresql://...` |
 | `SECRET_KEY` / `ALGORITHM` / `ACCESS_TOKEN_EXPIRE_HOURS` / `REFRESH_TOKEN_EXPIRE_DAYS` | JWT 认证 | HS256, 8h, 7d |
 | `CORS_ORIGINS` | 跨域来源 | `["http://localhost:2012"]`（开发） |
@@ -494,19 +527,22 @@ make dev-frontend
 | `SEARCH_SEMANTIC_THRESHOLD` / `SEARCH_PRECISE_THRESHOLD` / `SEARCH_SIMILAR_THRESHOLD_MIN` | 搜索阈值 | `0.5`, `0.95`, `0.7` |
 | `SEARCH_RRF_CONSTANT` / `SEARCH_HYBRID_EXTENDED_FACTOR` | 混合搜索参数 | `60`, `3` |
 | `RECOMMEND_SIMILARITY_THRESHOLD` / `RECOMMEND_TAG_WEIGHT` / `RECOMMEND_RESEARCH_WEIGHT` | 推荐阈值 | `0.6`, `0.5`, `0.5` |
-| `RATE_LIMIT_ENABLED` / `RATE_LIMIT_PER_MINUTE` | 限流开关 | `false`（开发） |
+| `RATE_LIMIT_ENABLED` / `RATE_LIMIT_PER_MINUTE` | 限流开关 | `false`（开发）, `100` |
 | `CIRCUIT_BREAKER_ENABLED` / `CIRCUIT_BREAKER_FAILURE_THRESHOLD` / `CIRCUIT_BREAKER_RECOVERY_TIMEOUT` / `CIRCUIT_BREAKER_WINDOW_SIZE` | 熔断器配置 | `true`, `5`, `30.0`, `10` |
-| `GITHUB_TOKENS` / `GITHUB_BASE_URL` / `GITHUB_RATE_LIMIT` / `GITHUB_PER_PAGE` / `GITHUB_BATCH_SIZE` | GitHub API 配置（开源人才采集） | `ghp_xxx`, `https://api.github.com`, `5000`, `100`, `5` |
-| `OPENALEX_BASE_URL` / `OPENALEX_EMAIL` / `OPENALEX_RATE_LIMIT` | OpenAlex API 配置 | `https://api.openalex.org` |
+| `GITHUB_TOKENS` / `GITHUB_BASE_URL` / `GITHUB_RATE_LIMIT` / `GITHUB_PER_PAGE` / `GITHUB_BATCH_SIZE` | GitHub API 配置（开源人才采集，token 逗号分隔） | `ghp_xxx`, `https://api.github.com`, `5000`, `100`, `5` |
+| `OPENALEX_BASE_URL` / `OPENALEX_EMAIL` / `OPENALEX_RATE_LIMIT` | OpenAlex API 配置 | `https://api.openalex.org`, `10` req/s |
 | `APP_NAME` / `APP_VERSION` / `ENVIRONMENT` / `DEBUG` | 应用基础配置 | 智能人才库 API, 3.0.0, development, false |
+| `BACKEND_PORT` | 后端服务端口（本地开发 8003；Docker 部署应设为 8000，用于代理自检推导） | `8003` |
 | `DEFAULT_PAGE_SIZE` / `MAX_PAGE_SIZE` | 分页 | `20`, `100` |
 | `BATCH_SIZE` / `SYNC_TIMEOUT` / `SYNC_COMMIT_BATCH_SIZE` | 批量处理 | `1000`, `3600`, `100` |
 | `CACHE_DEFAULT_TTL` / `CACHE_KEY_PREFIX` | 缓存 | `300`, `ai4talents` |
 | `JD_MATCH_WEIGHT_RESEARCH` / `JD_MATCH_WEIGHT_IMPACT` / `JD_MATCH_H_REF` | JD 匹配权重 | `0.8`, `0.2`, `100.0` |
 | `HTTP_TIMEOUT_SHORT` / `HTTP_TIMEOUT_DEFAULT` | HTTP 超时 | `10.0`, `30.0` |
-| `COLLECT_ERROR_MAX_LENGTH` | 采集错误日志最大长度 | `500` |
+| `COLLECT_ERROR_MAX_LENGTH` / `COLLECT_SUBTASK_RETRY_COUNT` / `COLLECT_SUBTASK_RETRY_BASE_WAIT` | 采集配置 | `500`, `3`, `1` |
+| `GENEALOGY_RANKING_DEFAULT_LIMIT` / `GENEALOGY_RANKING_MAX_LIMIT` | 谱系排行 | `50`, `200` |
+| `SCHOOL_LIST_MAX_PAGE_SIZE` / `MV_REFRESH_TIMEOUT` | 学校列表/物化视图 | `5000`, `300` |
 
-### 前端关键配置（`frontend/.env`）
+### 前端关键配置（`frontend/.env`，模板见 `frontend/.env.example`）
 
 | 变量 | 说明 | 典型值 |
 |------|------|--------|
@@ -522,7 +558,7 @@ make dev-frontend
 - **认证方式**: Bearer Token（`Authorization: Bearer <token>`）
 - **分页参数**: `page`, `page_size`（Query 参数）
 - **响应格式**: 统一 JSON 结构
-- **静态文件**: `/uploads` — 上传文件托管
+- **静态文件**: `/uploads` — 上传文件托管（`app/main.py` 中 mount）
 - **健康检查**:
   - `/api/v1/health` — 综合健康
   - `/ready` — 就绪探针
@@ -533,14 +569,16 @@ make dev-frontend
 
 ## 安全注意事项
 
-1. **数据库隔离**: 测试数据库与生产数据库必须物理隔离。`conftest.py` 会在每个测试函数后删除所有表。
-2. **JWT Secret**: 生产环境必须修改 `SECRET_KEY`，避免使用默认值。`config.py` 会在生产环境校验密钥长度和存在性，不满足则直接抛错。
-3. **CORS**: 开发环境允许全部来源 (`["*"]`)，生产环境应限制为实际域名。`config.py` 会在生产环境强制拒绝 `*` 和 `localhost`。
+1. **数据库隔离**: 测试数据库与生产数据库必须物理隔离。`conftest.py` 会在每个测试函数后清空/删除所有表。
+2. **JWT Secret**: 生产环境必须修改 `SECRET_KEY`，避免使用默认值。`config.py` 会在生产环境对缺失的 `SECRET_KEY` 直接抛错；开发环境自动生成随机密钥并告警；密钥短于 32 字符会告警。
+3. **CORS**: 开发环境默认 `["http://localhost:2012"]`，生产环境应限制为实际域名。`config.py` 会在生产环境强制拒绝 `*` 和包含 `localhost` 的来源。
 4. **Rate Limiting**: 生产环境建议启用 (`RATE_LIMIT_ENABLED=true`)，默认 100 req/min 每用户/IP。
-5. **代理配置**: v1.4.1 支持从数据库动态加载企业代理配置，用于内网部署。见 `app/main.py` 中的 `init_proxy_config()`。
+5. **代理配置**: 支持从数据库动态加载企业代理配置，用于内网部署。见 `app/main.py` 中的 `init_proxy_config()`（lifespan 启动时执行）。
 6. **LLM API Key**: 生产环境需妥善保管，勿提交到版本控制。
 7. **密码存储**: 使用 bcrypt 哈希，禁止明文存储。
 8. **CORS Credentials**: 系统使用 JWT Token 放在 `Authorization` Header 中（非 Cookie），因此 `allow_credentials=False`。
+9. **弱凭据告警**: `ENVIRONMENT` 为 staging/production 时，若 `DATABASE_URL` 含默认弱口令会发出警告。
+10. **Docker 部署**: `deploy/docker-compose.yml` 中的密码仅为占位符，生产环境必须用 override 文件或 secrets 覆盖，禁止提交真实密码。
 
 ---
 
@@ -556,6 +594,10 @@ make dev-frontend
 | CS 背景过滤 | `backend/app/domains/academic/services/common/cs_concepts.py` |
 | LLM 网关 | `backend/app/domains/shared/services/llm/llm_gateway.py` |
 | HTTP 客户端工厂 | `backend/app/domains/shared/services/common/http_client.py` |
+| 实验室人才导入 | `backend/app/domains/lab/services/lab_import_service.py` |
+| 实验室主页预览 | `backend/app/domains/lab/services/homepage_preview_service.py` |
+| 架构合规检查 | `backend/scripts/check_architecture.py` |
+| mypy 门禁 | `backend/scripts/ops/mypy_gate.py` |
 | 前端 API 客户端 | `frontend/src/services/api/client.ts` |
 | 前端类型定义 | `frontend/src/types/index.ts` |
 | 前端主题系统 | `frontend/src/theme/index.ts` |
