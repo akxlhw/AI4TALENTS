@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-07-18
+
+### Added
+
+- **失败采集任务重跑**：`POST /collect/tasks/{id}/rerun` —— 将 failed/cancelled 任务重置为 pending 并保留 `last_completed_phase` checkpoint 续跑，无需全量重采（`api/collect.py:398-446`）
+- **采集任务全局完成通知**：`useCollectTaskNotifier` 挂载 MainLayout，任务 running→completed/failed/cancelled 跃迁时全局 notification，离开配置页也可感知
+- **学术搜索 URL 全字段状态同步**：关键词/5 个筛选器/排序/分页全部进 URL，分享链接、刷新、前进/后退均可恢复；顺带修复筛选器旧状态滞后一拍、`country_code`/`tech_domain_id` 后端支持但前端未传的死筛选
+- **登录/注册页固定学术域主题**：`AcademicThemeScope`（嵌套 ConfigProvider + 作用域 CSS 变量），不再随用户当前域变色
+- 基础设施 hook/工具：`usePolling`（声明式轮询，unmount 清理、无硬上限、回页恢复）、`useCollectTaskNotifier`、`navigateBack`（返回兜底）、dev-gated `utils/logger`
+- 回归测试：GitHub 401 拉黑/限速推导、collector 失败计数、架构检查规则、日志 task_id 上下文（`tests/domains/open_source/`、`test_check_architecture.py`、`test_logging_context.py`）
+- 采集链路 Prometheus 指标落地：`COLLECTION_TASKS_ACTIVE/TOTAL/ERRORS` 在任务开始/完成/取消/失败四路径埋点
+
+### Changed
+
+- **三域主题切换实时生效**：`ThemedConfigProvider` 订阅 `domainStore` 重建 AntD token（此前启动时一次性固化，切域后组件仍停留学术蓝）
+- **前端响应式**：统计/筛选栅格补断点（桌面端不变）、`MainLayout` 窄屏折叠（`Grid.useBreakpoint`）、Hero 标题改 `clamp()`
+- **GenealogyGraph 布局动态化**：ResizeObserver 实测容器宽度替代写死 900px；单 tier 超 12 节点折叠为 Top N + 聚合节点（点击展开）；最右节点标签内翻；toolbox 一键复位；移除 roam 错位的 HTML 色带
+- **CollectConfigTab 拆分**：1140 行 / cx=142 → 200 行 / cx=1（`useCollectConfig` hook + 9 个子组件）
+- 轮询收敛：`useCollectConfig` 四处内联 `setInterval+setTimeout 封顶` 改为 `usePolling`（终态即停、离开页面不再 setState、回页面自动恢复）
+- 登录后回跳原页面：`ProtectedRoute` 携带 `state={{ from: location }}`
+- 详情页体验：区分 error/404 并带重试、加载期不再闪空态、返回按钮 `navigateBack` 兜底（分享链接打开不再退出站点）、研究方向 Tag 可点击跳转搜索
+- 反馈闭环：6 处静默 catch 补用户提示、admin 审核「拒绝」加 Popconfirm、搜索空态补清除筛选行动
+- `_is_postgres()` 下沉 `app/core/database.py`（消除跨域 3 份复制）；族谱/预取后台任务下沉 Service 层（`genealogy_background_service`、`prefetch_background_service`），API 层不再触碰 `AsyncSessionLocal`
+- rerun 端点 ORM 操作下沉 `CollectService.reset_task_for_rerun()`
+- 前端 26 处 `console.error` 替换为 dev-gated logger；前后端删除 75 处复述式注释
+
+### Fixed
+
+- **OpenAlex 批量拉取静默丢一半数据**：`batch_size` 钳制 ≤50 与 `per_page=50` 对齐（`data_fetchers.py:665,808`）
+- **空/全无效 JSONL 导入清空实验室数据**：`deduped` 为空且存在非空行时拒绝替换（`lab_import_service.py:184-197`）
+- **GitHub 401 不轮换 token**：401 拉黑坏 token 不再选中、不再无意义睡到 reset；修正换 token 守卫把未记录 token 当 0 配额的问题
+- **contributor 阶段静默完成**：失败计数生效，零产出任务标记 `failed` 而非 `completed`（消除"成功假象"）
+- Phase 1 重跑不跳过已完成子任务（浪费 API 配额）
+- 死配置接线：`GITHUB_RATE_LIMIT`（限速间隔按限额×token 池推导）、`COLLECT_SUBTASK_RETRY_COUNT/BASE_WAIT`、`BACKEND_PORT`（代理自检不再写死 8003）
+- school normalizer 吞异常无日志；`github_client` 404 静默返回 `{}`（改返回 None）；OpenAlex client 5xx 不重试；主页抓取 SSRF 防护（私网/回环拦截）与 URL 校验顺序
+- 架构检查器双盲区：banned-name 检查前移到 `app.core.` 白名单豁免之前（api 层 `AsyncSessionLocal` 不再漏检）、lab 域纳入跨域隔离检查
+- 前端：`/pools/:id` 死路由点击、登录回跳丢失、跨域进学术详情主题不切回、人才池/收藏列表等加载静默失败
+
 ## [3.0.0] - 2026-07-14
 
 ### Added
