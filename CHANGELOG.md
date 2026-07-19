@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-07-19
+
+### Added
+
+- **竞赛域 M2 数据源接入**（用户关注清单第一批，爬虫插件式、后端零改动）：
+  - **IOI 信息学奥赛**：`crawl_ioi.py` 解析官方统计站（stats.ioinformatics.org）服务端渲染表格，国家码自 `countries/XXX` 链接映射（100+ 三字母码→ISO-2），实测 IOI 2024 采集导入 **366 人**（金牌 34）
+  - **IMO 数学奥赛**：`crawl_imo.py` 解析官网成绩页（`/results/individual/year/<year>/`，经 legacy-results-resolver 定位的规范地址），P1-P6 小题分入 `raw_meta`，实测 IMO 2024 采集导入 **609 人**（金牌 58，与官方一致）
+  - **IPhO 物理奥赛**：官方站 `iphounesco.org` DNS 异常，改用 `ipho-unofficial.org` 存档源（`crawl_ipho.py`），理论/实验分入 `raw_meta`，实测 IPhO 2024 采集导入 **135 人**（金牌 18，覆盖全部获奖+荣誉提名）
+  - **ICPC（团队赛首源）**：官方 API 需认证，改用 CLIST 榜单（含完整队伍成员），`crawl_icpc.py` 解析「大学（队名）+ 成员|分隔」结构，按 ICPC 惯例映射奖牌（1-4 金 / 5-8 银 / 9-12 铜），实测 ICPC 2024 全球总决赛采集导入 **139 队 + 417 队员**（冠军 Peking University（Naive Birds）金牌，队员全部挂接 team_id）
+- 系列启用：`icpc` / `ioi` / `imo` / `ipho` 四个系列转为启用（`comp_series.is_enabled`），概览/筛选/详情自动可见
+- skill 元数据：`sources.yaml` 启用 5 源并登记各源脚本；`SKILL.md` 用法覆盖 5 源
+
+### Changed
+
+- 版本号 4.0.0 → 4.1.0（pyproject.toml、package.json、config.py、uv.lock、README.md、AGENTS.md）
+- IPhO 系列 homepage 更正为 `https://ipho-unofficial.org`（官方站 DNS 异常，采用存档源并在描述中注明）
+
+### Notes
+
+- M2 验证了「多源零改动接入」设计：4 个新源均为爬虫侧插件，产出同一 schema v1.0 JSONL，导入/查询/前端无一行改动
+- 全量后端回归 827 通过；各源 JSONL 均通过 `scripts/check_jsonl.py` 校验
+
 ## [4.0.0] - 2026-07-19
 
 ### Added

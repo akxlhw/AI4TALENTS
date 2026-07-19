@@ -8,7 +8,7 @@
 
 **智能人才库（AI4TALENTS）** 是一套面向招聘团队的多维度人才发现平台。
 
-- **当前版本**：**V4.0.0**（以 `backend/pyproject.toml`、`frontend/package.json`、`backend/app/core/config.py` 中的版本号为准；`CHANGELOG.md` 记录了各版本变更，最新发布为 3.1.0，4.0.0 为竞赛人才域开发中版本）。
+- **当前版本**：**V4.1.0**（以 `backend/pyproject.toml`、`frontend/package.json`、`backend/app/core/config.py` 中的版本号为准；`CHANGELOG.md` 记录了各版本变更，最新发布为 4.0.0，4.1.0 为当前版本（竞赛域 M2 已接入三大奥赛与 ICPC））。
 - **项目定位**：整合公开学术数据与开源社区数据，帮助招聘团队发现、筛选、对比和管理高端技术人才。
 - **已实现的人才数据源**：
   - **学术人才**（`domains/academic/`）：基于 OpenAlex 学术数据库，功能完整。
@@ -187,7 +187,7 @@ talent-platform/
 ├── Makefile                    # 统一命令入口
 ├── .pre-commit-config.yaml     # pre-commit 钩子（后端架构合规检查）
 ├── CLAUDE.md                   # Claude 专用指南（与本文件内容相近，改动时同步更新）
-├── CHANGELOG.md                # 版本变更记录（最新 3.1.0）
+├── CHANGELOG.md                # 版本变更记录（最新 4.0.0）
 └── .github/workflows/ci.yml    # GitHub Actions CI 配置
 ```
 
@@ -540,7 +540,7 @@ make dev-frontend
 | `CIRCUIT_BREAKER_ENABLED` / `CIRCUIT_BREAKER_FAILURE_THRESHOLD` / `CIRCUIT_BREAKER_RECOVERY_TIMEOUT` / `CIRCUIT_BREAKER_WINDOW_SIZE` | 熔断器配置 | `true`, `5`, `30.0`, `10` |
 | `GITHUB_TOKENS` / `GITHUB_BASE_URL` / `GITHUB_RATE_LIMIT` / `GITHUB_PER_PAGE` / `GITHUB_BATCH_SIZE` | GitHub API 配置（开源人才采集，token 逗号分隔） | `ghp_xxx`, `https://api.github.com`, `5000`, `100`, `5` |
 | `OPENALEX_BASE_URL` / `OPENALEX_EMAIL` / `OPENALEX_RATE_LIMIT` | OpenAlex API 配置 | `https://api.openalex.org`, `10` req/s |
-| `APP_NAME` / `APP_VERSION` / `ENVIRONMENT` / `DEBUG` | 应用基础配置 | 智能人才库 API, 4.0.0, development, false |
+| `APP_NAME` / `APP_VERSION` / `ENVIRONMENT` / `DEBUG` | 应用基础配置 | 智能人才库 API, 4.1.0, development, false |
 | `BACKEND_PORT` | 后端服务端口（本地开发 8003；Docker 部署应设为 8000，用于代理自检推导） | `8003` |
 | `DEFAULT_PAGE_SIZE` / `MAX_PAGE_SIZE` | 分页 | `20`, `100` |
 | `BATCH_SIZE` / `SYNC_TIMEOUT` / `SYNC_COMMIT_BATCH_SIZE` | 批量处理 | `1000`, `3600`, `100` |

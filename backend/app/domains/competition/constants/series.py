@@ -22,7 +22,7 @@ SERIES: list[dict] = [
         "name_en": "ICPC",
         "homepage": "https://icpc.global",
         "description": "International Collegiate Programming Contest（3 人团队赛）",
-        "is_enabled": False,  # M2
+        "is_enabled": True,  # M2（CLIST 榜单源，已验证导入）
     },
     {
         "code": "ioi",
@@ -30,7 +30,7 @@ SERIES: list[dict] = [
         "name_en": "IOI",
         "homepage": "https://ioinformatics.org",
         "description": "International Olympiad in Informatics",
-        "is_enabled": False,  # M2
+        "is_enabled": True,  # M2（stats.ioinformatics.org，已验证导入）
     },
     {
         "code": "imo",
@@ -38,15 +38,15 @@ SERIES: list[dict] = [
         "name_en": "IMO",
         "homepage": "https://www.imo-official.org",
         "description": "International Mathematical Olympiad",
-        "is_enabled": False,  # M2
+        "is_enabled": True,  # M2（imo-official.org，已验证导入）
     },
     {
         "code": "ipho",
         "name": "国际物理奥林匹克竞赛",
         "name_en": "IPhO",
-        "homepage": "https://www.iphounesco.org",
-        "description": "International Physics Olympiad",
-        "is_enabled": False,  # M2
+        "homepage": "https://ipho-unofficial.org",
+        "description": "International Physics Olympiad（官方站 DNS 异常，采用 ipho-unofficial 存档源）",
+        "is_enabled": True,  # M2（ipho-unofficial.org，已验证导入）
     },
     {
         "code": "kaggle",
