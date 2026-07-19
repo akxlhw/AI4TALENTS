@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { logger } from '../../utils/logger'
+import { navigateBack } from '../../utils/navigation'
 import {
   Card,
   Typography,
@@ -77,6 +79,7 @@ const SchoolDetailPage: React.FC = () => {
   const [school, setSchool] = useState<SchoolDetail | null>(null)
   const [talents, setTalents] = useState<Talent[]>([])
   const [talentsLoading, setTalentsLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [talentsTotal, setTalentsTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [roleFilter, setRoleFilter] = useState<string | undefined>()
@@ -84,12 +87,13 @@ const SchoolDetailPage: React.FC = () => {
 
   const fetchSchoolDetail = useCallback(async (schoolId: number) => {
     setLoading(true)
+    setLoadError(null)
     try {
       const response = await api.schools.get(schoolId)
       setSchool(response.data)
     } catch (error) {
-      console.error('Failed to fetch school detail:', error)
-      message.error(getErrorMessage(error, '加载院校详情失败'))
+      logger.error('Failed to fetch school detail:', error)
+      setLoadError(getErrorMessage(error, '加载院校详情失败'))
     } finally {
       setLoading(false)
     }
@@ -109,7 +113,7 @@ const SchoolDetailPage: React.FC = () => {
       setTalentsTotal(data.total)
       setPage(pageNum)
     } catch (error) {
-      console.error('Failed to fetch talents:', error)
+      logger.error('Failed to fetch talents:', error)
       message.error(getErrorMessage(error, '加载人才列表失败'))
     } finally {
       setTalentsLoading(false)
@@ -139,9 +143,17 @@ const SchoolDetailPage: React.FC = () => {
   if (!school) {
     return (
       <Card>
-        <Empty description="未找到该学校信息" />
+        {loadError ? (
+          <Empty description={loadError}>
+            <Button type="primary" onClick={() => id && fetchSchoolDetail(parseInt(id))}>
+              重试
+            </Button>
+          </Empty>
+        ) : (
+          <Empty description="未找到该学校信息" />
+        )}
         <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <Button onClick={() => navigate(-1)}>返回</Button>
+          <Button onClick={() => navigateBack(navigate, '/country-school')}>返回</Button>
         </div>
       </Card>
     )

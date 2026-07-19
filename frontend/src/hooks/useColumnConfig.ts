@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { logger } from '../utils/logger'
 
 export interface ColumnConfig {
   key: string
@@ -44,7 +45,7 @@ export function useColumnConfig() {
         setColumns(merged)
       }
     } catch (error) {
-      console.error('Failed to load column config:', error)
+      logger.error('Failed to load column config:', error)
     }
   }, [])
 
@@ -54,7 +55,7 @@ export function useColumnConfig() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newColumns))
       setColumns(newColumns)
     } catch (error) {
-      console.error('Failed to save column config:', error)
+      logger.error('Failed to save column config:', error)
     }
   }, [])
 

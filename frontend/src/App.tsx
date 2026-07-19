@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Spin } from 'antd'
 import MainLayout from './layouts/MainLayout'
 import HomePage from './pages/home-page'
@@ -39,6 +39,7 @@ const IndustryDemoPage = lazy(() => import('./pages/industry/industry-demo-page'
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth()
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -49,7 +50,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    // Carry the intended destination so login can navigate back to it
+    return <Navigate to="/login" replace state={{ from: location }} />
   }
 
   return <>{children}</>

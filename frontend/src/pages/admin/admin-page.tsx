@@ -431,14 +431,22 @@ const AdminPage: React.FC = () => {
               >
                 通过
               </Button>
-              <Button
-                type="link"
-                size="small"
-                danger
-                onClick={() => handleRejectUser(record.user_id)}
+              <Popconfirm
+                title="确认拒绝该用户的注册申请？"
+                description="拒绝后该账号将无法登录"
+                okText="确认拒绝"
+                cancelText="取消"
+                okButtonProps={{ danger: true }}
+                onConfirm={() => handleRejectUser(record.user_id)}
               >
-                拒绝
-              </Button>
+                <Button
+                  type="link"
+                  size="small"
+                  danger
+                >
+                  拒绝
+                </Button>
+              </Popconfirm>
             </>
           ) : (
             <>

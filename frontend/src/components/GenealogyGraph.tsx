@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { Empty, Spin, Typography, Space, Select, Slider, Card, Row, Col, Badge, Alert } from 'antd'
 
@@ -56,6 +56,10 @@ const RELATIONSHIP_NAMES: Record<string, string> = {
   senior_junior: '前辈-后辈',
 }
 
+// Max nodes rendered per tier row before collapsing into "Top N + aggregate".
+const MAX_PER_TIER = 12
+const AGG_NODE_PREFIX = '__agg_tier_'
+
 const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
   rootTalent,
   nodes,
@@ -67,6 +71,27 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
   // Default matches backend default min_confidence=0.3
   const [minConf, setMinConf] = useState<number>(0.3)
   const [tierFilter, setTierFilter] = useState<string | null>(null)
+  const [expandedTiers, setExpandedTiers] = useState<Set<number>>(new Set())
+  const [containerWidth, setContainerWidth] = useState(900)
+
+  // Measure the real container width and recompute layout on resize —
+  // replaces the previous hard-coded 900px canvas assumption.
+  const roRef = useRef<ResizeObserver | null>(null)
+  useEffect(() => () => roRef.current?.disconnect(), [])
+  const measureRef = useCallback((el: HTMLDivElement | null) => {
+    roRef.current?.disconnect()
+    roRef.current = null
+    if (el) {
+      setContainerWidth(el.clientWidth)
+      const ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          setContainerWidth(entry.contentRect.width)
+        }
+      })
+      ro.observe(el)
+      roRef.current = ro
+    }
+  }, [])
 
   const allNodes = useMemo(() => [rootTalent, ...nodes], [rootTalent, nodes])
 
@@ -108,47 +133,96 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
       tierGroups[key].push(node)
     })
 
-    const CONTAINER_WIDTH = 900
-    const MARGIN_X = 130
-    const tierYPositions = [60, 180, 300, 420]
-
-    const chartNodes = filteredNodes.map((node) => {
-      const isRoot = node.is_root
-      const size = isRoot ? 32 : Math.max(10, Math.min(28, 10 + node.composite_score * 0.2))
-      const tierIdx = TIER_ORDER.indexOf(node.tier)
-      const groupIdx = tierIdx >= 0 ? tierIdx : TIER_ORDER.length - 1
-      const group = tierGroups[groupIdx] || []
-      const indexInGroup = group.findIndex((n) => n.talent_id === node.talent_id)
-      const groupSize = group.length
-      const spacingX = groupSize > 1 ? (CONTAINER_WIDTH - 2 * MARGIN_X) / (groupSize - 1) : 0
-      return {
-        id: String(node.talent_id),
-        name: isRoot ? `★ ${node.name}` : node.name,
-        x: MARGIN_X + indexInGroup * spacingX,
-        y: tierYPositions[groupIdx],
-        symbolSize: size,
-        category: groupIdx,
-        itemStyle: {
-          color: TIER_COLORS[node.tier] || '#91d5ff',
-          ...(isRoot
-            ? {
-                borderColor: '#fff',
-                borderWidth: 3,
-                shadowBlur: 10,
-                shadowColor: 'rgba(0,0,0,0.3)',
-              }
-            : {}),
-        },
-        label: {
-          show: true,
-          fontSize: isRoot ? 14 : 12,
-          fontWeight: isRoot ? 'bold' : 'normal',
-        },
-        value: node.composite_score,
+    // Collapse oversized tiers into Top N (by citations) + an aggregate node,
+    // so rows stay readable instead of degenerating into overlapping dots.
+    const hiddenIds = new Set<string>()
+    const displayGroups: Record<number, { kept: GenealogyNode[]; hiddenCount: number }> = {}
+    Object.entries(tierGroups).forEach(([key, group]) => {
+      const idx = Number(key)
+      if (group.length > MAX_PER_TIER && !expandedTiers.has(idx)) {
+        const sorted = [...group].sort((a, b) => b.cited_by_count - a.cited_by_count)
+        const kept = sorted.slice(0, MAX_PER_TIER - 1)
+        displayGroups[idx] = { kept, hiddenCount: group.length - kept.length }
+        group.forEach((n) => {
+          if (!kept.some((k) => k.talent_id === n.talent_id)) hiddenIds.add(String(n.talent_id))
+        })
+      } else {
+        displayGroups[idx] = { kept: group, hiddenCount: 0 }
       }
     })
 
-    const chartLinks = filteredLinks.map((link) => ({
+    // Layout is driven by the measured container width, not a fixed canvas
+    const MARGIN_LEFT = 130
+    const MARGIN_RIGHT = 80
+    const usableWidth = Math.max(240, containerWidth - MARGIN_LEFT - MARGIN_RIGHT)
+    const tierYPositions = [60, 180, 300, 420]
+
+    const chartNodes: any[] = []
+    Object.entries(displayGroups).forEach(([key, { kept, hiddenCount }]) => {
+      const groupIdx = Number(key)
+      const rowCount = kept.length + (hiddenCount > 0 ? 1 : 0)
+      kept.forEach((node, indexInRow) => {
+        const isRoot = node.is_root
+        const size = isRoot ? 32 : Math.max(10, Math.min(28, 10 + node.composite_score * 0.2))
+        const isRightmost = hiddenCount === 0 && indexInRow === rowCount - 1
+        const x =
+          rowCount > 1
+            ? MARGIN_LEFT + (usableWidth * indexInRow) / (rowCount - 1)
+            : MARGIN_LEFT + usableWidth / 2
+        chartNodes.push({
+          id: String(node.talent_id),
+          name: isRoot ? `★ ${node.name}` : node.name,
+          x,
+          y: tierYPositions[groupIdx],
+          symbolSize: size,
+          category: groupIdx,
+          itemStyle: {
+            color: TIER_COLORS[node.tier] || '#91d5ff',
+            ...(isRoot
+              ? {
+                  borderColor: '#fff',
+                  borderWidth: 3,
+                  shadowBlur: 10,
+                  shadowColor: 'rgba(0,0,0,0.3)',
+                }
+              : {}),
+          },
+          label: {
+            show: true,
+            fontSize: isRoot ? 14 : 12,
+            fontWeight: isRoot ? 'bold' : 'normal',
+            // Flip the rightmost node's label inward so it stays on canvas
+            ...(isRightmost ? { position: 'left' } : {}),
+          },
+          value: node.composite_score,
+        })
+      })
+      if (hiddenCount > 0) {
+        chartNodes.push({
+          id: `${AGG_NODE_PREFIX}${groupIdx}`,
+          name: `+${hiddenCount} 人`,
+          x: MARGIN_LEFT + usableWidth,
+          y: tierYPositions[groupIdx],
+          symbolSize: 22,
+          category: groupIdx,
+          itemStyle: {
+            color: '#f5f5f5',
+            borderColor: '#999',
+            borderWidth: 1,
+            borderType: 'dashed',
+          },
+          label: { show: true, fontSize: 11, color: '#666', fontWeight: 'bold' },
+          value: 0,
+        })
+      }
+    })
+
+    // Links to collapsed-away nodes are hidden together with them
+    const displayLinks = filteredLinks.filter(
+      (l) => !hiddenIds.has(String(l.source)) && !hiddenIds.has(String(l.target))
+    )
+
+    const chartLinks = displayLinks.map((link) => ({
       // Backend stores from=student, to=advisor. Swap for visual direction: advisor -> student
       source: String(link.target),
       target: String(link.source),
@@ -173,11 +247,17 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
         trigger: 'item',
         formatter: (params: any) => {
           if (params.dataType === 'node') {
-            const node = filteredNodes.find((n) => String(n.talent_id) === params.data.id)
+            const id = String(params.data.id)
+            if (id.startsWith(AGG_NODE_PREFIX)) {
+              const tierIdx = Number(id.slice(AGG_NODE_PREFIX.length))
+              const hidden = displayGroups[tierIdx]?.hiddenCount ?? 0
+              return `该层级另有 ${hidden} 位学者已折叠<br/>点击此节点展开全部`
+            }
+            const node = filteredNodes.find((n) => String(n.talent_id) === id)
             if (!node) return params.data.name
             return `${node.name}<br/>机构: ${node.institution || '-'}<br/>综合评分: ${node.composite_score.toFixed(1)}<br/>层级: ${TIER_NAMES[node.tier]}<br/>h-index: ${node.h_index}<br/>引用: ${node.cited_by_count}`
           }
-          const link = filteredLinks[params.dataIndex]
+          const link = displayLinks[params.dataIndex]
           if (!link) return ''
           const advisorNode = filteredNodes.find((n) => n.talent_id === link.target)
           const studentNode = filteredNodes.find((n) => n.talent_id === link.source)
@@ -192,6 +272,14 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
         itemHeight: 12,
         textStyle: { fontSize: 11 },
         data: categories.map((c) => c.name),
+      },
+      toolbox: {
+        right: 10,
+        top: 0,
+        itemSize: 14,
+        feature: {
+          restore: {},
+        },
       },
       series: [
         {
@@ -226,7 +314,7 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
         },
       ],
     }
-  }, [filteredNodes, filteredLinks])
+  }, [filteredNodes, filteredLinks, expandedTiers, containerWidth])
 
   if (loading) {
     return (
@@ -256,7 +344,7 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
   const hasNoLinksAfterFilter = filteredLinks.length === 0
 
   return (
-    <div>
+    <div ref={measureRef}>
       <Card size="small" style={{ marginBottom: 12 }}>
         <Row gutter={16} align="middle">
           <Col xs={24} sm={6}>
@@ -326,31 +414,28 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
         )}
       </Card>
       {option && (
-        <div style={{ position: 'relative', height: 500 }}>
-          {/* Tier background strips */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '25%', backgroundColor: 'rgba(233,69,96,0.04)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', top: '25%', left: 0, right: 0, height: '25%', backgroundColor: 'rgba(255,167,38,0.04)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '25%', backgroundColor: 'rgba(66,165,245,0.04)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', top: '75%', left: 0, right: 0, height: '25%', backgroundColor: 'rgba(102,187,106,0.04)', pointerEvents: 'none' }} />
-          {/* Separator lines */}
-          <div style={{ position: 'absolute', top: '25%', left: 0, right: 0, borderTop: '1px dashed #e8e8e8', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, borderTop: '1px dashed #e8e8e8', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', top: '75%', left: 0, right: 0, borderTop: '1px dashed #e8e8e8', pointerEvents: 'none' }} />
-          <ReactECharts
-            option={option}
-            notMerge={true}
-            lazyUpdate={false}
-            style={{ height: 500, width: '100%', position: 'relative', zIndex: 1 }}
-            opts={{ renderer: 'canvas' }}
-            onEvents={{
-              click: (params: any) => {
-                if (params?.dataType === 'node' && onNodeClick) {
-                  onNodeClick(parseInt(params.data.id))
-                }
-              },
-            }}
-          />
-        </div>
+        <ReactECharts
+          option={option}
+          notMerge={true}
+          lazyUpdate={false}
+          style={{ height: 500, width: '100%' }}
+          opts={{ renderer: 'canvas' }}
+          onEvents={{
+            click: (params: any) => {
+              if (params?.dataType !== 'node') return
+              const id = String(params.data.id)
+              // Aggregate node: expand the collapsed tier instead of navigating
+              if (id.startsWith(AGG_NODE_PREFIX)) {
+                const tierIdx = Number(id.slice(AGG_NODE_PREFIX.length))
+                setExpandedTiers((prev) => new Set(prev).add(tierIdx))
+                return
+              }
+              if (onNodeClick) {
+                onNodeClick(parseInt(id))
+              }
+            },
+          }}
+        />
       )}
       {!option && (
         <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -60,8 +60,9 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
     try {
       const response = await api.talents.list({ keyword: searchQuery, page_size: 10 })
       setTalentOptions(response.data.items || [])
-    } catch { /* ignore */ }
-    finally {
+    } catch {
+      message.error('搜索人才失败，请稍后重试')
+    } finally {
       setSearchingTalents(false)
     }
   }

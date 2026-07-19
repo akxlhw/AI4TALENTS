@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { logger } from '../../utils/logger'
 import {
   Card,
   Row,
@@ -90,6 +91,7 @@ const OpenSourceSearchPage: React.FC = () => {
   const [exporting, setExporting] = useState(false)
   const [exportConfirmVisible, setExportConfirmVisible] = useState(false)
   const [pendingExportFormat, setPendingExportFormat] = useState<'csv' | 'xlsx' | null>(null)
+  const [searchError, setSearchError] = useState<string | null>(null)
 
   const [query, setQuery] = useState<OSSearchQuery>({
     q: searchParams.get('q') || '',
@@ -111,6 +113,7 @@ const OpenSourceSearchPage: React.FC = () => {
   const fetchDevelopers = useCallback(async () => {
     try {
       setLoading(true)
+      setSearchError(null)
       let res
       if (query.mode === 'keyword') {
         res = await api.openSource.listDevelopers({
@@ -144,7 +147,10 @@ const OpenSourceSearchPage: React.FC = () => {
       setDevelopers(res.data.items || [])
       setTotal(res.data.total || 0)
     } catch (err) {
-      console.error('Search failed', err)
+      const errorMessage = getErrorMessage(err, '搜索失败，请稍后重试')
+      logger.error('Search failed', err)
+      setSearchError(errorMessage)
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -167,8 +173,9 @@ const OpenSourceSearchPage: React.FC = () => {
         label: item.repo_full_name,
       })))
     } catch (err) {
-      console.error('Failed to load repos', err)
+      logger.error('Failed to load repos', err)
       setRepoOptions([])
+      message.warning('仓库列表加载失败')
     } finally {
       setRepoLoading(false)
     }
@@ -195,6 +202,22 @@ const OpenSourceSearchPage: React.FC = () => {
       setRepoOptions([])
     }
   }, [query.tech_elements, loadRepos])
+
+  const handleClearFilters = () => {
+    const cleared: OSSearchQuery = {
+      ...query,
+      q: '',
+      tech_elements: [],
+      languages: [],
+      location: '',
+      company: '',
+      repo_full_names: [],
+      is_committer: false,
+      page: 1,
+    }
+    setQuery(cleared)
+    updateSearchParams(cleared)
+  }
 
   const updateSearchParams = (newQuery: OSSearchQuery) => {
     const params = new URLSearchParams()
@@ -238,7 +261,7 @@ const OpenSourceSearchPage: React.FC = () => {
         setFavoriteIds((prev) => new Set(prev).add(developerId))
       }
     } catch (e) {
-      console.error('Favorite toggle failed', e)
+      logger.error('Favorite toggle failed', e)
       message.error(getErrorMessage(e, '收藏操作失败'))
     }
   }
@@ -390,7 +413,7 @@ const OpenSourceSearchPage: React.FC = () => {
 
         {filterExpanded && (
           <Row gutter={16} style={{ marginTop: 16 }}>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item label="技术领域" style={{ marginBottom: 8 }}>
                 <Select
                   mode="multiple"
@@ -406,7 +429,7 @@ const OpenSourceSearchPage: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item label="关联仓库" style={{ marginBottom: 8 }}>
                 <Select
                   mode="multiple"
@@ -426,7 +449,7 @@ const OpenSourceSearchPage: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item label="地区" style={{ marginBottom: 8 }}>
                 <Input
                   placeholder="如: Beijing"
@@ -435,7 +458,7 @@ const OpenSourceSearchPage: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item label="公司" style={{ marginBottom: 8 }}>
                 <Input
                   placeholder="如: Microsoft"
@@ -444,7 +467,7 @@ const OpenSourceSearchPage: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item label="编程语言" style={{ marginBottom: 8 }}>
                 <Select
                   mode="multiple"
@@ -456,7 +479,7 @@ const OpenSourceSearchPage: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item label="角色筛选" style={{ marginBottom: 8 }}>
                 <Checkbox
                   checked={query.is_committer}
@@ -518,13 +541,21 @@ const OpenSourceSearchPage: React.FC = () => {
         <div style={{ textAlign: 'center', padding: 60 }}>
           <Spin size="large" />
         </div>
+      ) : searchError ? (
+        <Empty description={searchError} image={Empty.PRESENTED_IMAGE_SIMPLE}>
+          <Button type="primary" onClick={() => fetchDevelopers()}>
+            重试
+          </Button>
+        </Empty>
       ) : developers.length === 0 ? (
-        <Empty description="未找到符合条件的开发者" />
+        <Empty description="未找到符合条件的开发者">
+          <Button type="primary" onClick={handleClearFilters}>清除筛选</Button>
+        </Empty>
       ) : (
         <>
-          <Row gutter={16}>
+          <Row gutter={[16, 16]}>
             {developers.map((dev) => (
-              <Col span={8} key={dev.developer_id} style={{ marginBottom: 16 }}>
+              <Col xs={24} sm={12} lg={8} key={dev.developer_id}>
                 <Card
                   hoverable
                   className="domain-card"

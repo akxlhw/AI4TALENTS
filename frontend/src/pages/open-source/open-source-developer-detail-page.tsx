@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { navigateBack } from '../../utils/navigation'
+import { logger } from '../../utils/logger'
 import {
   Card,
   Row,
@@ -56,7 +58,7 @@ const DeveloperDetailPage: React.FC = () => {
         setDetail(detailRes.data)
         setIsFavorite((favoriteRes.data.developer_ids || []).includes(developerId))
       } catch (e) {
-        console.error('Failed to load developer detail', e)
+        logger.error('Failed to load developer detail', e)
         message.error(getErrorMessage(e, '加载开发者详情失败'))
       } finally {
         setLoading(false)
@@ -75,7 +77,7 @@ const DeveloperDetailPage: React.FC = () => {
         setIsFavorite(true)
       }
     } catch (e) {
-      console.error('Favorite toggle failed', e)
+      logger.error('Favorite toggle failed', e)
       message.error(getErrorMessage(e, '收藏操作失败'))
     }
   }
@@ -279,12 +281,12 @@ const DeveloperDetailPage: React.FC = () => {
         </span>
       ),
       children: (
-        <Row gutter={16}>
+        <Row gutter={[16, 16]}>
           {(detail.similar_developers || []).length === 0 ? (
             <Col span={24}><Empty description="暂无相似推荐" /></Col>
           ) : (
             (detail.similar_developers || []).map((dev) => (
-              <Col span={8} key={dev.developer_id} style={{ marginBottom: 16 }}>
+              <Col xs={24} sm={12} lg={8} key={dev.developer_id}>
                 <Card
                   hoverable
                   size="small"
@@ -311,7 +313,7 @@ const DeveloperDetailPage: React.FC = () => {
   return (
     <div style={{ padding: '88px 32px 80px' }}>
       {/* Breadcrumb */}
-      <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ marginBottom: 16 }}>
+      <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigateBack(navigate, '/opensource/search')} style={{ marginBottom: 16 }}>
         返回
       </Button>
 
@@ -369,14 +371,14 @@ const DeveloperDetailPage: React.FC = () => {
       </Card>
 
       {/* Stats Cards */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         {[
           { title: 'Total Stars', value: detail.total_stars_received, icon: <StarOutlined />, color: semanticColors.osOrange },
           { title: 'Total Forks', value: detail.total_forks_received, icon: <ForkOutlined />, color: domainThemes.opensource.badgeBg },
           { title: 'Public Repos', value: detail.public_repos_count, icon: <GithubOutlined />, color: primary },
           { title: 'Followers', value: detail.followers_count, icon: <UserOutlined />, color: semanticColors.osBlue },
         ].map((s) => (
-          <Col span={6} key={s.title}>
+          <Col xs={24} sm={12} lg={6} key={s.title}>
             <Card className="domain-card" size="small" styles={{ body: { padding: '16px 20px' } }}>
               <Statistic
                 title={<Text style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{s.title}</Text>}

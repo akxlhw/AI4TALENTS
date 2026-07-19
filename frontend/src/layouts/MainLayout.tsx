@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Dropdown, Avatar, Space, Typography, Tag, Tooltip, Button } from 'antd'
+import { Dropdown, Avatar, Space, Typography, Tag, Tooltip, Button, Grid } from 'antd'
 import {
   UserOutlined,
   LogoutOutlined,
@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useDomainStore } from '../stores/domainStore'
+import { useCollectTaskNotifier } from '../hooks/useCollectTaskNotifier'
 import { domainThemes, semanticColors, type Domain } from '../theme'
 import LabIcon from '../components/lab-icon'
 import Footer from '../components/Footer'
@@ -40,6 +41,15 @@ const DOMAIN_PATH_PREFIXES: Record<string, Domain> = {
   '/academic': 'academic',
   '/opensource': 'opensource',
   '/lab': 'lab',
+  // Academic pages live at root-level paths (no /academic prefix)
+  '/talents': 'academic',
+  '/schools': 'academic',
+  '/search-recommend': 'academic',
+  '/search': 'academic',
+  '/jd-match': 'academic',
+  '/recommend': 'academic',
+  '/tech-domain': 'academic',
+  '/country-school': 'academic',
 }
 
 const MainLayout: React.FC = () => {
@@ -47,7 +57,12 @@ const MainLayout: React.FC = () => {
   const location = useLocation()
   const { user, logout } = useAuth()
   const { currentDomain, setDomain, isDomainAvailable } = useDomainStore()
+  // Global collect-task completion notifications (running → terminal)
+  useCollectTaskNotifier()
   const [scrolled, setScrolled] = useState(false)
+  const screens = Grid.useBreakpoint()
+  // <md（<768px）时折叠导航：域切换器只留图标，收藏/反馈收进用户菜单
+  const isNarrow = screens.md === false
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -73,6 +88,12 @@ const MainLayout: React.FC = () => {
   }
 
   const userMenuItems = [
+    // 窄屏时顶部收藏/反馈按钮收进用户菜单，保证导航单行不溢出
+    ...(isNarrow ? [
+      { key: 'favorites', icon: <StarOutlined />, label: '我的收藏' },
+      { key: 'feedback', icon: <MessageOutlined />, label: '意见反馈' },
+      { type: 'divider' as const },
+    ] : []),
     { key: 'profile', icon: <UserOutlined />, label: '个人信息' },
     ...(user?.role === 'super_admin' ? [
       { type: 'divider' as const },
@@ -89,6 +110,8 @@ const MainLayout: React.FC = () => {
   const handleUserMenuClick = ({ key }: { key: string }) => {
     if (key === 'logout') handleLogout()
     else if (key === 'profile') navigate('/profile')
+    else if (key === 'favorites') navigate('/favorites')
+    else if (key === 'feedback') navigate('/feedback')
     else if (key === 'admin') navigate('/admin')
     else if (key === 'system-config') navigate('/system-config')
     else if (key === 'data-version') navigate('/data-version')
@@ -161,16 +184,18 @@ const MainLayout: React.FC = () => {
             >
               AI4TALENT
             </Text>
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: 500,
-                color: 'var(--text-secondary)',
-                letterSpacing: '0.5px',
-              }}
-            >
-              智能人才库
-            </Text>
+            {!isNarrow && (
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: 'var(--text-secondary)',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                智能人才库
+              </Text>
+            )}
           </Space>
 
           {/* Divider */}
@@ -201,7 +226,7 @@ const MainLayout: React.FC = () => {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 5,
-                      padding: '5px 12px',
+                      padding: isNarrow ? '5px 8px' : '5px 12px',
                       borderRadius: 6,
                       border: 'none',
                       cursor: 'pointer',
@@ -245,24 +270,28 @@ const MainLayout: React.FC = () => {
         {/* Right: User actions */}
         {user && (
           <Space size={8} style={{ flexShrink: 0 }}>
-            <Button
-              type="text"
-              size="small"
-              icon={<StarOutlined />}
-              onClick={() => navigate('/favorites')}
-              style={{ fontSize: 13 }}
-            >
-              我的收藏
-            </Button>
-            <Button
-              type="text"
-              size="small"
-              icon={<MessageOutlined />}
-              onClick={() => navigate('/feedback')}
-              style={{ fontSize: 13 }}
-            >
-              意见反馈
-            </Button>
+            {!isNarrow && (
+              <>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<StarOutlined />}
+                  onClick={() => navigate('/favorites')}
+                  style={{ fontSize: 13 }}
+                >
+                  我的收藏
+                </Button>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<MessageOutlined />}
+                  onClick={() => navigate('/feedback')}
+                  style={{ fontSize: 13 }}
+                >
+                  意见反馈
+                </Button>
+              </>
+            )}
             <Dropdown
               menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
               placement="bottomRight"

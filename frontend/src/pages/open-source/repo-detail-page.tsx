@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { navigateBack } from '../../utils/navigation'
+import { logger } from '../../utils/logger'
 import {
   Card,
   Row,
@@ -66,7 +68,7 @@ const RepoDetailPage: React.FC = () => {
         const res = await api.openSource.getRepository(owner, name)
         setDetail(res.data)
       } catch (e) {
-        console.error('Failed to load repository detail', e)
+        logger.error('Failed to load repository detail', e)
         message.error(getErrorMessage(e, '加载仓库详情失败'))
       } finally {
         setLoading(false)
@@ -87,7 +89,7 @@ const RepoDetailPage: React.FC = () => {
         setContributors(res.data.items || [])
         setContributorTotal(res.data.total || 0)
       } catch (e) {
-        console.error('Failed to load contributors', e)
+        logger.error('Failed to load contributors', e)
         message.error(getErrorMessage(e, '加载贡献者失败'))
       } finally {
         setContribLoading(false)
@@ -156,7 +158,7 @@ const RepoDetailPage: React.FC = () => {
         </Col>
       ) : (
         ownerOrCommitters.map((c) => (
-          <Col span={8} key={c.developer_id}>
+          <Col xs={24} sm={12} lg={8} key={c.developer_id}>
             <Card
               hoverable
               className="domain-card"
@@ -343,7 +345,7 @@ const RepoDetailPage: React.FC = () => {
       <Button
         type="text"
         icon={<ArrowLeftOutlined />}
-        onClick={() => navigate(-1)}
+        onClick={() => navigateBack(navigate, '/opensource/repos')}
         style={{ marginBottom: 16 }}
       >
         返回
@@ -407,8 +409,8 @@ const RepoDetailPage: React.FC = () => {
       </Card>
 
       {/* Stats Row */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={12} lg={6}>
           <Card className="domain-card">
             <Statistic
               title="Stars"
@@ -417,7 +419,7 @@ const RepoDetailPage: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col xs={24} sm={12} lg={6}>
           <Card className="domain-card">
             <Statistic
               title="Forks"
@@ -426,7 +428,7 @@ const RepoDetailPage: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col xs={24} sm={12} lg={6}>
           <Card className="domain-card">
             <Statistic
               title="贡献者"
@@ -435,7 +437,7 @@ const RepoDetailPage: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col xs={24} sm={12} lg={6}>
           <Card className="domain-card">
             <Statistic
               title="主语言"

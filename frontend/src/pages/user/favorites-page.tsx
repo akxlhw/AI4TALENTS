@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { logger } from '../../utils/logger'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
@@ -101,7 +102,8 @@ const FavoritesPage: React.FC = () => {
       setFavorites(response.data.items || [])
       setTotal(response.data.total || 0)
     } catch {
-      console.error("Operation failed")
+      logger.error("Operation failed")
+      message.error('加载收藏列表失败')
     } finally {
       setLoading(false)
     }
@@ -113,7 +115,8 @@ const FavoritesPage: React.FC = () => {
       const response = await api.talentPools.list()
       setPools(response.data.items || [])
     } catch {
-      console.error("Operation failed")
+      logger.error("Operation failed")
+      message.error('加载人才池失败')
     } finally {
       setPoolsLoading(false)
     }
@@ -124,7 +127,8 @@ const FavoritesPage: React.FC = () => {
       const response = await api.talentPools.getFollowupStatuses()
       setFollowupStatuses(response.data || [])
     } catch {
-      console.error("Operation failed")
+      logger.error("Operation failed")
+      message.error('加载跟进状态失败')
     }
   }, [])
 
@@ -457,7 +461,7 @@ const FavoritesPage: React.FC = () => {
               <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 24px' } }}>
                 <Row gutter={16} align="middle">
                   <Col>
-                    <Space size={8}>
+                    <Space size={8} wrap>
                       <Text type="secondary">筛选:</Text>
 
                       <Select
@@ -581,10 +585,10 @@ const FavoritesPage: React.FC = () => {
                 {pools.length > 0 ? (
                   <Row gutter={[16, 16]}>
                     {pools.map(pool => (
-                      <Col span={8} key={pool.pool_id}>
+                      <Col xs={24} sm={12} lg={8} key={pool.pool_id}>
                         <Card
                           hoverable
-                          onClick={() => navigate(`/pools/${pool.pool_id}`)}
+                          onClick={() => message.info('人才池详情页建设中，敬请期待')}
                         >
                           <Space direction="vertical" style={{ width: '100%' }}>
                             <Text strong style={{ fontSize: 16 }}>

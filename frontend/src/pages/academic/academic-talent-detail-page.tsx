@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { logger } from '../../utils/logger'
+import { navigateBack } from '../../utils/navigation'
 import {
   Card,
   Descriptions,
@@ -99,6 +101,7 @@ const TalentDetailPage: React.FC = () => {
   const [genealogyNodes, setGenealogyNodes] = useState<GenealogyNode[]>([])
   const [genealogyLinks, setGenealogyLinks] = useState<GenealogyLink[]>([])
   const [genealogyError, setGenealogyError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     if (id) {
@@ -108,12 +111,13 @@ const TalentDetailPage: React.FC = () => {
 
   const fetchTalentDetail = async (talentId: number) => {
     setLoading(true)
+    setLoadError(null)
     try {
       const response = await api.talents.get(talentId)
       setTalent(response.data)
     } catch (error) {
-      console.error('Failed to fetch talent detail:', error)
-      message.error(getErrorMessage(error, '加载人才详情失败'))
+      logger.error('Failed to fetch talent detail:', error)
+      setLoadError(getErrorMessage(error, '加载人才详情失败'))
     } finally {
       setLoading(false)
     }
@@ -126,7 +130,7 @@ const TalentDetailPage: React.FC = () => {
       setCollabNodes(response.data.nodes || [])
       setCollabLinks(response.data.links || [])
     } catch (error) {
-      console.error('Failed to fetch collaborations:', error)
+      logger.error('Failed to fetch collaborations:', error)
       message.error(getErrorMessage(error, '加载合作信息失败'))
     } finally {
       setCollabLoading(false)
@@ -142,7 +146,7 @@ const TalentDetailPage: React.FC = () => {
       setGenealogyNodes(response.data.nodes || [])
       setGenealogyLinks(response.data.links || [])
     } catch (error: any) {
-      console.error('Failed to fetch genealogy:', error)
+      logger.error('Failed to fetch genealogy:', error)
       const msg = error?.response?.data?.detail || getErrorMessage(error, '加载族谱数据失败')
       setGenealogyError(msg)
       setGenealogyRoot(null)
@@ -172,9 +176,17 @@ const TalentDetailPage: React.FC = () => {
   if (!talent) {
     return (
       <Card>
-        <Empty description="未找到该人才信息" />
+        {loadError ? (
+          <Empty description={loadError}>
+            <Button type="primary" onClick={() => id && fetchTalentDetail(parseInt(id))}>
+              重试
+            </Button>
+          </Empty>
+        ) : (
+          <Empty description="未找到该人才信息" />
+        )}
         <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <Button onClick={() => navigate(-1)}>返回</Button>
+          <Button onClick={() => navigateBack(navigate, '/search-recommend')}>返回</Button>
         </div>
       </Card>
     )
@@ -224,14 +236,13 @@ const TalentDetailPage: React.FC = () => {
     },
   ]
 
-  // 计算数据完整度
   const completeness = talent.data_completeness ?? calculateCompleteness(talent)
 
   return (
     <div style={{ padding: '88px 32px 80px' }}>
       {/* 返回按钮 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Button type="link" onClick={() => navigate(-1)} style={{ paddingLeft: 0 }}>
+        <Button type="link" onClick={() => navigateBack(navigate, '/search-recommend')} style={{ paddingLeft: 0 }}>
           <ArrowLeftOutlined /> 返回
         </Button>
         <FavoriteButton talentId={talent.talent_id} showText />
@@ -431,7 +442,9 @@ const TalentDetailPage: React.FC = () => {
                       padding: '4px 12px',
                       background: `hsl(${(index * 60) % 360}, 70%, 95%)`,
                       border: `1px solid hsl(${(index * 60) % 360}, 70%, 85%)`,
+                      cursor: 'pointer',
                     }}
+                    onClick={() => navigate(`/search-recommend?q=${encodeURIComponent(topic)}`)}
                   >
                     {topic}
                   </Tag>
@@ -447,7 +460,9 @@ const TalentDetailPage: React.FC = () => {
                       padding: '4px 12px',
                       background: `hsl(${(index * 60) % 360}, 70%, 95%)`,
                       border: `1px solid hsl(${(index * 60) % 360}, 70%, 85%)`,
+                      cursor: 'pointer',
                     }}
+                    onClick={() => navigate(`/search-recommend?q=${encodeURIComponent(tag)}`)}
                   >
                     {tag}
                   </Tag>
@@ -508,7 +523,11 @@ const TalentDetailPage: React.FC = () => {
                   合作网络
                 </span>
               ),
-              children: collabNodes.length > 0 ? (
+              children: collabLoading ? (
+                <div style={{ textAlign: 'center', padding: '100px 0' }}>
+                  <Spin size="large" />
+                </div>
+              ) : collabNodes.length > 0 ? (
                 <CollaborationGraph
                   nodes={collabNodes}
                   links={collabLinks}
@@ -552,7 +571,13 @@ const TalentDetailPage: React.FC = () => {
                       </Text>
                     </Space>
                   }
-                />
+                >
+                  <Button onClick={() => fetchGenealogy(talent.talent_id)}>重试</Button>
+                </Empty>
+              ) : genealogyLoading ? (
+                <div style={{ textAlign: 'center', padding: '100px 0' }}>
+                  <Spin size="large" />
+                </div>
               ) : genealogyRoot ? (
                 <GenealogyGraph
                   rootTalent={genealogyRoot}

@@ -5,6 +5,8 @@ import { Row, Col, Card, Descriptions, Tag, Typography, Button, Space, Divider, 
 import { ArrowLeftOutlined, HomeOutlined } from '@ant-design/icons'
 import { useLabTalent, useHomepagePreview } from '../../hooks/useLabQueries'
 import { applyDomainCssVars } from '../../theme'
+import { getErrorMessage } from '../../utils'
+import { navigateBack } from '../../utils/navigation'
 import PageSkeleton from '../../components/PageSkeleton'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import BreadcrumbNav from '../../components/BreadcrumbNav'
@@ -16,7 +18,7 @@ const LabTalentDetailPage: React.FC = () => {
   const { talentId } = useParams<{ talentId: string }>()
   const navigate = useNavigate()
   const id = talentId ? Number(talentId) : undefined
-  const { data: talent, isLoading, error } = useLabTalent(id)
+  const { data: talent, isLoading, error, refetch } = useLabTalent(id)
 
   // Tab state: 'info' | 'homepage'
   const [activeTab, setActiveTab] = useState('info')
@@ -32,7 +34,17 @@ const LabTalentDetailPage: React.FC = () => {
 
   if (isLoading) return <PageSkeleton />
 
-  if (error || !talent) {
+  if (error) {
+    return (
+      <EmptyPlaceholder
+        title="加载失败"
+        description={getErrorMessage(error, '加载人才详情失败，请稍后重试')}
+        action={{ label: '重试', onClick: () => refetch() }}
+      />
+    )
+  }
+
+  if (!talent) {
     return (
       <EmptyPlaceholder
         title="人才不存在或已删除"
@@ -175,7 +187,7 @@ const LabTalentDetailPage: React.FC = () => {
 
       <Button
         icon={<ArrowLeftOutlined />}
-        onClick={() => navigate(-1)}
+        onClick={() => navigateBack(navigate, '/lab/search')}
         style={{ marginBottom: 16 }}
       >
         返回

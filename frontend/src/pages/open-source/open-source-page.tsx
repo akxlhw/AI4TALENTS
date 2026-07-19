@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { logger } from '../../utils/logger'
 import {
   Card,
   Row,
@@ -57,7 +58,7 @@ const OpenSourcePage: React.FC = () => {
         const repoRes = await api.openSource.listRepoConfigs({ page_size: 8, is_active: true, sort_by: 'stars', collected_only: true })
         setTrendingRepos(repoRes.data.items || [])
       } catch (e) {
-        console.error('Failed to load open source overview', e)
+        logger.error('Failed to load open source overview', e)
         message.error(getErrorMessage(e, '加载开源概览失败'))
       } finally {
         setLoading(false)
@@ -111,7 +112,7 @@ const OpenSourcePage: React.FC = () => {
               marginBottom: 16,
               color: '#fff',
               fontWeight: 800,
-              fontSize: 46,
+              fontSize: 'clamp(28px, 5vw, 46px)',
               letterSpacing: '-0.5px',
             }}
           >
@@ -173,14 +174,14 @@ const OpenSourcePage: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <Row gutter={16} style={{ marginTop: 32, marginBottom: 24, padding: '0 32px' }}>
+      <Row gutter={[16, 16]} style={{ marginTop: 32, marginBottom: 24, padding: '0 32px' }}>
         {[
           { title: '收录开发者', value: stats?.total_developers || 0, icon: <CodeOutlined />, color: primary, link: '/opensource/search' },
           { title: '覆盖仓库', value: stats?.total_repositories || 0, icon: <GithubOutlined />, color: secondary },
           { title: '活跃组织', value: stats?.total_organizations || 0, icon: <ForkOutlined />, color: domainThemes.opensource.badgeBg },
           { title: '技术栈', value: Object.keys(stats?.language_distribution || {}).length || 0, icon: <BranchesOutlined />, color: semanticColors.osGreen },
         ].map((s) => (
-          <Col span={6} key={s.title}>
+          <Col xs={24} sm={12} lg={6} key={s.title}>
             <Card
               className="domain-card"
               size="small"
@@ -201,9 +202,9 @@ const OpenSourcePage: React.FC = () => {
       </Row>
 
       {/* ═══════════ Trending Repos + Top Developers (side by side) ═══════════ */}
-      <Row gutter={24} style={{ padding: '0 32px' }}>
+      <Row gutter={[24, 24]} style={{ padding: '0 32px' }}>
         {/* ───── Left: Trending Repos ───── */}
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Title level={4} style={{ margin: 0 }}>
               <FireOutlined style={{ marginRight: 8, color: semanticColors.osOrange }} />
@@ -274,7 +275,7 @@ const OpenSourcePage: React.FC = () => {
         </Col>
 
         {/* ───── Right: Top Developers ───── */}
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Title level={4} style={{ margin: 0 }}>
               <StarOutlined style={{ marginRight: 8, color: secondary }} />
@@ -391,8 +392,8 @@ const OpenSourcePage: React.FC = () => {
                       {dev.bio || '暂无简介'}
                     </Paragraph>
 
-                    <Row gutter={16}>
-                      <Col span={6}>
+                    <Row gutter={[16, 16]}>
+                      <Col xs={24} sm={12} lg={6}>
                         <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Stars</Text>
                         <div style={{ fontWeight: 700, color: primary, fontSize: 13 }}>
                           <StarOutlined style={{ fontSize: 11, marginRight: 2 }} />

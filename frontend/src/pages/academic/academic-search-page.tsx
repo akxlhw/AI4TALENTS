@@ -61,7 +61,9 @@ const SearchRecommendPage: React.FC = () => {
       setSchools(schoolsRes.data.items || [])
       setCountries(countriesRes.data.items || [])
       setTechDomains(techDomainsRes.data.items || [])
-    } catch { /* ignore */ }
+    } catch {
+      message.error('加载筛选数据失败，请刷新重试')
+    }
   }, [])
 
   useEffect(() => {

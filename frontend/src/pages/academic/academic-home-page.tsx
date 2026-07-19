@@ -119,7 +119,7 @@ const AcademicHomePage: React.FC = () => {
                 marginBottom: 16,
                 color: '#fff',
                 fontWeight: 800,
-                fontSize: 46,
+                fontSize: 'clamp(28px, 5vw, 46px)',
                 letterSpacing: '-0.5px',
               }}
             >

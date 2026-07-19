@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { logger } from '../../utils/logger'
 import {
   Card,
   Row,
@@ -37,7 +38,6 @@ const { Title, Text } = Typography
 // 区域定义 - 按北美、亚太、欧洲、其他顺序
 const REGIONS_ORDER = ['north_america', 'asia_pacific', 'europe', 'other'] as const
 
-// 定义各区域的国家代码集合
 const NORTH_AMERICA_CODES = new Set(['US', 'CA'])
 const ASIA_PACIFIC_CODES = new Set(['CN', 'JP', 'KR', 'SG', 'AU', 'NZ', 'HK', 'MO', 'TW', 'IN', 'MY', 'TH'])
 const EUROPE_CODES = new Set(['GB', 'DE', 'FR', 'CH', 'NL', 'IT', 'ES', 'SE', 'AT', 'BE', 'DK', 'FI', 'NO', 'IE', 'PT', 'PL'])
@@ -108,7 +108,6 @@ const CountrySchoolPage: React.FC = () => {
     schoolCount: 0,
   })
 
-  // 计算其他区域的国家代码
   const otherRegionCountryCodes = useMemo(() => {
     const definedCodes = new Set([
       ...NORTH_AMERICA_CODES,
@@ -164,13 +163,12 @@ const CountrySchoolPage: React.FC = () => {
     return filtered.sort((a, b) => (b.professor_count + b.student_count) - (a.professor_count + a.student_count))
   }, [schools, activeRegion, countryCode, keyword, otherRegionCountryCodes])
 
-  // 加载国家列表
   const fetchCountries = useCallback(async () => {
     try {
       const response = await api.countries.list()
       setCountries(response.data.items || [])
     } catch (error) {
-      console.error('Failed to fetch countries:', error)
+      logger.error('Failed to fetch countries:', error)
       message.error(getErrorMessage(error, '加载国家列表失败'))
     }
   }, [])
@@ -191,14 +189,13 @@ const CountrySchoolPage: React.FC = () => {
       }
       setSchools(allItems)
     } catch (error) {
-      console.error('Failed to fetch schools:', error)
+      logger.error('Failed to fetch schools:', error)
       message.error(getErrorMessage(error, '加载院校列表失败'))
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // 加载统计数据
   const fetchSummary = useCallback(async () => {
     setSummaryLoading(true)
     try {
@@ -210,14 +207,13 @@ const CountrySchoolPage: React.FC = () => {
         schoolCount: overviewRes.data.stats.school_count,
       })
     } catch (error) {
-      console.error('Failed to fetch summary:', error)
+      logger.error('Failed to fetch summary:', error)
       message.error(getErrorMessage(error, '加载统计数据失败'))
     } finally {
       setSummaryLoading(false)
     }
   }, [])
 
-  // 初始化加载
   useEffect(() => {
     fetchCountries()
     fetchSummary()
@@ -253,7 +249,6 @@ const CountrySchoolPage: React.FC = () => {
     setCountryCode(undefined)
   }
 
-  // 处理重置
   const handleReset = () => {
     setCountryCode(undefined)
     setSchoolId(undefined)

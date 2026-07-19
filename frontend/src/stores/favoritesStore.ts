@@ -9,6 +9,7 @@ import { create } from 'zustand'
 import { message } from 'antd'
 import { api } from '../services/api'
 import type { FavoriteTalent } from '../types'
+import { logger } from '../utils/logger'
 
 interface FavoritesState {
   favoriteIds: Set<number>
@@ -40,7 +41,8 @@ export const useFavoritesStore = create<FavoritesState>()((set, get) => ({
         favorites: listResponse.data.items || [],
       })
     } catch (err) {
-      console.error('Failed to load favorites:', err)
+      logger.error('Failed to load favorites:', err)
+      message.error('收藏状态加载失败，收藏标记可能不准确')
     } finally {
       set({ loading: false })
     }

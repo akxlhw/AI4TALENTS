@@ -13,10 +13,10 @@ import {
   message,
 } from 'antd'
 import { InboxOutlined, UploadOutlined, CloudSyncOutlined } from '@ant-design/icons'
-import LabIcon from '../../../components/lab-icon'
+import LabIcon from './lab-icon'
 import type { UploadProps } from 'antd'
-import { api } from '../../../services/api'
-import { getErrorMessage } from '../../../utils'
+import { api } from '../services/api'
+import { getErrorMessage } from '../utils'
 
 const { Dragger } = Upload
 const { Text, Title } = Typography

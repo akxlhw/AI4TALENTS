@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { logger } from '../utils/logger'
 
 export interface SearchTemplate {
   id: string
@@ -29,7 +30,7 @@ export function useSearchTemplates() {
         setTemplates(JSON.parse(stored))
       }
     } catch (error) {
-      console.error('Failed to load search templates:', error)
+      logger.error('Failed to load search templates:', error)
     }
   }, [])
 
@@ -39,7 +40,7 @@ export function useSearchTemplates() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newTemplates))
       setTemplates(newTemplates)
     } catch (error) {
-      console.error('Failed to save search templates:', error)
+      logger.error('Failed to save search templates:', error)
     }
   }, [])
 

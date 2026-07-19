@@ -92,7 +92,6 @@ export function formatUTCToRelative(utcString: string | null | undefined): strin
  */
 export function getLocalISOTime(): string {
   const now = new Date()
-  // 转换为本地时间的 ISO 字符串
   const offset = now.getTimezoneOffset()
   const localTime = new Date(now.getTime() - offset * 60 * 1000)
   return localTime.toISOString().slice(0, -1) // 移除 'Z'

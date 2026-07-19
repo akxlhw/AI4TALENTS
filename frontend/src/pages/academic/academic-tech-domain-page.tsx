@@ -137,19 +137,16 @@ const TechDomainPage: React.FC = () => {
     label: d.domain_name,
   }))
 
-  // 处理技术领域变化
   const handleTechDomainChange = (value: number | undefined) => {
     setTechDomainId(value)
     setPage(1)
   }
 
-  // 处理搜索
   const handleSearch = () => {
     setPage(1)
     refetchTalents()
   }
 
-  // 处理重置
   const handleReset = () => {
     setTechDomainId(undefined)
     setKeyword('')
@@ -159,7 +156,6 @@ const TechDomainPage: React.FC = () => {
     setPage(1)
   }
 
-  // 处理表格分页变化
   const handleTableChange = (newPagination: TablePaginationConfig) => {
     setPage(newPagination.current || 1)
     setPageSize(newPagination.pageSize || 10)

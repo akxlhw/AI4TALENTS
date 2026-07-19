@@ -62,7 +62,17 @@ interface SearchTabProps {
   onAddToReference: (talentId: number, talentName: string) => void
 }
 
-const SEARCH_STATE_KEY = 'search_state'
+interface SearchUrlState {
+  q: string
+  page: number
+  role?: string
+  school?: number
+  minCit?: number
+  country?: string
+  techDomain?: number
+  sortField: string
+  order: 'desc' | 'asc'
+}
 
 const SearchTab: React.FC<SearchTabProps> = ({
   countryOptions,
@@ -109,55 +119,46 @@ const SearchTab: React.FC<SearchTabProps> = ({
     { key: 'Escape', action: () => { if (compareModalVisible) setCompareModalVisible(false) } },
   ])
 
-  // 从 sessionStorage 恢复搜索状态
-  const getSavedSearchState = () => {
-    try {
-      const saved = sessionStorage.getItem(SEARCH_STATE_KEY)
-      if (saved) {
-        return JSON.parse(saved)
-      }
-    } catch { /* ignore */ }
-    return null
-  }
-
-  // Initialize from URL or restore from sessionStorage
+  // URL is the single source of truth for search state. Every user action
+  // (search/filter/sort/page) updates the URL via updateUrl; this effect
+  // re-syncs the UI and re-runs the search — covering mount, shared links,
+  // and browser back/forward navigation.
   useEffect(() => {
-    const savedState = getSavedSearchState()
-    const q = urlSearchParams.get('q')
-
-    if (q) {
-      if (savedState && savedState.query === q && savedState.results?.length > 0) {
-        setQuery(savedState.query)
-        setResults(savedState.results)
-        setTotal(savedState.total)
-        setTookMs(savedState.tookMs)
-        setSearchModeUsed(savedState.searchModeUsed)
-        setFulltextMatchCount(savedState.fulltextMatchCount || 0)
-        setSemanticMatchCount(savedState.semanticMatchCount || 0)
-        setPage(savedState.page || 1)
-      } else {
-        setQuery(q)
-        performSearch(q, 1)
-      }
-    } else if (savedState) {
-      setQuery(savedState.query || '')
-      setResults(savedState.results || [])
-      setTotal(savedState.total || 0)
-      setTookMs(savedState.tookMs || null)
-      setSearchModeUsed(savedState.searchModeUsed || null)
-      setFulltextMatchCount(savedState.fulltextMatchCount || 0)
-      setSemanticMatchCount(savedState.semanticMatchCount || 0)
-      setPage(savedState.page || 1)
-    } else {
-      loadAllTalents()
+    const tab = urlSearchParams.get('tab')
+    if (tab && tab !== 'search') return
+    const s: SearchUrlState = {
+      q: urlSearchParams.get('q') || '',
+      page: parseInt(urlSearchParams.get('page') || '1', 10),
+      role: urlSearchParams.get('role_type') || undefined,
+      school: urlSearchParams.get('school_id') ? Number(urlSearchParams.get('school_id')) : undefined,
+      minCit: urlSearchParams.get('min_citations') ? Number(urlSearchParams.get('min_citations')) : undefined,
+      country: urlSearchParams.get('country') || undefined,
+      techDomain: urlSearchParams.get('tech_domain') ? Number(urlSearchParams.get('tech_domain')) : undefined,
+      sortField: urlSearchParams.get('sort_by') || 'cited_by_count',
+      order: (urlSearchParams.get('sort_order') as 'desc' | 'asc') || 'desc',
     }
+    setQuery(s.q)
+    setRoleFilter(s.role)
+    setSchoolFilter(s.school)
+    setMinCitations(s.minCit)
+    setCountryFilter(s.country)
+    setTechDomainFilter(s.techDomain)
+    setSortBy(s.sortField)
+    setSortOrder(s.order)
+    performSearch(s.q, s.page, s)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [urlSearchParams])
 
-  const loadAllTalents = async (pageNum: number = 1) => {
+  const loadAllTalents = async (pageNum: number = 1, filters: SearchUrlState) => {
     setSearchLoading(true)
     try {
-      const response = await api.talents.list({ page: pageNum, page_size: pageSize })
+      const response = await api.talents.list({
+        page: pageNum,
+        page_size: pageSize,
+        role_type: filters.role,
+        school_id: filters.school,
+        country_code: filters.country,
+      })
       const items: SearchTalent[] = (response.data.items || []).map((item: SearchTalent) => ({
         talent_id: item.talent_id,
         name: item.name,
@@ -187,8 +188,8 @@ const SearchTab: React.FC<SearchTabProps> = ({
     }
   }
 
-  const performSearch = async (searchQuery: string, pageNum: number) => {
-    if (!searchQuery.trim()) return loadAllTalents(pageNum)
+  const performSearch = async (searchQuery: string, pageNum: number, filters: SearchUrlState) => {
+    if (!searchQuery.trim()) return loadAllTalents(pageNum, filters)
     setSearchLoading(true)
     setTookMs(null)
     setSearchModeUsed(null)
@@ -196,9 +197,11 @@ const SearchTab: React.FC<SearchTabProps> = ({
       const response = await api.enhancedSearch.search({
         q: searchQuery.trim(),
         mode: 'hybrid',
-        role_type: roleFilter,
-        school_id: schoolFilter,
-        min_citations: minCitations,
+        role_type: filters.role,
+        school_id: filters.school,
+        min_citations: filters.minCit,
+        country_code: filters.country,
+        tech_domain_id: filters.techDomain,
         page: pageNum,
         page_size: pageSize,
       })
@@ -229,17 +232,6 @@ const SearchTab: React.FC<SearchTabProps> = ({
       setFulltextMatchCount(response.data.fulltext_count || 0)
       setSemanticMatchCount(response.data.semantic_count || 0)
       setPage(pageNum)
-
-      sessionStorage.setItem(SEARCH_STATE_KEY, JSON.stringify({
-        query: searchQuery.trim(),
-        results: items,
-        total: response.data.total || items.length,
-        tookMs: response.data.took_ms || null,
-        searchModeUsed: response.data.mode || 'hybrid',
-        fulltextMatchCount: response.data.fulltext_count || 0,
-        semanticMatchCount: response.data.semantic_count || 0,
-        page: pageNum,
-      }))
     } catch {
       message.error('搜索失败，请重试')
     } finally {
@@ -247,25 +239,37 @@ const SearchTab: React.FC<SearchTabProps> = ({
     }
   }
 
+  // Push a URL change; the effect above turns it into a new search
+  const updateUrl = (changes: Record<string, string | undefined>) => {
+    const params = new URLSearchParams(urlSearchParams)
+    Object.entries(changes).forEach(([key, value]) => {
+      if (value === undefined || value === '') params.delete(key)
+      else params.set(key, value)
+    })
+    params.set('tab', 'search')
+    navigate(`/search-recommend?${params.toString()}`)
+  }
+
   const handleSearch = (value: string) => {
-    setQuery(value)
-    navigate(`/search-recommend?tab=search${value.trim() ? `&q=${encodeURIComponent(value.trim())}` : ''}`)
-    performSearch(value, 1)
+    updateUrl({ q: value.trim() || undefined, page: undefined })
   }
 
   const handleTableChange = (pagination: TablePaginationConfig) => {
-    performSearch(query, pagination.current || 1)
+    const next = pagination.current || 1
+    updateUrl({ page: next > 1 ? String(next) : undefined })
   }
 
   const handleResetFilters = () => {
-    setRoleFilter(undefined)
-    setSchoolFilter(undefined)
-    setMinCitations(undefined)
-    setCountryFilter(undefined)
-    setTechDomainFilter(undefined)
-    setSortBy('cited_by_count')
-    setSortOrder('desc')
-    performSearch(query, 1)
+    updateUrl({
+      role_type: undefined,
+      school_id: undefined,
+      min_citations: undefined,
+      country: undefined,
+      tech_domain: undefined,
+      sort_by: undefined,
+      sort_order: undefined,
+      page: undefined,
+    })
   }
 
   const handleExportRequest = (format: 'csv' | 'xlsx') => {
@@ -315,7 +319,14 @@ const SearchTab: React.FC<SearchTabProps> = ({
   }
 
   const sortMenu = {
-    onClick: (e: { key: string }) => { const [field, order] = e.key.split('-'); setSortBy(field); setSortOrder(order as 'desc' | 'asc'); performSearch(query, 1) },
+    onClick: (e: { key: string }) => {
+      const [field, order] = e.key.split('-')
+      updateUrl({
+        sort_by: field === 'cited_by_count' ? undefined : field,
+        sort_order: order === 'desc' ? undefined : order,
+        page: undefined,
+      })
+    },
     items: [
       { key: 'cited_by_count-desc', label: '引用数 (高到低)' },
       { key: 'cited_by_count-asc', label: '引用数 (低到高)' },
@@ -489,11 +500,11 @@ const SearchTab: React.FC<SearchTabProps> = ({
           <Col span={24}>
             <Space size={8} wrap>
               <Text type="secondary">筛选:</Text>
-              <Select placeholder="技术领域" value={techDomainFilter} onChange={(val) => { setTechDomainFilter(val); performSearch(query, 1) }} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techDomainOptions} />
-              <Select placeholder="国家" value={countryFilter} onChange={(val) => { setCountryFilter(val); performSearch(query, 1) }} allowClear showSearch optionFilterProp="label" style={{ width: 120 }} options={countryOptions} />
-              <Select placeholder="院校机构" value={schoolFilter} onChange={(val) => { setSchoolFilter(val); performSearch(query, 1) }} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
-              <Select placeholder="角色" value={roleFilter} onChange={(val) => { setRoleFilter(val); performSearch(query, 1) }} allowClear style={{ width: 140 }} options={[{ value: 'professor', label: '教授/研究员' }, { value: 'student', label: '学生' }, { value: 'graduated', label: '毕业生' }]} />
-              <Select placeholder="最少引用" value={minCitations} onChange={(val) => { setMinCitations(val); performSearch(query, 1) }} allowClear style={{ width: 120 }} options={[{ value: 100, label: '100次以上' }, { value: 500, label: '500次以上' }, { value: 1000, label: '1000次以上' }]} />
+              <Select placeholder="技术领域" value={techDomainFilter} onChange={(val) => updateUrl({ tech_domain: val ? String(val) : undefined, page: undefined })} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techDomainOptions} />
+              <Select placeholder="国家" value={countryFilter} onChange={(val) => updateUrl({ country: val || undefined, page: undefined })} allowClear showSearch optionFilterProp="label" style={{ width: 120 }} options={countryOptions} />
+              <Select placeholder="院校机构" value={schoolFilter} onChange={(val) => updateUrl({ school_id: val ? String(val) : undefined, page: undefined })} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
+              <Select placeholder="角色" value={roleFilter} onChange={(val) => updateUrl({ role_type: val || undefined, page: undefined })} allowClear style={{ width: 140 }} options={[{ value: 'professor', label: '教授/研究员' }, { value: 'student', label: '学生' }, { value: 'graduated', label: '毕业生' }]} />
+              <Select placeholder="最少引用" value={minCitations} onChange={(val) => updateUrl({ min_citations: val ? String(val) : undefined, page: undefined })} allowClear style={{ width: 120 }} options={[{ value: 100, label: '100次以上' }, { value: 500, label: '500次以上' }, { value: 1000, label: '1000次以上' }]} />
               {hasActiveFilters && <Button type="link" icon={<ReloadOutlined />} onClick={handleResetFilters}>重置筛选</Button>}
             </Space>
           </Col>
@@ -524,7 +535,15 @@ const SearchTab: React.FC<SearchTabProps> = ({
             rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
             pagination={{ current: page, pageSize, total, showSizeChanger: false, showTotal: (t) => `共 ${t} 条结果` }}
             onChange={handleTableChange}
-            locale={{ emptyText: <Empty description={query ? `未找到与"${query}"相关的人才` : '暂无人才数据'} /> }}
+            locale={{
+              emptyText: query ? (
+                <Empty description={`未找到与"${query}"相关的人才`}>
+                  <Button size="small" onClick={handleResetFilters}>清除搜索条件</Button>
+                </Empty>
+              ) : (
+                <Empty description="暂无人才数据" />
+              ),
+            }}
           />
         </Spin>
       </Card>

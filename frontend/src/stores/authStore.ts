@@ -10,6 +10,7 @@ import { message } from 'antd'
 import { api } from '../services/api'
 import { applyDomainCssVars } from '../theme'
 import type { User } from '../types'
+import { logger } from '../utils/logger'
 
 interface AuthState {
   user: User | null
@@ -60,7 +61,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       const response = await api.auth.me()
       set({ user: response.data })
     } catch (err) {
-      console.error('Failed to refresh user:', err)
+      logger.error('Failed to refresh user:', err)
     }
   },
 }))

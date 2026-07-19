@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { logger } from '../../utils/logger'
 import {
   Card,
   Form,
@@ -67,7 +68,8 @@ const FeedbackPage: React.FC = () => {
       setMySuggestions(res.data.items || [])
       setMyTotal(res.data.total || 0)
     } catch (e) {
-      console.error('Failed to load suggestions', e)
+      logger.error('Failed to load suggestions', e)
+      message.error('加载反馈列表失败')
     } finally {
       setLoadingList(false)
     }
