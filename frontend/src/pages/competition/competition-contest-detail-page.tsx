@@ -177,12 +177,14 @@ const CompetitionContestDetailPage: React.FC = () => {
       dataIndex: 'handle',
       render: (handle: string | null, r) => {
         if (handle == null) return <Text type="secondary">-</Text>
+        // 无账号源用 name: 伪 handle 作身份键，展示时回落到真实姓名
+        const display = handle.startsWith('name:') ? (r.real_name ?? handle) : handle
         return (
           <div>
             {r.talent_id != null ? (
-              <a onClick={() => navigate(`/competition/talents/${r.talent_id}`)}>{handle}</a>
+              <a onClick={() => navigate(`/competition/talents/${r.talent_id}`)}>{display}</a>
             ) : (
-              <Text>{handle}</Text>
+              <Text>{display}</Text>
             )}
             {r.team_name && (
               <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>

@@ -124,11 +124,13 @@ const TalentCard: React.FC<{ talent: CompTalentSummary; onClick: () => void }> =
           src={t.avatar_url}
           style={{ background: compTheme.gradient, fontSize: 18, fontWeight: 600, flexShrink: 0 }}
         >
-          {t.handle.charAt(0).toUpperCase()}
+          {(t.handle.startsWith('name:') ? (t.real_name ?? t.handle) : t.handle)
+            .charAt(0)
+            .toUpperCase()}
         </Avatar>
         <div style={{ flex: 1, minWidth: 0 }}>
           <Text strong ellipsis style={{ fontSize: 15, display: 'block' }}>
-            {t.handle}
+            {t.handle.startsWith('name:') ? (t.real_name ?? t.handle) : t.handle}
           </Text>
           <RankTitleTag title={t.rank_title} />
         </div>

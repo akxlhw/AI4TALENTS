@@ -57,6 +57,7 @@ export interface CompLeaderboardEntry {
   rank: number | null
   talent_id: number | null
   handle: string | null
+  real_name: string | null
   school: string | null
   country_code: string | null
   avatar_url: string | null
@@ -104,7 +105,7 @@ export interface CompOverviewOut {
   total_series: number
   total_medalists: number
   total_countries: number
-  top_talents: CompTalentSummary[]
+  top_medalists: CompTalentSummary[]
   recent_contests: CompContestSummary[]
 }
 

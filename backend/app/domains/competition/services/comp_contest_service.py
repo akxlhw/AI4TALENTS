@@ -70,6 +70,7 @@ class CompContestService:
                     rank=result.rank,
                     talent_id=talent.talent_id,
                     handle=talent.handle,
+                    real_name=talent.real_name,
                     school=talent.school,
                     country_code=talent.country_code,
                     avatar_url=talent.avatar_url,

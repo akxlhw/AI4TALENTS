@@ -144,6 +144,7 @@ async def test_contests_list_and_detail(user_client: AsyncClient, seeded: None) 
     assert len(detail["results"]) == 2
     assert detail["results"][0]["handle"] == "tourist"  # rank asc
     assert detail["results"][0]["rating_after"] == 3948
+    assert detail["results"][0]["real_name"] == "Gennady Korotkevich"  # name: 前缀问题的展示修复依赖该字段
 
     assert (await user_client.get("/api/v1/comp/contests/999999")).status_code == 404
 
@@ -157,7 +158,7 @@ async def test_overview_and_series(user_client: AsyncClient, seeded: None) -> No
     assert data["total_contests"] == 1
     assert data["total_medalists"] == 1
     assert data["total_countries"] == 2
-    assert data["top_talents"][0]["handle"] == "tourist"
+    assert data["top_medalists"][0]["handle"] == "tourist"  # gold > bronze in medal sort
     assert data["recent_contests"][0]["name"] == "Codeforces Round 951 (Div. 1)"
 
     response = await user_client.get("/api/v1/comp/series")

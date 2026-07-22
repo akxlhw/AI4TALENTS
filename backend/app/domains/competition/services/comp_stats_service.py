@@ -23,7 +23,7 @@ class CompStatsService:
         total_countries = await self.repo.count_countries()
         series_rows = await self.repo.list_series_with_counts()
         enabled_series = sum(1 for s, _, _ in series_rows if s.is_enabled)
-        top = await self.repo.top_rated_talents(limit=10)
+        top = await self.repo.top_medalists(limit=10)
         recent_rows, _ = await self.repo.list_contests(page=1, page_size=5)
         return CompOverviewOut(
             total_talents=total_talents,
@@ -31,7 +31,7 @@ class CompStatsService:
             total_series=enabled_series,
             total_medalists=total_medalists,
             total_countries=total_countries,
-            top_talents=[talent_summary(t) for t in top],
+            top_medalists=[talent_summary(t) for t in top],
             recent_contests=[contest_summary(c, rc) for c, rc in recent_rows],
         )
 

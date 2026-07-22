@@ -360,12 +360,23 @@ class CompetitionRepository:
             )
         ) or 0
 
-    async def top_rated_talents(self, limit: int = 10) -> list[CompTalent]:
+    async def top_medalists(self, limit: int = 10) -> list[CompTalent]:
+        """Cross-source leaderboard: medalists ordered gold → silver → bronze."""
         items = (
             await self.session.scalars(
                 select(CompTalent)
-                .where(CompTalent.is_visible.is_(True), CompTalent.current_rating.isnot(None))
-                .order_by(CompTalent.current_rating.desc())
+                .where(
+                    CompTalent.is_visible.is_(True),
+                    (CompTalent.medals_gold + CompTalent.medals_silver + CompTalent.medals_bronze)
+                    > 0,
+                )
+                .order_by(
+                    CompTalent.medals_gold.desc(),
+                    CompTalent.medals_silver.desc(),
+                    CompTalent.medals_bronze.desc(),
+                    CompTalent.current_rating.desc().nulls_last(),
+                    CompTalent.talent_id,
+                )
                 .limit(limit)
             )
         ).all()

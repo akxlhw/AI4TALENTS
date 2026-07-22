@@ -97,6 +97,7 @@ class CompLeaderboardEntry(BaseModel):
     rank: int | None = None
     talent_id: int | None = None
     handle: str | None = None
+    real_name: str | None = None
     school: str | None = None
     country_code: str | None = None
     avatar_url: str | None = None
@@ -152,5 +153,5 @@ class CompOverviewOut(BaseModel):
     total_series: int = 0
     total_medalists: int = 0
     total_countries: int = 0
-    top_talents: list[CompTalentSummary] = Field(default_factory=list)
+    top_medalists: list[CompTalentSummary] = Field(default_factory=list)
     recent_contests: list[CompContestSummary] = Field(default_factory=list)

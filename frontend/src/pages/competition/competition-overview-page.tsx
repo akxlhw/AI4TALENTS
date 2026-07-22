@@ -224,13 +224,13 @@ const CompetitionOverviewPage: React.FC = () => {
         </Row>
 
         <Row gutter={[16, 16]}>
-          {/* 积分榜预览 */}
+          {/* 奖牌榜预览 */}
           <Col xs={24} lg={14}>
             <Card
               title={
                 <span>
                   <TrophyOutlined style={{ color: compTheme.badgeBg, marginRight: 8 }} />
-                  积分榜 Top 10
+                  奖牌榜 Top 10
                 </span>
               }
               extra={
@@ -241,7 +241,7 @@ const CompetitionOverviewPage: React.FC = () => {
               style={{ borderRadius: 12, height: '100%' }}
               styles={{ body: { padding: 8 } }}
             >
-              {data.top_talents.slice(0, 10).map((t, i) => (
+              {data.top_medalists.slice(0, 10).map((t, i) => (
                 <div
                   key={t.talent_id}
                   onClick={() => navigate(`/competition/talents/${t.talent_id}`)}
@@ -261,7 +261,7 @@ const CompetitionOverviewPage: React.FC = () => {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <Text strong ellipsis style={{ fontSize: 14 }}>
-                        {t.handle}
+                        {t.handle.startsWith('name:') ? (t.real_name ?? t.handle) : t.handle}
                       </Text>
                       <RankTitleTag title={t.rank_title} />
                     </div>
@@ -275,15 +275,14 @@ const CompetitionOverviewPage: React.FC = () => {
                     bronze={t.medals_bronze}
                   />
                   <Text
-                    strong
+                    type="secondary"
                     style={{
-                      color: compTheme.badgeBg,
-                      fontSize: 15,
+                      fontSize: 12,
                       minWidth: 52,
                       textAlign: 'right',
                     }}
                   >
-                    {t.current_rating ?? '-'}
+                    {t.contests_count} 场
                   </Text>
                 </div>
               ))}

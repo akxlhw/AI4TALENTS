@@ -289,12 +289,19 @@ const CompetitionTalentDetailPage: React.FC = () => {
                   src={talent.avatar_url}
                   style={{ background: compTheme.gradient, fontSize: 32, fontWeight: 700 }}
                 >
-                  {talent.handle.charAt(0).toUpperCase()}
+                  {(talent.handle.startsWith('name:')
+                    ? (talent.real_name ?? talent.handle)
+                    : talent.handle
+                  )
+                    .charAt(0)
+                    .toUpperCase()}
                 </Avatar>
                 <Title level={4} style={{ marginTop: 12, marginBottom: 4 }}>
-                  {talent.handle}
+                  {talent.handle.startsWith('name:')
+                    ? (talent.real_name ?? talent.handle)
+                    : talent.handle}
                 </Title>
-                {talent.real_name && (
+                {talent.real_name && !talent.handle.startsWith('name:') && (
                   <Text type="secondary" style={{ display: 'block' }}>
                     {talent.real_name}
                   </Text>
