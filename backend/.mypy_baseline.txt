@@ -860,7 +860,7 @@ app/domains/competition/services/comp_contest_service.py:77
 app/domains/competition/services/comp_contest_service.py:78
 app/domains/competition/services/comp_contest_service.py:79
 app/domains/competition/services/comp_contest_service.py:80
-app/domains/competition/services/comp_contest_service.py:86
+app/domains/competition/services/comp_contest_service.py:81
 app/domains/competition/services/comp_contest_service.py:87
 app/domains/competition/services/comp_contest_service.py:88
 app/domains/competition/services/comp_contest_service.py:89
@@ -868,6 +868,7 @@ app/domains/competition/services/comp_contest_service.py:90
 app/domains/competition/services/comp_contest_service.py:91
 app/domains/competition/services/comp_contest_service.py:92
 app/domains/competition/services/comp_contest_service.py:93
+app/domains/competition/services/comp_contest_service.py:94
 app/domains/competition/services/comp_import_service.py:247
 app/domains/competition/services/comp_import_service.py:262
 app/domains/competition/services/comp_import_service.py:283

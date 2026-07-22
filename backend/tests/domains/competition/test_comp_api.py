@@ -144,7 +144,9 @@ async def test_contests_list_and_detail(user_client: AsyncClient, seeded: None) 
     assert len(detail["results"]) == 2
     assert detail["results"][0]["handle"] == "tourist"  # rank asc
     assert detail["results"][0]["rating_after"] == 3948
-    assert detail["results"][0]["real_name"] == "Gennady Korotkevich"  # name: 前缀问题的展示修复依赖该字段
+    assert (
+        detail["results"][0]["real_name"] == "Gennady Korotkevich"
+    )  # name: 前缀问题的展示修复依赖该字段
 
     assert (await user_client.get("/api/v1/comp/contests/999999")).status_code == 404
 
