@@ -45,7 +45,7 @@ class CompSeries(Base, TimestampMixin):
 
 
 class CompContest(Base, TimestampMixin):
-    """A single contest instance (e.g. Codeforces Round 951 Div. 1)."""
+    """A single contest instance (e.g. ICPC World Finals 2024)."""
 
     __tablename__ = "comp_contest"
     __table_args__ = (
