@@ -25,18 +25,11 @@ const compTheme = domainThemes.competition
 // 名次圈前三：金 / 银 / 铜
 const RANK_CIRCLE_COLORS = ['#F6AD55', '#A0AEC0', '#D69E2E']
 
-// Codeforces 段位配色（newbie 灰 → legendary grandmaster 深红）
+// 段位配色（通用，适配多赛事段位体系）
 const RANK_TAG_COLORS: Record<string, string> = {
-  newbie: 'default',
-  pupil: 'green',
-  specialist: 'cyan',
-  expert: 'blue',
-  'candidate master': 'purple',
-  master: 'orange',
-  'international master': 'volcano',
-  grandmaster: 'red',
-  'international grandmaster': 'red',
-  'legendary grandmaster': '#cf1322',
+  gold: 'gold',
+  silver: 'default',
+  bronze: '#D69E2E',
 }
 
 const rankCircleStyle = (rank: number): React.CSSProperties => ({
@@ -145,7 +138,7 @@ const CompetitionOverviewPage: React.FC = () => {
         <Paragraph
           style={{ color: 'rgba(255,255,255,0.85)', fontSize: 15, margin: 0, maxWidth: 640 }}
         >
-          覆盖 Codeforces 等全球顶级赛事 · 发现顶尖竞赛选手
+          覆盖 ICPC / IOI / IMO / IPhO 等全球顶级赛事 · 发现顶尖竞赛选手
         </Paragraph>
       </div>
     </div>
@@ -166,7 +159,7 @@ const CompetitionOverviewPage: React.FC = () => {
               />
               <Title level={4}>暂无竞赛人才数据</Title>
               <Paragraph type="secondary">
-                数据库中还没有竞赛人才，请先在系统配置中导入 Codeforces 赛事榜单数据
+                数据库中还没有竞赛人才，请先在系统配置中导入赛事榜单数据
               </Paragraph>
               <Button
                 type="primary"

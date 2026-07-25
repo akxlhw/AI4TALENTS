@@ -27,7 +27,7 @@ from app.domains.shared.models.base import TimestampMixin
 
 
 class CompSeries(Base, TimestampMixin):
-    """Contest series/brand (codeforces, icpc, ioi, imo, ipho, kaggle, ...)."""
+    """Contest series/brand (icpc, ioi, imo, ipho, kaggle, ...)."""
 
     __tablename__ = "comp_series"
 

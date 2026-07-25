@@ -1,1 +1,1 @@
-"""Competition talent domain — competitive contest talents (Codeforces first)."""
+"""Competition talent domain — competitive contest talents (ICPC, IOI, etc.)."""

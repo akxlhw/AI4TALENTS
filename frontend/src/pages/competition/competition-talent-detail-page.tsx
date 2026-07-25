@@ -397,7 +397,7 @@ const CompetitionTalentDetailPage: React.FC = () => {
                   target="_blank"
                   style={{ marginTop: 16 }}
                 >
-                  Codeforces 主页
+                  选手主页
                 </Button>
               )}
             </Card>

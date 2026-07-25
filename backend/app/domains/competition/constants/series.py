@@ -1,21 +1,13 @@
 """Contest series registry — single source of truth for seeding and display.
 
 Codes follow the user's priority list (2026-07-18): ICPC, IOI/IMO/IPhO,
-IMC, CTF, Kaggle, RoboCup, ASC/SC/ISC supercomputing; Codeforces and
-AtCoder are companion sources. IChO/IBO are deferred (not pre-seeded).
+IMC, CTF, Kaggle, RoboCup, ASC/SC/ISC supercomputing; AtCoder is a
+companion source. IChO/IBO are deferred (not pre-seeded).
 """
 
 from __future__ import annotations
 
 SERIES: list[dict] = [
-    {
-        "code": "codeforces",
-        "name": "Codeforces",
-        "name_en": "Codeforces",
-        "homepage": "https://codeforces.com",
-        "description": "全球最大算法竞赛平台，按 rating 评定段位（Newbie → Legendary Grandmaster）",
-        "is_enabled": True,  # M1 首发源
-    },
     {
         "code": "icpc",
         "name": "国际大学生程序设计竞赛",
@@ -115,17 +107,3 @@ SERIES: list[dict] = [
 ]
 
 SERIES_BY_CODE: dict[str, dict] = {s["code"]: s for s in SERIES}
-
-# Codeforces rank titles in ascending order (display helpers)
-CF_RANK_TITLES = [
-    "newbie",
-    "pupil",
-    "specialist",
-    "expert",
-    "candidate master",
-    "master",
-    "international master",
-    "grandmaster",
-    "international grandmaster",
-    "legendary grandmaster",
-]

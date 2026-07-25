@@ -38,18 +38,11 @@ const compTheme = domainThemes.competition
 
 const PAGE_SIZE = 12
 
-// Codeforces 段位列表（值为后端存储的原始字符串）
+// 段位列表（通用，适配多赛事）
 const RANK_OPTIONS = [
-  { label: 'Newbie', value: 'newbie' },
-  { label: 'Pupil', value: 'pupil' },
-  { label: 'Specialist', value: 'specialist' },
-  { label: 'Expert', value: 'expert' },
-  { label: 'Candidate Master', value: 'candidate master' },
-  { label: 'Master', value: 'master' },
-  { label: 'International Master', value: 'international master' },
-  { label: 'Grandmaster', value: 'grandmaster' },
-  { label: 'International Grandmaster', value: 'international grandmaster' },
-  { label: 'Legendary Grandmaster', value: 'legendary grandmaster' },
+  { label: 'Gold', value: 'gold' },
+  { label: 'Silver', value: 'silver' },
+  { label: 'Bronze', value: 'bronze' },
 ]
 
 const SORT_OPTIONS = [

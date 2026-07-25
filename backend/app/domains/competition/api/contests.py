@@ -20,7 +20,7 @@ router = APIRouter(prefix="/comp", tags=["Competition Talent"])
     summary="List contests",
 )
 async def list_comp_contests(
-    series_code: str | None = Query(None, description="Series code filter (e.g. codeforces)"),
+    series_code: str | None = Query(None, description="Series code filter (e.g. icpc, ioi)"),
     season: str | None = Query(None, description="Season filter (e.g. 2024)"),
     keyword: str | None = Query(None, description="Contest name keyword (fuzzy)"),
     year_gte: int | None = Query(None, ge=1990, le=2100, description="Start-year lower bound"),
