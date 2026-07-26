@@ -64,25 +64,23 @@ const AdvisorNetworkChart: React.FC<AdvisorNetworkChartProps> = ({
     <div>
       <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
         金边 👑 = 创始人 · 深色 = 导师 · 浅色 = 学生 · 灰色分组 = 组织归类（非师承） ·
-        单击节点展开/收起，双击查看人物详情 · 滚轮缩放，拖拽平移
+        单击节点展开/收起，Shift+单击查看人物详情 · 滚轮缩放，拖拽平移
       </div>
       <ReactECharts
         option={option}
         notMerge
         style={{ height: 560 }}
         onEvents={{
-          click: (params: { data?: TreeNode }) => {
+          click: (params: {
+            data?: TreeNode
+            event?: { event?: { shiftKey?: boolean } }
+          }) => {
             const d = params.data
-            // Leaf node with a talent record → navigate; parents expand natively
-            if (d && !d.has_children && d.talent_id && onNodeClick) {
-              onNodeClick(d.name, d.talent_id)
-            }
-          },
-          // Parents toggle expand on click, so offer dblclick to open their
-          // detail page (works for leaves too)
-          dblclick: (params: { data?: TreeNode }) => {
-            const d = params.data
-            if (d?.talent_id && onNodeClick) {
+            if (!d || !onNodeClick) return
+            // Shift+click opens the detail page for ANY node with a talent
+            // record — plain click stays reserved for expand/collapse, so the
+            // two gestures never fight over the same node.
+            if (d.talent_id && (params.event?.event?.shiftKey || !d.has_children)) {
               onNodeClick(d.name, d.talent_id)
             }
           },
