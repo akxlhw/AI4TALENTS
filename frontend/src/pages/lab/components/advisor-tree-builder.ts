@@ -63,7 +63,7 @@ function makeVisual(
       symbolSize: size,
       symbolKeepAspect: true,
       itemStyle: { borderColor, borderWidth },
-      label: { show: true, position: 'right', fontSize: opts.founder ? 13 : 11, color: '#333' },
+      label: { show: true, position: 'bottom', fontSize: opts.founder ? 13 : 11, color: '#333' },
       tooltip: { formatter: tooltip },
     }
   }
@@ -77,7 +77,7 @@ function makeVisual(
     },
     label: {
       show: true,
-      position: 'right',
+      position: 'bottom',
       fontSize: opts.founder ? 13 : 11,
       color: '#333',
       formatter: (p: { name?: string }) => (p.name ? `${initialsOf(p.name)} ${p.name}` : ''),
