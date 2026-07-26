@@ -15,7 +15,7 @@ const AdvisorNetworkChart: React.FC<AdvisorNetworkChartProps> = ({
   labName = '实验室',
   onNodeClick,
 }) => {
-  const { root, totalNodes } = useMemo(
+  const { root, totalNodes, leafCount, depth } = useMemo(
     () => buildTree(data.nodes, data.edges, labName),
     [data, labName],
   )
@@ -23,16 +23,22 @@ const AdvisorNetworkChart: React.FC<AdvisorNetworkChartProps> = ({
   // Large labs: collapse student level by default, click to expand
   const initialDepth = totalNodes > 60 ? 1 : 3
 
+  // Fixed-px canvas sized by tree shape, so sibling/level spacing stays
+  // compact and constant (~88px per leaf column, ~150px per level) no
+  // matter how big the tree gets — roam lets the user pan/zoom the overflow.
+  const canvasWidth = Math.max(640, leafCount * 88)
+  const canvasHeight = Math.max(320, depth * 150)
+
   const option: EChartsOption = {
     tooltip: { trigger: 'item', triggerOn: 'mousemove' },
     series: [
       {
         type: 'tree',
         data: [root],
-        top: '6%',
-        left: '6%',
-        bottom: '6%',
-        right: '6%',
+        left: 'center',
+        top: 24,
+        width: canvasWidth,
+        height: canvasHeight,
         orient: 'TB',
         symbol: 'circle',
         symbolSize: 28,
@@ -53,7 +59,7 @@ const AdvisorNetworkChart: React.FC<AdvisorNetworkChartProps> = ({
     <div>
       <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
         金边 👑 = 创始人 · 深色 = 导师 · 浅色 = 学生 · 灰色分组 = 组织归类（非师承） ·
-        点击节点展开/收起，点击学生查看详情 · 滚轮缩放
+        点击节点展开/收起，点击学生查看详情 · 滚轮缩放，拖拽平移
       </div>
       <ReactECharts
         option={option}

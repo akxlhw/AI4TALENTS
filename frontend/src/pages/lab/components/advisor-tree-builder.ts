@@ -30,6 +30,28 @@ export interface TreeNode {
   collapsed?: boolean
 }
 
+export interface BuiltTree {
+  root: TreeNode
+  totalNodes: number
+  /** Leaf count drives canvas width, depth drives canvas height — keeps
+   * per-node spacing constant in px regardless of tree size. */
+  leafCount: number
+  depth: number
+}
+
+function measure(t: TreeNode): { leaves: number; depth: number } {
+  const kids = t.children ?? []
+  if (!kids.length) return { leaves: 1, depth: 1 }
+  let leaves = 0
+  let depth = 0
+  for (const k of kids) {
+    const m = measure(k)
+    leaves += m.leaves
+    depth = Math.max(depth, m.depth)
+  }
+  return { leaves, depth: depth + 1 }
+}
+
 const FOUNDER_GOLD = '#D4AF37'
 const ADVISOR_COLOR = '#0D2B4E'
 const STUDENT_COLOR = '#0EA5E9'
@@ -93,7 +115,7 @@ export function buildTree(
   nodes: NetworkNode[],
   edges: NetworkEdge[],
   labName: string,
-): { root: TreeNode; totalNodes: number } {
+): BuiltTree {
   const byName = new Map(nodes.map(n => [n.name, n]))
   const childrenOf = new Map<string, string[]>()
   const coOf = new Map<string, string[]>()
@@ -152,7 +174,7 @@ export function buildTree(
         ...makeVisual(null, { aggregate: true }, '其他导师', '组织分组（非师承关系）'),
       })
     }
-    return { root: { ...founderTree, children }, totalNodes: nodes.length }
+    return withMeasure({ ...founderTree, children })
   }
 
   // Neutral forest: virtual lab root → all advisors in parallel (sorted by
@@ -160,14 +182,16 @@ export function buildTree(
   const topAdvisors = [...childrenOf.keys()]
     .filter(name => byName.has(name))
     .sort((a, b) => (childrenOf.get(b)?.length ?? 0) - (childrenOf.get(a)?.length ?? 0))
-  return {
-    root: {
-      name: labName,
-      talent_id: null,
-      has_children: true,
-      children: topAdvisors.map(name => toTreeNode(name, new Set())),
-      ...makeVisual(null, { aggregate: true }, labName, ''),
-    },
-    totalNodes: nodes.length,
+  return withMeasure({
+    name: labName,
+    talent_id: null,
+    has_children: true,
+    children: topAdvisors.map(name => toTreeNode(name, new Set())),
+    ...makeVisual(null, { aggregate: true }, labName, ''),
+  })
+
+  function withMeasure(root: TreeNode): BuiltTree {
+    const m = measure(root)
+    return { root, totalNodes: nodes.length, leafCount: m.leaves, depth: m.depth }
   }
 }
