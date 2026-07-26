@@ -64,7 +64,7 @@ const AdvisorNetworkChart: React.FC<AdvisorNetworkChartProps> = ({
     <div>
       <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
         金边 👑 = 创始人 · 深色 = 导师 · 浅色 = 学生 · 灰色分组 = 组织归类（非师承） ·
-        点击节点展开/收起，点击学生查看详情 · 滚轮缩放，拖拽平移
+        单击节点展开/收起，双击查看人物详情 · 滚轮缩放，拖拽平移
       </div>
       <ReactECharts
         option={option}
@@ -75,6 +75,14 @@ const AdvisorNetworkChart: React.FC<AdvisorNetworkChartProps> = ({
             const d = params.data
             // Leaf node with a talent record → navigate; parents expand natively
             if (d && !d.has_children && d.talent_id && onNodeClick) {
+              onNodeClick(d.name, d.talent_id)
+            }
+          },
+          // Parents toggle expand on click, so offer dblclick to open their
+          // detail page (works for leaves too)
+          dblclick: (params: { data?: TreeNode }) => {
+            const d = params.data
+            if (d?.talent_id && onNodeClick) {
               onNodeClick(d.name, d.talent_id)
             }
           },
