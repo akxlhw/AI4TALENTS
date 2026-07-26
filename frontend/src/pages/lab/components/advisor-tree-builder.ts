@@ -129,7 +129,14 @@ export function buildTree(
     }
   }
 
-  const toTreeNode = (name: string, visited: Set<string>): TreeNode => {
+  // collapseFrom: nodes at this depth (counted from their subtree root) that
+  // have children start collapsed; shallower parents start expanded.
+  const toTreeNode = (
+    name: string,
+    visited: Set<string>,
+    depth = 0,
+    collapseFrom = 0,
+  ): TreeNode => {
     const person = byName.get(name) ?? null
     const coList = coOf.get(name) ?? []
     const tooltipExtra = coList.length ? `共同指导：${coList.join('、')}` : ''
@@ -137,13 +144,13 @@ export function buildTree(
       ? []
       : (childrenOf.get(name) ?? []).filter(k => byName.has(k) && !visited.has(k))
     visited.add(name)
-    const childNodes = kids.map(k => toTreeNode(k, visited))
+    const childNodes = kids.map(k => toTreeNode(k, visited, depth + 1, collapseFrom))
     const founder = person?.is_founder === true
     return {
       name,
       talent_id: person?.talent_id ?? null,
       has_children: childNodes.length > 0,
-      ...(childNodes.length ? { children: childNodes } : {}),
+      ...(childNodes.length ? { children: childNodes, collapsed: depth >= collapseFrom } : {}),
       ...makeVisual(person, { founder }, name, tooltipExtra),
     }
   }
@@ -155,32 +162,50 @@ export function buildTree(
 
   const founderNode = nodes.find(n => n.is_founder)
   if (founderNode) {
-    // Founder-pinned: founder is the root; his student subtree + an
-    // organizational "其他导师" aggregate for the remaining advisors.
-    const founderTree = toTreeNode(founderNode.name, new Set())
+    // Founder-pinned: founder is the root. His direct students split into
+    // professors (already advisors themselves — kept as real edges and
+    // expanded one level) and plain students (folded into a "学生" aggregate)
+    // so the lineage chain carries the visual weight, not the flat headcount.
+    const founderTree = toTreeNode(founderNode.name, new Set(), 0, 2)
     const subtree = new Set<string>()
     collectNames(founderTree, subtree)
 
     const otherAdvisorTrees = [...childrenOf.keys()]
       .filter(name => !subtree.has(name) && byName.has(name))
       .sort((a, b) => (childrenOf.get(b)?.length ?? 0) - (childrenOf.get(a)?.length ?? 0))
-      .map(name => toTreeNode(name, new Set(subtree)))
+      .map(name => toTreeNode(name, new Set(subtree), 0, 0))
 
-    const children = [...(founderTree.children ?? [])]
+    const direct = founderTree.children ?? []
+    const professorKids = direct.filter(c => c.children?.length)
+    const plainStudents = direct.filter(c => !c.children?.length)
+
+    const children: TreeNode[] = [...professorKids]
+    if (plainStudents.length) {
+      const label = `学生（${plainStudents.length}）`
+      children.push({
+        name: label,
+        talent_id: null,
+        has_children: true,
+        collapsed: true,
+        children: plainStudents,
+        ...makeVisual(null, { aggregate: true }, label, '创始人的学生（组织分组）'),
+      })
+    }
     if (otherAdvisorTrees.length) {
       children.push({
         name: '其他导师',
         talent_id: null,
         has_children: true,
+        collapsed: true,
         children: otherAdvisorTrees,
         ...makeVisual(null, { aggregate: true }, '其他导师', '组织分组（非师承关系）'),
       })
     }
-    return withMeasure({ ...founderTree, children })
+    return withMeasure({ ...founderTree, children, collapsed: false })
   }
 
   // Neutral forest: virtual lab root → all advisors in parallel (sorted by
-  // student count), each with their own student subtree.
+  // student count), each with their own student subtree (collapsed).
   const topAdvisors = [...childrenOf.keys()]
     .filter(name => byName.has(name))
     .sort((a, b) => (childrenOf.get(b)?.length ?? 0) - (childrenOf.get(a)?.length ?? 0))
@@ -188,7 +213,8 @@ export function buildTree(
     name: labName,
     talent_id: null,
     has_children: true,
-    children: topAdvisors.map(name => toTreeNode(name, new Set())),
+    collapsed: false,
+    children: topAdvisors.map(name => toTreeNode(name, new Set(), 0, 0)),
     ...makeVisual(null, { aggregate: true }, labName, ''),
   })
 

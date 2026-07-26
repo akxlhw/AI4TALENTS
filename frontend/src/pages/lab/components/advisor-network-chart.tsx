@@ -15,28 +15,22 @@ const AdvisorNetworkChart: React.FC<AdvisorNetworkChartProps> = ({
   labName = '实验室',
   onNodeClick,
 }) => {
-  const { root, totalNodes, depth } = useMemo(
-    () => buildTree(data.nodes, data.edges, labName),
-    [data, labName],
-  )
+  const { root } = useMemo(() => buildTree(data.nodes, data.edges, labName), [data, labName])
 
-  // Large labs: collapse student level by default, click to expand
-  const initialDepth = totalNodes > 60 ? 1 : 3
+  // Canvas size follows the INITIALLY VISIBLE tree shape (a collapsed node
+  // counts as one leaf and one level), so sibling spacing stays compact and
+  // constant in px no matter how big the full tree is — roam handles overflow.
+  const { visibleLeafCount, visibleLevels } = useMemo(() => {
+    const leaves = (n: TreeNode): number =>
+      n.collapsed || !n.children?.length
+        ? 1
+        : n.children.reduce((sum, c) => sum + leaves(c), 0)
+    const levels = (n: TreeNode): number =>
+      n.collapsed || !n.children?.length ? 1 : 1 + Math.max(...n.children.map(levels))
+    return { visibleLeafCount: leaves(root), visibleLevels: levels(root) }
+  }, [root])
 
-  // Canvas width follows the INITIALLY VISIBLE leaf count (collapsed subtrees
-  // count as one leaf), so sibling spacing stays ~72px without a canvas that
-  // is sized for a fully-expanded tree the user isn't looking at. Same for
-  // height: only the initially visible levels get rows.
-  const visibleLeafCount = useMemo(() => {
-    const walk = (n: TreeNode, d: number): number => {
-      if (d >= initialDepth || !n.children?.length) return 1
-      return n.children.reduce((sum, c) => sum + walk(c, d + 1), 0)
-    }
-    return walk(root, 0)
-  }, [root, initialDepth])
-
-  const visibleLevels = Math.min(depth, initialDepth + 1)
-  const canvasWidth = Math.max(640, visibleLeafCount * 60)
+  const canvasWidth = Math.max(640, visibleLeafCount * 48)
   const canvasHeight = Math.max(240, visibleLevels * 160)
 
   const option: EChartsOption = {
@@ -53,7 +47,8 @@ const AdvisorNetworkChart: React.FC<AdvisorNetworkChartProps> = ({
         symbol: 'circle',
         symbolSize: 28,
         roam: true,
-        initialTreeDepth: initialDepth,
+        // -1 = no depth-based default; per-node `collapsed` flags decide
+        initialTreeDepth: -1,
         expandAndCollapse: true,
         label: { show: true, position: 'bottom', fontSize: 11, color: '#333' },
         leaves: { label: { show: true, position: 'bottom', fontSize: 11 } },
