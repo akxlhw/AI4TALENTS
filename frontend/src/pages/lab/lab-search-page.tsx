@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Row, Col, Pagination, Typography, Spin, Tag, Tabs, Button, Card } from 'antd'
 import { HomeOutlined, ArrowLeftOutlined } from '@ant-design/icons'
@@ -19,7 +19,14 @@ const LabSearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const state = useLabSearchStore()
-  const [mainTab, setMainTab] = useState<'talents' | 'advisors'>('talents')
+  // Tab state lives in the URL so browser-back from a talent detail page
+  // restores the tab the user came from (e.g. 师从关系)
+  const mainTab = searchParams.get('tab') === 'advisors' ? 'advisors' : 'talents'
+  const setMainTab = (k: 'talents' | 'advisors') => {
+    const p = new URLSearchParams(searchParams)
+    p.set('tab', k)
+    setSearchParams(p)
+  }
 
   useEffect(() => {
     applyDomainCssVars('lab')
@@ -33,6 +40,9 @@ const LabSearchPage: React.FC = () => {
 
   useEffect(() => {
     const query = state.toQuery()
+    // `tab` is page-level UI state, not a store filter — keep it across re-syncs
+    const tab = searchParams.get('tab')
+    if (tab) query.tab = tab
     setSearchParams(query, { replace: true })
     // State object is stable; list individual fields to avoid excessive re-syncs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -234,8 +244,7 @@ const LabSearchPage: React.FC = () => {
         {state.parentLab && profile ? (
           <Tabs
             activeKey={mainTab}
-            onChange={k => setMainTab(k as 'talents' | 'advisors')}
-            items={[
+            onChange={k => setMainTab(k as 'talents' | 'advisors')}            items={[
               {
                 key: 'talents',
                 label: '人才列表',
