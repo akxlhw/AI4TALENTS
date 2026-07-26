@@ -102,7 +102,9 @@ function makeVisual(
       position: 'bottom',
       fontSize: opts.founder ? 13 : 11,
       color: '#333',
-      formatter: (p: { name?: string }) => (p.name ? `${initialsOf(p.name)} ${p.name}` : ''),
+      formatter: opts.aggregate
+        ? undefined
+        : (p: { name?: string }) => (p.name ? `${initialsOf(p.name)} ${p.name}` : ''),
     },
     tooltip: { formatter: tooltip },
   }

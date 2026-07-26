@@ -15,7 +15,7 @@ const AdvisorNetworkChart: React.FC<AdvisorNetworkChartProps> = ({
   labName = '实验室',
   onNodeClick,
 }) => {
-  const { root, totalNodes, leafCount, depth } = useMemo(
+  const { root, totalNodes, depth } = useMemo(
     () => buildTree(data.nodes, data.edges, labName),
     [data, labName],
   )
@@ -23,11 +23,21 @@ const AdvisorNetworkChart: React.FC<AdvisorNetworkChartProps> = ({
   // Large labs: collapse student level by default, click to expand
   const initialDepth = totalNodes > 60 ? 1 : 3
 
-  // Fixed-px canvas sized by tree shape, so sibling/level spacing stays
-  // compact and constant (~88px per leaf column, ~150px per level) no
-  // matter how big the tree gets — roam lets the user pan/zoom the overflow.
-  const canvasWidth = Math.max(640, leafCount * 88)
-  const canvasHeight = Math.max(320, depth * 150)
+  // Canvas width follows the INITIALLY VISIBLE leaf count (collapsed subtrees
+  // count as one leaf), so sibling spacing stays ~72px without a canvas that
+  // is sized for a fully-expanded tree the user isn't looking at. Same for
+  // height: only the initially visible levels get rows.
+  const visibleLeafCount = useMemo(() => {
+    const walk = (n: TreeNode, d: number): number => {
+      if (d >= initialDepth || !n.children?.length) return 1
+      return n.children.reduce((sum, c) => sum + walk(c, d + 1), 0)
+    }
+    return walk(root, 0)
+  }, [root, initialDepth])
+
+  const visibleLevels = Math.min(depth, initialDepth + 1)
+  const canvasWidth = Math.max(640, visibleLeafCount * 60)
+  const canvasHeight = Math.max(240, visibleLevels * 160)
 
   const option: EChartsOption = {
     tooltip: { trigger: 'item', triggerOn: 'mousemove' },
