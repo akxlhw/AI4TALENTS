@@ -300,6 +300,8 @@ class LabImportService:
             "email": record.get("email"),
             "social_links": _clean_social_links(record.get("social_links")),
             "photo_url": record.get("photo_url"),
+            "advisor": record.get("advisor"),
+            "co_advisor": record.get("co_advisor"),
             "department": record.get("department"),
             "research_areas": _clean_research_areas(record.get("research_areas")),
             "cohort_year": record.get("cohort_year"),

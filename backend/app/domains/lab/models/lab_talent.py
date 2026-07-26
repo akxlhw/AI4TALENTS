@@ -56,6 +56,10 @@ class LabTalent(Base, TimestampMixin):
     source_detail_url = Column(String(1000), nullable=True)
     collected_at = Column(DateTime, nullable=True)
 
+    # Mentorship (extracted from bio detail pages by crawler)
+    advisor = Column(String(255), nullable=True)  # primary advisor name
+    co_advisor = Column(String(255), nullable=True)  # co-advisor name if any
+
     # Dedup / identity
     dedup_hash = Column(String(64), nullable=False, unique=True, index=True)
     unified_person_id = Column(
@@ -100,6 +104,8 @@ class LabTalent(Base, TimestampMixin):
                 "email": self.email,
                 "social_links": self.social_links or {},
                 "photo_url": self.photo_url,
+                "advisor": self.advisor,
+                "co_advisor": self.co_advisor,
                 "cohort_source": self.cohort_source,
                 "source_url": self.source_url,
                 "source_detail_url": self.source_detail_url,

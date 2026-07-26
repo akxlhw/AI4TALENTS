@@ -14,6 +14,7 @@ from app.domains.lab.schemas.lab_talent import (
     LabTalentDetail,
     LabTalentSummary,
     LabWithTalents,
+    MentorshipResponse,
 )
 
 
@@ -83,6 +84,48 @@ class LabTalentService:
             links["linkedin"] = _linkedin_search_url(data["name"], affiliation)
         data["social_links"] = links
         return LabTalentDetail(**data)
+
+    async def get_mentorship(self, talent_id: int) -> MentorshipResponse:
+        """Get mentorship info: advisors + students supervised by this talent."""
+        from app.domains.lab.schemas.lab_talent import AdvisorStudentItem
+
+        talent = await self.repo.get_by_id(talent_id)
+        if not talent:
+            raise NotFoundError("LabTalent", talent_id)
+
+        # Try to find advisor's talent_id (if advisor is also in DB)
+        advisor_id = None
+        co_advisor_id = None
+        if talent.advisor:
+            adv = await self.repo.find_by_name(talent.advisor)
+            if adv:
+                advisor_id = adv.talent_id
+        if talent.co_advisor:
+            co_adv = await self.repo.find_by_name(talent.co_advisor)
+            if co_adv:
+                co_advisor_id = co_adv.talent_id
+
+        # Reverse lookup: students whose advisor is this person
+        students_raw = await self.repo.get_students(talent.name)
+        students = [
+            AdvisorStudentItem(
+                talent_id=row.talent_id,
+                name=row.name,
+                role_type=row.role_type,
+                academic_level=row.academic_level,
+                cohort_year=row.cohort_year,
+                parent_lab=row.parent_lab,
+            )
+            for row in students_raw
+        ]
+
+        return MentorshipResponse(
+            advisor=talent.advisor,
+            co_advisor=talent.co_advisor,
+            advisor_talent_id=advisor_id,
+            co_advisor_talent_id=co_advisor_id,
+            students=students,
+        )
 
     async def list_labs(self, *, preview_limit: int = 6) -> list[LabWithTalents]:
         """List parent labs with a preview of their talents."""

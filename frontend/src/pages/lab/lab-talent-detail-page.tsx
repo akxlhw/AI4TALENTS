@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { TabsProps } from 'antd'
 import { Row, Col, Card, Descriptions, Tag, Typography, Button, Space, Divider, Spin, Tabs } from 'antd'
-import { ArrowLeftOutlined, HomeOutlined } from '@ant-design/icons'
-import { useLabTalent, useHomepagePreview } from '../../hooks/useLabQueries'
+import { ArrowLeftOutlined, HomeOutlined, TeamOutlined, UserSwitchOutlined } from '@ant-design/icons'
+import { useLabTalent, useHomepagePreview, useMentorship } from '../../hooks/useLabQueries'
 import { applyDomainCssVars } from '../../theme'
 import { getErrorMessage } from '../../utils'
 import { navigateBack } from '../../utils/navigation'
+import { ROLE_LABELS, LEVEL_LABELS } from './constants/lab-role'
 import PageSkeleton from '../../components/PageSkeleton'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import BreadcrumbNav from '../../components/BreadcrumbNav'
@@ -20,12 +21,16 @@ const LabTalentDetailPage: React.FC = () => {
   const id = talentId ? Number(talentId) : undefined
   const { data: talent, isLoading, error, refetch } = useLabTalent(id)
 
-  // Tab state: 'info' | 'homepage'
+  // Tab state: 'info' | 'mentorship' | 'homepage'
   const [activeTab, setActiveTab] = useState('info')
   // Load preview when user switches to homepage tab
   const { data: preview, isLoading: previewLoading, error: previewError } = useHomepagePreview(
     id,
     activeTab === 'homepage'
+  )
+  // Load mentorship data (lazy — only when mentorship tab is active)
+  const { data: mentorship, isLoading: mentorshipLoading } = useMentorship(
+    activeTab === 'mentorship' ? id : undefined
   )
 
   useEffect(() => {
@@ -116,6 +121,114 @@ const LabTalentDetailPage: React.FC = () => {
       ),
     },
   ]
+
+  // Add mentorship tab (always present — data may have advisor or students)
+  tabItems.push({
+    key: 'mentorship',
+    label: (
+      <span>
+        <TeamOutlined style={{ marginRight: 4 }} />
+        师承关系
+      </span>
+    ),
+    children: (
+      <div style={{ minHeight: 200 }}>
+        {mentorshipLoading ? (
+          <div style={{ textAlign: 'center', padding: 48 }}>
+            <Spin tip="加载师承关系..." />
+          </div>
+        ) : mentorship ? (
+          <>
+            {/* Advisors */}
+            <div style={{ marginBottom: 24 }}>
+              <Title level={5}>
+                <UserSwitchOutlined style={{ marginRight: 6 }} />
+                导师
+              </Title>
+              {mentorship.advisor ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <Tag color="blue">导师</Tag>
+                  {mentorship.advisor_talent_id ? (
+                    <Link onClick={() => navigate(`/lab/talents/${mentorship.advisor_talent_id}`)}>
+                      {mentorship.advisor}
+                    </Link>
+                  ) : (
+                    <Text>{mentorship.advisor}</Text>
+                  )}
+                </div>
+              ) : (
+                <Text type="secondary">未收录导师信息</Text>
+              )}
+              {mentorship.co_advisor && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Tag color="cyan">共同导师</Tag>
+                  {mentorship.co_advisor_talent_id ? (
+                    <Link
+                      onClick={() => navigate(`/lab/talents/${mentorship.co_advisor_talent_id}`)}
+                    >
+                      {mentorship.co_advisor}
+                    </Link>
+                  ) : (
+                    <Text>{mentorship.co_advisor}</Text>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <Divider />
+
+            {/* Students */}
+            <div>
+              <Title level={5}>
+                <TeamOutlined style={{ marginRight: 6 }} />
+                指导的学生
+                {mentorship.students.length > 0 && (
+                  <Tag style={{ marginLeft: 8 }}>{mentorship.students.length} 人</Tag>
+                )}
+              </Title>
+              {mentorship.students.length > 0 ? (
+                <Row gutter={[12, 12]}>
+                  {mentorship.students.map(s => (
+                    <Col xs={24} sm={12} md={8} key={s.talent_id}>
+                      <Card
+                        size="small"
+                        hoverable
+                        onClick={() => navigate(`/lab/talents/${s.talent_id}`)}
+                        style={{ borderRadius: 8 }}
+                      >
+                        <Space direction="vertical" size={2}>
+                          <Text strong>{s.name}</Text>
+                          <Space size={4}>
+                            <Tag style={{ fontSize: 11 }}>
+                              {ROLE_LABELS[s.role_type] || s.role_type}
+                            </Tag>
+                            {s.academic_level && (
+                              <Tag color="blue" style={{ fontSize: 11 }}>
+                                {LEVEL_LABELS[s.academic_level] || s.academic_level}
+                              </Tag>
+                            )}
+                          </Space>
+                          {s.cohort_year && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              {s.cohort_year} 级
+                            </Text>
+                          )}
+                        </Space>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              ) : (
+                <Text type="secondary">暂无收录指导的学生</Text>
+              )}
+            </div>
+          </>
+        ) : (
+          <Text type="secondary">暂无师承关系数据</Text>
+        )}
+      </div>
+    ),
+  })
 
   // Add homepage tab only if talent has a homepage
   if (talent.homepage) {

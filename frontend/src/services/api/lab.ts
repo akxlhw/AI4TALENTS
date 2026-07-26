@@ -5,6 +5,7 @@ import type {
   LabTalent,
   LabTalentDetail,
   LabWithTalents,
+  MentorshipData,
   PaginatedResponse,
 } from '../../types'
 
@@ -41,6 +42,9 @@ export const labApi = {
     apiClient.get<PaginatedResponse<LabTalent>>('/lab/talents', { params }),
 
   getTalent: (id: number) => apiClient.get<LabTalentDetail>(`/lab/talents/${id}`),
+
+  getMentorship: (id: number) =>
+    apiClient.get<MentorshipData>(`/lab/talents/${id}/mentorship`),
 
   getHomepagePreview: (id: number) =>
     apiClient.get<{ html: string; base_url: string; title: string; status: string }>(

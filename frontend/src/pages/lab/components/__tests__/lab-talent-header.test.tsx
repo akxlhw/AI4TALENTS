@@ -13,6 +13,8 @@ const mockTalent: LabTalentDetail = {
   homepage: 'http://cs.nju.edu.cn/zhouzh',
   email: 'zhouzh@nju.edu.cn',
   photo_url: null,
+  advisor: null,
+  co_advisor: null,
   department: '计算机系',
   research_areas: ['machine learning'],
   cohort_year: null,

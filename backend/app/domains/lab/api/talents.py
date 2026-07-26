@@ -12,6 +12,7 @@ from app.domains.lab.schemas.lab_talent import (
     LabTalentDetail,
     LabTalentSummary,
     LabWithTalents,
+    MentorshipResponse,
 )
 from app.domains.lab.services.lab_talent_service import LabTalentService
 from app.domains.shared.api.auth import get_current_user
@@ -109,6 +110,21 @@ async def get_lab_talent_detail(
     """Get full detail for a single lab talent."""
     service = LabTalentService(session)
     return await service.get_talent_detail(talent_id)
+
+
+@router.get(
+    "/talents/{talent_id}/mentorship",
+    response_model=MentorshipResponse,
+    summary="Get mentorship info (advisors + supervised students)",
+)
+async def get_mentorship(
+    talent_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    _user: dict = Depends(get_current_user),
+) -> MentorshipResponse:
+    """Return advisor info + list of students supervised by this talent."""
+    service = LabTalentService(session)
+    return await service.get_mentorship(talent_id)
 
 
 @router.get(

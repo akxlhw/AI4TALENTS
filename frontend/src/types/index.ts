@@ -571,11 +571,30 @@ export interface LabTalent {
 }
 
 export interface LabTalentDetail extends LabTalent {
+  advisor: string | null
+  co_advisor: string | null
   cohort_source: string | null
   source_url: string | null
   source_detail_url: string | null
   social_links: Record<string, string>
   collected_at: string | null
+}
+
+export interface AdvisorStudent {
+  talent_id: number
+  name: string
+  role_type: string
+  academic_level: string | null
+  cohort_year: number | null
+  parent_lab: string
+}
+
+export interface MentorshipData {
+  advisor: string | null
+  co_advisor: string | null
+  advisor_talent_id: number | null
+  co_advisor_talent_id: number | null
+  students: AdvisorStudent[]
 }
 
 export interface LabWithTalents {

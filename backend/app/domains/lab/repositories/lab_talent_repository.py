@@ -37,6 +37,33 @@ class LabTalentRepository:
         )
         return result.scalar_one_or_none()
 
+    async def find_by_name(self, name: str) -> LabTalent | None:
+        """Find a visible talent by exact name match (first result)."""
+        result = await self.session.execute(
+            select(LabTalent).where(LabTalent.name == name, LabTalent.is_visible.is_(True)).limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_students(self, advisor_name: str, limit: int = 50) -> list[LabTalent]:
+        """Find talents whose advisor matches the given name (reverse lookup)."""
+        result = await self.session.execute(
+            select(
+                LabTalent.talent_id,
+                LabTalent.name,
+                LabTalent.role_type,
+                LabTalent.academic_level,
+                LabTalent.cohort_year,
+                LabTalent.parent_lab,
+            )
+            .where(
+                LabTalent.is_visible.is_(True),
+                (LabTalent.advisor == advisor_name) | (LabTalent.co_advisor == advisor_name),
+            )
+            .order_by(LabTalent.cohort_year.desc().nullslast())
+            .limit(limit)
+        )
+        return result.all()
+
     async def list_talents(
         self,
         *,

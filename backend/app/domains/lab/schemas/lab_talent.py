@@ -33,6 +33,8 @@ class LabTalentSummary(BaseModel):
 class LabTalentDetail(LabTalentSummary):
     """Detail — full talent info for detail page."""
 
+    advisor: str | None = None
+    co_advisor: str | None = None
     cohort_source: str | None = None
     source_url: str | None = None
     source_detail_url: str | None = None
@@ -93,6 +95,27 @@ class LabImportReport(BaseModel):
     inserted: int
     skipped: int
     skip_reasons: list[SkipReason] = Field(default_factory=list)
+
+
+class AdvisorStudentItem(BaseModel):
+    """A student supervised by the current talent."""
+
+    talent_id: int
+    name: str
+    role_type: str
+    academic_level: str | None = None
+    cohort_year: int | None = None
+    parent_lab: str
+
+
+class MentorshipResponse(BaseModel):
+    """Mentorship data for the talent detail page."""
+
+    advisor: str | None = None
+    co_advisor: str | None = None
+    advisor_talent_id: int | None = None  # link if advisor is also in DB
+    co_advisor_talent_id: int | None = None
+    students: list[AdvisorStudentItem] = Field(default_factory=list)
 
 
 class HomepagePreviewResponse(BaseModel):

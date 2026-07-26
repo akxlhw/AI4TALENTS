@@ -92,6 +92,22 @@ export function useLabProfile(parentLab?: string) {
 }
 
 /**
+ * Get mentorship data (advisors + supervised students).
+ * Cached for 10 minutes.
+ */
+export function useMentorship(talentId?: number) {
+  return useQuery({
+    queryKey: ['lab', 'mentorship', talentId],
+    queryFn: async () => {
+      const response = await api.lab.getMentorship(talentId!)
+      return response.data
+    },
+    staleTime: staleTimes.detail,
+    enabled: !!talentId,
+  })
+}
+
+/**
  * Get cleaned homepage HTML for inline preview.
  * Not cached (always fresh fetch).
  */
