@@ -118,6 +118,30 @@ class MentorshipResponse(BaseModel):
     students: list[AdvisorStudentItem] = Field(default_factory=list)
 
 
+class AdvisorNetworkNode(BaseModel):
+    """A node in the advisor-student network graph."""
+
+    name: str
+    talent_id: int | None = None
+    role_type: str
+    is_student: bool
+
+
+class AdvisorNetworkEdge(BaseModel):
+    """An edge (advisor→student) in the network graph."""
+
+    source: str
+    target: str
+    type: str  # advisor / co_advisor
+
+
+class AdvisorNetworkResponse(BaseModel):
+    """Advisor-student network for ECharts force-directed graph."""
+
+    nodes: list[AdvisorNetworkNode] = Field(default_factory=list)
+    edges: list[AdvisorNetworkEdge] = Field(default_factory=list)
+
+
 class HomepagePreviewResponse(BaseModel):
     """Cleaned personal homepage HTML for inline preview."""
 

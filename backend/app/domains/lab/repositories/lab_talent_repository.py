@@ -227,6 +227,59 @@ class LabTalentRepository:
             "sub_labs": sub_labs,
         }
 
+    async def get_advisor_network(self, parent_lab: str) -> dict[str, Any]:
+        """Get advisor→student relationship edges for network visualization."""
+        result = await self.session.execute(
+            select(
+                LabTalent.talent_id,
+                LabTalent.name,
+                LabTalent.role_type,
+                LabTalent.advisor,
+                LabTalent.co_advisor,
+            ).where(
+                LabTalent.is_visible.is_(True),
+                LabTalent.parent_lab == parent_lab,
+                LabTalent.advisor.isnot(None),
+                LabTalent.advisor != "",
+            )
+        )
+        rows = result.all()
+
+        # Build node list (unique names) + edge list (advisor→student)
+        nodes: dict[str, dict] = {}
+        edges: list[dict] = []
+        for row in rows:
+            student_key = row.name
+            if student_key not in nodes:
+                nodes[student_key] = {
+                    "name": row.name,
+                    "talent_id": row.talent_id,
+                    "role_type": row.role_type,
+                    "is_student": row.role_type in ("student", "graduate"),
+                }
+            for advisor_name, is_co in [(row.advisor, False), (row.co_advisor, True)]:
+                if not advisor_name:
+                    continue
+                if advisor_name not in nodes:
+                    nodes[advisor_name] = {
+                        "name": advisor_name,
+                        "talent_id": None,
+                        "role_type": "professor",
+                        "is_student": False,
+                    }
+                edges.append(
+                    {
+                        "source": advisor_name,
+                        "target": student_key,
+                        "type": "co_advisor" if is_co else "advisor",
+                    }
+                )
+
+        return {
+            "nodes": list(nodes.values()),
+            "edges": edges,
+        }
+
     async def get_stats(self) -> dict[str, Any]:
         """Compute overview statistics."""
         base_filter = LabTalent.is_visible.is_(True)

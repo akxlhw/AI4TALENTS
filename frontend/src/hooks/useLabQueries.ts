@@ -92,6 +92,21 @@ export function useLabProfile(parentLab?: string) {
 }
 
 /**
+ * Get advisor-student network for lab page force-directed graph.
+ */
+export function useAdvisorNetwork(parentLab?: string) {
+  return useQuery({
+    queryKey: ['lab', 'advisor-network', parentLab],
+    queryFn: async () => {
+      const response = await api.lab.getAdvisorNetwork(parentLab!)
+      return response.data
+    },
+    staleTime: staleTimes.detail,
+    enabled: !!parentLab,
+  })
+}
+
+/**
  * Get mentorship data (advisors + supervised students).
  * Cached for 10 minutes.
  */

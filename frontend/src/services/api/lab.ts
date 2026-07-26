@@ -38,6 +38,12 @@ export const labApi = {
   getLabProfile: (parentLab: string) =>
     apiClient.get<LabProfile>(`/lab/labs/${encodeURIComponent(parentLab)}/profile`),
 
+  getAdvisorNetwork: (parentLab: string) =>
+    apiClient.get<{
+      nodes: { name: string; talent_id: number | null; role_type: string; is_student: boolean }[]
+      edges: { source: string; target: string; type: string }[]
+    }>(`/lab/labs/${encodeURIComponent(parentLab)}/advisor-network`),
+
   listTalents: (params?: LabTalentSearchParams) =>
     apiClient.get<PaginatedResponse<LabTalent>>('/lab/talents', { params }),
 

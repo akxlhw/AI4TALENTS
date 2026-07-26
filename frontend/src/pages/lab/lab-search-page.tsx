@@ -1,13 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Row, Col, Pagination, Typography, Spin, Tag, Tabs, Button } from 'antd'
-import { HomeOutlined, ArrowLeftOutlined } from '@ant-design/icons'
-import { useLabTalents, useLabProfile } from '../../hooks/useLabQueries'
+import { HomeOutlined, ArrowLeftOutlined, ShareAltOutlined } from '@ant-design/icons'
+import { useLabTalents, useLabProfile, useAdvisorNetwork } from '../../hooks/useLabQueries'
 import { useLabSearchStore } from '../../stores/labSearchStore'
 import { applyDomainCssVars } from '../../theme'
 import LabIcon from '../../components/lab-icon'
 import LabSearchFilter from './components/lab-search-filter'
 import LabTalentCard from './components/lab-talent-card'
+import AdvisorNetworkChart from './components/advisor-network-chart'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import BreadcrumbNav from '../../components/BreadcrumbNav'
 import { ROLE_TAB_CONFIG } from './constants/lab-role'
@@ -261,12 +262,56 @@ const LabSearchPage: React.FC = () => {
             />
           </>
         )}
+
+        {/* Advisor network chart — only when viewing a specific lab */}
+        {state.parentLab && <AdvisorNetworkSection parentLab={state.parentLab} navigate={navigate} />}
       </div>
     </div>
   )
 }
 
 // --- Sub components ---
+
+const AdvisorNetworkSection: React.FC<{
+  parentLab: string
+  navigate: (path: string) => void
+}> = ({ parentLab, navigate }) => {
+  const [expanded, setExpanded] = useState(false)
+  const { data: network } = useAdvisorNetwork(expanded ? parentLab : undefined)
+
+  if (!expanded) {
+    return (
+      <Button
+        type="default"
+        ghost
+        icon={<ShareAltOutlined />}
+        onClick={() => setExpanded(true)}
+        style={{ marginTop: 24 }}
+      >
+        查看导师-学生网络图
+      </Button>
+    )
+  }
+
+  if (!network || network.nodes.length === 0) {
+    return (
+      <div style={{ marginTop: 24 }}>
+        <Text type="secondary">该实验室暂无导师关系数据</Text>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ marginTop: 24 }}>
+      <AdvisorNetworkChart
+        data={network}
+        onNodeClick={(_name, talentId) => {
+          if (talentId) navigate(`/lab/talents/${talentId}`)
+        }}
+      />
+    </div>
+  )
+}
 
 const RoleTabs: React.FC<
   React.PropsWithChildren<{

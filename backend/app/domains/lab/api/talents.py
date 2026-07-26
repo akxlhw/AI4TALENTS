@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.domains.lab.schemas.lab_talent import (
+    AdvisorNetworkResponse,
     HomepagePreviewResponse,
     LabProfileResponse,
     LabTalentDetail,
@@ -95,6 +96,21 @@ async def get_lab_profile(
     """Return lab-level metadata and aggregated role/sub-lab stats."""
     service = LabTalentService(session)
     return await service.get_lab_profile(parent_lab)
+
+
+@router.get(
+    "/labs/{parent_lab}/advisor-network",
+    response_model=AdvisorNetworkResponse,
+    summary="Get advisor-student network graph data",
+)
+async def get_advisor_network(
+    parent_lab: str,
+    session: AsyncSession = Depends(get_async_session),
+    _user: dict = Depends(get_current_user),
+) -> AdvisorNetworkResponse:
+    """Return nodes + edges for force-directed graph visualization."""
+    service = LabTalentService(session)
+    return await service.get_advisor_network(parent_lab)
 
 
 @router.get(

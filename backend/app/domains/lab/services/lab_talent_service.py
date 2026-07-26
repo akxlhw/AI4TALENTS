@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import NotFoundError
 from app.domains.lab.repositories.lab_talent_repository import LabTalentRepository
 from app.domains.lab.schemas.lab_talent import (
+    AdvisorNetworkResponse,
     HomepagePreviewResponse,
     LabProfileResponse,
     LabTalentDetail,
@@ -126,6 +127,11 @@ class LabTalentService:
             co_advisor_talent_id=co_advisor_id,
             students=students,
         )
+
+    async def get_advisor_network(self, parent_lab: str) -> AdvisorNetworkResponse:
+        """Get advisor→student network for lab page force-directed graph."""
+        data = await self.repo.get_advisor_network(parent_lab)
+        return AdvisorNetworkResponse(**data)
 
     async def list_labs(self, *, preview_limit: int = 6) -> list[LabWithTalents]:
         """List parent labs with a preview of their talents."""
