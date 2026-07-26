@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Row, Col, Pagination, Typography, Spin, Tag, Tabs, Button } from 'antd'
+import { Row, Col, Pagination, Typography, Spin, Tag, Tabs, Button, Card } from 'antd'
 import { HomeOutlined, ArrowLeftOutlined, ShareAltOutlined } from '@ant-design/icons'
 import { useLabTalents, useLabProfile, useAdvisorNetwork } from '../../hooks/useLabQueries'
 import { useLabSearchStore } from '../../stores/labSearchStore'
@@ -19,6 +19,7 @@ const LabSearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const state = useLabSearchStore()
+  const [networkVisible, setNetworkVisible] = useState(false)
 
   useEffect(() => {
     applyDomainCssVars('lab')
@@ -158,6 +159,19 @@ const LabSearchPage: React.FC = () => {
                       <HomeOutlined /> 官网
                     </a>
                   )}
+                  <span
+                    onClick={() => setNetworkVisible(v => !v)}
+                    style={{
+                      color: networkVisible ? '#fff' : 'rgba(255,255,255,0.8)',
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <ShareAltOutlined /> 师承网络
+                  </span>
                 </div>
 
                 {/* Description */}
@@ -230,6 +244,13 @@ const LabSearchPage: React.FC = () => {
       )}
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px 48px' }}>
+        {/* Advisor network chart — toggle from banner, shown above tabs */}
+        {state.parentLab && networkVisible && (
+          <Card style={{ marginBottom: 16, borderRadius: 12 }}>
+            <AdvisorNetworkInline parentLab={state.parentLab} navigate={navigate} />
+          </Card>
+        )}
+
         {/* Role Tabs — only when viewing a specific lab */}
         {state.parentLab && profile ? (
           <RoleTabs
@@ -262,9 +283,6 @@ const LabSearchPage: React.FC = () => {
             />
           </>
         )}
-
-        {/* Advisor network chart — only when viewing a specific lab */}
-        {state.parentLab && <AdvisorNetworkSection parentLab={state.parentLab} navigate={navigate} />}
       </div>
     </div>
   )
@@ -272,44 +290,31 @@ const LabSearchPage: React.FC = () => {
 
 // --- Sub components ---
 
-const AdvisorNetworkSection: React.FC<{
+const AdvisorNetworkInline: React.FC<{
   parentLab: string
   navigate: (path: string) => void
 }> = ({ parentLab, navigate }) => {
-  const [expanded, setExpanded] = useState(false)
-  const { data: network } = useAdvisorNetwork(expanded ? parentLab : undefined)
+  const { data: network, isLoading } = useAdvisorNetwork(parentLab)
 
-  if (!expanded) {
+  if (isLoading) {
     return (
-      <Button
-        type="default"
-        ghost
-        icon={<ShareAltOutlined />}
-        onClick={() => setExpanded(true)}
-        style={{ marginTop: 24 }}
-      >
-        查看导师-学生网络图
-      </Button>
-    )
-  }
-
-  if (!network || network.nodes.length === 0) {
-    return (
-      <div style={{ marginTop: 24 }}>
-        <Text type="secondary">该实验室暂无导师关系数据</Text>
+      <div style={{ textAlign: 'center', padding: 48 }}>
+        <Spin tip="加载导师网络..." />
       </div>
     )
   }
 
+  if (!network || network.nodes.length === 0) {
+    return <Text type="secondary">该实验室暂无导师关系数据</Text>
+  }
+
   return (
-    <div style={{ marginTop: 24 }}>
-      <AdvisorNetworkChart
-        data={network}
-        onNodeClick={(_name, talentId) => {
-          if (talentId) navigate(`/lab/talents/${talentId}`)
-        }}
-      />
-    </div>
+    <AdvisorNetworkChart
+      data={network}
+      onNodeClick={(_name, talentId) => {
+        if (talentId) navigate(`/lab/talents/${talentId}`)
+      }}
+    />
   )
 }
 
