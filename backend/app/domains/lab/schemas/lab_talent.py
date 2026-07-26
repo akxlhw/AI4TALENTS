@@ -125,6 +125,8 @@ class AdvisorNetworkNode(BaseModel):
     talent_id: int | None = None
     role_type: str
     is_student: bool
+    photo_url: str | None = None
+    is_founder: bool = False
 
 
 class AdvisorNetworkEdge(BaseModel):

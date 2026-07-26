@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domains.lab.constants.lab_founders import founder_for
 from app.domains.lab.models.lab_talent import LabTalent
 
 # Sortable field → column expression mapping
@@ -234,6 +235,7 @@ class LabTalentRepository:
                 LabTalent.talent_id,
                 LabTalent.name,
                 LabTalent.role_type,
+                LabTalent.photo_url,
                 LabTalent.advisor,
                 LabTalent.co_advisor,
             ).where(
@@ -244,6 +246,24 @@ class LabTalentRepository:
             )
         )
         rows = result.all()
+
+        # Index all talents in this lab by name — advisor nodes are enriched
+        # from real talent records (photo, talent_id, role) when they exist.
+        all_talents = (
+            await self.session.execute(
+                select(
+                    LabTalent.talent_id,
+                    LabTalent.name,
+                    LabTalent.role_type,
+                    LabTalent.photo_url,
+                ).where(LabTalent.is_visible.is_(True), LabTalent.parent_lab == parent_lab)
+            )
+        ).all()
+        by_name = {r.name: r for r in all_talents}
+
+        founder = founder_for(parent_lab)
+        founder_variants = founder[1] if founder else set()
+        canonical_founder = founder[0] if founder else None
 
         # Build node list (unique names) + edge list (advisor→student)
         nodes: dict[str, dict] = {}
@@ -256,20 +276,27 @@ class LabTalentRepository:
                     "talent_id": row.talent_id,
                     "role_type": row.role_type,
                     "is_student": row.role_type in ("student", "graduate"),
+                    "photo_url": row.photo_url,
+                    "is_founder": False,
                 }
             for advisor_name, is_co in [(row.advisor, False), (row.co_advisor, True)]:
                 if not advisor_name:
                     continue
-                if advisor_name not in nodes:
-                    nodes[advisor_name] = {
-                        "name": advisor_name,
-                        "talent_id": None,
-                        "role_type": "professor",
+                # Normalize founder name variants (e.g. "Zhi-Hua Zhou" → "周志华")
+                normalized = canonical_founder if advisor_name in founder_variants else advisor_name
+                if normalized not in nodes:
+                    person = by_name.get(normalized)
+                    nodes[normalized] = {
+                        "name": normalized,
+                        "talent_id": person.talent_id if person else None,
+                        "role_type": person.role_type if person else "professor",
                         "is_student": False,
+                        "photo_url": person.photo_url if person else None,
+                        "is_founder": normalized == canonical_founder,
                     }
                 edges.append(
                     {
-                        "source": advisor_name,
+                        "source": normalized,
                         "target": student_key,
                         "type": "co_advisor" if is_co else "advisor",
                     }

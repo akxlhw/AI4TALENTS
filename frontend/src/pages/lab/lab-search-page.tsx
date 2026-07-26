@@ -19,7 +19,7 @@ const LabSearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const state = useLabSearchStore()
-  const [networkVisible, setNetworkVisible] = useState(false)
+  const [mainTab, setMainTab] = useState<'talents' | 'advisors'>('talents')
 
   useEffect(() => {
     applyDomainCssVars('lab')
@@ -160,9 +160,9 @@ const LabSearchPage: React.FC = () => {
                     </a>
                   )}
                   <span
-                    onClick={() => setNetworkVisible(v => !v)}
+                    onClick={() => setMainTab('advisors')}
                     style={{
-                      color: networkVisible ? '#fff' : 'rgba(255,255,255,0.8)',
+                      color: 'rgba(255,255,255,0.8)',
                       fontSize: 13,
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -244,31 +244,44 @@ const LabSearchPage: React.FC = () => {
       )}
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px 48px' }}>
-        {/* Advisor network chart — toggle from banner, shown above tabs */}
-        {state.parentLab && networkVisible && (
-          <Card style={{ marginBottom: 16, borderRadius: 12 }}>
-            <AdvisorNetworkInline parentLab={state.parentLab} navigate={navigate} />
-          </Card>
-        )}
-
-        {/* Role Tabs — only when viewing a specific lab */}
         {state.parentLab && profile ? (
-          <RoleTabs
-            roleDist={profile.role_distribution || {}}
-            activeRole={state.roleType}
-            onRoleChange={r => state.setFilter('roleType', r)}
-          >
-            <LabSearchFilter state={state} />
-            <SearchResults
-              isLoading={isLoading}
-              items={items}
-              total={total}
-              page={state.page}
-              pageSize={state.pageSize}
-              onPageChange={p => state.setFilter('page', p)}
-              onReset={() => state.resetFilters()}
-            />
-          </RoleTabs>
+          <Tabs
+            activeKey={mainTab}
+            onChange={k => setMainTab(k as 'talents' | 'advisors')}
+            items={[
+              {
+                key: 'talents',
+                label: '人才列表',
+                children: (
+                  <RoleTabs
+                    roleDist={profile.role_distribution || {}}
+                    activeRole={state.roleType}
+                    onRoleChange={r => state.setFilter('roleType', r)}
+                  >
+                    <LabSearchFilter state={state} />
+                    <SearchResults
+                      isLoading={isLoading}
+                      items={items}
+                      total={total}
+                      page={state.page}
+                      pageSize={state.pageSize}
+                      onPageChange={p => state.setFilter('page', p)}
+                      onReset={() => state.resetFilters()}
+                    />
+                  </RoleTabs>
+                ),
+              },
+              {
+                key: 'advisors',
+                label: '师从关系',
+                children: (
+                  <Card style={{ borderRadius: 12 }}>
+                    <AdvisorNetworkInline parentLab={state.parentLab} navigate={navigate} />
+                  </Card>
+                ),
+              },
+            ]}
+          />
         ) : (
           <>
             <LabSearchFilter state={state} />
@@ -311,6 +324,7 @@ const AdvisorNetworkInline: React.FC<{
   return (
     <AdvisorNetworkChart
       data={network}
+      labName={parentLab}
       onNodeClick={(_name, talentId) => {
         if (talentId) navigate(`/lab/talents/${talentId}`)
       }}

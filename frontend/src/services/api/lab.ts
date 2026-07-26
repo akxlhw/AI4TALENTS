@@ -40,7 +40,14 @@ export const labApi = {
 
   getAdvisorNetwork: (parentLab: string) =>
     apiClient.get<{
-      nodes: { name: string; talent_id: number | null; role_type: string; is_student: boolean }[]
+      nodes: {
+        name: string
+        talent_id: number | null
+        role_type: string
+        is_student: boolean
+        photo_url: string | null
+        is_founder: boolean
+      }[]
       edges: { source: string; target: string; type: string }[]
     }>(`/lab/labs/${encodeURIComponent(parentLab)}/advisor-network`),
 
