@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildTree } from '../advisor-network-chart'
+import { buildTree } from '../advisor-tree-builder'
 
 interface N {
   name: string

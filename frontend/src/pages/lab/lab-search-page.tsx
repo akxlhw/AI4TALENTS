@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Row, Col, Pagination, Typography, Spin, Tag, Tabs, Button, Card } from 'antd'
-import { HomeOutlined, ArrowLeftOutlined, ShareAltOutlined } from '@ant-design/icons'
+import { HomeOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import { useLabTalents, useLabProfile, useAdvisorNetwork } from '../../hooks/useLabQueries'
 import { useLabSearchStore } from '../../stores/labSearchStore'
 import { applyDomainCssVars } from '../../theme'
@@ -159,19 +159,6 @@ const LabSearchPage: React.FC = () => {
                       <HomeOutlined /> 官网
                     </a>
                   )}
-                  <span
-                    onClick={() => setMainTab('advisors')}
-                    style={{
-                      color: 'rgba(255,255,255,0.8)',
-                      fontSize: 13,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                    }}
-                  >
-                    <ShareAltOutlined /> 师承网络
-                  </span>
                 </div>
 
                 {/* Description */}
