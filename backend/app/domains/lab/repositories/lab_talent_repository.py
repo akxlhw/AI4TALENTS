@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import Row, delete, func, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,7 +46,9 @@ class LabTalentRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_students(self, advisor_name: str, limit: int = 50) -> list[LabTalent]:
+    async def get_students(
+        self, advisor_name: str, limit: int = 50
+    ) -> Sequence[Row[tuple[int, str, str, str, int, str]]]:
         """Find talents whose advisor matches the given name (reverse lookup)."""
         result = await self.session.execute(
             select(
