@@ -15,6 +15,7 @@ from sqlalchemy import (
     String,
     Text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 
 from app.core.database import Base
@@ -62,8 +63,8 @@ class OSDeveloper(Base, TimestampMixin):
     public_repos_count = Column(Integer, default=0, nullable=False)
     total_stars_received = Column(Integer, default=0, nullable=False)
     total_forks_received = Column(Integer, default=0, nullable=False)
-    primary_languages = Column(JSON, default=list)
-    tech_tags = Column(JSON, default=list)
+    primary_languages = Column(JSON().with_variant(JSONB, "postgresql"), default=list)
+    tech_tags = Column(JSON().with_variant(JSONB, "postgresql"), default=list)
     is_visible = Column(Boolean, default=True, nullable=False)
 
 

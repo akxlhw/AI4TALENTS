@@ -134,7 +134,7 @@ talent-platform/
 │   │           ├── repositories/
 │   │           └── services/  # cache*, llm/, common/（含 http_client）、config_service、
 │   │                          #   audit_service、user_service、suggestion_service、privacy_service 等
-│   ├── migrations/            # Alembic 数据库迁移脚本（编号序列 001~054，另有若干 hash 命名的历史脚本）
+│   ├── migrations/            # Alembic 数据库迁移脚本（编号序列 001~056，另有若干 hash 命名的历史脚本）
 │   ├── tests/                 # pytest 测试
 │   ├── scripts/               # 运维与数据脚本
 │   │   ├── check_architecture.py  # 架构合规检查（CI 门禁）

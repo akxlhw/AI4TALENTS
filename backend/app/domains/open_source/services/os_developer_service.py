@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -347,8 +347,13 @@ class OSDeveloperService:
             )
             return semantic_items, total
 
-        # Hybrid mode: keyword + semantic merge
-        keyword_items, _keyword_total = await self.list_developers(
+        # Hybrid mode: fetch candidates from both legs, fuse via Reciprocal Rank Fusion
+        candidate_size = min(
+            max(req.page * req.page_size, req.page_size * settings.SEARCH_HYBRID_EXTENDED_FACTOR),
+            100,
+        )
+
+        keyword_items, keyword_total = await self.list_developers(
             q=req.q,
             tech_elements=req.filters.tech_elements if req.filters else None,
             languages=req.filters.languages if req.filters else None,
@@ -357,30 +362,37 @@ class OSDeveloperService:
             min_stars=req.filters.min_stars if req.filters else None,
             repo_full_names=req.filters.repo_full_names if req.filters else None,
             page=1,
-            page_size=req.page_size * 2,
+            page_size=candidate_size,
         )
 
-        semantic_items, _semantic_total = await self.repo.search_by_vector_similarity(
+        semantic_items, semantic_total = await self.repo.search_by_vector_similarity(
             query_embedding=query_embedding,
             similarity_threshold=settings.SEARCH_SIMILAR_THRESHOLD_MIN,
             filters=filters,
-            limit=req.page_size * 2,
+            limit=candidate_size,
             offset=0,
         )
 
-        # Deduplicate and merge: semantic results first, then keyword results not already included
-        seen_ids = set()
-        merged = []
-        for dev in semantic_items:
-            if dev.developer_id not in seen_ids:
-                seen_ids.add(dev.developer_id)
-                merged.append(dev)
-        for dev in keyword_items:
-            if dev.developer_id not in seen_ids:
-                seen_ids.add(dev.developer_id)
-                merged.append(dev)
+        # Reciprocal Rank Fusion: score = sum(1 / (k + rank)) across both legs
+        k = settings.SEARCH_RRF_CONSTANT
+        score_map: dict[int, float] = {}
+        item_map: dict[int, OSDeveloper] = {}
+        for rank, dev in enumerate(keyword_items, 1):
+            dev_id = cast(int, dev.developer_id)
+            score_map[dev_id] = score_map.get(dev_id, 0.0) + 1.0 / (k + rank)
+            item_map.setdefault(dev_id, dev)
+        for rank, dev in enumerate(semantic_items, 1):
+            dev_id = cast(int, dev.developer_id)
+            score_map[dev_id] = score_map.get(dev_id, 0.0) + 1.0 / (k + rank)
+            item_map.setdefault(dev_id, dev)
 
-        total = len(merged)
+        merged = sorted(
+            item_map.values(),
+            key=lambda dev: score_map[cast(int, dev.developer_id)],
+            reverse=True,
+        )
+
+        total = max(keyword_total, semantic_total, len(merged))
         start = (req.page - 1) * req.page_size
         end = start + req.page_size
         return merged[start:end], total
@@ -463,6 +475,10 @@ class OSDeveloperService:
     async def get_developer_contributions(self, developer_id: int) -> list[Any]:
         """Get contributions for a developer."""
         return await self.repo.get_developer_contributions(developer_id)
+
+    async def get_developer_roles_map(self, developer_ids: list[int]) -> dict[int, list[str]]:
+        """Batch get contribution role tags (Owner/Committer) for multiple developers."""
+        return await self.repo.get_contribution_roles_for_developers(developer_ids)
 
     async def get_developer_languages(self, developer_id: int) -> list[Any]:
         """Get language skills for a developer."""

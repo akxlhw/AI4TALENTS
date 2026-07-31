@@ -4,6 +4,8 @@ Open Source — Developer, Repository, and Search endpoints.
 
 from __future__ import annotations
 
+from typing import cast
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -65,18 +67,13 @@ async def list_developers(
         page_size=page_size,
     )
 
-    # Enrich each summary with aggregated role tags from contributions
+    # Enrich summaries with aggregated role tags from contributions (single batch query)
+    dev_ids = [cast(int, dev.developer_id) for dev in items]
+    roles_map = await service.get_developer_roles_map(dev_ids)
     summaries: list[OSDeveloperSummary] = []
-    for dev in items:
+    for dev, dev_id in zip(items, dev_ids, strict=True):
         summary = OSDeveloperSummary.model_validate(dev)
-        contributions = await service.get_developer_contributions(dev.developer_id)
-        role_set: set[str] = set()
-        for c, _ in contributions:
-            if c.is_owner:
-                role_set.add("Owner")
-            if c.is_committer:
-                role_set.add("Committer")
-        summary.roles = sorted(role_set)
+        summary.roles = roles_map.get(dev_id, [])
         summaries.append(summary)
 
     return PaginatedResponse.create(

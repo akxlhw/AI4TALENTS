@@ -86,15 +86,36 @@ class OpenSourceAdvancedRepository:
         self,
         req: Any,
     ) -> tuple[list[OSDeveloper], int]:
-        """Search developers (delegates to list_developers for now)."""
-        # Simple keyword search fallback
-        q = getattr(req, "query", "")
-        page = getattr(req, "page", 1)
-        page_size = getattr(req, "page_size", 20)
+        """Keyword search over developers (delegates to list_developers).
+
+        Reads OSSearchRequest fields (q, filters, sort_by, page, page_size)
+        so the keyword path has the same filtering/sorting capability as the
+        GET list endpoint.
+        """
+        filters: dict[str, Any] = {}
+        q = getattr(req, "q", "") or ""
+        if q:
+            filters["q"] = q
+
+        req_filters = getattr(req, "filters", None)
+        if req_filters:
+            for key in (
+                "tech_elements",
+                "languages",
+                "location",
+                "company",
+                "min_stars",
+                "repo_full_names",
+            ):
+                value = getattr(req_filters, key, None)
+                if value is not None:
+                    filters[key] = value
+
         return await self.list_developers(
-            filters={"q": q} if q else None,
-            page=page,
-            page_size=page_size,
+            filters=filters or None,
+            sort_by=getattr(req, "sort_by", "stars_desc") or "stars_desc",
+            page=getattr(req, "page", 1) or 1,
+            page_size=getattr(req, "page_size", 20) or 20,
         )
 
     async def jd_match(

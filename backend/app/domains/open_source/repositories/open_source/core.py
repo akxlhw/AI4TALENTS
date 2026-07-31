@@ -314,6 +314,35 @@ class OpenSourceCoreRepository:
         )
         return list(result.all())
 
+    async def get_contribution_roles_for_developers(
+        self,
+        developer_ids: list[int],
+    ) -> dict[int, list[str]]:
+        """Batch aggregate contribution role tags (Owner/Committer) for developers.
+
+        Single grouped query to avoid per-developer N+1 lookups in list views.
+        """
+        if not developer_ids:
+            return {}
+        result = await self.session.execute(
+            select(
+                OSContribution.developer_id,
+                func.bool_or(OSContribution.is_owner),
+                func.bool_or(OSContribution.is_committer),
+            )
+            .where(OSContribution.developer_id.in_(developer_ids))
+            .group_by(OSContribution.developer_id)
+        )
+        roles_map: dict[int, list[str]] = {}
+        for dev_id, is_owner, is_committer in result.all():
+            roles: list[str] = []
+            if is_committer:
+                roles.append("Committer")
+            if is_owner:
+                roles.append("Owner")
+            roles_map[dev_id] = roles
+        return roles_map
+
     async def get_developer_languages(
         self,
         developer_id: int,

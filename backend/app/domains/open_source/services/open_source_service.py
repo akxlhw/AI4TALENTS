@@ -322,6 +322,9 @@ class OpenSourceService:
     async def get_developer_contributions(self, developer_id: int) -> list[Any]:
         return await self._developer.get_developer_contributions(developer_id)
 
+    async def get_developer_roles_map(self, developer_ids: list[int]) -> dict[int, list[str]]:
+        return await self._developer.get_developer_roles_map(developer_ids)
+
     async def get_developer_languages(self, developer_id: int) -> list[Any]:
         return await self._developer.get_developer_languages(developer_id)
 
