@@ -555,7 +555,7 @@ const OSRepoConfigSubTab: React.FC = () => {
                 条、原始数据 {purgePreview.raw} 条），以及该仓库本身。
               </p>
               <p>
-                <strong>{purgePreview.developers_shared}</strong> 名人才因被其他仓库引用而保留，
+                <strong>{purgePreview.developers_shared}</strong> 名人才因被其他已配置仓库引用而保留，
                 <strong> {purgePreview.developers_protected} </strong>
                 名人才因被收藏或加入人才池而保留。
               </p>

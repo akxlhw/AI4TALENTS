@@ -767,9 +767,13 @@ class OpenSourceCoreRepository:
 
         Involved developers = contributors of this repo + repo owner.
         Returns disjoint sets of developer IDs:
-        - exclusive: no other contributions and owns no other repos; will be deleted
+        - exclusive: not referenced by any other *configured* repo (i.e. a repo whose
+          full_name exists in os_repo_config); will be deleted
         - protected: exclusive to this repo but kept due to active favourite or pool membership
-        - shared: still referenced by other repos (contribution or ownership); kept
+        - shared: still referenced by other configured repos (contribution or ownership); kept
+
+        References to unconfigured repos (e.g. personal repos fetched alongside
+        contributor profiles) do not count as shared.
         """
         repo_id = tcast(int, repo.repo_id)
         owner_id = tcast(int, repo.developer_id)
@@ -783,11 +787,14 @@ class OpenSourceCoreRepository:
         if not involved_ids:
             return {"exclusive": set(), "protected": set(), "shared": set()}
 
+        configured_names = select(OSRepoConfig.repo_full_name)
         other_contrib_rows = await self.session.execute(
             select(OSContribution.developer_id)
+            .join(OSRepository, OSContribution.repo_id == OSRepository.repo_id)
             .where(
                 OSContribution.developer_id.in_(involved_ids),
                 OSContribution.repo_id != repo_id,
+                OSRepository.full_name.in_(configured_names),
             )
             .distinct()
         )
@@ -796,6 +803,7 @@ class OpenSourceCoreRepository:
             .where(
                 OSRepository.developer_id.in_(involved_ids),
                 OSRepository.repo_id != repo_id,
+                OSRepository.full_name.in_(configured_names),
             )
             .distinct()
         )
@@ -864,6 +872,36 @@ class OpenSourceCoreRepository:
             )
         return counts
 
+    async def _exclusive_owned_repo_ids(self, exclusive_ids: set[int]) -> set[int]:
+        """Repo IDs owned by exclusive developers.
+
+        Under the configured-repo sharing rule an exclusive developer may still own
+        unconfigured repos (e.g. personal repos); those rows reference
+        os_developer via FK and must be cascade-deleted together with the developer.
+        """
+        if not exclusive_ids:
+            return set()
+        rows = await self.session.execute(
+            select(OSRepository.repo_id).where(OSRepository.developer_id.in_(exclusive_ids))
+        )
+        return {tcast(int, row[0]) for row in rows.all()}
+
+    def _purge_contribution_conditions(
+        self,
+        repo_id: int,
+        exclusive_ids: set[int],
+        owned_repo_ids: set[int],
+    ) -> list[Any]:
+        """Conditions matching every contribution row a purge will delete:
+        this repo's contributions + contributions to repos owned by exclusive
+        developers + exclusive developers' own contributions to any other repo."""
+        conditions: list[Any] = [OSContribution.repo_id == repo_id]
+        if owned_repo_ids:
+            conditions.append(OSContribution.repo_id.in_(owned_repo_ids))
+        if exclusive_ids:
+            conditions.append(OSContribution.developer_id.in_(exclusive_ids))
+        return conditions
+
     async def get_repo_purge_preview(self, repo_full_name: str) -> dict[str, Any]:
         """Compute purge impact counts for a repo's collected data (no deletion)."""
         repo = await self.get_repository_by_full_name(repo_full_name)
@@ -871,21 +909,29 @@ class OpenSourceCoreRepository:
             return self._empty_purge_counts()
 
         classification = await self._classify_repo_developers(repo)
+        exclusive_ids = classification["exclusive"]
+        owned_repo_ids = await self._exclusive_owned_repo_ids(exclusive_ids)
         contributions = (
             await self.session.scalar(
                 select(func.count())
                 .select_from(OSContribution)
-                .where(OSContribution.repo_id == repo.repo_id)
+                .where(
+                    or_(
+                        *self._purge_contribution_conditions(
+                            tcast(int, repo.repo_id), exclusive_ids, owned_repo_ids
+                        )
+                    )
+                )
             )
             or 0
         )
-        cascades = await self._count_exclusive_cascades(classification["exclusive"])
+        cascades = await self._count_exclusive_cascades(exclusive_ids)
 
         return {
             "repo_found": True,
             "contributions": contributions,
             "developers_total": sum(len(ids) for ids in classification.values()),
-            "developers_exclusive": len(classification["exclusive"]),
+            "developers_exclusive": len(exclusive_ids),
             "developers_protected": len(classification["protected"]),
             "developers_shared": len(classification["shared"]),
             **cascades,
@@ -894,8 +940,10 @@ class OpenSourceCoreRepository:
     async def purge_repo_data(self, repo_full_name: str) -> dict[str, Any]:
         """Hard-delete collected data for a repo.
 
-        Deletion order: this repo's contributions -> repo row (exclusive developers
-        may own this repo) -> exclusive developers' language skills / embeddings /
+        Deletion order: all affected contributions (this repo's + repos owned by
+        exclusive developers + exclusive developers' other contributions) -> repo
+        row (exclusive developers may own this repo) -> other repos owned by
+        exclusive developers -> exclusive developers' language skills / embeddings /
         raw data -> exclusive developers.
         Shared and protected developers are kept; collect task history is preserved.
         """
@@ -903,17 +951,28 @@ class OpenSourceCoreRepository:
         if repo is None:
             return self._empty_purge_counts()
 
+        repo_id = tcast(int, repo.repo_id)
         classification = await self._classify_repo_developers(repo)
         exclusive_ids = classification["exclusive"]
+        owned_repo_ids = await self._exclusive_owned_repo_ids(exclusive_ids)
 
         contrib_result = await self.session.execute(
-            delete(OSContribution).where(OSContribution.repo_id == repo.repo_id)
+            delete(OSContribution).where(
+                or_(*self._purge_contribution_conditions(repo_id, exclusive_ids, owned_repo_ids))
+            )
         )
         contributions = contrib_result.rowcount or 0
 
         # 先删仓库行 R：独占人才可能就是 R 的属主，os_repository.developer_id 有外键约束
         await self.session.delete(repo)
         await self.session.flush()
+
+        # 级联删除独占人才拥有的其他仓库（未配置的个人仓库等，同样有外键约束）
+        other_owned_ids = owned_repo_ids - {repo_id}
+        if other_owned_ids:
+            await self.session.execute(
+                delete(OSRepository).where(OSRepository.repo_id.in_(other_owned_ids))
+            )
 
         skills = embeddings = raw = 0
         if exclusive_ids:

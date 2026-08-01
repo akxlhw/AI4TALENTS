@@ -1,0 +1,369 @@
+{"type": "meta", "schema_version": "1.0", "source_code": "ioi", "contest_external_id": "ioi-2024", "crawler": "comp-talent-crawler", "crawler_version": "1.1.0", "collected_at": "2026-07-19T05:29:31Z"}
+{"type": "series", "code": "ioi", "name": "国际信息学奥林匹克竞赛", "name_en": "IOI", "homepage": "https://ioinformatics.org", "description": "International Olympiad in Informatics"}
+{"type": "contest", "external_id": "ioi-2024", "name": "IOI 2024（国际信息学奥林匹克竞赛）", "season": "2024", "status": "finished", "source_url": "https://stats.ioinformatics.org/results/2024"}
+{"type": "person", "handle": "name:kangyang_zhou", "real_name": "Kangyang Zhou", "result": {"rank": 1, "participated": true, "score": 600.0, "award": "gold"}, "country_code": "CN"}
+{"type": "person", "handle": "name:adam_gąsienica-samek", "real_name": "Adam Gąsienica-Samek", "result": {"rank": 2, "participated": true, "score": 476.22, "award": "gold"}, "country_code": "PL"}
+{"type": "person", "handle": "name:brian_xue", "real_name": "Brian Xue", "result": {"rank": 3, "participated": true, "score": 471.31, "award": "gold"}, "country_code": "US"}
+{"type": "person", "handle": "name:daniel_weber", "real_name": "Daniel Weber", "result": {"rank": 4, "participated": true, "score": 439.5, "award": "gold"}, "country_code": "IL"}
+{"type": "person", "handle": "name:agastya_goel", "real_name": "Agastya Goel", "result": {"rank": 4, "participated": true, "score": 438.97, "award": "gold"}, "country_code": "US"}
+{"type": "person", "handle": "name:rain_jiang", "real_name": "Rain Jiang", "result": {"rank": 5, "participated": true, "score": 434.4, "award": "gold"}, "country_code": "US"}
+{"type": "person", "handle": "name:mihai-valeriu_voicu", "real_name": "Mihai-Valeriu Voicu", "result": {"rank": 6, "participated": true, "score": 426.85, "award": "gold"}, "country_code": "RO"}
+{"type": "person", "handle": "name:bálint_rózsa", "real_name": "Bálint Rózsa", "result": {"rank": 7, "participated": true, "score": 423.64, "award": "gold"}, "country_code": "CA"}
+{"type": "person", "handle": "name:yuchong_guo", "real_name": "Yuchong Guo", "result": {"rank": 8, "participated": true, "score": 419.17, "award": "gold"}, "country_code": "CN"}
+{"type": "person", "handle": "name:eliška_macáková", "real_name": "Eliška Macáková", "result": {"rank": 9, "participated": true, "score": 418.97, "award": "gold"}, "country_code": "SK"}
+{"type": "person", "handle": "name:daria_grekova", "real_name": "Daria Grekova", "result": {"rank": 10, "participated": true, "score": 417.88, "award": "gold"}}
+{"type": "person", "handle": "name:ivan_piskarev", "real_name": "Ivan Piskarev", "result": {"rank": 11, "participated": true, "score": 416.67, "award": "gold"}}
+{"type": "person", "handle": "name:ryan_bai", "real_name": "Ryan Bai", "result": {"rank": 12, "participated": true, "score": 413.17, "award": "gold"}, "country_code": "CA"}
+{"type": "person", "handle": "name:shogo_amacho", "real_name": "Shogo Amacho", "result": {"rank": 13, "participated": true, "score": 410.72, "award": "gold"}, "country_code": "JP"}
+{"type": "person", "handle": "name:istván_ádám_molnár", "real_name": "István Ádám Molnár", "result": {"rank": 14, "participated": true, "score": 402.67, "award": "gold"}, "country_code": "HU"}
+{"type": "person", "handle": "name:katsuki_ota", "real_name": "Katsuki Ota", "result": {"rank": 15, "participated": true, "score": 402.17, "award": "gold"}, "country_code": "JP"}
+{"type": "person", "handle": "name:alejandro_vivero_puga", "real_name": "Alejandro Vivero Puga", "result": {"rank": 16, "participated": true, "score": 402.16, "award": "gold"}, "country_code": "ES"}
+{"type": "person", "handle": "name:amirali_asgari", "real_name": "Amirali Asgari", "result": {"rank": 17, "participated": true, "score": 401.12, "award": "gold"}, "country_code": "IR"}
+{"type": "person", "handle": "name:elazar_koren", "real_name": "Elazar Koren", "result": {"rank": 17, "participated": true, "score": 396.88, "award": "gold"}, "country_code": "IL"}
+{"type": "person", "handle": "name:samuel_trajtenberg", "real_name": "Samuel Trajtenberg", "result": {"rank": 17, "participated": true, "score": 395.7, "award": "gold"}, "country_code": "GB"}
+{"type": "person", "handle": "name:duru_ozer", "real_name": "Duru Ozer", "result": {"rank": 18, "participated": true, "score": 390.2, "award": "gold"}, "country_code": "TR"}
+{"type": "person", "handle": "name:rafał_mańczyk", "real_name": "Rafał Mańczyk", "result": {"rank": 19, "participated": true, "score": 389.84, "award": "gold"}, "country_code": "PL"}
+{"type": "person", "handle": "name:gimran_abdullin", "real_name": "Gimran Abdullin", "result": {"rank": 20, "participated": true, "score": 376.85, "award": "gold"}}
+{"type": "person", "handle": "name:kshitij_sodani", "real_name": "Kshitij Sodani", "result": {"rank": 21, "participated": true, "score": 376.31, "award": "gold"}, "country_code": "IN"}
+{"type": "person", "handle": "name:chun_wong", "real_name": "Chun Wong", "result": {"rank": 22, "participated": true, "score": 376.22, "award": "gold"}, "country_code": "HK"}
+{"type": "person", "handle": "name:minh_pham_cong", "real_name": "Minh Pham Cong", "result": {"rank": 23, "participated": true, "score": 376.2, "award": "gold"}, "country_code": "VN"}
+{"type": "person", "handle": "name:bach_hoang_xuan", "real_name": "Bach Hoang Xuan", "result": {"rank": 24, "participated": true, "score": 374.72, "award": "gold"}, "country_code": "VN"}
+{"type": "person", "handle": "name:debojoti_das_soumya", "real_name": "Debojoti Das Soumya", "result": {"rank": 25, "participated": true, "score": 373.63, "award": "gold"}, "country_code": "BD"}
+{"type": "person", "handle": "name:miles_conway", "real_name": "Miles Conway", "result": {"rank": 26, "participated": true, "score": 372.17, "award": "gold"}, "country_code": "AU"}
+{"type": "person", "handle": "name:alon_tanay", "real_name": "Alon Tanay", "result": {"rank": 27, "participated": true, "score": 371.88, "award": "gold"}, "country_code": "IL"}
+{"type": "person", "handle": "name:petr_losev", "real_name": "Petr Losev", "result": {"rank": 27, "participated": true, "score": 371.72, "award": "gold"}}
+{"type": "person", "handle": "name:ansis_gustavs_andersons", "real_name": "Ansis Gustavs Andersons", "result": {"rank": 28, "participated": true, "score": 366.64, "award": "gold"}, "country_code": "LV"}
+{"type": "person", "handle": "name:eunseong_kim", "real_name": "Eunseong Kim", "result": {"rank": 29, "participated": true, "score": 362.64, "award": "gold"}, "country_code": "KR"}
+{"type": "person", "handle": "name:david_s._eikeland", "real_name": "David S. Eikeland", "result": {"rank": 30, "participated": true, "score": 359.71, "award": "gold"}, "country_code": "NO"}
+{"type": "person", "handle": "name:yuya_hirasawa", "real_name": "Yuya Hirasawa", "result": {"rank": 31, "participated": true, "score": 359.11, "award": "silver"}, "country_code": "JP"}
+{"type": "person", "handle": "name:kajetan_ramsza", "real_name": "Kajetan Ramsza", "result": {"rank": 32, "participated": true, "score": 358.97, "award": "silver"}, "country_code": "PL"}
+{"type": "person", "handle": "name:mingyu_woo", "real_name": "Mingyu Woo", "result": {"rank": 33, "participated": true, "score": 357.4, "award": "silver"}, "country_code": "KR"}
+{"type": "person", "handle": "name:jan_gwiazda", "real_name": "Jan Gwiazda", "result": {"rank": 34, "participated": true, "score": 356.19, "award": "silver"}, "country_code": "PL"}
+{"type": "person", "handle": "name:andy_wu", "real_name": "Andy Wu", "result": {"rank": 35, "participated": true, "score": 353.88, "award": "silver"}, "country_code": "AU"}
+{"type": "person", "handle": "name:daniel_koynov", "real_name": "Daniel Koynov", "result": {"rank": 36, "participated": true, "score": 353.61, "award": "silver"}, "country_code": "BG"}
+{"type": "person", "handle": "name:po-kai_chen", "real_name": "Po-Kai Chen", "result": {"rank": 36, "participated": true, "score": 353.61, "award": "silver"}, "country_code": "TW"}
+{"type": "person", "handle": "name:damjan_davkov", "real_name": "Damjan Davkov", "result": {"rank": 38, "participated": true, "score": 350.81, "award": "silver"}, "country_code": "MK"}
+{"type": "person", "handle": "name:jonni_haapiainen", "real_name": "Jonni Haapiainen", "result": {"rank": 39, "participated": true, "score": 349.2, "award": "silver"}, "country_code": "FI"}
+{"type": "person", "handle": "name:rohin_garg", "real_name": "Rohin Garg", "result": {"rank": 40, "participated": true, "score": 348.7, "award": "silver"}, "country_code": "US"}
+{"type": "person", "handle": "name:heewoo_jung", "real_name": "Heewoo Jung", "result": {"rank": 41, "participated": true, "score": 346.89, "award": "silver"}, "country_code": "KR"}
+{"type": "person", "handle": "name:hanks_chong", "real_name": "Hanks Chong", "result": {"rank": 42, "participated": true, "score": 346.71, "award": "silver"}, "country_code": "GB"}
+{"type": "person", "handle": "name:yaw_chur_zhe", "real_name": "Yaw Chur Zhe", "result": {"rank": 43, "participated": true, "score": 346.63, "award": "silver"}, "country_code": "SG"}
+{"type": "person", "handle": "name:isaac_kai_sheng_hew", "real_name": "Isaac Kai Sheng Hew", "result": {"rank": 44, "participated": true, "score": 344.61, "award": "silver"}, "country_code": "MY"}
+{"type": "person", "handle": "name:boris_mihov", "real_name": "Boris Mihov", "result": {"rank": 45, "participated": true, "score": 344.17, "award": "silver"}, "country_code": "BG"}
+{"type": "person", "handle": "name:ryotaro_hayashi", "real_name": "Ryotaro Hayashi", "result": {"rank": 46, "participated": true, "score": 342.81, "award": "silver"}, "country_code": "JP"}
+{"type": "person", "handle": "name:oscar_fischler", "real_name": "Oscar Fischler", "result": {"rank": 47, "participated": true, "score": 342.33, "award": "silver"}, "country_code": "FR"}
+{"type": "person", "handle": "name:min-chan_jung", "real_name": "Min-chan Jung", "result": {"rank": 48, "participated": true, "score": 341.64, "award": "silver"}, "country_code": "KR"}
+{"type": "person", "handle": "name:tuan_nguyen_huu", "real_name": "Tuan Nguyen Huu", "result": {"rank": 49, "participated": true, "score": 336.97, "award": "silver"}, "country_code": "VN"}
+{"type": "person", "handle": "name:veikko_heikkinen", "real_name": "Veikko Heikkinen", "result": {"rank": 50, "participated": true, "score": 335.7, "award": "silver"}, "country_code": "FI"}
+{"type": "person", "handle": "name:rareș-andrei_neculau", "real_name": "Rareș-Andrei Neculau", "result": {"rank": 51, "participated": true, "score": 331.72, "award": "silver"}, "country_code": "RO"}
+{"type": "person", "handle": "name:antonín_maloň", "real_name": "Antonín Maloň", "result": {"rank": 52, "participated": true, "score": 329.14, "award": "silver"}, "country_code": "CZ"}
+{"type": "person", "handle": "name:amirhossein_farkhondeh_far", "real_name": "Amirhossein Farkhondeh Far", "result": {"rank": 53, "participated": true, "score": 326.85, "award": "silver"}, "country_code": "IR"}
+{"type": "person", "handle": "name:denys_tereshchenko", "real_name": "Denys Tereshchenko", "result": {"rank": 53, "participated": true, "score": 326.81, "award": "silver"}, "country_code": "UA"}
+{"type": "person", "handle": "name:javier_badesa_pérez", "real_name": "Javier Badesa Pérez", "result": {"rank": 53, "participated": true, "score": 326.81, "award": "silver"}, "country_code": "ES"}
+{"type": "person", "handle": "name:sushil_raaja_umasudhan", "real_name": "Sushil Raaja Umasudhan", "result": {"rank": 55, "participated": true, "score": 326.64, "award": "silver"}, "country_code": "IN"}
+{"type": "person", "handle": "name:matthew_allan", "real_name": "Matthew Allan", "result": {"rank": 56, "participated": true, "score": 324.89, "award": "silver"}, "country_code": "ID"}
+{"type": "person", "handle": "name:andrei-paul_iorgulescu", "real_name": "Andrei-Paul Iorgulescu", "result": {"rank": 57, "participated": true, "score": 322.89, "award": "silver"}, "country_code": "RO"}
+{"type": "person", "handle": "name:maxim_tsoy", "real_name": "Maxim Tsoy", "result": {"rank": 57, "participated": true, "score": 322.89, "award": "silver"}, "country_code": "KZ"}
+{"type": "person", "handle": "name:aufan_ahmad_mumtaza", "real_name": "Aufan Ahmad Mumtaza", "result": {"rank": 59, "participated": true, "score": 322.69, "award": "silver"}, "country_code": "ID"}
+{"type": "person", "handle": "name:luotian_huang", "real_name": "Luotian Huang", "result": {"rank": 60, "participated": true, "score": 322.61, "award": "silver"}, "country_code": "CN"}
+{"type": "person", "handle": "name:cengiz_eray_aslan", "real_name": "Cengiz Eray Aslan", "result": {"rank": 61, "participated": true, "score": 322.2, "award": "silver"}, "country_code": "TR"}
+{"type": "person", "handle": "name:andrii_smutchak", "real_name": "Andrii Smutchak", "result": {"rank": 62, "participated": true, "score": 321.89, "award": "silver"}, "country_code": "UA"}
+{"type": "person", "handle": "name:berke_inan_tol", "real_name": "Berke Inan Tol", "result": {"rank": 63, "participated": true, "score": 321.69, "award": "silver"}, "country_code": "TR"}
+{"type": "person", "handle": "name:vesselin_markovich", "real_name": "Vesselin Markovich", "result": {"rank": 64, "participated": true, "score": 319.71, "award": "silver"}, "country_code": "BG"}
+{"type": "person", "handle": "name:amirreza_dorosti", "real_name": "Amirreza Dorosti", "result": {"rank": 65, "participated": true, "score": 315.89, "award": "silver"}, "country_code": "IR"}
+{"type": "person", "handle": "name:brian_xiao_boyang", "real_name": "Brian Xiao Boyang", "result": {"rank": 65, "participated": true, "score": 314.7, "award": "silver"}, "country_code": "SG"}
+{"type": "person", "handle": "name:anatole_bouton", "real_name": "Anatole Bouton", "result": {"rank": 66, "participated": true, "score": 313.25, "award": "silver"}, "country_code": "FR"}
+{"type": "person", "handle": "name:samik_goyal", "real_name": "Samik Goyal", "result": {"rank": 67, "participated": true, "score": 311.35, "award": "silver"}, "country_code": "IN"}
+{"type": "person", "handle": "name:jakob_žorž", "real_name": "Jakob Žorž", "result": {"rank": 68, "participated": true, "score": 311.19, "award": "silver"}, "country_code": "SI"}
+{"type": "person", "handle": "name:alex_wang", "real_name": "Alex Wang", "result": {"rank": 69, "participated": true, "score": 308.89, "award": "silver"}, "country_code": "AU"}
+{"type": "person", "handle": "name:guanhan_li", "real_name": "Guanhan Li", "result": {"rank": 70, "participated": true, "score": 308.21, "award": "silver"}, "country_code": "NZ"}
+{"type": "person", "handle": "name:pál_czanik", "real_name": "Pál Czanik", "result": {"rank": 71, "participated": true, "score": 308.14, "award": "silver"}, "country_code": "HU"}
+{"type": "person", "handle": "name:kwong_weng_loh", "real_name": "Kwong Weng Loh", "result": {"rank": 72, "participated": true, "score": 308.13, "award": "silver"}, "country_code": "MY"}
+{"type": "person", "handle": "name:mansur_taimas", "real_name": "Mansur Taimas", "result": {"rank": 73, "participated": true, "score": 307.19, "award": "silver"}, "country_code": "KZ"}
+{"type": "person", "handle": "name:illia_permiakov", "real_name": "Illia Permiakov", "result": {"rank": 74, "participated": true, "score": 307.15, "award": "silver"}, "country_code": "UA"}
+{"type": "person", "handle": "name:timur_degteari", "real_name": "Timur Degteari", "result": {"rank": 75, "participated": true, "score": 305.19, "award": "silver"}, "country_code": "MD"}
+{"type": "person", "handle": "name:gagik_gevorgyan", "real_name": "Gagik Gevorgyan", "result": {"rank": 76, "participated": true, "score": 304.75, "award": "silver"}, "country_code": "AM"}
+{"type": "person", "handle": "name:sean_wanitchollakit", "real_name": "Sean Wanitchollakit", "result": {"rank": 77, "participated": true, "score": 304.47, "award": "silver"}, "country_code": "TH"}
+{"type": "person", "handle": "name:kelven_nathanael", "real_name": "Kelven Nathanael", "result": {"rank": 78, "participated": true, "score": 302.7, "award": "silver"}, "country_code": "ID"}
+{"type": "person", "handle": "name:ian_bobrus", "real_name": "Ian Bobrus", "result": {"rank": 79, "participated": true, "score": 302.28, "award": "silver"}, "country_code": "KG"}
+{"type": "person", "handle": "name:martin_bierbaumer", "real_name": "Martin Bierbaumer", "result": {"rank": 80, "participated": true, "score": 300.31, "award": "silver"}, "country_code": "AT"}
+{"type": "person", "handle": "name:jerome_austin_te", "real_name": "Jerome Austin Te", "result": {"rank": 81, "participated": true, "score": 299.14, "award": "silver"}, "country_code": "PH"}
+{"type": "person", "handle": "name:jovian_soejono", "real_name": "Jovian Soejono", "result": {"rank": 82, "participated": true, "score": 295.7, "award": "silver"}, "country_code": "CH"}
+{"type": "person", "handle": "name:papangkorn_apinyanon", "real_name": "Papangkorn Apinyanon", "result": {"rank": 83, "participated": true, "score": 293.7, "award": "silver"}, "country_code": "TH"}
+{"type": "person", "handle": "name:alihan_aidarbekov", "real_name": "Alihan Aidarbekov", "result": {"rank": 84, "participated": true, "score": 291.81, "award": "silver"}, "country_code": "KG"}
+{"type": "person", "handle": "name:nemanja_majski", "real_name": "Nemanja Majski", "result": {"rank": 85, "participated": true, "score": 290.64, "award": "silver"}, "country_code": "RS"}
+{"type": "person", "handle": "name:nazar_serazitdinov", "real_name": "Nazar Serazitdinov", "result": {"rank": 86, "participated": true, "score": 289.81, "award": "silver"}, "country_code": "KZ"}
+{"type": "person", "handle": "name:yung_ho_kwan", "real_name": "Yung Ho Kwan", "result": {"rank": 86, "participated": true, "score": 289.81, "award": "silver"}, "country_code": "HK"}
+{"type": "person", "handle": "name:lok_yin_siu", "real_name": "Lok Yin Siu", "result": {"rank": 88, "participated": true, "score": 289.69, "award": "silver"}, "country_code": "HK"}
+{"type": "person", "handle": "name:yahia_emara", "real_name": "Yahia Emara", "result": {"participated": true, "score": 289.39}, "country_code": "EG"}
+{"type": "person", "handle": "name:andrey_stefanov", "real_name": "Andrey Stefanov", "result": {"rank": 89, "participated": true, "score": 289.31, "award": "silver"}, "country_code": "BG"}
+{"type": "person", "handle": "name:matthias_pleschinger", "real_name": "Matthias Pleschinger", "result": {"rank": 90, "participated": true, "score": 287.97, "award": "bronze"}, "country_code": "AT"}
+{"type": "person", "handle": "name:raphaël_pons", "real_name": "Raphaël Pons", "result": {"rank": 91, "participated": true, "score": 287.7, "award": "bronze"}, "country_code": "FR"}
+{"type": "person", "handle": "name:yi-yu_chao", "real_name": "Yi-Yu Chao", "result": {"rank": 92, "participated": true, "score": 286.85, "award": "bronze"}, "country_code": "TW"}
+{"type": "person", "handle": "name:eduardo_carranza_vélez", "real_name": "Eduardo Carranza Vélez", "result": {"rank": 93, "participated": true, "score": 286.7, "award": "bronze"}, "country_code": "AR"}
+{"type": "person", "handle": "name:panagiotis_paskalis", "real_name": "Panagiotis Paskalis", "result": {"rank": 93, "participated": true, "score": 286.7, "award": "bronze"}, "country_code": "GR"}
+{"type": "person", "handle": "name:ihnat_zharikhin", "real_name": "Ihnat Zharikhin", "result": {"rank": 95, "participated": true, "score": 286.13, "award": "bronze"}, "country_code": "UA"}
+{"type": "person", "handle": "name:maksym_shvedchenko", "real_name": "Maksym Shvedchenko", "result": {"rank": 95, "participated": true, "score": 286.13, "award": "bronze"}, "country_code": "DE"}
+{"type": "person", "handle": "name:james_ray_bamber", "real_name": "James Ray Bamber", "result": {"rank": 97, "participated": true, "score": 285.7, "award": "bronze"}, "country_code": "IT"}
+{"type": "person", "handle": "name:faruk_ibrahimović", "real_name": "Faruk Ibrahimović", "result": {"rank": 98, "participated": true, "score": 285.25, "award": "bronze"}, "country_code": "BA"}
+{"type": "person", "handle": "name:filipe_lalic", "real_name": "Filipe Lalic", "result": {"rank": 99, "participated": true, "score": 285.14, "award": "bronze"}, "country_code": "BR"}
+{"type": "person", "handle": "name:yun-shuo_tsao", "real_name": "Yun-Shuo Tsao", "result": {"rank": 100, "participated": true, "score": 283.47, "award": "bronze"}, "country_code": "TW"}
+{"type": "person", "handle": "name:ayman_riad_solh", "real_name": "Ayman Riad Solh", "result": {"rank": 101, "participated": true, "score": 283.21, "award": "bronze"}, "country_code": "MA"}
+{"type": "person", "handle": "name:minkyum_kim", "real_name": "Minkyum Kim", "result": {"rank": 102, "participated": true, "score": 283.2, "award": "bronze"}, "country_code": "ZA"}
+{"type": "person", "handle": "name:trung_pham_ngoc", "real_name": "Trung Pham Ngoc", "result": {"rank": 102, "participated": true, "score": 283.2, "award": "bronze"}, "country_code": "VN"}
+{"type": "person", "handle": "name:alessandro_lombardo", "real_name": "Alessandro Lombardo", "result": {"rank": 104, "participated": true, "score": 282.69, "award": "bronze"}, "country_code": "IT"}
+{"type": "person", "handle": "name:elias_bauer", "real_name": "Elias Bauer", "result": {"rank": 105, "participated": true, "score": 279.35, "award": "bronze"}, "country_code": "CH"}
+{"type": "person", "handle": "name:adavya_goyal", "real_name": "Adavya Goyal", "result": {"rank": 106, "participated": true, "score": 278.62, "award": "bronze"}, "country_code": "GB"}
+{"type": "person", "handle": "name:onolt_khurtsbilguun", "real_name": "Onolt Khurtsbilguun", "result": {"rank": 107, "participated": true, "score": 277.85, "award": "bronze"}, "country_code": "MN"}
+{"type": "person", "handle": "name:chenyu_lin", "real_name": "Chenyu Lin", "result": {"rank": 108, "participated": true, "score": 277.67, "award": "bronze"}, "country_code": "NL"}
+{"type": "person", "handle": "name:luca_baglietto", "real_name": "Luca Baglietto", "result": {"rank": 109, "participated": true, "score": 277.11, "award": "bronze"}, "country_code": "IT"}
+{"type": "person", "handle": "name:ping-chung_chang", "real_name": "Ping-Chung Chang", "result": {"rank": 110, "participated": true, "score": 276.97, "award": "bronze"}, "country_code": "TW"}
+{"type": "person", "handle": "name:kaarel_toomet", "real_name": "Kaarel Toomet", "result": {"rank": 111, "participated": true, "score": 276.14, "award": "bronze"}, "country_code": "EE"}
+{"type": "person", "handle": "name:theodor_beskow", "real_name": "Theodor Beskow", "result": {"rank": 112, "participated": true, "score": 276.13, "award": "bronze"}, "country_code": "SE"}
+{"type": "person", "handle": "name:dino_hadžić", "real_name": "Dino Hadžić", "result": {"rank": 113, "participated": true, "score": 276.0, "award": "bronze"}, "country_code": "HR"}
+{"type": "person", "handle": "name:irmuun_chinbat", "real_name": "Irmuun Chinbat", "result": {"rank": 114, "participated": true, "score": 274.77, "award": "bronze"}, "country_code": "MN"}
+{"type": "person", "handle": "name:nathan_zhou", "real_name": "Nathan Zhou", "result": {"rank": 115, "participated": true, "score": 272.69, "award": "bronze"}, "country_code": "AU"}
+{"type": "person", "handle": "name:francesco_vercellesi", "real_name": "Francesco Vercellesi", "result": {"rank": 116, "participated": true, "score": 272.47, "award": "bronze"}, "country_code": "IT"}
+{"type": "person", "handle": "name:markos_radaios", "real_name": "Markos Radaios", "result": {"rank": 117, "participated": true, "score": 272.2, "award": "bronze"}, "country_code": "GR"}
+{"type": "person", "handle": "name:jelle_van_der_drift", "real_name": "Jelle van der Drift", "result": {"rank": 118, "participated": true, "score": 271.47, "award": "bronze"}, "country_code": "NL"}
+{"type": "person", "handle": "name:parsa_farjpoursarabi", "real_name": "Parsa Farjpoursarabi", "result": {"rank": 119, "participated": true, "score": 271.39, "award": "bronze"}, "country_code": "IR"}
+{"type": "person", "handle": "name:kristjan_lepp", "real_name": "Kristjan Lepp", "result": {"rank": 119, "participated": true, "score": 269.81, "award": "bronze"}, "country_code": "EE"}
+{"type": "person", "handle": "name:nikola_vujica", "real_name": "Nikola Vujica", "result": {"rank": 120, "participated": true, "score": 269.15, "award": "bronze"}, "country_code": "HR"}
+{"type": "person", "handle": "name:mariza_paspalli", "real_name": "Mariza Paspalli", "result": {"rank": 121, "participated": true, "score": 269.11, "award": "bronze"}, "country_code": "CY"}
+{"type": "person", "handle": "name:theofanis_orfanou", "real_name": "Theofanis Orfanou", "result": {"rank": 122, "participated": true, "score": 267.97, "award": "bronze"}, "country_code": "CY"}
+{"type": "person", "handle": "name:dzmitry_harbatouski", "real_name": "Dzmitry Harbatouski", "result": {"rank": 123, "participated": true, "score": 267.81, "award": "bronze"}}
+{"type": "person", "handle": "name:ahmed_osman", "real_name": "Ahmed Osman", "result": {"rank": 124, "participated": true, "score": 265.39, "award": "bronze"}, "country_code": "EG"}
+{"type": "person", "handle": "name:simon_bachran", "real_name": "Simon Bachran", "result": {"rank": 125, "participated": true, "score": 263.64, "award": "bronze"}, "country_code": "DE"}
+{"type": "person", "handle": "name:kunthee_yongvanich", "real_name": "Kunthee Yongvanich", "result": {"rank": 125, "participated": true, "score": 262.12, "award": "bronze"}, "country_code": "TH"}
+{"type": "person", "handle": "name:mina_gayed", "real_name": "Mina Gayed", "result": {"participated": true, "score": 260.39}, "country_code": "EG"}
+{"type": "person", "handle": "name:aykhan_damirli", "real_name": "Aykhan Damirli", "result": {"rank": 126, "participated": true, "score": 260.11, "award": "bronze"}, "country_code": "AZ"}
+{"type": "person", "handle": "name:noyan_cantürk", "real_name": "Noyan Cantürk", "result": {"rank": 126, "participated": true, "score": 260.11, "award": "bronze"}, "country_code": "TR"}
+{"type": "person", "handle": "name:miloš_milutinović", "real_name": "Miloš Milutinović", "result": {"rank": 128, "participated": true, "score": 259.15, "award": "bronze"}, "country_code": "RS"}
+{"type": "person", "handle": "name:kang_yiming", "real_name": "Kang Yiming", "result": {"rank": 129, "participated": true, "score": 257.83, "award": "bronze"}, "country_code": "SG"}
+{"type": "person", "handle": "name:arthur_lobo_leite_lopes", "real_name": "Arthur Lobo Leite Lopes", "result": {"rank": 130, "participated": true, "score": 257.64, "award": "bronze"}, "country_code": "BR"}
+{"type": "person", "handle": "name:moez_mahmoud", "real_name": "Moez Mahmoud", "result": {"rank": 131, "participated": true, "score": 256.83, "award": "bronze"}, "country_code": "EG"}
+{"type": "person", "handle": "name:marijonas_salvijus_keturakis", "real_name": "Marijonas Salvijus Keturakis", "result": {"rank": 132, "participated": true, "score": 256.7, "award": "bronze"}, "country_code": "LT"}
+{"type": "person", "handle": "name:jakov_celin", "real_name": "Jakov Celin", "result": {"rank": 133, "participated": true, "score": 254.65, "award": "bronze"}, "country_code": "HR"}
+{"type": "person", "handle": "name:lovro_tunjić", "real_name": "Lovro Tunjić", "result": {"rank": 134, "participated": true, "score": 251.35, "award": "bronze"}, "country_code": "HR"}
+{"type": "person", "handle": "name:abdelmaged_nour", "real_name": "Abdelmaged Nour", "result": {"rank": 135, "participated": true, "score": 251.2, "award": "bronze"}, "country_code": "EG"}
+{"type": "person", "handle": "name:rareș-felix_tudose", "real_name": "Rareș-Felix Tudose", "result": {"rank": 135, "participated": true, "score": 251.2, "award": "bronze"}, "country_code": "RO"}
+{"type": "person", "handle": "name:kiryl_kardash", "real_name": "Kiryl Kardash", "result": {"rank": 137, "participated": true, "score": 250.5, "award": "bronze"}}
+{"type": "person", "handle": "name:baitoro_mairambekov", "real_name": "Baitoro Mairambekov", "result": {"rank": 138, "participated": true, "score": 250.31, "award": "bronze"}, "country_code": "KG"}
+{"type": "person", "handle": "name:bianca_vicente", "real_name": "Bianca Vicente", "result": {"rank": 139, "participated": true, "score": 250.13, "award": "bronze"}, "country_code": "AR"}
+{"type": "person", "handle": "name:nikoloz_melikishvili", "real_name": "Nikoloz Melikishvili", "result": {"rank": 140, "participated": true, "score": 248.85, "award": "bronze"}, "country_code": "GE"}
+{"type": "person", "handle": "name:thawin_tengamnuay", "real_name": "Thawin Tengamnuay", "result": {"rank": 141, "participated": true, "score": 247.72, "award": "bronze"}, "country_code": "TH"}
+{"type": "person", "handle": "name:filbert_ephraim_wu", "real_name": "Filbert Ephraim Wu", "result": {"rank": 142, "participated": true, "score": 247.27, "award": "bronze"}, "country_code": "PH"}
+{"type": "person", "handle": "name:hang_chi_ng", "real_name": "Hang Chi Ng", "result": {"rank": 143, "participated": true, "score": 246.33, "award": "bronze"}, "country_code": "MO"}
+{"type": "person", "handle": "name:yash_thakker", "real_name": "Yash Thakker", "result": {"rank": 144, "participated": true, "score": 244.11, "award": "bronze"}, "country_code": "IN"}
+{"type": "person", "handle": "name:itamar_nir", "real_name": "Itamar Nir", "result": {"rank": 145, "participated": true, "score": 243.72, "award": "bronze"}, "country_code": "IL"}
+{"type": "person", "handle": "name:mihailo_jančević", "real_name": "Mihailo Jančević", "result": {"rank": 145, "participated": true, "score": 242.63, "award": "bronze"}, "country_code": "RS"}
+{"type": "person", "handle": "name:jarif_rahman", "real_name": "Jarif Rahman", "result": {"rank": 146, "participated": true, "score": 242.19, "award": "bronze"}, "country_code": "BD"}
+{"type": "person", "handle": "name:muhammad_umair_ahmad_mirza", "real_name": "Muhammad Umair Ahmad Mirza", "result": {"rank": 147, "participated": true, "score": 240.75, "award": "bronze"}, "country_code": "PK"}
+{"type": "person", "handle": "name:akhmet_issa", "real_name": "Akhmet Issa", "result": {"rank": 148, "participated": true, "score": 240.47, "award": "bronze"}, "country_code": "KZ"}
+{"type": "person", "handle": "name:andrei_sabalenka", "real_name": "Andrei Sabalenka", "result": {"rank": 149, "participated": true, "score": 240.13, "award": "bronze"}}
+{"type": "person", "handle": "name:marco_antonio_escandón_garcía", "real_name": "Marco Antonio Escandón García", "result": {"rank": 150, "participated": true, "score": 240.11, "award": "bronze"}, "country_code": "CU"}
+{"type": "person", "handle": "name:anton_avilov", "real_name": "Anton Avilov", "result": {"rank": 151, "participated": true, "score": 239.0, "award": "bronze"}, "country_code": "FR"}
+{"type": "person", "handle": "name:amin_charba", "real_name": "Amin Charba", "result": {"rank": 152, "participated": true, "score": 238.0, "award": "bronze"}, "country_code": "SY"}
+{"type": "person", "handle": "name:hugo_bruwer", "real_name": "Hugo Bruwer", "result": {"rank": 153, "participated": true, "score": 237.35, "award": "bronze"}, "country_code": "ZA"}
+{"type": "person", "handle": "name:jan_slíva", "real_name": "Jan Slíva", "result": {"rank": 154, "participated": true, "score": 236.5, "award": "bronze"}, "country_code": "CZ"}
+{"type": "person", "handle": "name:victor_coen", "real_name": "Victor Coen", "result": {"rank": 155, "participated": true, "score": 235.47, "award": "bronze"}, "country_code": "NZ"}
+{"type": "person", "handle": "name:martin_šindelář", "real_name": "Martin Šindelář", "result": {"rank": 156, "participated": true, "score": 235.31, "award": "bronze"}, "country_code": "SK"}
+{"type": "person", "handle": "name:ahmed_alhashim", "real_name": "Ahmed Alhashim", "result": {"rank": 157, "participated": true, "score": 234.81, "award": "bronze"}, "country_code": "SA"}
+{"type": "person", "handle": "name:chang_jun_lim", "real_name": "Chang Jun Lim", "result": {"rank": 158, "participated": true, "score": 234.5, "award": "bronze"}, "country_code": "MY"}
+{"type": "person", "handle": "name:adeeb_alshehry", "real_name": "Adeeb AlShehry", "result": {"rank": 159, "participated": true, "score": 234.15, "award": "bronze"}, "country_code": "SA"}
+{"type": "person", "handle": "name:pedro_suyama_leston_rey", "real_name": "Pedro Suyama Leston Rey", "result": {"rank": 160, "participated": true, "score": 230.85, "award": "bronze"}, "country_code": "BR"}
+{"type": "person", "handle": "name:sun_beichen", "real_name": "Sun Beichen", "result": {"rank": 161, "participated": true, "score": 230.4, "award": "bronze"}, "country_code": "SG"}
+{"type": "person", "handle": "name:yaël_arn", "real_name": "Yaël Arn", "result": {"rank": 162, "participated": true, "score": 230.0, "award": "bronze"}, "country_code": "CH"}
+{"type": "person", "handle": "name:øystein_berntzen", "real_name": "Øystein Berntzen", "result": {"rank": 163, "participated": true, "score": 229.81, "award": "bronze"}, "country_code": "NO"}
+{"type": "person", "handle": "name:victor_vatn", "real_name": "Victor Vatn", "result": {"rank": 164, "participated": true, "score": 229.11, "award": "bronze"}, "country_code": "SE"}
+{"type": "person", "handle": "name:gunadi_gani", "real_name": "Gunadi Gani", "result": {"rank": 165, "participated": true, "score": 227.81, "award": "bronze"}, "country_code": "ID"}
+{"type": "person", "handle": "name:mardon_hazratov", "real_name": "Mardon Hazratov", "result": {"rank": 166, "participated": true, "score": 227.5, "award": "bronze"}, "country_code": "UZ"}
+{"type": "person", "handle": "name:uroš_kostadinović", "real_name": "Uroš Kostadinović", "result": {"rank": 167, "participated": true, "score": 227.28, "award": "bronze"}, "country_code": "RS"}
+{"type": "person", "handle": "name:kaleem_raza_syed", "real_name": "Kaleem Raza Syed", "result": {"rank": 168, "participated": true, "score": 226.97, "award": "bronze"}, "country_code": "PK"}
+{"type": "person", "handle": "name:josé_andrés_lemus_velazquez", "real_name": "José Andrés Lemus Velazquez", "result": {"rank": 169, "participated": true, "score": 225.61, "award": "bronze"}, "country_code": "MX"}
+{"type": "person", "handle": "name:sebastian_meineche_falk", "real_name": "Sebastian Meineche Falk", "result": {"rank": 170, "participated": true, "score": 224.2, "award": "bronze"}, "country_code": "DK"}
+{"type": "person", "handle": "name:mikhail_brel", "real_name": "Mikhail Brel", "result": {"rank": 171, "participated": true, "score": 223.31, "award": "bronze"}}
+{"type": "person", "handle": "name:patrik_číhal", "real_name": "Patrik Číhal", "result": {"rank": 172, "participated": true, "score": 223.0, "award": "bronze"}, "country_code": "CZ"}
+{"type": "person", "handle": "name:tomas_marcinkevičius", "real_name": "Tomas Marcinkevičius", "result": {"rank": 172, "participated": true, "score": 223.0, "award": "bronze"}, "country_code": "LT"}
+{"type": "person", "handle": "name:tarek_zaki", "real_name": "Tarek Zaki", "result": {"participated": true, "score": 223.0}, "country_code": "EG"}
+{"type": "person", "handle": "name:tsovak_yegoryan", "real_name": "Tsovak Yegoryan", "result": {"rank": 174, "participated": true, "score": 222.5, "award": "bronze"}, "country_code": "AM"}
+{"type": "person", "handle": "name:mihai_esanu", "real_name": "Mihai Esanu", "result": {"rank": 175, "participated": true, "score": 218.81, "award": "bronze"}, "country_code": "MD"}
+{"type": "person", "handle": "name:akib_azmain_turja", "real_name": "Akib Azmain Turja", "result": {"rank": 176, "participated": true, "score": 217.97, "award": "bronze"}, "country_code": "BD"}
+{"type": "person", "handle": "name:raouf_ould_ali", "real_name": "Raouf Ould Ali", "result": {"rank": 177, "participated": true, "score": 216.97, "award": "bronze"}, "country_code": "DZ"}
+{"type": "person", "handle": "name:hakob_ayvazyan", "real_name": "Hakob Ayvazyan", "result": {"rank": 178, "participated": true, "score": 215.47, "award": "hm"}, "country_code": "AM"}
+{"type": "person", "handle": "name:david_hromádka", "real_name": "David Hromádka", "result": {"rank": 179, "participated": true, "score": 215.31, "award": "hm"}, "country_code": "CZ"}
+{"type": "person", "handle": "name:aleks_grigoryan", "real_name": "Aleks Grigoryan", "result": {"rank": 180, "participated": true, "score": 213.33, "award": "hm"}, "country_code": "AM"}
+{"type": "person", "handle": "name:yan_xun_khor", "real_name": "Yan Xun Khor", "result": {"rank": 181, "participated": true, "score": 213.27, "award": "hm"}, "country_code": "MY"}
+{"type": "person", "handle": "name:santiago_de_la_torre_zamudio", "real_name": "Santiago de la Torre Zamudio", "result": {"rank": 182, "participated": true, "score": 212.33, "award": "hm"}, "country_code": "MX"}
+{"type": "person", "handle": "name:zsombor_bata", "real_name": "Zsombor Bata", "result": {"rank": 183, "participated": true, "score": 211.7, "award": "hm"}, "country_code": "HU"}
+{"type": "person", "handle": "name:fuad_garayev", "real_name": "Fuad Garayev", "result": {"rank": 184, "participated": true, "score": 210.33, "award": "hm"}, "country_code": "AZ"}
+{"type": "person", "handle": "name:benjamin_mujkić", "real_name": "Benjamin Mujkić", "result": {"rank": 185, "participated": true, "score": 209.83, "award": "hm"}, "country_code": "BA"}
+{"type": "person", "handle": "name:muhammad_saram", "real_name": "Muhammad Saram", "result": {"rank": 185, "participated": true, "score": 209.83, "award": "hm"}, "country_code": "PK"}
+{"type": "person", "handle": "name:tsz_chai_berton_choy", "real_name": "Tsz Chai Berton Choy", "result": {"rank": 187, "participated": true, "score": 209.31, "award": "hm"}, "country_code": "HK"}
+{"type": "person", "handle": "name:ziyan_wang", "real_name": "Ziyan Wang", "result": {"rank": 188, "participated": true, "score": 207.03, "award": "hm"}, "country_code": "MO"}
+{"type": "person", "handle": "name:hadi_suleiman", "real_name": "Hadi Suleiman", "result": {"rank": 189, "participated": true, "score": 205.81, "award": "hm"}, "country_code": "SY"}
+{"type": "person", "handle": "name:anango_prabhat", "real_name": "Anango Prabhat", "result": {"rank": 190, "participated": true, "score": 205.33, "award": "hm"}, "country_code": "GB"}
+{"type": "person", "handle": "name:irakli_sulamanidze", "real_name": "Irakli Sulamanidze", "result": {"rank": 191, "participated": true, "score": 205.28, "award": "hm"}, "country_code": "GE"}
+{"type": "person", "handle": "name:yuan_li", "real_name": "Yuan Li", "result": {"rank": 192, "participated": true, "score": 204.62, "award": "hm"}, "country_code": "IE"}
+{"type": "person", "handle": "name:abdulaziz_lebiev", "real_name": "Abdulaziz Lebiev", "result": {"rank": 193, "participated": true, "score": 203.31, "award": "hm"}, "country_code": "KG"}
+{"type": "person", "handle": "name:khusanboy_mansuraliev", "real_name": "Khusanboy Mansuraliev", "result": {"rank": 194, "participated": true, "score": 203.0}, "country_code": "UZ"}
+{"type": "person", "handle": "name:logan_guerrero_díaz", "real_name": "Logan Guerrero Díaz", "result": {"rank": 195, "participated": true, "score": 202.83, "award": "hm"}, "country_code": "MX"}
+{"type": "person", "handle": "name:otar_tsibadze", "real_name": "Otar Tsibadze", "result": {"rank": 196, "participated": true, "score": 202.0, "award": "hm"}, "country_code": "GE"}
+{"type": "person", "handle": "name:malitha_bandara", "real_name": "Malitha Bandara", "result": {"rank": 197, "participated": true, "score": 201.7}, "country_code": "LK"}
+{"type": "person", "handle": "name:patrik_prítrský", "real_name": "Patrik Prítrský", "result": {"rank": 198, "participated": true, "score": 200.47, "award": "hm"}, "country_code": "SK"}
+{"type": "person", "handle": "name:abdullah_abdullah", "real_name": "Abdullah Abdullah", "result": {"rank": 199, "participated": true, "score": 199.83, "award": "hm"}, "country_code": "SY"}
+{"type": "person", "handle": "name:marian_soltan", "real_name": "Marian Soltan", "result": {"rank": 200, "participated": true, "score": 199.5, "award": "hm"}, "country_code": "MD"}
+{"type": "person", "handle": "name:zein_alabdeen_zammar", "real_name": "Zein Alabdeen Zammar", "result": {"rank": 201, "participated": true, "score": 198.31}, "country_code": "SY"}
+{"type": "person", "handle": "name:alin_popescu", "real_name": "Alin Popescu", "result": {"rank": 202, "participated": true, "score": 195.19}, "country_code": "MD"}
+{"type": "person", "handle": "name:tamás_görömbey", "real_name": "Tamás Görömbey", "result": {"rank": 203, "participated": true, "score": 195.0}, "country_code": "HU"}
+{"type": "person", "handle": "name:emmanuel_buenrostro_briseño", "real_name": "Emmanuel Buenrostro Briseño", "result": {"rank": 204, "participated": true, "score": 194.83, "award": "hm"}, "country_code": "MX"}
+{"type": "person", "handle": "name:blagoj_rujanoski_stojanovski", "real_name": "Blagoj Rujanoski Stojanovski", "result": {"rank": 205, "participated": true, "score": 194.81, "award": "hm"}, "country_code": "MK"}
+{"type": "person", "handle": "name:sunnatov_asilbek", "real_name": "Sunnatov Asilbek", "result": {"rank": 206, "participated": true, "score": 194.33, "award": "hm"}, "country_code": "UZ"}
+{"type": "person", "handle": "name:youkyum_kim", "real_name": "Youkyum Kim", "result": {"rank": 207, "participated": true, "score": 193.11, "award": "hm"}, "country_code": "ZA"}
+{"type": "person", "handle": "name:daniel_nieto_pérez", "real_name": "Daniel Nieto Pérez", "result": {"rank": 208, "participated": true, "score": 191.0, "award": "hm"}, "country_code": "ES"}
+{"type": "person", "handle": "name:antreas_knais", "real_name": "Antreas Knais", "result": {"rank": 209, "participated": true, "score": 190.31}, "country_code": "CY"}
+{"type": "person", "handle": "name:nik_sauer", "real_name": "Nik Sauer", "result": {"rank": 210, "participated": true, "score": 190.03}, "country_code": "AT"}
+{"type": "person", "handle": "name:raphael_heuchl", "real_name": "Raphael Heuchl", "result": {"rank": 211, "participated": true, "score": 189.7}, "country_code": "AT"}
+{"type": "person", "handle": "name:sofia_maragò", "real_name": "Sofia Maragò", "result": {"rank": 212, "participated": true, "score": 187.97}, "country_code": "LU"}
+{"type": "person", "handle": "name:essa_almousa", "real_name": "Essa Almousa", "result": {"rank": 213, "participated": true, "score": 187.81}, "country_code": "SA"}
+{"type": "person", "handle": "name:musojon_muhammadiev", "real_name": "Musojon Muhammadiev", "result": {"rank": 213, "participated": true, "score": 187.81}, "country_code": "TJ"}
+{"type": "person", "handle": "name:noé_zech", "real_name": "Noé Zech", "result": {"rank": 213, "participated": true, "score": 187.81}, "country_code": "BE"}
+{"type": "person", "handle": "name:daniel_ye", "real_name": "Daniel Ye", "result": {"rank": 216, "participated": true, "score": 187.7, "award": "hm"}, "country_code": "CA"}
+{"type": "person", "handle": "name:daniel_holm_rasmussen", "real_name": "Daniel Holm Rasmussen", "result": {"rank": 217, "participated": true, "score": 187.47}, "country_code": "DK"}
+{"type": "person", "handle": "name:luka_heric", "real_name": "Luka Heric", "result": {"rank": 217, "participated": true, "score": 187.47}, "country_code": "SI"}
+{"type": "person", "handle": "name:mahdi_benkhadra", "real_name": "Mahdi Benkhadra", "result": {"rank": 219, "participated": true, "score": 187.31, "award": "hm"}, "country_code": "MA"}
+{"type": "person", "handle": "name:kipras_deksnys", "real_name": "Kipras Deksnys", "result": {"rank": 220, "participated": true, "score": 185.97, "award": "hm"}, "country_code": "LT"}
+{"type": "person", "handle": "name:tahir_aliyev", "real_name": "Tahir Aliyev", "result": {"rank": 221, "participated": true, "score": 185.77}, "country_code": "AZ"}
+{"type": "person", "handle": "name:ursus_wigger", "real_name": "Ursus Wigger", "result": {"rank": 222, "participated": true, "score": 184.5, "award": "hm"}, "country_code": "CH"}
+{"type": "person", "handle": "name:yassine_ben_younes", "real_name": "Yassine Ben Younes", "result": {"rank": 222, "participated": true, "score": 184.5, "award": "hm"}, "country_code": "TN"}
+{"type": "person", "handle": "name:daniel_emeka-ilozor", "real_name": "Daniel Emeka-Ilozor", "result": {"rank": 224, "participated": true, "score": 183.15, "award": "hm"}, "country_code": "NG"}
+{"type": "person", "handle": "name:lazaros_karageorgiou", "real_name": "Lazaros Karageorgiou", "result": {"rank": 225, "participated": true, "score": 182.62}, "country_code": "GR"}
+{"type": "person", "handle": "name:ghulam_junaid", "real_name": "Ghulam Junaid", "result": {"rank": 226, "participated": true, "score": 180.47}, "country_code": "PK"}
+{"type": "person", "handle": "name:gabee_de_vera", "real_name": "Gabee De Vera", "result": {"rank": 227, "participated": true, "score": 180.31}, "country_code": "PH"}
+{"type": "person", "handle": "name:mohammed_wawi", "real_name": "Mohammed Wawi", "result": {"rank": 228, "participated": true, "score": 179.33}, "country_code": "PS"}
+{"type": "person", "handle": "name:gustav_bille_gørtz", "real_name": "Gustav Bille Gørtz", "result": {"rank": 229, "participated": true, "score": 179.31, "award": "hm"}, "country_code": "DK"}
+{"type": "person", "handle": "name:brest_lenarčič", "real_name": "Brest Lenarčič", "result": {"rank": 230, "participated": true, "score": 178.83, "award": "hm"}, "country_code": "SI"}
+{"type": "person", "handle": "name:marwen_el_arbi", "real_name": "Marwen El Arbi", "result": {"rank": 231, "participated": true, "score": 176.78}, "country_code": "TN"}
+{"type": "person", "handle": "name:adnan_osmić", "real_name": "Adnan Osmić", "result": {"rank": 232, "participated": true, "score": 176.33}, "country_code": "BA"}
+{"type": "person", "handle": "name:camilo_triana_barata", "real_name": "Camilo Triana Barata", "result": {"rank": 233, "participated": true, "score": 175.35}, "country_code": "CU"}
+{"type": "person", "handle": "name:musharraf_shukrulloev", "real_name": "Musharraf Shukrulloev", "result": {"rank": 234, "participated": true, "score": 175.33, "award": "hm"}, "country_code": "TJ"}
+{"type": "person", "handle": "name:anastasiia_saranchina", "real_name": "Anastasiia Saranchina", "result": {"rank": 235, "participated": true, "score": 174.33}, "country_code": "SE"}
+{"type": "person", "handle": "name:shuheng_wei", "real_name": "Shuheng Wei", "result": {"rank": 236, "participated": true, "score": 173.2, "award": "hm"}, "country_code": "DE"}
+{"type": "person", "handle": "name:deera_wijesundara", "real_name": "Deera Wijesundara", "result": {"rank": 237, "participated": true, "score": 172.81}, "country_code": "LK"}
+{"type": "person", "handle": "name:huseyn_aghayev", "real_name": "Huseyn Aghayev", "result": {"rank": 237, "participated": true, "score": 172.81}, "country_code": "AZ"}
+{"type": "person", "handle": "name:rushdi_jallad", "real_name": "Rushdi Jallad", "result": {"rank": 237, "participated": true, "score": 172.81}, "country_code": "PS"}
+{"type": "person", "handle": "name:frederik_vase_haraldsson", "real_name": "Frederik Vase Haraldsson", "result": {"rank": 240, "participated": true, "score": 172.61, "award": "hm"}, "country_code": "DK"}
+{"type": "person", "handle": "name:joaquim_schaeverbeke", "real_name": "Joaquim Schaeverbeke", "result": {"rank": 241, "participated": true, "score": 172.5}, "country_code": "BE"}
+{"type": "person", "handle": "name:maria_clara_fontes_silva", "real_name": "Maria Clara Fontes Silva", "result": {"rank": 242, "participated": true, "score": 171.0}, "country_code": "BR"}
+{"type": "person", "handle": "name:georgios-diomedes_varvaresos", "real_name": "Georgios-Diomedes Varvaresos", "result": {"rank": 243, "participated": true, "score": 168.0}, "country_code": "GR"}
+{"type": "person", "handle": "name:ismail_fateen", "real_name": "Ismail Fateen", "result": {"rank": 244, "participated": true, "score": 165.33}, "country_code": "EG"}
+{"type": "person", "handle": "name:faruk_demirović", "real_name": "Faruk Demirović", "result": {"rank": 245, "participated": true, "score": 163.81, "award": "hm"}, "country_code": "BA"}
+{"type": "person", "handle": "name:saad_alarifi", "real_name": "Saad Alarifi", "result": {"rank": 246, "participated": true, "score": 163.75}, "country_code": "SA"}
+{"type": "person", "handle": "name:ulug'bek_rakhmatullaev", "real_name": "Ulug'bek Rakhmatullaev", "result": {"rank": 247, "participated": true, "score": 161.5}, "country_code": "UZ"}
+{"type": "person", "handle": "name:aidas_agejevas", "real_name": "Aidas Agejevas", "result": {"rank": 248, "participated": true, "score": 160.83}, "country_code": "LT"}
+{"type": "person", "handle": "name:nour_moubarak", "real_name": "Nour Moubarak", "result": {"participated": true, "score": 160.5}, "country_code": "EG"}
+{"type": "person", "handle": "name:desh_acharjee", "real_name": "Desh Acharjee", "result": {"rank": 249, "participated": true, "score": 160.0}, "country_code": "BD"}
+{"type": "person", "handle": "name:hasani_ghulomzoda", "real_name": "Hasani Ghulomzoda", "result": {"rank": 250, "participated": true, "score": 159.5}, "country_code": "TJ"}
+{"type": "person", "handle": "name:fernando_andreé_gonzález_meléndez", "real_name": "Fernando Andreé González Meléndez", "result": {"rank": 251, "participated": true, "score": 159.31}, "country_code": "SV"}
+{"type": "person", "handle": "name:maxwell_he", "real_name": "Maxwell He", "result": {"rank": 252, "participated": true, "score": 159.0}, "country_code": "CA"}
+{"type": "person", "handle": "name:žan_pustoslemšek", "real_name": "Žan Pustoslemšek", "result": {"rank": 252, "participated": true, "score": 159.0}, "country_code": "SI"}
+{"type": "person", "handle": "name:viliam_gottweis", "real_name": "Viliam Gottweis", "result": {"rank": 254, "participated": true, "score": 155.0}, "country_code": "SK"}
+{"type": "person", "handle": "name:io_fai_lei", "real_name": "Io Fai Lei", "result": {"rank": 255, "participated": true, "score": 154.5}, "country_code": "MO"}
+{"type": "person", "handle": "name:adriāns_piliksers", "real_name": "Adriāns Piliksers", "result": {"rank": 256, "participated": true, "score": 154.33}, "country_code": "LV"}
+{"type": "person", "handle": "name:boas_bakker", "real_name": "Boas Bakker", "result": {"rank": 257, "participated": true, "score": 153.81}, "country_code": "NL"}
+{"type": "person", "handle": "name:alejandro_pineda_miranda", "real_name": "Alejandro Pineda Miranda", "result": {"rank": 258, "participated": true, "score": 153.5}, "country_code": "PE"}
+{"type": "person", "handle": "name:niilo_mikkola", "real_name": "Niilo Mikkola", "result": {"rank": 259, "participated": true, "score": 153.15}, "country_code": "FI"}
+{"type": "person", "handle": "name:antreas_leonidou", "real_name": "Antreas Leonidou", "result": {"rank": 260, "participated": true, "score": 151.81, "award": "hm"}, "country_code": "CY"}
+{"type": "person", "handle": "name:praveen_athauda-arachchi", "real_name": "Praveen Athauda-Arachchi", "result": {"rank": 261, "participated": true, "score": 149.81}, "country_code": "LK"}
+{"type": "person", "handle": "name:pok_hong_lam", "real_name": "Pok Hong Lam", "result": {"rank": 262, "participated": true, "score": 148.47}, "country_code": "MO"}
+{"type": "person", "handle": "name:alban_van_vyve", "real_name": "Alban Van Vyve", "result": {"rank": 263, "participated": true, "score": 147.11}, "country_code": "BE"}
+{"type": "person", "handle": "name:kareem_kayid", "real_name": "Kareem Kayid", "result": {"rank": 264, "participated": true, "score": 144.5}, "country_code": "PS"}
+{"type": "person", "handle": "name:jesse_zhang", "real_name": "Jesse Zhang", "result": {"rank": 265, "participated": true, "score": 143.83}, "country_code": "NZ"}
+{"type": "person", "handle": "name:davit_dzadzamia", "real_name": "Davit Dzadzamia", "result": {"rank": 266, "participated": true, "score": 143.0}, "country_code": "GE"}
+{"type": "person", "handle": "name:tomás_faria", "real_name": "Tomás Faria", "result": {"rank": 267, "participated": true, "score": 142.5, "award": "hm"}, "country_code": "PT"}
+{"type": "person", "handle": "name:xu_yian", "real_name": "Xu Yian", "result": {"rank": 267, "participated": true, "score": 142.5}, "country_code": "ZA"}
+{"type": "person", "handle": "name:rosangel_alexandra_bullon_linares", "real_name": "Rosangel Alexandra Bullon Linares", "result": {"rank": 269, "participated": true, "score": 142.0, "award": "hm"}, "country_code": "PE"}
+{"type": "person", "handle": "name:sofie_fu", "real_name": "Sofie Fu", "result": {"rank": 270, "participated": true, "score": 141.5}, "country_code": "SE"}
+{"type": "person", "handle": "name:walsh_letran", "real_name": "Walsh Letran", "result": {"rank": 271, "participated": true, "score": 139.0, "award": "hm"}, "country_code": "PH"}
+{"type": "person", "handle": "name:diana_huacasi_durand", "real_name": "Diana Huacasi Durand", "result": {"rank": 272, "participated": true, "score": 135.5}, "country_code": "PE"}
+{"type": "person", "handle": "name:tamir_jamiyangarav", "real_name": "Tamir Jamiyangarav", "result": {"rank": 273, "participated": true, "score": 133.5}, "country_code": "MN"}
+{"type": "person", "handle": "name:andrejs_piroženoks", "real_name": "Andrejs Piroženoks", "result": {"rank": 274, "participated": true, "score": 130.7}, "country_code": "LV"}
+{"type": "person", "handle": "name:pierre_rouchès", "real_name": "Pierre Rouchès", "result": {"rank": 275, "participated": true, "score": 129.83}, "country_code": "DO"}
+{"type": "person", "handle": "name:mousa_hamed", "real_name": "Mousa Hamed", "result": {"rank": 276, "participated": true, "score": 127.5}, "country_code": "LY"}
+{"type": "person", "handle": "name:viktor_maksimoski", "real_name": "Viktor Maksimoski", "result": {"rank": 277, "participated": true, "score": 127.0}, "country_code": "MK"}
+{"type": "person", "handle": "name:matias_francisco_nova_baza", "real_name": "Matias Francisco Nova Baza", "result": {"rank": 278, "participated": true, "score": 123.81}, "country_code": "CL"}
+{"type": "person", "handle": "name:héctor_verdeal_rodríguez", "real_name": "Héctor Verdeal Rodríguez", "result": {"rank": 279, "participated": true, "score": 123.61}, "country_code": "ES"}
+{"type": "person", "handle": "name:yhlas_amanmyradov", "real_name": "Yhlas Amanmyradov", "result": {"rank": 280, "participated": true, "score": 123.5}, "country_code": "TM"}
+{"type": "person", "handle": "name:nebili_mohamed_fares", "real_name": "Nebili Mohamed Fares", "result": {"rank": 281, "participated": true, "score": 122.5}, "country_code": "TN"}
+{"type": "person", "handle": "name:piotr_stelmaszek", "real_name": "Piotr Stelmaszek", "result": {"rank": 282, "participated": true, "score": 117.85}, "country_code": "IE"}
+{"type": "person", "handle": "name:kristinn_hrafn_daníelsson", "real_name": "Kristinn Hrafn Daníelsson", "result": {"rank": 283, "participated": true, "score": 115.5}, "country_code": "IS"}
+{"type": "person", "handle": "name:hlieb_boiarkin", "real_name": "Hlieb Boiarkin", "result": {"rank": 284, "participated": true, "score": 115.31}, "country_code": "PT"}
+{"type": "person", "handle": "name:santiago_guaneme_quintero", "real_name": "Santiago Guaneme Quintero", "result": {"rank": 285, "participated": true, "score": 114.83}, "country_code": "CO"}
+{"type": "person", "handle": "name:edvards_freimanis", "real_name": "Edvards Freimanis", "result": {"rank": 286, "participated": true, "score": 112.73}, "country_code": "LV"}
+{"type": "person", "handle": "name:laura_muliar", "real_name": "Laura Muliar", "result": {"rank": 287, "participated": true, "score": 111.33}, "country_code": "PT"}
+{"type": "person", "handle": "name:akram_zakine", "real_name": "Akram Zakine", "result": {"rank": 288, "participated": true, "score": 110.85}, "country_code": "BE"}
+{"type": "person", "handle": "name:yassir_salama", "real_name": "Yassir Salama", "result": {"rank": 289, "participated": true, "score": 104.5}, "country_code": "MA"}
+{"type": "person", "handle": "name:mohamed_wassim_fkih", "real_name": "Mohamed Wassim Fkih", "result": {"rank": 290, "participated": true, "score": 103.97}, "country_code": "TN"}
+{"type": "person", "handle": "name:edgardo_león", "real_name": "Edgardo León", "result": {"rank": 291, "participated": true, "score": 103.0}, "country_code": "CL"}
+{"type": "person", "handle": "name:peter_zhou", "real_name": "Peter Zhou", "result": {"rank": 292, "participated": true, "score": 101.31}, "country_code": "NZ"}
+{"type": "person", "handle": "name:mindiya_karunasinghe", "real_name": "Mindiya Karunasinghe", "result": {"rank": 293, "participated": true, "score": 99.61}, "country_code": "LK"}
+{"type": "person", "handle": "name:sofija_velkovska", "real_name": "Sofija Velkovska", "result": {"rank": 294, "participated": true, "score": 99.33}, "country_code": "MK"}
+{"type": "person", "handle": "name:arthur_harri_jaakko_antila", "real_name": "Arthur Harri Jaakko Antila", "result": {"rank": 295, "participated": true, "score": 99.0}, "country_code": "EE"}
+{"type": "person", "handle": "name:erkhem_ganzorig", "real_name": "Erkhem Ganzorig", "result": {"rank": 296, "participated": true, "score": 96.0}, "country_code": "MN"}
+{"type": "person", "handle": "name:ralf_robert_paabo", "real_name": "Ralf Robert Paabo", "result": {"rank": 296, "participated": true, "score": 96.0}, "country_code": "EE"}
+{"type": "person", "handle": "name:gabriel_alberto_cruz_nogales", "real_name": "Gabriel Alberto Cruz Nogales", "result": {"rank": 298, "participated": true, "score": 95.5}, "country_code": "BO"}
+{"type": "person", "handle": "name:antero_nyberg", "real_name": "Antero Nyberg", "result": {"rank": 299, "participated": true, "score": 95.31}, "country_code": "FI"}
+{"type": "person", "handle": "name:raed_naseer", "real_name": "Raed Naseer", "result": {"rank": 300, "participated": true, "score": 94.5}, "country_code": "JO"}
+{"type": "person", "handle": "name:francis_josé_rodríguez_ronda", "real_name": "Francis José Rodríguez Ronda", "result": {"rank": 301, "participated": true, "score": 94.0}, "country_code": "CU"}
+{"type": "person", "handle": "name:roberto_josué_polanco_hernández", "real_name": "Roberto Josué Polanco Hernández", "result": {"rank": 302, "participated": true, "score": 93.5}, "country_code": "SV"}
+{"type": "person", "handle": "name:eva_sóllilja_einarsdóttir", "real_name": "Eva Sóllilja Einarsdóttir", "result": {"rank": 303, "participated": true, "score": 93.31}, "country_code": "IS"}
+{"type": "person", "handle": "name:albara_abdulhafith", "real_name": "Albara Abdulhafith", "result": {"rank": 304, "participated": true, "score": 90.0}, "country_code": "LY"}
+{"type": "person", "handle": "name:fionn_kimber_o'shea", "real_name": "Fionn Kimber O'Shea", "result": {"rank": 305, "participated": true, "score": 89.5}, "country_code": "IE"}
+{"type": "person", "handle": "name:oscar_josé_pleités_lemus", "real_name": "Oscar José Pleités Lemus", "result": {"rank": 306, "participated": true, "score": 88.0}, "country_code": "SV"}
+{"type": "person", "handle": "name:miguel_pereira", "real_name": "Miguel Pereira", "result": {"rank": 307, "participated": true, "score": 87.5}, "country_code": "PT"}
+{"type": "person", "handle": "name:atas_lapenas", "real_name": "Atas Lapenas", "result": {"rank": 308, "participated": true, "score": 86.97}, "country_code": "NO"}
+{"type": "person", "handle": "name:fabrizio_lautaro_brandellero", "real_name": "Fabrizio Lautaro Brandellero", "result": {"rank": 309, "participated": true, "score": 86.5}, "country_code": "AR"}
+{"type": "person", "handle": "name:abdallah_sherbini", "real_name": "Abdallah Sherbini", "result": {"rank": 310, "participated": true, "score": 86.0}, "country_code": "PS"}
+{"type": "person", "handle": "name:baldwin_huang", "real_name": "Baldwin Huang", "result": {"rank": 311, "participated": true, "score": 85.81}, "country_code": "DO"}
+{"type": "person", "handle": "name:samuel_leber", "real_name": "Samuel Leber", "result": {"rank": 312, "participated": true, "score": 84.0}, "country_code": "DE"}
+{"type": "person", "handle": "name:shamir_leonardo_terán_mustafá", "real_name": "Shamir Leonardo Terán Mustafá", "result": {"rank": 313, "participated": true, "score": 83.0}, "country_code": "BO"}
+{"type": "person", "handle": "name:hlib_zabudko", "real_name": "Hlib Zabudko", "result": {"rank": 314, "participated": true, "score": 82.97}, "country_code": "LU"}
+{"type": "person", "handle": "name:halymmuhammet_annageldyyev", "real_name": "Halymmuhammet Annageldyyev", "result": {"rank": 315, "participated": true, "score": 82.0}, "country_code": "TM"}
+{"type": "person", "handle": "name:maité_morales_carreras", "real_name": "Maité Morales Carreras", "result": {"rank": 315, "participated": true, "score": 82.0}, "country_code": "CU"}
+{"type": "person", "handle": "name:han_yang", "real_name": "Han Yang", "result": {"rank": 317, "participated": true, "score": 79.0}, "country_code": "CL"}
+{"type": "person", "handle": "name:aleksander_emil_moltu", "real_name": "Aleksander Emil Moltu", "result": {"rank": 318, "participated": true, "score": 78.0}, "country_code": "NO"}
+{"type": "person", "handle": "name:simón_martínez", "real_name": "Simón Martínez", "result": {"rank": 319, "participated": true, "score": 77.0}, "country_code": "CO"}
+{"type": "person", "handle": "name:þórhallur_tryggvason", "real_name": "Þórhallur Tryggvason", "result": {"rank": 320, "participated": true, "score": 76.35}, "country_code": "IS"}
+{"type": "person", "handle": "name:lucas_kuunders", "real_name": "Lucas Kuunders", "result": {"rank": 321, "participated": true, "score": 75.0}, "country_code": "NL"}
+{"type": "person", "handle": "name:aybak_samiz", "real_name": "Aybak Samiz", "result": {"rank": 322, "participated": true, "score": 72.31}, "country_code": "JO"}
+{"type": "person", "handle": "name:anri_esoev", "real_name": "Anri Esoev", "result": {"rank": 323, "participated": true, "score": 71.31}, "country_code": "TJ"}
+{"type": "person", "handle": "name:francisco_pinhao", "real_name": "Francisco Pinhao", "result": {"rank": 324, "participated": true, "score": 70.31}, "country_code": "CL"}
+{"type": "person", "handle": "name:juan_josé_läderach", "real_name": "Juan José Läderach", "result": {"rank": 325, "participated": true, "score": 68.81}, "country_code": "AR"}
+{"type": "person", "handle": "name:malik_sadaqa", "real_name": "Malik Sadaqa", "result": {"rank": 326, "participated": true, "score": 68.0}, "country_code": "JO"}
+{"type": "person", "handle": "name:hojamuhammet_hydyrov", "real_name": "Hojamuhammet Hydyrov", "result": {"rank": 327, "participated": true, "score": 67.0}, "country_code": "TM"}
+{"type": "person", "handle": "name:sami_almajali", "real_name": "Sami Almajali", "result": {"rank": 328, "participated": true, "score": 66.0}, "country_code": "JO"}
+{"type": "person", "handle": "name:rubdary_valentina_rojas_linarez", "real_name": "Rubdary Valentina Rojas Linarez", "result": {"rank": 329, "participated": true, "score": 59.0}, "country_code": "VE"}
+{"type": "person", "handle": "name:tom_philippe_roth", "real_name": "Tom Philippe Roth", "result": {"rank": 330, "participated": true, "score": 58.31}, "country_code": "LU"}
+{"type": "person", "handle": "name:balsa_radulovic", "real_name": "Balsa Radulovic", "result": {"rank": 331, "participated": true, "score": 53.0}, "country_code": "ME"}
+{"type": "person", "handle": "name:mohammed_cherki", "real_name": "Mohammed Cherki", "result": {"rank": 331, "participated": true, "score": 53.0}, "country_code": "MA"}
+{"type": "person", "handle": "name:belcar_santiago_cuentas-zavala_infante", "real_name": "Belcar Santiago Cuentas-Zavala Infante", "result": {"rank": 333, "participated": true, "score": 51.31}, "country_code": "CO"}
+{"type": "person", "handle": "name:agustin_leonardo_arnez_alcocer", "real_name": "Agustin Leonardo Arnez Alcocer", "result": {"rank": 334, "participated": true, "score": 51.0}, "country_code": "BO"}
+{"type": "person", "handle": "name:didar_choganov", "real_name": "Didar Choganov", "result": {"rank": 335, "participated": true, "score": 45.0}, "country_code": "TM"}
+{"type": "person", "handle": "name:arben_kryemadhi", "real_name": "Arben Kryemadhi", "result": {"rank": 336, "participated": true, "score": 43.0}, "country_code": "AL"}
+{"type": "person", "handle": "name:juan_david_onofre_florián", "real_name": "Juan David Onofre Florián", "result": {"rank": 337, "participated": true, "score": 41.0}, "country_code": "CO"}
+{"type": "person", "handle": "name:raphael_le_goaller", "real_name": "Raphael Le Goaller", "result": {"rank": 338, "participated": true, "score": 40.0}, "country_code": "LU"}
+{"type": "person", "handle": "name:mateo_neira", "real_name": "Mateo Neira", "result": {"rank": 339, "participated": true, "score": 35.0}, "country_code": "EC"}
+{"type": "person", "handle": "name:andrew_batista_garcía", "real_name": "Andrew Batista García", "result": {"rank": 340, "participated": true, "score": 31.0}, "country_code": "DO"}
+{"type": "person", "handle": "name:shuyang_feng", "real_name": "Shuyang Feng", "result": {"rank": 341, "participated": true, "score": 24.0}, "country_code": "IE"}
+{"type": "person", "handle": "name:roberto_valverde_abad", "real_name": "Roberto Valverde Abad", "result": {"rank": 342, "participated": true, "score": 22.0}, "country_code": "EC"}
+{"type": "person", "handle": "name:adriano_augusto_hernández_rodríguez", "real_name": "Adriano Augusto Hernández Rodríguez", "result": {"rank": 343, "participated": true, "score": 15.0}, "country_code": "DO"}
+{"type": "person", "handle": "name:ahmed_albakoush", "real_name": "Ahmed Albakoush", "result": {"rank": 343, "participated": true, "score": 15.0}, "country_code": "LY"}
+{"type": "person", "handle": "name:fadel_elsenusi", "real_name": "Fadel Elsenusi", "result": {"rank": 343, "participated": true, "score": 15.0}, "country_code": "LY"}
+{"type": "person", "handle": "name:assil_abderrezak_boukhnoufa", "real_name": "Assil Abderrezak Boukhnoufa", "result": {"rank": 346, "participated": true, "score": 9.0}, "country_code": "DZ"}
+{"type": "person", "handle": "name:rubin_bekteshi", "real_name": "Rubin Bekteshi", "result": {"rank": 347, "participated": true, "score": 6.5}, "country_code": "AL"}
+{"type": "person", "handle": "name:mohammed_hachem", "real_name": "Mohammed Hachem", "result": {"rank": 348, "participated": true, "score": 6.0}, "country_code": "DZ"}
+{"type": "person", "handle": "name:steven_mera", "real_name": "Steven Mera", "result": {"rank": 349, "participated": true, "score": 3.0}, "country_code": "EC"}
+{"type": "person", "handle": "name:blendi_avdolli", "real_name": "Blendi Avdolli", "result": {"rank": 350, "participated": true, "score": 0.0}, "country_code": "AL"}
+{"type": "person", "handle": "name:mathías_rivera", "real_name": "Mathías Rivera", "result": {"rank": 350, "participated": true, "score": 0.0}, "country_code": "EC"}
+{"type": "person", "handle": "name:nzubechukwu_chendo", "real_name": "Nzubechukwu Chendo", "result": {"rank": 350, "participated": true, "score": 0.0}, "country_code": "NG"}
+{"type": "person", "handle": "name:jiyu_shen", "real_name": "Jiyu Shen", "result": {"participated": true, "score": 0.0}, "country_code": "CN"}

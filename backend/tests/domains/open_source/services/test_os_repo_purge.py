@@ -70,7 +70,7 @@ async def _make_user(test_session: AsyncSession, username: str) -> UserAccount:
 async def _seed_shared_scenario(test_session: AsyncSession) -> dict:
     """Seed repo R (org/r1, owner devA) with contributors devA/devB; devB also contributes to R2.
 
-    devA is exclusive to R; devB is shared with R2.
+    devA is exclusive to R; devB is shared with the *configured* repo R2.
     """
     config = OSRepoConfig(
         repo_full_name="org/r1",
@@ -79,9 +79,16 @@ async def _seed_shared_scenario(test_session: AsyncSession) -> dict:
         is_active=True,
         collect_enabled=True,
     )
+    config_r2 = OSRepoConfig(
+        repo_full_name="org/r2",
+        display_name="R2",
+        tech_element="ai",
+        is_active=True,
+        collect_enabled=True,
+    )
     dev_a = _make_developer("dev-exclusive", 9001)
     dev_b = _make_developer("dev-shared", 9002)
-    test_session.add_all([config, dev_a, dev_b])
+    test_session.add_all([config, config_r2, dev_a, dev_b])
     await test_session.commit()
 
     r1 = _make_repo(dev_a, "org/r1", 9101)
@@ -141,43 +148,54 @@ class TestRepoPurgeRepository:
         assert result["raw"] == 1
 
         # 独占人才及其级联数据已删除
-        assert await _count(
-            test_session, OSDeveloper, OSDeveloper.developer_id == dev_a.developer_id
-        ) == 0
-        assert await _count(
-            test_session, OSLanguageSkill, OSLanguageSkill.developer_id == dev_a.developer_id
-        ) == 0
-        assert await _count(
-            test_session, OSEmbedding, OSEmbedding.developer_id == dev_a.developer_id
-        ) == 0
-        assert await _count(
-            test_session, OSRawDeveloper, OSRawDeveloper.github_login == "dev-exclusive"
-        ) == 0
+        assert (
+            await _count(test_session, OSDeveloper, OSDeveloper.developer_id == dev_a.developer_id)
+            == 0
+        )
+        assert (
+            await _count(
+                test_session, OSLanguageSkill, OSLanguageSkill.developer_id == dev_a.developer_id
+            )
+            == 0
+        )
+        assert (
+            await _count(test_session, OSEmbedding, OSEmbedding.developer_id == dev_a.developer_id)
+            == 0
+        )
+        assert (
+            await _count(
+                test_session, OSRawDeveloper, OSRawDeveloper.github_login == "dev-exclusive"
+            )
+            == 0
+        )
 
         # 共享人才及其级联数据保留
-        assert await _count(
-            test_session, OSDeveloper, OSDeveloper.developer_id == dev_b.developer_id
-        ) == 1
-        assert await _count(
-            test_session, OSLanguageSkill, OSLanguageSkill.developer_id == dev_b.developer_id
-        ) == 1
-        assert await _count(
-            test_session, OSRawDeveloper, OSRawDeveloper.github_login == "dev-shared"
-        ) == 1
+        assert (
+            await _count(test_session, OSDeveloper, OSDeveloper.developer_id == dev_b.developer_id)
+            == 1
+        )
+        assert (
+            await _count(
+                test_session, OSLanguageSkill, OSLanguageSkill.developer_id == dev_b.developer_id
+            )
+            == 1
+        )
+        assert (
+            await _count(test_session, OSRawDeveloper, OSRawDeveloper.github_login == "dev-shared")
+            == 1
+        )
 
         # R 的贡献与仓库行已删除；R2 不受影响
-        assert await _count(
-            test_session, OSContribution, OSContribution.repo_id == data["r1"].repo_id
-        ) == 0
-        assert await _count(
-            test_session, OSRepository, OSRepository.full_name == "org/r1"
-        ) == 0
-        assert await _count(
-            test_session, OSContribution, OSContribution.repo_id == data["r2"].repo_id
-        ) == 1
-        assert await _count(
-            test_session, OSRepository, OSRepository.full_name == "org/r2"
-        ) == 1
+        assert (
+            await _count(test_session, OSContribution, OSContribution.repo_id == data["r1"].repo_id)
+            == 0
+        )
+        assert await _count(test_session, OSRepository, OSRepository.full_name == "org/r1") == 0
+        assert (
+            await _count(test_session, OSContribution, OSContribution.repo_id == data["r2"].repo_id)
+            == 1
+        )
+        assert await _count(test_session, OSRepository, OSRepository.full_name == "org/r2") == 1
 
     @pytest.mark.asyncio
     async def test_preview_does_not_delete(self, test_session: AsyncSession):
@@ -219,18 +237,26 @@ class TestRepoPurgeRepository:
         assert result["developers_protected"] == 1
         assert result["skills"] == 0
         # 被收藏人才及其级联数据保留，但贡献记录仍删除
-        assert await _count(
-            test_session, OSDeveloper, OSDeveloper.developer_id == dev_a.developer_id
-        ) == 1
-        assert await _count(
-            test_session, OSLanguageSkill, OSLanguageSkill.developer_id == dev_a.developer_id
-        ) == 1
-        assert await _count(
-            test_session, OSRawDeveloper, OSRawDeveloper.github_login == "dev-exclusive"
-        ) == 1
-        assert await _count(
-            test_session, OSContribution, OSContribution.repo_id == data["r1"].repo_id
-        ) == 0
+        assert (
+            await _count(test_session, OSDeveloper, OSDeveloper.developer_id == dev_a.developer_id)
+            == 1
+        )
+        assert (
+            await _count(
+                test_session, OSLanguageSkill, OSLanguageSkill.developer_id == dev_a.developer_id
+            )
+            == 1
+        )
+        assert (
+            await _count(
+                test_session, OSRawDeveloper, OSRawDeveloper.github_login == "dev-exclusive"
+            )
+            == 1
+        )
+        assert (
+            await _count(test_session, OSContribution, OSContribution.repo_id == data["r1"].repo_id)
+            == 0
+        )
         assert await _count(test_session, OSRepository, OSRepository.full_name == "org/r1") == 0
 
     @pytest.mark.asyncio
@@ -253,9 +279,10 @@ class TestRepoPurgeRepository:
 
         assert result["developers_exclusive"] == 0
         assert result["developers_protected"] == 1
-        assert await _count(
-            test_session, OSDeveloper, OSDeveloper.developer_id == dev_a.developer_id
-        ) == 1
+        assert (
+            await _count(test_session, OSDeveloper, OSDeveloper.developer_id == dev_a.developer_id)
+            == 1
+        )
 
     @pytest.mark.asyncio
     async def test_purge_repo_not_collected(self, test_session: AsyncSession):
@@ -280,6 +307,78 @@ class TestRepoPurgeRepository:
         assert result["repo_found"] is False
         assert result["developers_exclusive"] == 0
 
+    @pytest.mark.asyncio
+    async def test_purge_unconfigured_references_count_as_exclusive(
+        self, test_session: AsyncSession
+    ):
+        """只拥有未配置个人仓库 / 只对未配置仓库有贡献的人才判独占，连同其未配置仓库一并删除。"""
+        config = OSRepoConfig(
+            repo_full_name="org/r1",
+            display_name="R1",
+            tech_element="ai",
+            is_active=True,
+            collect_enabled=True,
+        )
+        dev_c = _make_developer("dev-personal-repo", 9003)
+        dev_d = _make_developer("dev-unconfigured-contrib", 9004)
+        test_session.add_all([config, dev_c, dev_d])
+        await test_session.commit()
+
+        r1 = _make_repo(dev_c, "org/r1", 9103)
+        personal = _make_repo(dev_c, "devc/personal-repo", 9104)
+        other = _make_repo(dev_d, "other/unconfigured", 9105)
+        test_session.add_all([r1, personal, other])
+        await test_session.commit()
+
+        test_session.add_all(
+            [
+                OSContribution(
+                    developer_id=dev_c.developer_id, repo_id=r1.repo_id, commits_count=8
+                ),
+                OSContribution(
+                    developer_id=dev_d.developer_id, repo_id=r1.repo_id, commits_count=4
+                ),
+                OSContribution(
+                    developer_id=dev_d.developer_id, repo_id=other.repo_id, commits_count=2
+                ),
+            ]
+        )
+        await test_session.commit()
+
+        repo = OpenSourceRepository(test_session)
+        preview = await repo.get_repo_purge_preview("org/r1")
+        assert preview["developers_total"] == 2
+        assert preview["developers_exclusive"] == 2
+        assert preview["developers_shared"] == 0
+        # R1 的 2 条贡献 + dev_d 对未配置仓库的 1 条贡献
+        assert preview["contributions"] == 3
+
+        result = await repo.purge_repo_data("org/r1")
+        assert result["developers_exclusive"] == 2
+        assert result["developers_shared"] == 0
+        assert result["contributions"] == 3
+
+        # 两名独占人才已删除
+        assert (
+            await _count(test_session, OSDeveloper, OSDeveloper.developer_id == dev_c.developer_id)
+            == 0
+        )
+        assert (
+            await _count(test_session, OSDeveloper, OSDeveloper.developer_id == dev_d.developer_id)
+            == 0
+        )
+        # 其拥有的未配置仓库与相关贡献也已级联删除
+        assert (
+            await _count(test_session, OSRepository, OSRepository.full_name == "devc/personal-repo")
+            == 0
+        )
+        assert (
+            await _count(test_session, OSRepository, OSRepository.full_name == "other/unconfigured")
+            == 0
+        )
+        assert await _count(test_session, OSContribution) == 0
+        assert await _count(test_session, OSRepository) == 0
+
 
 class TestRepoPurgeService:
     @pytest.mark.asyncio
@@ -298,9 +397,12 @@ class TestRepoPurgeService:
 
         assert result.config_deleted is True
         assert result.developers_exclusive == 1
-        assert await _count(
-            test_session, OSRepoConfig, OSRepoConfig.repo_config_id == config.repo_config_id
-        ) == 0
+        assert (
+            await _count(
+                test_session, OSRepoConfig, OSRepoConfig.repo_config_id == config.repo_config_id
+            )
+            == 0
+        )
 
     @pytest.mark.asyncio
     async def test_purge_keeps_config_by_default(self, test_session: AsyncSession):
@@ -311,9 +413,12 @@ class TestRepoPurgeService:
         result = await service.purge_repo(config.repo_config_id, delete_config=False)
 
         assert result.config_deleted is False
-        assert await _count(
-            test_session, OSRepoConfig, OSRepoConfig.repo_config_id == config.repo_config_id
-        ) == 1
+        assert (
+            await _count(
+                test_session, OSRepoConfig, OSRepoConfig.repo_config_id == config.repo_config_id
+            )
+            == 1
+        )
 
 
 class TestRepoPurgeApi:
