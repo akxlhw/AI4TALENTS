@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [5.0.0] - 2026-08-01
 
-> V5.0.0 主开发内容：**行业人才库**（`domains/industry/`，第四个人才域）。当前交付设计文档，实现按 `docs/industry-talent-v1.0-design.md` 实施顺序推进。
+> V5.0.0 主开发内容：**行业人才库**（`domains/industry/`，第四个人才域）。当前交付设计文档，实现按 `docs/v5.0.0/02-技术设计.md` 实施顺序推进。
 
 ### Added
 
-- **行业人才库设计文档 v1.1**（`docs/industry-talent-v1.0-design.md`）：
+- **行业人才库设计文档 v1.1**（`docs/v5.0.0/02-技术设计.md`）：
   - 三表模型：`industry_position`（岗位一等实体）/ `industry_talent`（人才全局唯一，dedup_hash 三要素）/ `industry_position_talent`（关联表打分，含院校/企业/方向三维子分数）
   - 呈现原则：以人才为主线（与全库一致），岗位为标签与筛选维度（按岗招聘为辅助支撑）
   - 增量 upsert 导入：空字段不覆盖、缺席不删除、保留 touched/status/notes；JSONL 导入契约 schema v1.0
