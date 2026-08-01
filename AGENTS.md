@@ -8,14 +8,16 @@
 
 **智能人才库（AI4TALENTS）** 是一套面向招聘团队的多维度人才发现平台。
 
-- **当前版本**：**V4.1.0**（以 `backend/pyproject.toml`、`frontend/package.json`、`backend/app/core/config.py` 中的版本号为准；`CHANGELOG.md` 记录了各版本变更，最新发布为 4.0.0，4.1.0 为当前版本（竞赛域 M2 已接入三大奥赛与 ICPC））。
+- **当前版本**：**V5.0.0**（以 `backend/pyproject.toml`、`frontend/package.json`、`backend/app/core/config.py` 中的版本号为准；`CHANGELOG.md` 记录了各版本变更，最新发布为 5.0.0。V5.0.0 主要开发内容为**行业人才库**）。
 - **项目定位**：整合公开学术数据与开源社区数据，帮助招聘团队发现、筛选、对比和管理高端技术人才。
 - **已实现的人才数据源**：
   - **学术人才**（`domains/academic/`）：基于 OpenAlex 学术数据库，功能完整。
   - **开源人才**（`domains/open_source/`）：基于 GitHub API，功能完整。
   - **实验室人才**（`domains/lab/`，V3.0.0 新增）：AI 实验室人才（Stanford AI Lab、MIT CSAIL、LAMDA 等），通过 `ai-lab-talent-crawler` skill 采集官网人员数据，产出 JSONL 由 `LabImportService` 导入。导入方式为管理员手动上传。使用独立的 `lab_talent` 表 + `lab_info` 实验室元数据表（不复用 `core_talent`，因跨域隔离铁律）。
   - **竞赛人才**（`domains/competition/`，V4.0.0 新增，M1）：竞赛选手与队伍（ICPC、IOI/IMO/IPhO、Kaggle、CTF、RoboCup、超算等为目标清单，M1 首发源 Codeforces 官方 API），通过 `comp-talent-crawler` skill 采集赛事榜单与选手画像，产出 schema v1.0 JSONL 由 `CompImportService` 按单场赛事全量替换导入。独立 `comp_series / comp_contest / comp_talent / comp_team / comp_result` 五表族（不复用其他域表，跨域隔离铁律）。设计文档见 `docs/competition-v1.0/`。
-- **规划中的人才数据源**：行业人才（前端目前仅有 `demo-industry` 演示页）；竞赛清单内其余源（ICPC/奥赛/Kaggle 等，M2/M3 接入）。
+- **开发中的人才数据源**：
+  - **行业人才**（`domains/industry/`，V5.0.0 主要开发内容）：面向"按岗招聘"的行业候选人（脉脉/LinkedIn），数据由 `smart-talent-sourcing` skill 采集产出 JSONL，域内不实现采集。三表模型（`industry_position` 岗位 / `industry_talent` 人才全局唯一 / `industry_position_talent` 关联打分），增量 upsert 导入。呈现以人才为主线、岗位为标签与筛选维度。设计文档见 `docs/industry-talent-v1.0-design.md`（前端目前仅有 `demo-industry` 演示页，正式页面上线后退役）。
+- **规划中的人才数据源**：竞赛清单内其余源（Kaggle/CTF/RoboCup/超算等，M3 接入）。
 
 主要功能包括：学术/开源/实验室人才搜索与发现、人才画像查看、候选人筛选/排序/对比、重点人才导出、收藏与人才池管理、三维权限控制（学校/国家/技术要素）、采集任务管理、语义搜索、JD 岗位匹配、相似人才推荐、学术谱系（genealogy）、实验室人才主页预取与预览、用户注册审批与审计日志等。
 
@@ -541,7 +543,7 @@ make dev-frontend
 | `CIRCUIT_BREAKER_ENABLED` / `CIRCUIT_BREAKER_FAILURE_THRESHOLD` / `CIRCUIT_BREAKER_RECOVERY_TIMEOUT` / `CIRCUIT_BREAKER_WINDOW_SIZE` | 熔断器配置 | `true`, `5`, `30.0`, `10` |
 | `GITHUB_TOKENS` / `GITHUB_BASE_URL` / `GITHUB_RATE_LIMIT` / `GITHUB_PER_PAGE` / `GITHUB_BATCH_SIZE` | GitHub API 配置（开源人才采集，token 逗号分隔） | `ghp_xxx`, `https://api.github.com`, `5000`, `100`, `5` |
 | `OPENALEX_BASE_URL` / `OPENALEX_EMAIL` / `OPENALEX_RATE_LIMIT` | OpenAlex API 配置 | `https://api.openalex.org`, `10` req/s |
-| `APP_NAME` / `APP_VERSION` / `ENVIRONMENT` / `DEBUG` | 应用基础配置 | 智能人才库 API, 4.1.0, development, false |
+| `APP_NAME` / `APP_VERSION` / `ENVIRONMENT` / `DEBUG` | 应用基础配置 | 智能人才库 API, 5.0.0, development, false |
 | `BACKEND_PORT` | 后端服务端口（本地开发 8003；Docker 部署应设为 8000，用于代理自检推导） | `8003` |
 | `DEFAULT_PAGE_SIZE` / `MAX_PAGE_SIZE` | 分页 | `20`, `100` |
 | `BATCH_SIZE` / `SYNC_TIMEOUT` / `SYNC_COMMIT_BATCH_SIZE` | 批量处理 | `1000`, `3600`, `100` |

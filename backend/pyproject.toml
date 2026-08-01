@@ -1,6 +1,6 @@
 [project]
 name = "talent-platform-backend"
-version = "4.1.0"
+version = "5.0.0"
 description = "智能人才库 - 多维度人才发现平台后端服务"
 readme = "README.md"
 requires-python = ">=3.11"

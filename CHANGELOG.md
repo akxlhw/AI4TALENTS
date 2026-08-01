@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-08-01
+
+> V5.0.0 主开发内容：**行业人才库**（`domains/industry/`，第四个人才域）。当前交付设计文档，实现按 `docs/industry-talent-v1.0-design.md` 实施顺序推进。
+
+### Added
+
+- **行业人才库设计文档 v1.1**（`docs/industry-talent-v1.0-design.md`）：
+  - 三表模型：`industry_position`（岗位一等实体）/ `industry_talent`（人才全局唯一，dedup_hash 三要素）/ `industry_position_talent`（关联表打分，含院校/企业/方向三维子分数）
+  - 呈现原则：以人才为主线（与全库一致），岗位为标签与筛选维度（按岗招聘为辅助支撑）
+  - 增量 upsert 导入：空字段不覆盖、缺席不删除、保留 touched/status/notes；JSONL 导入契约 schema v1.0
+  - 数据来源：smart-talent-sourcing skill（脉脉/LinkedIn），域内不实现采集
+- **AI Native 实验室师承树**（lab 域）：
+  - 师从关系从力导向图重写为**树状拓扑**（自上而下、固定像素间距、无限画布缩放平移），节点带头像
+  - 创始人置顶：后端 `LAB_FOUNDERS` 常量表标记（含别名归一），创始人金边树根 + 其学生真师承子树 + 「其他导师」组织聚合；无创始人实验室为实验室根 + 教授平行森林
+  - B+C 分层：创始人学生中已为人师者（教授）默认展开一层，纯学生折叠为「学生（N）」聚合
+  - 实验室页面拆「人才列表 / 师从关系」双 Tab（Tab 状态入 URL，详情页返回不丢失）；单击展开/收起，Shift+单击进人物详情
+- **开源人才检索修复与增强**：
+  - 修复 `POST /search` 关键词静默失效 bug（`query`→`q` 字段名错误，降级路径曾返回无筛选全表）
+  - 混合搜索改 RRF 融合（k=60，与学术域同参数），修正分页总数失真
+  - 迁移 056：`os_developer` name/github_login/company/location/bio 建 pg_trgm GIN 索引，tech_tags/primary_languages 转 JSONB + GIN
+  - 列表接口 N+1 修复（角色标签批量聚合，每页 20 次查询降为 1 次）
+- **开源人才「在校生」标签**：`is_student`（迁移 057）= bio 学生信号 OR（company 命中学校词典 AND 无教职工信号）；学校词典 5889 校名（学术域 core_school 导出）+ 32 条手工缩写别名；sync 流水线增量重算 + 存量回填脚本；列表/搜索/导出全链路筛选，前端筛选框 + 卡片绿色标签（开发库 3615 人标记 373 人）
+- **开源仓库数据清理**：`POST /open-source/repo-configs/{id}/purge`（超管），dry_run 预览计数 → 确认硬删；归属判定「被其他已配置仓库引用才算共享」，收藏/入池人才保护；审计日志；前端清理入口 + 确认弹窗
+
+### Changed
+
+- 版本号 4.1.0 → 5.0.0（pyproject.toml、package.json、config.py、uv.lock、README.md、AGENTS.md、CLAUDE.md）
+- mypy 基线：93 个既有错误被消除（在校生字段实施时顺带清理，零行为变化）
+
 ## [4.1.0] - 2026-07-19
 
 ### Added

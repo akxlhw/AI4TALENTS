@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-智能人才库 (AI4TALENTS) V2.1.0 — 面向招聘团队的多维度人才发现平台。
+智能人才库 (AI4TALENTS) V5.0.0 — 面向招聘团队的多维度人才发现平台。
 
 当前实现的人才数据源：
 - **学术人才** (`academic` domain): 基于 OpenAlex 学术数据库，完整功能
-- **开源人才** (`open_source` domain): 基于 GitHub API，v2.0 新增
-- **竞赛人才** (`competition`): 规划中
-- **行业人才** (`industry`): 规划中
+- **开源人才** (`open_source` domain): 基于 GitHub API，完整功能
+- **实验室人才** (`lab` domain): AI 实验室人才（ai-lab-talent-crawler skill + JSONL 导入）
+- **竞赛人才** (`competition` domain): 竞赛选手与队伍（comp-talent-crawler skill，已接入 Codeforces/IOI/IMO/IPhO/ICPC）
+- **行业人才** (`industry` domain): V5.0.0 开发中（smart-talent-sourcing skill + JSONL 增量导入，设计文档见 `docs/industry-talent-v1.0-design.md`）
 
 ## Tech Stack
 
