@@ -99,7 +99,7 @@ const IndustrySearchPage: React.FC = () => {
           <Paragraph style={{
             margin: 0, marginBottom: 32, color: 'rgba(255,255,255,0.85)', fontSize: 15,
           }}>
-            面向按岗招聘的行业候选人 · 数据来自脉脉 / LinkedIn 智能寻猎 · 三维匹配评分
+            对准高端精英、关键稀缺岗位，智能发现行业优秀顶尖人才
           </Paragraph>
           <Input.Search
             placeholder="搜索姓名 / 公司 / 职位..."
