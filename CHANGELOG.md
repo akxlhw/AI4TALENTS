@@ -9,15 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [5.0.0] - 2026-08-01
 
-> V5.0.0 主开发内容：**行业人才库**（`domains/industry/`，第四个人才域）。当前交付设计文档，实现按 `docs/v5.0.0/02-技术设计.md` 实施顺序推进。
+> V5.0.0 主开发内容：**行业人才库**（`domains/industry/`，第四个人才域），已交付。设计文档见 `docs/v5.0.0/`（00 README / 01 需求清单 / 02 技术设计）。
 
 ### Added
 
-- **行业人才库设计文档 v1.1**（`docs/v5.0.0/02-技术设计.md`）：
-  - 三表模型：`industry_position`（岗位一等实体）/ `industry_talent`（人才全局唯一，dedup_hash 三要素）/ `industry_position_talent`（关联表打分，含院校/企业/方向三维子分数）
-  - 呈现原则：以人才为主线（与全库一致），岗位为标签与筛选维度（按岗招聘为辅助支撑）
-  - 增量 upsert 导入：空字段不覆盖、缺席不删除、保留 touched/status/notes；JSONL 导入契约 schema v1.0
-  - 数据来源：smart-talent-sourcing skill（脉脉/LinkedIn），域内不实现采集
+- **行业人才库**（`domains/industry/`，V5.0.0 主交付）：
+  - **数据模型**（迁移 058）：`industry_position`（岗位一等实体，仅归档不物理删除）/ `industry_talent`（人才全局唯一，dedup_hash = name+org+title 三要素 NFKC 归一，缺 org 打 warning）/ `industry_position_talent`（关联打分，含 score_school/company/direction 三维子分数 + touched/status/notes 招聘状态）
+  - **增量 upsert 导入**：空字段不覆盖、缺席不删除、同人进新岗位仅新增关联、保留 touched/status/notes；逐行失败跳过不中断；导入报告（新增/更新/跳过/warnings）；管理员上传端点（20MB，super_admin）；API Key 推送通道留位（501，v1 不启用）
+  - **API**：岗位 CRUD（列表带候选人数/平均匹配分）+ 人才列表（六维筛选、默认 match_score_desc、命中岗位+最高分单条 GROUP BY 聚合无 N+1）+ 人才详情（多岗位匹配对比）+ 候选人状态 PATCH
+  - **前端**：人才列表页（紫域主题、环形彩色匹配分视觉锚点、卡片网格、sticky 筛选栏、状态快捷修改、URL 全字段同步）+ 人才详情页（身份卡 + 基本信息/履历时间线/岗位匹配三 Tab、三维子分数条、状态编辑）+ 管理后台「行业人才岗位」「行业人才导入」两个 Tab；导航「行业」解锁，demo-industry 演示页退役
+  - **种子**：core_tech_direction 填充 22 个技术方向（与开源域既有引用兼容，幂等）
+  - 测试：后端 23 个（导入 12 + API 11）、前端 store 9 个
+- **行业人才库设计文档**（`docs/v5.0.0/`：00 README 决策记录 / 01 需求清单验收标准 / 02 技术设计 v1.1）
 - **AI Native 实验室师承树**（lab 域）：
   - 师从关系从力导向图重写为**树状拓扑**（自上而下、固定像素间距、无限画布缩放平移），节点带头像
   - 创始人置顶：后端 `LAB_FOUNDERS` 常量表标记（含别名归一），创始人金边树根 + 其学生真师承子树 + 「其他导师」组织聚合；无创始人实验室为实验室根 + 教授平行森林
