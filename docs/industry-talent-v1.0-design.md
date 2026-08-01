@@ -179,49 +179,104 @@ PUT    /api/v1/industry/positions/{id}
 DELETE /api/v1/industry/positions/{id}
 ```
 
-### 候选人列表
+### 人才列表（全局）
 
 ```
-GET    /api/v1/industry/positions/{id}/candidates
-  Query: page, page_size, keyword, min_score, status, source_platform, sort_by
+GET    /api/v1/industry/talents
+  Query: page, page_size, keyword, position_id, min_score, status,
+         source_platform, tech_direction, sort_by
+  Response: PaginatedResponse<IndustryTalentSummary>
+    # Summary = 基本信息 + 最高匹配分 + 命中的岗位列表 + 招聘状态
 ```
 
 ### 人才详情
 
 ```
 GET    /api/v1/industry/talents/{talent_id}
+  # 含完整履历 + 该人才在各岗位下的匹配分对比
+
 GET    /api/v1/industry/talents/{talent_id}/positions
+  # 该人才在哪些岗位下出现过 + 各岗位匹配分
 ```
 
 ### 候选人状态管理
 
 ```
-PATCH  /api/v1/industry/positions/{id}/candidates/{talent_id}
+PATCH  /api/v1/industry/talents/{talent_id}/positions/{position_id}
   Body: { status?, touched?, notes? }
+  # 更新人才在某岗位下的招聘状态
 ```
 
 ---
 
 ## 7. 前端
 
-### 普通用户
+### 7.1 设计原则
+
+行业人才库与其他域（学术/开源/AI Native）保持一致的人才发现体验，而非招聘工具式的管理界面。
+
+**展现维度：以人才为主，岗位为筛选**
+
+- 用户进入行业人才库看到的是**人才列表**（全局人才池），和学术库/AI Native 库的浏览模式一致
+- 岗位在这个体系里的角色是**筛选维度**和**匹配标记**，不是组织主线：
+  - 筛选栏支持按"在招岗位"筛选（"哪些人命中了大模型推理工程师岗位"）
+  - 人才卡片上标注该人命中的岗位 + 最高匹配分
+  - 人才详情页展示多岗位匹配分对比
+
+**视觉原则：与全库一致**
+
+- 卡片网格布局（不是表格/列表），和学术库/AI Native 库同样的浏览体验
+- 匹配分作为卡片上的视觉锚点（彩色分数 + 命中标签），但不改变整体布局节奏
+- 紫色域主题（`#6B46C1`）用于导航/选中态，数据展示区用中性色
+
+**交互原则：筛选 + 状态流转**
+
+- 筛选栏置顶 sticky，支持多维度即时筛选（关键词/岗位/匹配分/状态/来源/技术方向）
+- 招聘状态（new/contacted/interviewed/rejected/hired）通过标签颜色区分
+- 状态变更是常见操作，支持列表页快捷修改（不强制进详情页）
+
+### 7.2 页面结构
 
 | 页面 | 路由 | 功能 |
 |------|------|------|
-| 岗位列表 | `/industry` | open 岗位卡片列表 |
-| 岗位候选人 | `/industry/positions/{id}` | 按 match_score 降序 + 筛选 |
-| 人才详情 | `/industry/talents/{id}` | 基本信息 + 履历时间线 + 多岗位对比 |
+| **人才列表** | `/industry` | 全局人才池卡片网格；筛选栏（关键词/岗位/匹配分/状态/来源/技术方向）；匹配分排序 |
+| **人才详情** | `/industry/talents/{id}` | 基本信息 + 履历时间线 + 三维打分（院校/企业/方向）+ 多岗位匹配分对比 + 招聘状态管理 |
 
-### 管理员（系统配置）
+### 7.3 人才卡片设计
+
+卡片展示（与 AI Native 库的 LabTalentCard 同级精度）：
+
+```
+┌─────────────────────────────────────┐
+│ [头像] 张三                    98 分 │ ← 匹配分（彩色：80+绿/65-79黄）
+│        应用科学家 · 亚马逊云科技      │ ← current_title · current_org
+│        博士 · 10年 · 北京             │ ← degree · years · location
+│        [顶级院校] [美企巨头] [LLM]   │ ← match_tags（命中标签）
+│        📋 大模型推理工程师            │ ← 命中的岗位（可多选标签）
+│        ○ new（状态标签）              │ ← 招聘状态
+└─────────────────────────────────────┘
+```
+
+### 7.4 人才详情页
+
+Tabs 分区（参照 AI Native 库的详情页模式）：
+
+| Tab | 内容 |
+|-----|------|
+| **基本信息** | 姓名/公司/职位/学历/年限/位置/求职意向/来源链接 |
+| **履历时间线** | experiences[] 的可视化时间线：每段 = 公司 + 职位 + 时间范围；命中标签（顶级院校/美企）贴在对应履历段上 |
+| **岗位匹配** | 该人才在各岗位下的匹配分对比（横向条形图或卡片列表：岗位名 + 匹配分 + 三维分数 + 状态） |
+
+### 7.5 管理员（系统配置）
 
 | 位置 | 功能 |
 |------|------|
-| "行业人才岗位" tab | 岗位 CRUD |
+| "行业人才岗位" tab | 岗位 CRUD（含部门/技术方向/职级范围） |
 | "行业人才导入" tab | 选岗位 + 上传 JSONL |
 
-### 导航
+### 7.6 导航
 
-主导航新增"行业人才"，紫色域主题（`#6B46C1`）。
+主导航新增"行业人才"入口，与学术/开源/AI Native 并列，紫色域主题。
 
 ---
 
@@ -240,6 +295,6 @@ PATCH  /api/v1/industry/positions/{id}/candidates/{talent_id}
 1. 种子：core_tech_direction 填充
 2. 数据层：三表模型 + 迁移
 3. 导入服务：JSONL 解析 + 增量 upsert
-4. API：岗位 CRUD + 候选人列表 + 人才详情 + 状态管理
+4. API：人才列表 + 人才详情 + 岗位 CRUD + 状态管理
 5. 系统配置：岗位管理 + 导入 tab
-6. 前端三页面 + 导航
+6. 前端：人才列表页 + 人才详情页 + 导航
