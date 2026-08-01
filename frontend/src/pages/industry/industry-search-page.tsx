@@ -108,7 +108,7 @@ const IndustrySearchPage: React.FC = () => {
             onChange={e => { setKw(e.target.value); if (!e.target.value) state.setFilter('keyword', '') }}
             onSearch={v => state.setFilter('keyword', v.trim())}
             enterButton={<span style={{ fontWeight: 500 }}><SearchOutlined /> 搜索</span>}
-            style={{ width: '100%', maxWidth: 560 }}
+            style={{ width: '100%', margin: '0 auto' }}
             allowClear
           />
           {/* Quick position tags */}
