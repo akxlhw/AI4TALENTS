@@ -94,8 +94,7 @@ const IndustrySearchPage: React.FC = () => {
             margin: 0, marginBottom: 12, color: '#fff', fontWeight: 800,
             fontSize: 'clamp(26px, 4vw, 40px)', letterSpacing: '-0.5px',
           }}>
-            <BuildOutlined style={{ marginRight: 10 }} />
-            行业人才库
+            全球行业顶尖人才库
           </Title>
           <Paragraph style={{
             margin: 0, marginBottom: 32, color: 'rgba(255,255,255,0.85)', fontSize: 15,
