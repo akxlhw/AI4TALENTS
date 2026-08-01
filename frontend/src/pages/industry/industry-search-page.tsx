@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Col, Pagination, Row, Spin, Typography, Card, Statistic, Input, Badge, Select, Button } from 'antd'
-import { BuildOutlined, SearchOutlined, TeamOutlined, TrophyOutlined, UserOutlined, ClearOutlined } from '@ant-design/icons'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  Col, Pagination, Row, Spin, Typography, Card, Statistic, Input, Tag,
+  Badge, Select, Button,
+} from 'antd'
+import {
+  BuildOutlined, SearchOutlined, TeamOutlined, TrophyOutlined, UserOutlined,
+  ClearOutlined, FireOutlined, StarOutlined,
+} from '@ant-design/icons'
 import { useIndustryTalents, useIndustryPositions, useTechDirectionOptions } from '../../hooks/useIndustryQueries'
 import { useIndustrySearchStore } from '../../stores/industrySearchStore'
 import type { IndustrySearchState } from '../../stores/industrySearchStore'
@@ -9,22 +15,18 @@ import { applyDomainCssVars } from '../../theme'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import IndustryTalentCard from './components/industry-talent-card'
 import {
-  CANDIDATE_STATUS_OPTIONS,
-  MIN_SCORE_OPTIONS,
-  SOURCE_PLATFORM_OPTIONS,
-  INDUSTRY_SORT_OPTIONS,
+  CANDIDATE_STATUS_OPTIONS, MIN_SCORE_OPTIONS, SOURCE_PLATFORM_OPTIONS, INDUSTRY_SORT_OPTIONS,
 } from './constants/industry-config'
 
-const { Text, Title } = Typography
+const { Text, Title, Paragraph } = Typography
 
 const IndustrySearchPage: React.FC = () => {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const state = useIndustrySearchStore()
   const [kw, setKw] = useState(state.keyword)
 
-  useEffect(() => {
-    applyDomainCssVars('industry')
-  }, [])
+  useEffect(() => { applyDomainCssVars('industry') }, [])
 
   useEffect(() => {
     state.syncFromUrl(searchParams)
@@ -34,18 +36,9 @@ const IndustrySearchPage: React.FC = () => {
   useEffect(() => {
     setSearchParams(state.toQuery(), { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    state.keyword,
-    state.positionId,
-    state.minScore,
-    state.status,
-    state.sourcePlatform,
-    state.techDirection,
-    state.sortBy,
-    state.page,
-    state.pageSize,
-    setSearchParams,
-  ])
+  }, [state.keyword, state.positionId, state.minScore, state.status,
+      state.sourcePlatform, state.techDirection, state.sortBy,
+      state.page, state.pageSize, setSearchParams])
 
   const { data, isLoading, error, refetch } = useIndustryTalents({
     keyword: state.keyword || undefined,
@@ -54,9 +47,7 @@ const IndustrySearchPage: React.FC = () => {
     status: state.status || undefined,
     source_platform: state.sourcePlatform || undefined,
     tech_direction: state.techDirection || undefined,
-    sort_by: state.sortBy,
-    page: state.page,
-    page_size: state.pageSize,
+    sort_by: state.sortBy, page: state.page, page_size: state.pageSize,
   })
 
   const { data: positions } = useIndustryPositions('open')
@@ -64,11 +55,8 @@ const IndustrySearchPage: React.FC = () => {
   if (error) {
     return (
       <div style={{ paddingTop: 64 }}>
-        <EmptyPlaceholder
-          title="加载失败"
-          description={error.message || '请稍后重试'}
-          action={{ label: '重试', onClick: () => refetch() }}
-        />
+        <EmptyPlaceholder title="加载失败" description={error.message || '请稍后重试'}
+          action={{ label: '重试', onClick: () => refetch() }} />
       </div>
     )
   }
@@ -78,87 +66,96 @@ const IndustrySearchPage: React.FC = () => {
   const openPositions = positions || []
   const totalCandidates = openPositions.reduce((s, p) => s + (p.candidate_count || 0), 0)
   const avgScore = openPositions.length > 0
-    ? Math.round(openPositions.reduce((s, p) => s + (p.avg_match_score || 0), 0) / openPositions.length)
-    : 0
+    ? Math.round(openPositions.reduce((s, p) => s + (p.avg_match_score || 0), 0) / openPositions.length) : 0
 
-  // Position sidebar click → filter by position
   const handlePositionClick = (positionId: number | null) => {
     state.setFilter('positionId', positionId)
     state.setFilter('page', 1)
   }
 
+  const hasFilters = state.keyword || state.positionId || state.minScore ||
+    state.status || state.sourcePlatform || state.techDirection
+
   return (
     <div style={{ paddingTop: 64, background: 'var(--color-bg-gray-light)', minHeight: '100vh' }}>
-      {/* ========= Hero: Big Search Engine ========= */}
-      <div
-        style={{
-          background: 'var(--domain-gradient, linear-gradient(135deg,#1A365D,#6B46C1))',
-          padding: '40px 24px 32px',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Decorative rings */}
+      {/* ═══ Hero Section ═══ */}
+      <div style={{
+        background: 'var(--domain-gradient, linear-gradient(135deg,#1A365D,#6B46C1))',
+        padding: '64px 32px 48px', color: '#fff', position: 'relative', overflow: 'hidden', textAlign: 'center',
+      }}>
+        {/* Dot pattern overlay */}
         <div style={{
-          position: 'absolute', right: -60, top: -80, width: 260, height: 260,
-          borderRadius: '50%', border: '40px solid rgba(255,255,255,0.06)', pointerEvents: 'none',
+          position: 'absolute', inset: 0, opacity: 0.06,
+          backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.8) 1px, transparent 0)',
+          backgroundSize: '28px 28px',
         }} />
-        <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
-          <Title style={{ color: '#fff', fontSize: 28, fontWeight: 700, marginBottom: 8 }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 880, margin: '0 auto' }}>
+          <Title style={{
+            margin: 0, marginBottom: 12, color: '#fff', fontWeight: 800,
+            fontSize: 'clamp(26px, 4vw, 40px)', letterSpacing: '-0.5px',
+          }}>
             <BuildOutlined style={{ marginRight: 10 }} />
             行业人才库
           </Title>
-          <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 14, display: 'block', marginBottom: 24 }}>
-            面向按岗招聘的行业候选人 · 数据来自脉脉 / LinkedIn 寻猎
-          </Text>
-          {/* Big search bar */}
+          <Paragraph style={{
+            margin: 0, marginBottom: 32, color: 'rgba(255,255,255,0.85)', fontSize: 15,
+          }}>
+            面向按岗招聘的行业候选人 · 数据来自脉脉 / LinkedIn 智能寻猎 · 三维匹配评分
+          </Paragraph>
           <Input.Search
-            size="large"
             placeholder="搜索姓名 / 公司 / 职位..."
+            size="large"
             value={kw}
-            onChange={e => {
-              setKw(e.target.value)
-              if (!e.target.value) state.setFilter('keyword', '')
-            }}
+            onChange={e => { setKw(e.target.value); if (!e.target.value) state.setFilter('keyword', '') }}
             onSearch={v => state.setFilter('keyword', v.trim())}
-            enterButton={<span><SearchOutlined /> 搜索</span>}
+            enterButton={<span style={{ fontWeight: 500 }}><SearchOutlined /> 搜索</span>}
+            style={{ width: '100%', maxWidth: 560 }}
             allowClear
-            style={{ maxWidth: 600 }}
           />
+          {/* Quick position tags */}
+          {openPositions.length > 0 && (
+            <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
+              {openPositions.slice(0, 5).map(p => (
+                <Tag key={p.position_id} onClick={() => handlePositionClick(p.position_id)} style={{
+                  cursor: 'pointer', background: 'rgba(255,255,255,0.15)',
+                  border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.9)',
+                  borderRadius: 16, padding: '2px 12px', fontSize: 12,
+                }}>
+                  {p.title}
+                </Tag>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ========= Summary Stats ========= */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px 0' }}>
-        <Row gutter={[12, 12]}>
-          <Col xs={12} sm={6}>
-            <Card size="small" style={{ borderRadius: 10 }}>
-              <Statistic title="在招岗位" value={openPositions.length} prefix={<TrophyOutlined />} />
+      {/* ═══ Stats ═══ */}
+      <Row gutter={[16, 16]} style={{ marginTop: -24, marginBottom: 24, padding: '0 32px', position: 'relative', zIndex: 2 }}>
+        {[
+          { title: '在招岗位', value: openPositions.length, icon: <TrophyOutlined />, link: undefined },
+          { title: '候选人总数', value: totalCandidates, icon: <TeamOutlined />, link: undefined },
+          { title: '当前结果', value: total, icon: <UserOutlined />, link: undefined },
+          { title: '平均匹配分', value: avgScore || '—', suffix: avgScore ? '分' : '', icon: <StarOutlined />, link: undefined },
+        ].map(s => (
+          <Col xs={12} sm={6} key={s.title}>
+            <Card className="domain-card" size="small" styles={{ body: { padding: '16px 20px' } }}>
+              <Statistic
+                title={<Text style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{s.title}</Text>}
+                value={s.value}
+                suffix={s.suffix || ''}
+                prefix={<span style={{ color: 'var(--domain-badge-bg, #6B46C1)' }}>{s.icon}</span>}
+                valueStyle={{ color: 'var(--domain-badge-bg, #6B46C1)', fontSize: 24, fontWeight: 700 }}
+              />
             </Card>
           </Col>
-          <Col xs={12} sm={6}>
-            <Card size="small" style={{ borderRadius: 10 }}>
-              <Statistic title="候选人总数" value={totalCandidates} prefix={<TeamOutlined />} />
-            </Card>
-          </Col>
-          <Col xs={12} sm={6}>
-            <Card size="small" style={{ borderRadius: 10 }}>
-              <Statistic title="当前结果" value={total} prefix={<UserOutlined />} />
-            </Card>
-          </Col>
-          <Col xs={12} sm={6}>
-            <Card size="small" style={{ borderRadius: 10 }}>
-              <Statistic title="平均匹配分" value={avgScore || '—'} suffix={avgScore ? '分' : ''} />
-            </Card>
-          </Col>
-        </Row>
-      </div>
+        ))}
+      </Row>
 
-      {/* ========= Main: Position sidebar + Talent list ========= */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px 48px' }}>
-        <Row gutter={[16, 16]}>
-          {/* Left: Position list */}
-          <Col xs={24} sm={8} md={6} lg={5}>
+      {/* ═══ Main: Position sidebar + Talent list ═══ */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px 64px' }}>
+        <Row gutter={[24, 24]}>
+          {/* Left: Position sidebar + filters */}
+          <Col xs={24} sm={8} md={7} lg={6}>
             <PositionSidebar
               positions={openPositions}
               activePositionId={state.positionId}
@@ -168,28 +165,40 @@ const IndustrySearchPage: React.FC = () => {
           </Col>
 
           {/* Right: Talent cards */}
-          <Col xs={24} sm={16} md={18} lg={19}>
+          <Col xs={24} sm={16} md={17} lg={18}>
+            {/* Section header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Title level={4} style={{ margin: 0 }}>
+                <FireOutlined style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }} />
+                {hasFilters ? `搜索结果（${total} 人）` : '推荐候选人'}
+              </Title>
+              <Button type="link" onClick={() => navigate('/industry/search')}
+                style={{ fontSize: 14, padding: 0 }}>
+                查看全部 ↓
+              </Button>
+            </div>
+
             <Spin spinning={isLoading}>
               {items.length === 0 && !isLoading ? (
-                <EmptyPlaceholder
-                  title="未找到匹配的候选人"
-                  description="试试调整关键词或放宽筛选条件；也可以先在系统配置中导入人才数据"
-                  action={{ label: '清除全部筛选', onClick: () => { setKw(''); state.resetFilters() }}}
-                />
+                <Card className="domain-card" style={{ borderRadius: 12 }}>
+                  <EmptyPlaceholder
+                    title="未找到匹配的候选人"
+                    description="试试调整关键词或放宽筛选条件；也可以先在系统配置中导入人才数据"
+                    action={{ label: '清除全部筛选', onClick: () => { setKw(''); state.resetFilters() } }}
+                  />
+                </Card>
               ) : (
                 <>
                   <Row gutter={[16, 16]}>
                     {items.map(t => (
-                      <Col xs={24} sm={12} md={8} key={t.talent_id}>
+                      <Col xs={24} sm={12} lg={8} key={t.talent_id}>
                         <IndustryTalentCard talent={t} />
                       </Col>
                     ))}
                   </Row>
                   <div style={{ textAlign: 'center', marginTop: 32 }}>
                     <Pagination
-                      current={state.page}
-                      total={total}
-                      pageSize={state.pageSize}
+                      current={state.page} total={total} pageSize={state.pageSize}
                       onChange={p => state.setFilter('page', p)}
                       showTotal={t => `共 ${t} 人`}
                     />
@@ -204,16 +213,12 @@ const IndustrySearchPage: React.FC = () => {
   )
 }
 
-// ========= Position Sidebar Component =========
+// ═══ Position Sidebar Component ═══
 
 const PositionSidebar: React.FC<{
   positions: Array<{
-    position_id: number
-    title: string
-    department: string | null
-    candidate_count: number
-    avg_match_score: number | null
-    status: string
+    position_id: number; title: string; department: string | null
+    candidate_count: number; avg_match_score: number | null; status: string
   }>
   activePositionId: number | null
   onPositionClick: (id: number | null) => void
@@ -223,119 +228,59 @@ const PositionSidebar: React.FC<{
   const directionOptions = (directions || []).map(d => ({ value: d.code, label: d.name }))
 
   return (
-    <div style={{ position: 'sticky', top: 80 }}>
-      {/* Position list */}
-      <Card
-        size="small"
-        style={{ borderRadius: 10, marginBottom: 12 }}
-        title={<span style={{ fontSize: 13 }}>岗位</span>}
-      >
+    <div style={{ position: 'sticky', top: 80, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Positions */}
+      <Card className="domain-card" size="small" style={{ borderRadius: 12 }} title={
+        <span style={{ fontSize: 14, fontWeight: 600 }}>
+          <TrophyOutlined style={{ marginRight: 6, color: 'var(--domain-badge-bg, #6B46C1)' }} />
+          在招岗位
+        </span>
+      }>
         {positions.length === 0 ? (
-          <Text type="secondary" style={{ fontSize: 12 }}>暂无在招岗位</Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>暂无在招岗位</Text>
         ) : (
           <>
-            {/* "All positions" option */}
-            <div
-              onClick={() => onPositionClick(null)}
-              style={{
-                padding: '6px 10px',
-                borderRadius: 6,
-                cursor: 'pointer',
-                marginBottom: 4,
-                background: activePositionId === null ? 'var(--domain-light-bg, #FAF5FF)' : 'transparent',
-                fontWeight: activePositionId === null ? 600 : 400,
-                color: activePositionId === null ? 'var(--domain-badge-bg, #6B46C1)' : '#333',
-                fontSize: 13,
-                transition: 'background 0.15s',
-              }}
-            >
-              全部候选人
-            </div>
+            <PositionItem
+              title="全部候选人" count={positions.reduce((s, p) => s + p.candidate_count, 0)}
+              active={activePositionId === null} onClick={() => onPositionClick(null)}
+            />
             {positions.map(p => (
-              <div
-                key={p.position_id}
+              <PositionItem
+                key={p.position_id} title={p.title} department={p.department}
+                count={p.candidate_count} avgScore={p.avg_match_score}
+                active={activePositionId === p.position_id}
                 onClick={() => onPositionClick(p.position_id)}
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  marginBottom: 4,
-                  background: activePositionId === p.position_id ? 'var(--domain-light-bg, #FAF5FF)' : 'transparent',
-                  fontWeight: activePositionId === p.position_id ? 600 : 400,
-                  color: activePositionId === p.position_id ? 'var(--domain-badge-bg, #6B46C1)' : '#333',
-                  fontSize: 13,
-                  transition: 'background 0.15s',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                    {p.title}
-                  </span>
-                  <Badge count={p.candidate_count} style={{ backgroundColor: 'var(--domain-badge-bg, #6B46C1)', marginLeft: 6 }} />
-                </div>
-                {p.avg_match_score != null && (
-                  <Text type="secondary" style={{ fontSize: 11 }}>
-                    均分 {Math.round(p.avg_match_score)}
-                  </Text>
-                )}
-              </div>
+              />
             ))}
           </>
         )}
       </Card>
 
-      {/* Compact filters */}
-      <Card size="small" style={{ borderRadius: 10 }} title={<span style={{ fontSize: 13 }}>筛选</span>}>
+      {/* Filters */}
+      <Card className="domain-card" size="small" style={{ borderRadius: 12 }} title={
+        <span style={{ fontSize: 14, fontWeight: 600 }}>筛选条件</span>
+      }>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <Select
-            placeholder="最低匹配分"
-            size="small"
-            style={{ width: '100%' }}
+          <Select placeholder="最低匹配分" size="small" style={{ width: '100%' }}
             value={state.minScore ?? 0}
             onChange={v => state.setFilter('minScore', v === 0 ? null : v)}
-            options={MIN_SCORE_OPTIONS}
-          />
-          <Select
-            placeholder="候选人状态"
-            size="small"
-            style={{ width: '100%' }}
+            options={MIN_SCORE_OPTIONS} />
+          <Select placeholder="候选人状态" size="small" style={{ width: '100%' }}
             value={state.status || undefined}
             onChange={v => state.setFilter('status', v || '')}
-            options={CANDIDATE_STATUS_OPTIONS}
-            allowClear
-          />
-          <Select
-            placeholder="来源平台"
-            size="small"
-            style={{ width: '100%' }}
+            options={CANDIDATE_STATUS_OPTIONS} allowClear />
+          <Select placeholder="来源平台" size="small" style={{ width: '100%' }}
             value={state.sourcePlatform || undefined}
             onChange={v => state.setFilter('sourcePlatform', v || '')}
-            options={SOURCE_PLATFORM_OPTIONS}
-            allowClear
-          />
-          <Select
-            placeholder="技术方向"
-            size="small"
-            style={{ width: '100%' }}
+            options={SOURCE_PLATFORM_OPTIONS} allowClear />
+          <Select placeholder="技术方向" size="small" style={{ width: '100%' }}
             value={state.techDirection || undefined}
             onChange={v => state.setFilter('techDirection', v || '')}
-            options={directionOptions}
-            allowClear
-            showSearch
-            optionFilterProp="label"
-          />
-          <Select
-            size="small"
-            style={{ width: '100%' }}
-            value={state.sortBy}
-            onChange={v => state.setFilter('sortBy', v)}
-            options={INDUSTRY_SORT_OPTIONS}
-          />
-          <Button
-            size="small"
-            icon={<ClearOutlined />}
-            onClick={() => state.resetFilters()}
-          >
+            options={directionOptions} allowClear showSearch optionFilterProp="label" />
+          <Select size="small" style={{ width: '100%' }}
+            value={state.sortBy} onChange={v => state.setFilter('sortBy', v)}
+            options={INDUSTRY_SORT_OPTIONS} />
+          <Button size="small" icon={<ClearOutlined />} onClick={() => state.resetFilters()}>
             清除全部
           </Button>
         </div>
@@ -343,5 +288,37 @@ const PositionSidebar: React.FC<{
     </div>
   )
 }
+
+const PositionItem: React.FC<{
+  title: string; department?: string | null; count: number
+  avgScore?: number | null; active: boolean; onClick: () => void
+}> = ({ title, department, count, avgScore, active, onClick }) => (
+  <div onClick={onClick} style={{
+    padding: '8px 10px', borderRadius: 8, cursor: 'pointer', marginBottom: 4,
+    background: active ? 'var(--domain-light-bg, #FAF5FF)' : 'transparent',
+    borderLeft: active ? '3px solid var(--domain-badge-bg, #6B46C1)' : '3px solid transparent',
+    transition: 'all 0.15s',
+  }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{
+        fontSize: 13, fontWeight: active ? 600 : 400,
+        color: active ? 'var(--domain-badge-bg, #6B46C1)' : '#333',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+      }}>
+        {title}
+      </Text>
+      <Badge count={count} style={{
+        backgroundColor: 'var(--domain-badge-bg, #6B46C1)', marginLeft: 6,
+      }} />
+    </div>
+    {(department || avgScore != null) && (
+      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+        {department && <span>{department}</span>}
+        {department && avgScore != null && <span> · </span>}
+        {avgScore != null && <span>均分 {Math.round(avgScore)}</span>}
+      </div>
+    )}
+  </div>
+)
 
 export default IndustrySearchPage
