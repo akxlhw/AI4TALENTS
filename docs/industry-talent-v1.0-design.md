@@ -45,6 +45,8 @@
 | `title` | String(255) | NOT NULL, indexed | 岗位名称 |
 | `department` | String(255) | nullable | 所属部门 |
 | `tech_direction_codes` | JSON | default `[]` | 技术方向编码数组（关联 core_tech_direction） |
+| `level_min` | Integer | nullable | 职级下限（如 19） |
+| `level_max` | Integer | nullable | 职级上限（如 20） |
 | `jd_text` | Text | nullable | JD 原文 |
 | `jd_features` | JSON | nullable | JD 特征（技能/经验/目标公司） |
 | `status` | String(20) | NOT NULL, default 'open', indexed | open / closed / archived |
