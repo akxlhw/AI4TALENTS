@@ -129,7 +129,7 @@ const IndustrySearchPage: React.FC = () => {
       </div>
 
       {/* ═══ Stats ═══ */}
-      <Row gutter={[16, 16]} style={{ marginTop: -24, marginBottom: 24, padding: '0 32px', position: 'relative', zIndex: 2 }}>
+      <Row gutter={[16, 16]} style={{ marginTop: 24, marginBottom: 24, padding: '0 32px' }}>
         {[
           { title: '在招岗位', value: openPositions.length, icon: <TrophyOutlined />, link: undefined },
           { title: '候选人总数', value: totalCandidates, icon: <TeamOutlined />, link: undefined },
