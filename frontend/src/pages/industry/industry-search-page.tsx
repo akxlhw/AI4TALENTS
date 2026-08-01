@@ -99,7 +99,7 @@ const IndustrySearchPage: React.FC = () => {
           <Paragraph style={{
             margin: 0, marginBottom: 32, color: 'rgba(255,255,255,0.85)', fontSize: 15,
           }}>
-            对准高端精英、关键稀缺岗位，智能发现行业优秀顶尖人才
+            对准高端精英、关键稀缺岗位，智能发现行业优秀顶尖人才，加速人才供应
           </Paragraph>
           <Input.Search
             placeholder="搜索姓名 / 公司 / 职位..."
