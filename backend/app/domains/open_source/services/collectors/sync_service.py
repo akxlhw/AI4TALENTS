@@ -6,7 +6,7 @@ Handles upsert of developers, repositories, contributions, and language skills.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +17,7 @@ from app.domains.open_source.models.open_source import (
     OSLanguageSkill,
     OSRepository,
 )
+from app.domains.open_source.services.os_student_classifier import compute_is_student
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,13 @@ class SyncService:
             if key in data and data[key] is not None:
                 setattr(dev, key, data[key])
 
+        # 在校生识别：基于 upsert 后的最终 company/bio/email 重算
+        dev.is_student = compute_is_student(  # type: ignore[assignment]
+            company=cast("str | None", dev.company),
+            bio=cast("str | None", dev.bio),
+            email=cast("str | None", dev.email),
+        )
+
         if auto_flush:
             await self.session.flush()
         return dev
@@ -88,7 +96,7 @@ class SyncService:
             repo = OSRepository(full_name=full_name)
             self.session.add(repo)
 
-        repo.developer_id = developer_id
+        repo.developer_id = cast(Any, developer_id)
         for key in [
             "github_repo_id",
             "name",

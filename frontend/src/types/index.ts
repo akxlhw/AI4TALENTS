@@ -418,6 +418,7 @@ export interface OSDeveloper {
   primary_languages: string[]
   tech_tags: string[]
   is_visible: boolean
+  is_student: boolean
   roles?: string[]
 }
 
@@ -515,6 +516,7 @@ export interface OSSearchQuery {
   location?: string
   company?: string
   is_committer?: boolean
+  is_student?: boolean
   repo_full_names?: string[]
   sort_by?: string
   mode?: 'keyword' | 'semantic' | 'hybrid'

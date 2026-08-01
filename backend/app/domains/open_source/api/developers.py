@@ -16,6 +16,7 @@ from app.domains.open_source.api.auth import get_current_user
 from app.domains.open_source.schemas.open_source import (
     OSContributionItem,
     OSDeveloperCompareRequest,
+    OSDeveloperCompareResponse,
     OSDeveloperDetail,
     OSDeveloperSummary,
     OSLanguageSkillItem,
@@ -45,13 +46,14 @@ async def list_developers(
     company: str | None = Query(None),
     min_stars: int | None = Query(None, ge=0),
     is_committer: bool | None = Query(None, description="Filter developers who are committers"),
+    is_student: bool | None = Query(None, description="Filter developers who are students"),
     repo_full_names: list[str] | None = Query(None, description="Filter by repository full names"),
     sort_by: str = Query("stars_desc"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(get_current_user),
-):
+) -> PaginatedResponse[OSDeveloperSummary]:
     service = OpenSourceService(session)
     items, total = await service.list_developers(
         q=q,
@@ -61,6 +63,7 @@ async def list_developers(
         company=company,
         min_stars=min_stars,
         is_committer=is_committer,
+        is_student=is_student,
         repo_full_names=repo_full_names,
         sort_by=sort_by,
         page=page,
@@ -93,11 +96,12 @@ async def list_all_developer_ids(
     company: str | None = Query(None),
     min_stars: int | None = Query(None, ge=0),
     is_committer: bool | None = Query(None, description="Filter developers who are committers"),
+    is_student: bool | None = Query(None, description="Filter developers who are students"),
     repo_full_names: list[str] | None = Query(None, description="Filter by repository full names"),
     sort_by: str = Query("stars_desc"),
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(get_current_user),
-):
+) -> list[int]:
     """Return all developer IDs matching the current filters (no pagination).
     Used for frontend 'select all' feature.
     """
@@ -110,12 +114,13 @@ async def list_all_developer_ids(
         company=company,
         min_stars=min_stars,
         is_committer=is_committer,
+        is_student=is_student,
         repo_full_names=repo_full_names,
         sort_by=sort_by,
         page=1,
         page_size=100000,
     )
-    return [dev.developer_id for dev in items]
+    return [cast(int, dev.developer_id) for dev in items]
 
 
 @router.get("/developers/{developer_id}", response_model=OSDeveloperDetail)
@@ -123,7 +128,7 @@ async def get_developer(
     developer_id: int,
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(get_current_user),
-):
+) -> OSDeveloperDetail:
     service = OpenSourceService(session)
     return await service.get_developer_detail(developer_id)
 
@@ -137,7 +142,7 @@ async def list_developer_repositories(
     page_size: int = Query(20, ge=1, le=100),
     sort_by: str = Query("stars"),
     session: AsyncSession = Depends(get_async_session),
-):
+) -> PaginatedResponse[OSRepositoryItem]:
     service = OpenSourceService(session)
     items = await service.get_developer_repositories(developer_id)
     # Simple in-memory sort/paginate
@@ -169,21 +174,21 @@ async def list_developer_repositories(
 async def list_developer_contributions(
     developer_id: int,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> list[OSContributionItem]:
     service = OpenSourceService(session)
     result = await service.get_developer_contributions(developer_id)
     return [
         OSContributionItem(
-            contribution_id=c.contribution_id,
-            repo_id=c.repo_id,
+            contribution_id=cast(int, c.contribution_id),
+            repo_id=cast(int, c.repo_id),
             repo_full_name=full_name,
-            commits_count=c.commits_count,
-            prs_count=c.prs_count,
-            issues_count=c.issues_count,
-            code_reviews_count=c.code_reviews_count,
-            is_owner=c.is_owner,
-            is_maintainer=c.is_maintainer,
-            is_committer=c.is_committer,
+            commits_count=cast(int, c.commits_count),
+            prs_count=cast(int, c.prs_count),
+            issues_count=cast(int, c.issues_count),
+            code_reviews_count=cast(int, c.code_reviews_count),
+            is_owner=cast(bool, c.is_owner),
+            is_maintainer=cast(bool, c.is_maintainer),
+            is_committer=cast(bool, c.is_committer),
         )
         for c, full_name in result
     ]
@@ -193,7 +198,7 @@ async def list_developer_contributions(
 async def list_developer_languages(
     developer_id: int,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> list[OSLanguageSkillItem]:
     service = OpenSourceService(session)
     items = await service.get_developer_languages(developer_id)
     return [OSLanguageSkillItem.model_validate(i) for i in items]
@@ -203,7 +208,7 @@ async def list_developer_languages(
 async def compare_developers(
     data: OSDeveloperCompareRequest,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> OSDeveloperCompareResponse:
     service = OpenSourceService(session)
     return await service.compare_developers(data.developer_ids)
 
@@ -213,7 +218,7 @@ async def recommend_similar_developers(
     developer_id: int,
     limit: int = Query(10, ge=1, le=50),
     session: AsyncSession = Depends(get_async_session),
-):
+) -> list[OSDeveloperSummary]:
     service = OpenSourceService(session)
     items = await service.recommend_similar(developer_id, limit=limit)
     return [OSDeveloperSummary.model_validate(i) for i in items]
@@ -229,8 +234,8 @@ async def export_developers(
     data: ExportDevelopersRequest,
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(require_admin),
-    request: Request = None,
-):
+    request: Request = None,  # type: ignore[assignment]
+) -> StreamingResponse:
     """Export selected developers to CSV or Excel format."""
     import csv
     import io
@@ -259,7 +264,7 @@ async def export_developers(
         raise HTTPException(status_code=404, detail="未找到要导出的开发者")
 
     # Batch fetch collected repos for enriched fields
-    dev_ids = [d.developer_id for d in developers]
+    dev_ids = [cast(int, d.developer_id) for d in developers]
     repos_map = await service.get_collected_repos_for_developers(dev_ids)
 
     disclaimer = (
@@ -289,7 +294,7 @@ async def export_developers(
 
     rows = []
     for idx, d in enumerate(developers, 1):
-        repo_names = ", ".join(repos_map.get(d.developer_id, []))
+        repo_names = ", ".join(repos_map.get(cast(int, d.developer_id), []))
         name = d.name or d.github_login or ""
         company = d.company or ""
         search_query = f"{name} {company} LinkedIn".strip()
@@ -373,13 +378,13 @@ async def export_developers(
             headers={"Content-Disposition": "attachment; filename=os_developers_export.xlsx"},
         )
     else:
-        buffer = io.StringIO()
-        writer = csv.writer(buffer)
+        text_buffer = io.StringIO()
+        writer = csv.writer(text_buffer)
         writer.writerow([disclaimer])
         writer.writerow([])
         writer.writerow(headers)
         writer.writerows(rows)
-        buffer.seek(0)
+        text_buffer.seek(0)
 
         await AuditService.log_data_operation(
             user_id=current_user.get("user_id"),
@@ -397,7 +402,7 @@ async def export_developers(
         )
 
         return StreamingResponse(
-            io.BytesIO(buffer.getvalue().encode("utf-8-sig")),
+            io.BytesIO(text_buffer.getvalue().encode("utf-8-sig")),
             media_type="text/csv",
             headers={"Content-Disposition": "attachment; filename=os_developers_export.csv"},
         )
@@ -416,7 +421,7 @@ async def list_public_repositories(
     collected_only: bool = Query(True, description="Only repos with completed collect tasks"),
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(get_current_user),
-):
+) -> PaginatedResponse[OSRepoConfigResponse]:
     """List all public repositories (collected repo configs)."""
     service = OpenSourceService(session)
     items, total = await service.list_repo_configs(
@@ -446,10 +451,10 @@ async def get_repository(
     name: str,
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(get_current_user),
-):
+) -> OSRepositoryDetailResponse:
     """Get repository detail with contributor count by full name."""
     service = OpenSourceService(session)
-    return await service.get_repository_detail(f"{owner}/{name}")
+    return cast(OSRepositoryDetailResponse, await service.get_repository_detail(f"{owner}/{name}"))
 
 
 @router.get(
@@ -463,7 +468,7 @@ async def get_repository_contributors(
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(get_current_user),
-):
+) -> PaginatedResponse[OSRepositoryContributor]:
     """Get contributors for a repository by full name."""
     service = OpenSourceService(session)
     items, total = await service.get_repository_contributors(f"{owner}/{name}", page, page_size)
@@ -483,7 +488,7 @@ async def search_developers(
     req: OSSearchRequest,
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(get_current_user),
-):
+) -> PaginatedResponse[OSDeveloperSummary]:
     """Unified search endpoint supporting keyword/semantic/hybrid modes."""
     service = OpenSourceService(session)
     items, total = await service.search_developers(req)

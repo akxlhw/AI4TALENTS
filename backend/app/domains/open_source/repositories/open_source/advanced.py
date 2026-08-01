@@ -10,8 +10,10 @@ import json
 import logging
 import re
 from typing import Any
+from typing import cast as tcast
 
 from sqlalchemy import func, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import is_postgres as _is_postgres
 from app.domains.open_source.models.open_source import (
@@ -28,7 +30,7 @@ logger = logging.getLogger(__name__)
 class OpenSourceAdvancedRepository:
     """Advanced search, embedding and analytics for open-source talent."""
 
-    def __init__(self, session):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     async def get_stats(
@@ -50,14 +52,18 @@ class OpenSourceAdvancedRepository:
             .group_by(OSLanguageSkill.language)
             .order_by(func.count(OSLanguageSkill.developer_id).desc())
         )
-        language_distribution = dict(lang_result.all())
+        language_distribution: dict[str, int] = {}
+        for lang, lang_cnt in lang_result.all():
+            language_distribution[lang] = lang_cnt
 
         tech_result = await self.session.execute(
             select(OSRepoConfig.tech_element, func.count(OSRepoConfig.repo_config_id))
             .where(OSRepoConfig.is_active.is_(True))
             .group_by(OSRepoConfig.tech_element)
         )
-        tech_element_distribution = dict(tech_result.all())
+        tech_element_distribution: dict[str, int] = {}
+        for element, element_cnt in tech_result.all():
+            tech_element_distribution[element] = element_cnt
 
         return {
             "total_developers": total_devs or 0,
@@ -106,16 +112,22 @@ class OpenSourceAdvancedRepository:
                 "company",
                 "min_stars",
                 "repo_full_names",
+                "is_student",
             ):
                 value = getattr(req_filters, key, None)
                 if value is not None:
                     filters[key] = value
 
-        return await self.list_developers(
-            filters=filters or None,
-            sort_by=getattr(req, "sort_by", "stars_desc") or "stars_desc",
-            page=getattr(req, "page", 1) or 1,
-            page_size=getattr(req, "page_size", 20) or 20,
+        # list_developers is provided by OpenSourceCoreRepository; the two are
+        # only combined in OpenSourceRepository (multiple inheritance).
+        return tcast(
+            "tuple[list[OSDeveloper], int]",
+            await tcast(Any, self).list_developers(
+                filters=filters or None,
+                sort_by=getattr(req, "sort_by", "stars_desc") or "stars_desc",
+                page=getattr(req, "page", 1) or 1,
+                page_size=getattr(req, "page_size", 20) or 20,
+            ),
         )
 
     async def jd_match(
@@ -139,7 +151,7 @@ class OpenSourceAdvancedRepository:
                 OSEmbedding.vector_type == vector_type,
             )
         )
-        return result.scalar_one_or_none()
+        return tcast(OSEmbedding | None, result.scalar_one_or_none())
 
     async def upsert_embedding(
         self,
@@ -183,15 +195,18 @@ class OpenSourceAdvancedRepository:
                 },
             )
             await self.session.flush()
-            return await self.get_embedding_by_developer_id(developer_id, vector_type)
+            return tcast(
+                OSEmbedding,
+                await self.get_embedding_by_developer_id(developer_id, vector_type),
+            )
         else:
             existing = await self.get_embedding_by_developer_id(developer_id, vector_type)
             embedding_str = json.dumps(embedding)
             if existing:
-                existing.embedding = embedding_str
-                existing.model_name = model_name
-                existing.source_text_hash = source_text_hash
-                existing.updated_at = now
+                existing.embedding = tcast(Any, embedding_str)
+                existing.model_name = tcast(Any, model_name)
+                existing.source_text_hash = tcast(Any, source_text_hash)
+                existing.updated_at = tcast(Any, now)
                 await self.session.flush()
                 return existing
             else:
@@ -311,6 +326,9 @@ class OpenSourceAdvancedRepository:
             if "min_stars" in filters:
                 filter_clauses.append("d.total_stars_received >= :min_stars")
                 filter_params["min_stars"] = filters["min_stars"]
+            if "is_student" in filters:
+                filter_clauses.append("d.is_student = :is_student")
+                filter_params["is_student"] = filters["is_student"]
             if "repo_full_names" in filters:
                 filter_clauses.append(
                     "EXISTS (SELECT 1 FROM os_contribution oc JOIN os_repository ore ON oc.repo_id = ore.repo_id "
@@ -371,6 +389,7 @@ class OpenSourceAdvancedRepository:
                 primary_languages=row["primary_languages"],
                 tech_tags=row["tech_tags"],
                 is_visible=row["is_visible"],
+                is_student=row["is_student"],
                 created_at=row["created_at"],
                 updated_at=row["updated_at"],
             )

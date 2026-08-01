@@ -69,6 +69,7 @@ class OSDeveloperService:
         company: str | None = None,
         min_stars: int | None = None,
         is_committer: bool | None = None,
+        is_student: bool | None = None,
         repo_full_names: list[str] | None = None,
         sort_by: str = "stars_desc",
         page: int = 1,
@@ -84,6 +85,8 @@ class OSDeveloperService:
             location: 所在地筛选
             company: 公司筛选
             min_stars: 最小 Stars 数
+            is_committer: 是否 Committer
+            is_student: 是否在校生
             sort_by: 排序方式
             page: 页码
             page_size: 每页数量
@@ -91,7 +94,7 @@ class OSDeveloperService:
         Returns:
             Tuple[List[OSDeveloper], int]: 开发者列表和总数
         """
-        filters = {}
+        filters: dict[str, Any] = {}
         if q:
             filters["q"] = q
         if tech_elements:
@@ -106,6 +109,8 @@ class OSDeveloperService:
             filters["min_stars"] = min_stars
         if is_committer is not None:
             filters["is_committer"] = is_committer
+        if is_student is not None:
+            filters["is_student"] = is_student
         if repo_full_names is not None:
             filters["repo_full_names"] = repo_full_names
         return await self.repo.list_developers(
@@ -157,16 +162,16 @@ class OSDeveloperService:
         repositories = [OSRepositoryItem.model_validate(r) for r in repos_result]
         contributions = [
             OSContributionItem(
-                contribution_id=c.contribution_id,
-                repo_id=c.repo_id,
+                contribution_id=cast(int, c.contribution_id),
+                repo_id=cast(int, c.repo_id),
                 repo_full_name=full_name,
-                commits_count=c.commits_count,
-                prs_count=c.prs_count,
-                issues_count=c.issues_count,
-                code_reviews_count=c.code_reviews_count,
-                is_owner=c.is_owner,
-                is_maintainer=c.is_maintainer,
-                is_committer=c.is_committer,
+                commits_count=cast(int, c.commits_count),
+                prs_count=cast(int, c.prs_count),
+                issues_count=cast(int, c.issues_count),
+                code_reviews_count=cast(int, c.code_reviews_count),
+                is_owner=cast(bool, c.is_owner),
+                is_maintainer=cast(bool, c.is_maintainer),
+                is_committer=cast(bool, c.is_committer),
             )
             for c, full_name in contributions_result
         ]
@@ -175,13 +180,13 @@ class OSDeveloperService:
 
         return OSDeveloperDetail(
             **OSDeveloperSummary.model_validate(dev).model_dump(),
-            github_id=dev.github_id,
-            blog_url=dev.blog_url,
-            email=dev.email,
-            followers_count=dev.followers_count,
-            following_count=dev.following_count,
-            public_repos_count=dev.public_repos_count,
-            total_forks_received=dev.total_forks_received,
+            github_id=cast("int | None", dev.github_id),
+            blog_url=cast("str | None", dev.blog_url),
+            email=cast("str | None", dev.email),
+            followers_count=cast(int, dev.followers_count),
+            following_count=cast(int, dev.following_count),
+            public_repos_count=cast(int, dev.public_repos_count),
+            total_forks_received=cast(int, dev.total_forks_received),
             repositories=repositories,
             contributions=contributions,
             language_skills=language_skills,
@@ -202,7 +207,7 @@ class OSDeveloperService:
         if not repo:
             raise NotFoundError("Repository")
 
-        contributor_count = await self.repo.count_repository_contributors(repo.repo_id)
+        contributor_count = await self.repo.count_repository_contributors(cast(int, repo.repo_id))
 
         # Fetch description and tech_element from OSRepoConfig (OSRepository doesn't have these fields)
         from sqlalchemy import select
@@ -245,7 +250,9 @@ class OSDeveloperService:
         repo = await self.repo.get_repository_by_full_name(repo_full_name)
         if not repo:
             raise NotFoundError("Repository")
-        items, total = await self.repo.get_repository_contributors(repo.repo_id, page, page_size)
+        items, total = await self.repo.get_repository_contributors(
+            cast(int, repo.repo_id), page, page_size
+        )
         contributors: list[OSRepositoryContributor] = []
         for dev, contrib in items:
             roles: list[str] = []
@@ -255,17 +262,17 @@ class OSDeveloperService:
                 roles.append("Committer")
             contributors.append(
                 OSRepositoryContributor(
-                    developer_id=dev.developer_id,
-                    github_login=dev.github_login,
-                    name=dev.name,
-                    avatar_url=dev.avatar_url,
-                    company=dev.company,
-                    location=dev.location,
-                    commits_count=contrib.commits_count,
-                    prs_count=contrib.prs_count,
-                    issues_count=contrib.issues_count,
-                    is_owner=contrib.is_owner,
-                    is_committer=contrib.is_committer,
+                    developer_id=cast(int, dev.developer_id),
+                    github_login=cast(str, dev.github_login),
+                    name=cast("str | None", dev.name),
+                    avatar_url=cast("str | None", dev.avatar_url),
+                    company=cast("str | None", dev.company),
+                    location=cast("str | None", dev.location),
+                    commits_count=cast(int, contrib.commits_count),
+                    prs_count=cast(int, contrib.prs_count),
+                    issues_count=cast(int, contrib.issues_count),
+                    is_owner=cast(bool, contrib.is_owner),
+                    is_committer=cast(bool, contrib.is_committer),
                     roles=roles,
                 )
             )
@@ -322,7 +329,7 @@ class OSDeveloperService:
             logger.warning(f"Failed to generate query embedding, falling back to keyword: {e}")
             return await self.repo.search_developers(req)
 
-        filters = {}
+        filters: dict[str, Any] = {}
         if req.filters:
             if req.filters.tech_elements:
                 filters["tech_elements"] = req.filters.tech_elements
@@ -336,6 +343,8 @@ class OSDeveloperService:
                 filters["min_stars"] = req.filters.min_stars
             if req.filters.repo_full_names:
                 filters["repo_full_names"] = req.filters.repo_full_names
+            if req.filters.is_student is not None:
+                filters["is_student"] = req.filters.is_student
 
         if req.mode == "semantic":
             semantic_items, total = await self.repo.search_by_vector_similarity(
@@ -360,6 +369,7 @@ class OSDeveloperService:
             location=req.filters.location if req.filters else None,
             company=req.filters.company if req.filters else None,
             min_stars=req.filters.min_stars if req.filters else None,
+            is_student=req.filters.is_student if req.filters else None,
             repo_full_names=req.filters.repo_full_names if req.filters else None,
             page=1,
             page_size=candidate_size,
@@ -426,13 +436,16 @@ class OSDeveloperService:
         }
 
         def _metric(dev: OSDeveloper, key: str) -> float:
-            return {
-                "stars": dev.total_stars_received,
-                "forks": dev.total_forks_received,
-                "repos": dev.public_repos_count,
-                "followers": dev.followers_count,
-                "languages": len(dev.primary_languages or []),
-            }.get(key, 0)
+            return cast(
+                float,
+                {
+                    "stars": dev.total_stars_received,
+                    "forks": dev.total_forks_received,
+                    "repos": dev.public_repos_count,
+                    "followers": dev.followers_count,
+                    "languages": len(dev.primary_languages or []),
+                }.get(key, 0),
+            )
 
         radar: dict[str, Any] = {}
         for dim_key, dim_label in dimensions.items():
@@ -445,7 +458,7 @@ class OSDeveloperService:
             }
 
         developer_details = [
-            await self.get_developer_detail(dev.developer_id) for dev in developers
+            await self.get_developer_detail(cast(int, dev.developer_id)) for dev in developers
         ]
 
         return OSDeveloperCompareResponse(
@@ -519,7 +532,7 @@ class OSDeveloperService:
         Returns:
             OSStatsResponse: 统计信息
         """
-        return await self.repo.get_stats()
+        return cast(OSStatsResponse, await self.repo.get_stats())
 
     async def jd_match(
         self,
@@ -538,8 +551,11 @@ class OSDeveloperService:
         Returns:
             OSJDMatchResponse: 匹配结果
         """
-        return await self.repo.jd_match(
-            jd_text=jd_text,
-            filters=filters,
-            top_k=top_k,
+        return cast(
+            OSJDMatchResponse,
+            await self.repo.jd_match(
+                jd_text=jd_text,
+                filters=filters,
+                top_k=top_k,
+            ),
         )

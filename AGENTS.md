@@ -107,11 +107,12 @@ talent-platform/
 │   │       ├── open_source/   # 开源人才域
 │   │       │   ├── api/       # auth, collection, developers, favourites, open_source,
 │   │       │   │              #   repo_config, stats（__init__.py 聚合为单个 router）
+│   │       │   ├── constants/ # school_aliases（手工学校别名）、school_dict.json（学术域导出词典）
 │   │       │   ├── models/    # open_source.py（developer, repository, contribution）
 │   │       │   ├── repositories/open_source/
 │   │       │   ├── schemas/
 │   │       │   └── services/  # 含 collectors/（github_collector, sync_service）、
-│   │       │                  #   github_client、os_* 领域服务、嵌入服务
+│   │       │                  #   github_client、os_* 领域服务、os_student_classifier（在校生识别）、嵌入服务
 │   │       ├── lab/           # AI 实验室人才域（V3.0.0，JSONL 导入）
 │   │       │   ├── api/       # import_endpoint, talents, stats, prefetch（__init__.py 聚合）
 │   │       │   ├── constants/ # role_mapping（role_section → role_type + academic_level）
@@ -134,7 +135,7 @@ talent-platform/
 │   │           ├── repositories/
 │   │           └── services/  # cache*, llm/, common/（含 http_client）、config_service、
 │   │                          #   audit_service、user_service、suggestion_service、privacy_service 等
-│   ├── migrations/            # Alembic 数据库迁移脚本（编号序列 001~056，另有若干 hash 命名的历史脚本）
+│   ├── migrations/            # Alembic 数据库迁移脚本（编号序列 001~057，另有若干 hash 命名的历史脚本）
 │   ├── tests/                 # pytest 测试
 │   ├── scripts/               # 运维与数据脚本
 │   │   ├── check_architecture.py  # 架构合规检查（CI 门禁）

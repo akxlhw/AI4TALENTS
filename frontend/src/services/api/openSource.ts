@@ -1,11 +1,32 @@
 import { apiClient } from './client'
+import type { OSSearchQuery } from '../../types'
+
+export interface OSSearchFilters {
+  tech_elements?: string[]
+  languages?: string[]
+  location?: string
+  company?: string
+  min_stars?: number
+  repo_full_names?: string[]
+  is_committer?: boolean
+  is_student?: boolean
+}
+
+export interface OSSearchParams {
+  q?: string
+  mode?: 'keyword' | 'semantic' | 'hybrid'
+  filters?: OSSearchFilters
+  sort_by?: string
+  page?: number
+  page_size?: number
+}
 
 export const openSourceApi = {
   getStats: () => apiClient.get('/open-source/stats'),
   getTrending: (params?: { period?: string; limit?: number }) =>
     apiClient.get('/open-source/trending', { params }),
 
-  listDevelopers: (params?: Record<string, unknown>) =>
+  listDevelopers: (params?: OSSearchQuery & { min_stars?: number }) =>
     apiClient.get('/open-source/developers', { params }),
   getDeveloper: (id: number) =>
     apiClient.get(`/open-source/developers/${id}`),
@@ -30,7 +51,7 @@ export const openSourceApi = {
   getRecommendations: (id: number, limit?: number) =>
     apiClient.get(`/open-source/developers/${id}/recommend`, { params: { limit } }),
 
-  search: (params: Record<string, unknown>) =>
+  search: (params: OSSearchParams) =>
     apiClient.post('/open-source/search', params),
 
   addFavorite: (developerId: number, notes?: string) =>

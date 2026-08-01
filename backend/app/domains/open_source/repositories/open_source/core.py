@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from typing import cast as tcast
 
 from sqlalchemy import and_, cast, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import array as pg_array
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.open_source.models.open_source import (
     OSCollectTask,
@@ -33,7 +35,7 @@ logger = logging.getLogger(__name__)
 class OpenSourceCoreRepository:
     """Core CRUD operations for open-source talent."""
 
-    def __init__(self, session):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     async def list_repo_configs(
@@ -45,7 +47,7 @@ class OpenSourceCoreRepository:
     ) -> tuple[list[OSRepoConfig], int]:
         """List repo configs with filters and pagination."""
         filters = filters or {}
-        conditions = []
+        conditions: list[Any] = []
 
         tech_elements = filters.get("tech_elements")
         is_active = filters.get("is_active")
@@ -100,7 +102,7 @@ class OpenSourceCoreRepository:
         result = await self.session.execute(
             select(OSRepoConfig).where(OSRepoConfig.repo_config_id == repo_config_id)
         )
-        return result.scalar_one_or_none()
+        return tcast(OSRepoConfig | None, result.scalar_one_or_none())
 
     async def create_repo_config(
         self,
@@ -151,7 +153,7 @@ class OpenSourceCoreRepository:
         result = await self.session.execute(
             select(OSRepoConfig).where(OSRepoConfig.repo_full_name == repo_full_name)
         )
-        return result.scalar_one_or_none()
+        return tcast(OSRepoConfig | None, result.scalar_one_or_none())
 
     # ========== CollectTask ==========
 
@@ -175,7 +177,7 @@ class OpenSourceCoreRepository:
         result = await self.session.execute(
             select(OSCollectTask).where(OSCollectTask.task_id == task_id)
         )
-        return result.scalar_one_or_none()
+        return tcast(OSCollectTask | None, result.scalar_one_or_none())
 
     async def create_collect_task(
         self,
@@ -200,7 +202,7 @@ class OpenSourceCoreRepository:
                 OSCollectTask.status.in_(["pending", "running"]),
             )
         )
-        return result.scalar_one_or_none()
+        return tcast(OSCollectTask | None, result.scalar_one_or_none())
 
     # ========== Developer ==========
 
@@ -213,7 +215,7 @@ class OpenSourceCoreRepository:
     ) -> tuple[list[OSDeveloper], int]:
         """List developers with filters and pagination."""
         filters = filters or {}
-        conditions = [OSDeveloper.is_visible.is_(True)]
+        conditions: list[Any] = [OSDeveloper.is_visible.is_(True)]
 
         q = filters.get("q")
         tech_elements = filters.get("tech_elements")
@@ -257,6 +259,10 @@ class OpenSourceCoreRepository:
                 )
             )
 
+        is_student = filters.get("is_student")
+        if is_student is not None:
+            conditions.append(OSDeveloper.is_student.is_(bool(is_student)))
+
         repo_full_names = filters.get("repo_full_names")
         if repo_full_names:
             conditions.append(
@@ -268,7 +274,7 @@ class OpenSourceCoreRepository:
             )
 
         stmt = select(OSDeveloper).where(and_(*conditions))
-        order_map = {
+        order_map: dict[str, Any] = {
             "stars_desc": OSDeveloper.total_stars_received.desc(),
             "stars_asc": OSDeveloper.total_stars_received.asc(),
             "name_asc": OSDeveloper.name.asc(),
@@ -288,7 +294,7 @@ class OpenSourceCoreRepository:
         result = await self.session.execute(
             select(OSDeveloper).where(OSDeveloper.developer_id == developer_id)
         )
-        return result.scalar_one_or_none()
+        return tcast(OSDeveloper | None, result.scalar_one_or_none())
 
     async def get_developer_repositories(
         self,
@@ -312,7 +318,7 @@ class OpenSourceCoreRepository:
             .join(OSRepository, OSContribution.repo_id == OSRepository.repo_id)
             .where(OSContribution.developer_id == developer_id)
         )
-        return list(result.all())
+        return tcast("list[tuple[OSContribution, str]]", list(result.all()))
 
     async def get_contribution_roles_for_developers(
         self,
@@ -388,7 +394,7 @@ class OpenSourceCoreRepository:
         result = await self.session.execute(
             select(OSRepository).where(OSRepository.repo_id == repo_id)
         )
-        return result.scalar_one_or_none()
+        return tcast(OSRepository | None, result.scalar_one_or_none())
 
     async def get_repository_by_full_name(self, full_name: str) -> OSRepository | None:
         """Get a repository by its full name (owner/repo)."""
@@ -398,7 +404,7 @@ class OpenSourceCoreRepository:
             .order_by(OSRepository.stars_count.desc())
             .limit(1)
         )
-        return result.scalar_one_or_none()
+        return tcast(OSRepository | None, result.scalar_one_or_none())
 
     async def get_repository_contributors(
         self,
@@ -416,7 +422,7 @@ class OpenSourceCoreRepository:
         total = await self.session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
         stmt = stmt.offset((page - 1) * page_size).limit(page_size)
         result = await self.session.execute(stmt)
-        return list(result.all()), total
+        return tcast("list[tuple[OSDeveloper, OSContribution]]", list(result.all())), total
 
     async def count_repository_contributors(self, repo_id: int) -> int:
         """Count distinct contributors for a repository."""
@@ -484,7 +490,7 @@ class OpenSourceCoreRepository:
                 OSFavourite.user_id == user_id, OSFavourite.developer_id == developer_id
             )
         )
-        return result.scalar_one_or_none()
+        return tcast(OSFavourite | None, result.scalar_one_or_none())
 
     async def create_favourite(
         self,
@@ -522,7 +528,7 @@ class OpenSourceCoreRepository:
         favourite: OSFavourite,
     ) -> None:
         """Soft-delete a favourite by setting is_active=False."""
-        favourite.is_active = False
+        favourite.is_active = tcast(Any, False)
         await self.session.flush()
         await self.session.commit()
 
@@ -548,7 +554,7 @@ class OpenSourceCoreRepository:
         result = await self.session.execute(
             select(OSTalentPool).where(OSTalentPool.pool_id == pool_id)
         )
-        return result.scalar_one_or_none()
+        return tcast(OSTalentPool | None, result.scalar_one_or_none())
 
     async def create_talent_pool(
         self,
@@ -601,7 +607,7 @@ class OpenSourceCoreRepository:
                 OSPoolMember.developer_id == developer_id,
             )
         )
-        return result.scalar_one_or_none()
+        return tcast(OSPoolMember | None, result.scalar_one_or_none())
 
     async def add_pool_member(
         self,
@@ -649,7 +655,7 @@ class OpenSourceCoreRepository:
         task = await self.get_collect_task(task_id)
         if task is None:
             return None
-        task.status = "cancelled"
+        task.status = tcast(Any, "cancelled")
         await self.session.flush()
         await self.session.commit()
         await self.session.refresh(task)
@@ -714,9 +720,10 @@ class OpenSourceCoreRepository:
         )
         mapping: dict[int, list[OSRepository]] = {}
         for repo in result.scalars().all():
-            if repo.developer_id not in mapping:
-                mapping[repo.developer_id] = []
-            mapping[repo.developer_id].append(repo)
+            dev_id = tcast(int, repo.developer_id)
+            if dev_id not in mapping:
+                mapping[dev_id] = []
+            mapping[dev_id].append(repo)
         return mapping
 
     async def get_raw_developers_by_logins(
@@ -731,7 +738,8 @@ class OpenSourceCoreRepository:
         )
         mapping: dict[str, dict[str, Any]] = {}
         for raw in result.scalars().all():
-            mapping[raw.github_login] = raw.raw_data or {}
+            login = tcast(str, raw.github_login)
+            mapping[login] = tcast("dict[str, Any] | None", raw.raw_data) or {}
         return mapping
 
     async def get_collected_repos_for_developers(

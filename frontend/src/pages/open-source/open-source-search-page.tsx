@@ -101,6 +101,7 @@ const OpenSourceSearchPage: React.FC = () => {
     company: searchParams.get('company') || '',
     repo_full_names: searchParams.get('repo_full_names')?.split(',').filter(Boolean) || [],
     is_committer: searchParams.get('is_committer') === 'true',
+    is_student: searchParams.get('is_student') === 'true',
     sort_by: searchParams.get('sort_by') || 'stars_desc',
     mode: (searchParams.get('mode') as OSSearchQuery['mode']) || 'keyword',
     page: parseInt(searchParams.get('page') || '1'),
@@ -124,6 +125,7 @@ const OpenSourceSearchPage: React.FC = () => {
           company: query.company,
           repo_full_names: query.repo_full_names,
           is_committer: query.is_committer,
+          is_student: query.is_student,
           sort_by: query.sort_by,
           page: query.page,
           page_size: query.page_size,
@@ -138,6 +140,7 @@ const OpenSourceSearchPage: React.FC = () => {
             location: query.location,
             company: query.company,
             repo_full_names: query.repo_full_names,
+            is_student: query.is_student,
           },
           sort_by: query.sort_by,
           page: query.page,
@@ -213,6 +216,7 @@ const OpenSourceSearchPage: React.FC = () => {
       company: '',
       repo_full_names: [],
       is_committer: false,
+      is_student: false,
       page: 1,
     }
     setQuery(cleared)
@@ -229,6 +233,7 @@ const OpenSourceSearchPage: React.FC = () => {
     if (newQuery.repo_full_names?.length) params.set('repo_full_names', newQuery.repo_full_names.join(','))
 
     if (newQuery.is_committer) params.set('is_committer', 'true')
+    if (newQuery.is_student) params.set('is_student', 'true')
     if (newQuery.sort_by && newQuery.sort_by !== 'stars_desc') params.set('sort_by', newQuery.sort_by)
     if (newQuery.mode && newQuery.mode !== 'keyword') params.set('mode', newQuery.mode)
     if (newQuery.page && newQuery.page > 1) params.set('page', String(newQuery.page))
@@ -306,6 +311,7 @@ const OpenSourceSearchPage: React.FC = () => {
         company: query.company,
         repo_full_names: query.repo_full_names,
         is_committer: query.is_committer,
+        is_student: query.is_student,
         sort_by: query.sort_by,
       }
       const res = await api.openSource.getAllDeveloperIds(params)
@@ -481,12 +487,20 @@ const OpenSourceSearchPage: React.FC = () => {
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item label="角色筛选" style={{ marginBottom: 8 }}>
-                <Checkbox
-                  checked={query.is_committer}
-                  onChange={(e) => setQuery({ ...query, is_committer: e.target.checked })}
-                >
-                  Committer
-                </Checkbox>
+                <Space>
+                  <Checkbox
+                    checked={query.is_committer}
+                    onChange={(e) => setQuery({ ...query, is_committer: e.target.checked })}
+                  >
+                    Committer
+                  </Checkbox>
+                  <Checkbox
+                    checked={query.is_student}
+                    onChange={(e) => setQuery({ ...query, is_student: e.target.checked })}
+                  >
+                    在校生
+                  </Checkbox>
+                </Space>
               </Form.Item>
             </Col>
           </Row>
@@ -596,6 +610,11 @@ const OpenSourceSearchPage: React.FC = () => {
                           {dev.roles?.includes('Committer') && (
                             <Tag style={{ fontSize: 10, lineHeight: '16px', padding: '0 6px', borderRadius: 4, margin: 0, background: semanticColors.osBlue, color: '#fff', border: 'none', fontWeight: 600 }}>
                               Committer
+                            </Tag>
+                          )}
+                          {dev.is_student && (
+                            <Tag color="green" style={{ fontSize: 10, lineHeight: '16px', padding: '0 6px', borderRadius: 4, margin: 0, fontWeight: 600 }}>
+                              在校生
                             </Tag>
                           )}
                         </div>

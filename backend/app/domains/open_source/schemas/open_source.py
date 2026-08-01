@@ -77,6 +77,7 @@ class OSDeveloperSummary(BaseModel):
     primary_languages: list[str]
     tech_tags: list[str]
     is_visible: bool
+    is_student: bool
     roles: list[str] = Field(default_factory=list, description="角色标签 (Owner, Committer)")
 
     model_config = ConfigDict(from_attributes=True)
@@ -168,6 +169,7 @@ class OSSearchFilters(BaseModel):
     company: str | None = Field(default=None)
     min_stars: int | None = Field(default=None, ge=0)
     repo_full_names: list[str] | None = Field(default=None)
+    is_student: bool | None = Field(default=None)
 
 
 class OSSearchRequest(BaseModel):

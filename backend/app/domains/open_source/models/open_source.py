@@ -66,6 +66,7 @@ class OSDeveloper(Base, TimestampMixin):
     primary_languages = Column(JSON().with_variant(JSONB, "postgresql"), default=list)
     tech_tags = Column(JSON().with_variant(JSONB, "postgresql"), default=list)
     is_visible = Column(Boolean, default=True, nullable=False)
+    is_student = Column(Boolean, default=False, nullable=False, index=True)
 
 
 class OSRepository(Base, TimestampMixin):
