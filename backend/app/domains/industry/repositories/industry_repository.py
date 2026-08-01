@@ -160,6 +160,8 @@ class IndustryRepository:
                         IndustryPositionTalent.status,
                         "touched",
                         IndustryPositionTalent.touched,
+                        "match_tags",
+                        IndustryPositionTalent.match_tags,
                     )
                 ).label("hits"),
             )

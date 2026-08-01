@@ -17,7 +17,7 @@ interface DomainState {
 }
 
 /** Domains that have full functionality (not just demo) */
-const availableDomains: Domain[] = ['academic', 'opensource', 'lab', 'competition']
+const availableDomains: Domain[] = ['academic', 'opensource', 'lab', 'competition', 'industry']
 
 export const useDomainStore = create<DomainState>()(
   persist(

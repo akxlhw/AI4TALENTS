@@ -96,6 +96,15 @@ export const queryKeys = {
     talents: (params?: object) => ['lab', 'talents', params] as const,
     talent: (id: number) => ['lab', 'talent', id] as const,
   },
+
+  // Industry
+  industry: {
+    all: ['industry'] as const,
+    positions: (status?: string) => ['industry', 'positions', status ?? 'all'] as const,
+    talents: (params?: object) => ['industry', 'talents', params] as const,
+    talent: (id: number) => ['industry', 'talent', id] as const,
+    techDirections: ['industry', 'techDirections'] as const,
+  },
 }
 
 /**

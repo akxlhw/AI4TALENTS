@@ -15,7 +15,7 @@
   - **开源人才**（`domains/open_source/`）：基于 GitHub API，功能完整。
   - **实验室人才**（`domains/lab/`，V3.0.0 新增）：AI 实验室人才（Stanford AI Lab、MIT CSAIL、LAMDA 等），通过 `ai-lab-talent-crawler` skill 采集官网人员数据，产出 JSONL 由 `LabImportService` 导入。导入方式为管理员手动上传。使用独立的 `lab_talent` 表 + `lab_info` 实验室元数据表（不复用 `core_talent`，因跨域隔离铁律）。
   - **竞赛人才**（`domains/competition/`，V4.0.0 新增，M1）：竞赛选手与队伍（ICPC、IOI/IMO/IPhO、Kaggle、CTF、RoboCup、超算等为目标清单，M1 首发源 Codeforces 官方 API），通过 `comp-talent-crawler` skill 采集赛事榜单与选手画像，产出 schema v1.0 JSONL 由 `CompImportService` 按单场赛事全量替换导入。独立 `comp_series / comp_contest / comp_talent / comp_team / comp_result` 五表族（不复用其他域表，跨域隔离铁律）。设计文档见 `docs/competition-v1.0/`。
-  - **行业人才**（`domains/industry/`，V5.0.0 新增）：面向"按岗招聘"的行业候选人（脉脉/LinkedIn），数据由 `smart-talent-sourcing` skill 采集产出 JSONL，域内不实现采集，导入方式为管理员上传（`IndustryImportService`，增量 upsert：空字段不覆盖/缺席不删除/保留 touched/status/notes）。独立三表族 `industry_position` 岗位 / `industry_talent` 人才全局唯一（dedup_hash = name+org+title 三要素）/ `industry_position_talent` 关联打分（跨域隔离铁律）。后端已完成：岗位 CRUD（无 DELETE，仅归档）、人才列表/详情/状态 PATCH、导入上传；技术方向种子 `scripts/data/seed_tech_directions.py` 填充 `core_tech_direction`。设计文档见 `docs/v5.0.0/02-技术设计.md`（前端目前仅有 `demo-industry` 演示页，正式页面上线后退役）。
+  - **行业人才**（`domains/industry/`，V5.0.0 新增）：面向"按岗招聘"的行业候选人（脉脉/LinkedIn），数据由 `smart-talent-sourcing` skill 采集产出 JSONL，域内不实现采集，导入方式为管理员上传（`IndustryImportService`，增量 upsert：空字段不覆盖/缺席不删除/保留 touched/status/notes）。独立三表族 `industry_position` 岗位 / `industry_talent` 人才全局唯一（dedup_hash = name+org+title 三要素）/ `industry_position_talent` 关联打分（跨域隔离铁律）。后端已完成：岗位 CRUD（无 DELETE，仅归档）、人才列表/详情/状态 PATCH、导入上传；技术方向种子 `scripts/data/seed_tech_directions.py` 填充 `core_tech_direction`。设计文档见 `docs/v5.0.0/02-技术设计.md`。前端已完成：人才列表页 `/industry`（banner + sticky 筛选栏 + 卡片网格 + URL 双向同步，`industrySearchStore`）、人才详情页 `/industry/talents/:id`（基本信息/履历时间线/岗位匹配三 Tab，可改 status/touched/notes）、系统配置两个子 Tab「行业人才岗位」「行业人才导入」（位于采集配置下），主导航「行业」入口已解锁（紫色域主题 #6B46C1），`demo-industry` 演示页已退役。
 - **规划中的人才数据源**：竞赛清单内其余源（Kaggle/CTF/RoboCup/超算等，M3 接入）。
 
 主要功能包括：学术/开源/实验室人才搜索与发现、人才画像查看、候选人筛选/排序/对比、重点人才导出、收藏与人才池管理、三维权限控制（学校/国家/技术要素）、采集任务管理、语义搜索、JD 岗位匹配、相似人才推荐、学术谱系（genealogy）、实验室人才主页预取与预览、用户注册审批与审计日志等。
@@ -159,8 +159,8 @@ talent-platform/
 ├── frontend/                   # 前端应用
 │   ├── src/
 │   │   ├── App.tsx            # 路由定义与路由守卫
-│   │   ├── pages/             # 页面级组件（academic, open-source, lab, admin, auth, user,
-│   │   │                      #   system-config, feedback, legal, competition/industry 演示页）
+│   │   ├── pages/             # 页面级组件（academic, open-source, lab, competition, industry,
+│   │   │                      #   admin, auth, user, system-config, feedback, legal）
 │   │   ├── components/        # 可复用组件
 │   │   ├── layouts/           # 布局组件
 │   │   ├── contexts/          # React Context（AuthContext, FavoritesContext，Zustand 的兼容包装）

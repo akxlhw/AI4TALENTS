@@ -4,3 +4,4 @@
 export * from './useQueries'
 export * from './queryClient'
 export * from './useLabQueries'
+export * from './useIndustryQueries'

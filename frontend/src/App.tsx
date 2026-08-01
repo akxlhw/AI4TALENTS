@@ -24,6 +24,8 @@ import CompetitionOverviewPage from './pages/competition/competition-overview-pa
 import CompetitionSearchPage from './pages/competition/competition-search-page'
 import CompetitionTalentDetailPage from './pages/competition/competition-talent-detail-page'
 import CompetitionContestDetailPage from './pages/competition/competition-contest-detail-page'
+import IndustrySearchPage from './pages/industry/industry-search-page'
+import IndustryTalentDetailPage from './pages/industry/industry-talent-detail-page'
 import DeveloperDetailPage from './pages/open-source/open-source-developer-detail-page'
 import RepoDetailPage from './pages/open-source/repo-detail-page'
 import RepoListPage from './pages/open-source/repo-list-page'
@@ -38,7 +40,6 @@ const DataVersionPage = lazy(() => import('./pages/admin/data-version-page'))
 const SuggestionAdminPage = lazy(() => import('./pages/admin/suggestion-admin-page'))
 const SystemConfigPage = lazy(() => import('./pages/system-config/system-config-page'))
 const OpenSourceDemoPage = lazy(() => import('./pages/open-source/open-source-demo-page'))
-const IndustryDemoPage = lazy(() => import('./pages/industry/industry-demo-page'))
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -171,14 +172,8 @@ function AppRoutes() {
         <Route path="competition/search" element={<CompetitionSearchPage />} />
         <Route path="competition/talents/:id" element={<CompetitionTalentDetailPage />} />
         <Route path="competition/contests/:id" element={<CompetitionContestDetailPage />} />
-        <Route
-          path="demo-industry"
-          element={
-            <Suspense fallback={<LazyFallback />}>
-              <IndustryDemoPage />
-            </Suspense>
-          }
-        />
+        <Route path="industry" element={<IndustrySearchPage />} />
+        <Route path="industry/talents/:id" element={<IndustryTalentDetailPage />} />
         <Route path="talents/:id" element={<TalentDetailPage />} />
         <Route path="schools/:id" element={<SchoolDetailPage />} />
         <Route path="favorites" element={<FavoritesPage />} />

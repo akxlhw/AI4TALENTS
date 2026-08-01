@@ -10,6 +10,7 @@ import { academicApi } from './api/academic'
 import { openSourceApi } from './api/openSource'
 import { labApi } from './api/lab'
 import { compApi } from './api/competition'
+import { industryApi } from './api/industry'
 
 export const api = {
   ...sharedApi,
@@ -17,4 +18,5 @@ export const api = {
   openSource: openSourceApi,
   lab: labApi,
   comp: compApi,
+  industry: industryApi,
 }

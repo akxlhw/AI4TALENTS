@@ -66,6 +66,7 @@ class PositionHit(BaseModel):
     match_score: float | None = None
     status: str = "new"
     touched: bool = False
+    match_tags: list[str] = Field(default_factory=list)
 
 
 class IndustryTalentSummary(BaseModel):

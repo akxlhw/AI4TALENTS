@@ -7,12 +7,15 @@ import {
   CloudUploadOutlined,
   GithubOutlined,
   TrophyOutlined,
+  BuildOutlined,
 } from '@ant-design/icons'
 import LabIcon from '../../../components/lab-icon'
 import OSRepoConfigSubTab from './os-repo-config-sub-tab'
 import OSCollectTaskSubTab from './os-collect-task-sub-tab'
 import LabImportTab from './lab-import-tab'
 import CompImportTab from './comp-import-tab'
+import IndustryPositionsTab from './industry-positions-tab'
+import IndustryImportTab from './industry-import-tab'
 import { useCollectConfig } from './collect-config-tab/useCollectConfig'
 import TechDomainPanel from './collect-config-tab/tech-domain-panel'
 import TaskListPanel from './collect-config-tab/task-list-panel'
@@ -141,6 +144,24 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
               </span>
             ),
             children: <CompImportTab />,
+          },
+          {
+            key: 'industry-positions',
+            label: (
+              <span>
+                <BuildOutlined style={{ marginRight: 4 }} /> 行业人才岗位
+              </span>
+            ),
+            children: <IndustryPositionsTab />,
+          },
+          {
+            key: 'industry-import',
+            label: (
+              <span>
+                <BuildOutlined style={{ marginRight: 4 }} /> 行业人才导入
+              </span>
+            ),
+            children: <IndustryImportTab />,
           },
           {
             key: 'embeddings',
