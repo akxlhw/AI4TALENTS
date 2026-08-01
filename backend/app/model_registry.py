@@ -41,6 +41,11 @@ from app.domains.competition.models.competition import (
     CompTalent,
     CompTeam,
 )
+from app.domains.industry.models.industry import (
+    IndustryPosition,
+    IndustryPositionTalent,
+    IndustryTalent,
+)
 from app.domains.lab.models.lab_talent import LabInfo, LabTalent
 from app.domains.open_source.models.open_source import (
     OSCollectTask,
@@ -163,4 +168,8 @@ __all__ = [
     "CompTalent",
     "CompTeam",
     "CompResult",
+    # Industry (v5.0)
+    "IndustryPosition",
+    "IndustryTalent",
+    "IndustryPositionTalent",
 ]

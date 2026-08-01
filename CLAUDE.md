@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **开源人才** (`open_source` domain): 基于 GitHub API，完整功能
 - **实验室人才** (`lab` domain): AI 实验室人才（ai-lab-talent-crawler skill + JSONL 导入）
 - **竞赛人才** (`competition` domain): 竞赛选手与队伍（comp-talent-crawler skill，已接入 Codeforces/IOI/IMO/IPhO/ICPC）
-- **行业人才** (`industry` domain): V5.0.0 开发中（smart-talent-sourcing skill + JSONL 增量导入，设计文档见 `docs/v5.0.0/02-技术设计.md`）
+- **行业人才** (`industry` domain): V5.0.0（后端已完成：三表模型 + JSONL 增量 upsert 导入 + 岗位 CRUD/人才浏览 API；数据由 smart-talent-sourcing skill 产出，设计文档见 `docs/v5.0.0/02-技术设计.md`）
 
 ## Tech Stack
 

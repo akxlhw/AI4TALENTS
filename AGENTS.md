@@ -15,8 +15,7 @@
   - **开源人才**（`domains/open_source/`）：基于 GitHub API，功能完整。
   - **实验室人才**（`domains/lab/`，V3.0.0 新增）：AI 实验室人才（Stanford AI Lab、MIT CSAIL、LAMDA 等），通过 `ai-lab-talent-crawler` skill 采集官网人员数据，产出 JSONL 由 `LabImportService` 导入。导入方式为管理员手动上传。使用独立的 `lab_talent` 表 + `lab_info` 实验室元数据表（不复用 `core_talent`，因跨域隔离铁律）。
   - **竞赛人才**（`domains/competition/`，V4.0.0 新增，M1）：竞赛选手与队伍（ICPC、IOI/IMO/IPhO、Kaggle、CTF、RoboCup、超算等为目标清单，M1 首发源 Codeforces 官方 API），通过 `comp-talent-crawler` skill 采集赛事榜单与选手画像，产出 schema v1.0 JSONL 由 `CompImportService` 按单场赛事全量替换导入。独立 `comp_series / comp_contest / comp_talent / comp_team / comp_result` 五表族（不复用其他域表，跨域隔离铁律）。设计文档见 `docs/competition-v1.0/`。
-- **开发中的人才数据源**：
-  - **行业人才**（`domains/industry/`，V5.0.0 主要开发内容）：面向"按岗招聘"的行业候选人（脉脉/LinkedIn），数据由 `smart-talent-sourcing` skill 采集产出 JSONL，域内不实现采集。三表模型（`industry_position` 岗位 / `industry_talent` 人才全局唯一 / `industry_position_talent` 关联打分），增量 upsert 导入。呈现以人才为主线、岗位为标签与筛选维度。设计文档见 `docs/v5.0.0/02-技术设计.md`（前端目前仅有 `demo-industry` 演示页，正式页面上线后退役）。
+  - **行业人才**（`domains/industry/`，V5.0.0 新增）：面向"按岗招聘"的行业候选人（脉脉/LinkedIn），数据由 `smart-talent-sourcing` skill 采集产出 JSONL，域内不实现采集，导入方式为管理员上传（`IndustryImportService`，增量 upsert：空字段不覆盖/缺席不删除/保留 touched/status/notes）。独立三表族 `industry_position` 岗位 / `industry_talent` 人才全局唯一（dedup_hash = name+org+title 三要素）/ `industry_position_talent` 关联打分（跨域隔离铁律）。后端已完成：岗位 CRUD（无 DELETE，仅归档）、人才列表/详情/状态 PATCH、导入上传；技术方向种子 `scripts/data/seed_tech_directions.py` 填充 `core_tech_direction`。设计文档见 `docs/v5.0.0/02-技术设计.md`（前端目前仅有 `demo-industry` 演示页，正式页面上线后退役）。
 - **规划中的人才数据源**：竞赛清单内其余源（Kaggle/CTF/RoboCup/超算等，M3 接入）。
 
 主要功能包括：学术/开源/实验室人才搜索与发现、人才画像查看、候选人筛选/排序/对比、重点人才导出、收藏与人才池管理、三维权限控制（学校/国家/技术要素）、采集任务管理、语义搜索、JD 岗位匹配、相似人才推荐、学术谱系（genealogy）、实验室人才主页预取与预览、用户注册审批与审计日志等。
@@ -71,7 +70,7 @@
 talent-platform/
 ├── backend/                    # 后端服务
 │   ├── app/                   # 应用代码
-│   │   ├── api_router.py      # FastAPI 路由注册表（聚合全部 26 个域路由到 /api/v1）
+│   │   ├── api_router.py      # FastAPI 路由注册表（聚合全部 27 个域路由到 /api/v1）
 │   │   ├── model_registry.py  # Alembic 模型注册表（聚合所有域模型）
 │   │   ├── main.py            # FastAPI 入口与生命周期管理（lifespan、中间件、/uploads 静态托管）
 │   │   ├── core/              # 核心基础设施
@@ -131,13 +130,21 @@ talent-platform/
 │   │       │   ├── schemas/
 │   │       │   └── services/  # comp_import_service, comp_talent_service,
 │   │       │                  #   comp_contest_service, comp_stats_service
+│   │       ├── industry/      # 行业人才域（V5.0.0，smart-talent-sourcing skill JSONL 导入）
+│   │       │   ├── api/       # import_endpoint, positions, talents（__init__.py 聚合）
+│   │       │   ├── constants/ # status_config（岗位/候选人状态映射）
+│   │       │   ├── models/    # industry.py（IndustryPosition/IndustryTalent/IndustryPositionTalent）
+│   │       │   ├── repositories/  # industry_repository（单类，upsert + 聚合查询）
+│   │       │   ├── schemas/
+│   │       │   └── services/  # industry_import_service, industry_position_service,
+│   │       │                  #   industry_talent_service
 │   │       └── shared/        # 共享域
 │   │           ├── api/       # auth, audit, health, metrics, permissions, privacy, suggestion, system_config
 │   │           ├── models/    # base, enums, iam, audit, system_config, suggestion
 │   │           ├── repositories/
 │   │           └── services/  # cache*, llm/, common/（含 http_client）、config_service、
 │   │                          #   audit_service、user_service、suggestion_service、privacy_service 等
-│   ├── migrations/            # Alembic 数据库迁移脚本（编号序列 001~057，另有若干 hash 命名的历史脚本）
+│   ├── migrations/            # Alembic 数据库迁移脚本（编号序列 001~058，另有若干 hash 命名的历史脚本）
 │   ├── tests/                 # pytest 测试
 │   ├── scripts/               # 运维与数据脚本
 │   │   ├── check_architecture.py  # 架构合规检查（CI 门禁）
@@ -609,6 +616,8 @@ make dev-frontend
 | 实验室人才导入 | `backend/app/domains/lab/services/lab_import_service.py` |
 | 实验室主页预览 | `backend/app/domains/lab/services/homepage_preview_service.py` |
 | 竞赛人才导入 | `backend/app/domains/competition/services/comp_import_service.py` |
+| 行业人才导入 | `backend/app/domains/industry/services/industry_import_service.py` |
+| 技术方向种子 | `backend/scripts/data/seed_tech_directions.py` |
 | 竞赛爬虫 skill | `~/.agents/skills/comp-talent-crawler/`（scripts/crawl_codeforces.py） |
 | 架构合规检查 | `backend/scripts/check_architecture.py` |
 | mypy 门禁 | `backend/scripts/ops/mypy_gate.py` |

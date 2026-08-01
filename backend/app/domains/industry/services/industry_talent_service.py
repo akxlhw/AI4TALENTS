@@ -1,0 +1,121 @@
+"""Industry talent service — list/detail/status business logic."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.exceptions import BadRequestError, NotFoundError
+from app.domains.industry.constants.status_config import CANDIDATE_STATUSES
+from app.domains.industry.models.industry import IndustryTalent
+from app.domains.industry.repositories.industry_repository import IndustryRepository
+from app.domains.industry.schemas.industry import (
+    CandidateStatusPatch,
+    IndustryPositionMatchDetail,
+    IndustryTalentDetail,
+    IndustryTalentSummary,
+    PositionHit,
+)
+
+_SORT_KEYS = {"match_score_desc", "match_score_asc", "created_desc", "name_asc"}
+
+
+class IndustryTalentService:
+    """Service for browsing talents and managing recruiting state."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+        self.repo = IndustryRepository(session)
+
+    async def list_talents(
+        self,
+        *,
+        keyword: str | None = None,
+        position_id: int | None = None,
+        min_score: float | None = None,
+        status: str | None = None,
+        source_platform: str | None = None,
+        tech_direction: str | None = None,
+        sort_by: str = "match_score_desc",
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[IndustryTalentSummary], int]:
+        """List talents with filters. Returns (summaries, total)."""
+        if sort_by not in _SORT_KEYS:
+            raise BadRequestError(
+                f"invalid sort_by: {sort_by!r} (expected one of {sorted(_SORT_KEYS)})"
+            )
+        if status is not None and status not in CANDIDATE_STATUSES:
+            raise BadRequestError(
+                f"invalid status: {status!r} (expected one of {CANDIDATE_STATUSES})"
+            )
+        rows, total = await self.repo.list_talents(
+            keyword=keyword,
+            position_id=position_id,
+            min_score=min_score,
+            status=status,
+            source_platform=source_platform,
+            tech_direction=tech_direction,
+            sort_by=sort_by,
+            page=page,
+            page_size=page_size,
+        )
+        summaries = [
+            self._to_summary(talent, best_score, hits) for talent, best_score, hits in rows
+        ]
+        return summaries, total
+
+    @staticmethod
+    def _to_summary(talent: IndustryTalent, best_score: Any, hits: Any) -> IndustryTalentSummary:
+        positions = [PositionHit(**hit) for hit in (hits or [])]
+        positions.sort(key=lambda h: (h.match_score is not None, h.match_score or 0), reverse=True)
+        data = talent.to_summary_dict()
+        data["best_match_score"] = round(best_score, 2) if best_score is not None else None
+        data["positions"] = positions
+        return IndustryTalentSummary(**data)
+
+    async def get_talent_detail(self, talent_id: int) -> IndustryTalentDetail:
+        """Full profile plus per-position match comparison."""
+        talent = await self.repo.get_talent(talent_id)
+        if talent is None:
+            raise NotFoundError("IndustryTalent", talent_id)
+        matches = await self._list_matches(talent_id)
+        data = talent.to_detail_dict()
+        data["best_match_score"] = max(
+            (m.match_score for m in matches if m.match_score is not None),
+            default=None,
+        )
+        data["positions"] = matches
+        return IndustryTalentDetail(**data)
+
+    async def get_talent_positions(self, talent_id: int) -> list[IndustryPositionMatchDetail]:
+        """Which positions this talent matched, with per-position scores."""
+        talent = await self.repo.get_talent(talent_id)
+        if talent is None:
+            raise NotFoundError("IndustryTalent", talent_id)
+        return await self._list_matches(talent_id)
+
+    async def _list_matches(self, talent_id: int) -> list[IndustryPositionMatchDetail]:
+        rows = await self.repo.get_talent_links(talent_id)
+        return [IndustryPositionMatchDetail(**link.to_match_dict(title)) for link, title in rows]
+
+    async def patch_candidate_status(
+        self, talent_id: int, position_id: int, patch: CandidateStatusPatch
+    ) -> IndustryPositionMatchDetail:
+        """Update recruiting state (status/touched/notes) on one link."""
+        if patch.status is not None and patch.status not in CANDIDATE_STATUSES:
+            raise BadRequestError(
+                f"invalid status: {patch.status!r} (expected one of {CANDIDATE_STATUSES})"
+            )
+        link = await self.repo.get_link(talent_id, position_id)
+        if link is None:
+            raise NotFoundError("IndustryPositionTalent", f"{position_id}/{talent_id}")
+        values = patch.model_dump(exclude_unset=True)
+        for field, value in values.items():
+            setattr(link, field, value)
+        await self.session.commit()
+        await self.session.refresh(link)  # onupdate server value expired at flush
+        position = await self.repo.get_position(position_id)
+        title = str(position.title) if position is not None else ""
+        return IndustryPositionMatchDetail(**link.to_match_dict(title))

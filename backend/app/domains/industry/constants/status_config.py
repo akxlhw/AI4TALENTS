@@ -1,0 +1,26 @@
+"""Industry domain status enums and labels.
+
+Candidate link status and position status values per
+docs/v5.0.0/02-技术设计.md §3.1/§3.3.
+"""
+
+# Position lifecycle (no physical delete; open → closed → archived)
+POSITION_STATUSES: list[str] = ["open", "closed", "archived"]
+POSITION_STATUS_LABELS: dict[str, str] = {
+    "open": "在招",
+    "closed": "已关闭",
+    "archived": "已归档",
+}
+
+# Candidate recruiting status on a position-talent link
+CANDIDATE_STATUSES: list[str] = ["new", "contacted", "interviewed", "rejected", "hired"]
+CANDIDATE_STATUS_LABELS: dict[str, str] = {
+    "new": "新候选人",
+    "contacted": "已触达",
+    "interviewed": "面试中",
+    "rejected": "已淘汰",
+    "hired": "已入职",
+}
+
+# Known source platforms (informational; import does not hard-reject others)
+SOURCE_PLATFORMS: list[str] = ["maimai", "linkedin"]

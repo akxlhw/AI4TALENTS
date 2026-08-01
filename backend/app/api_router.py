@@ -24,6 +24,7 @@ from app.domains.academic.api import (
     venue,
 )
 from app.domains.competition import api as competition_api
+from app.domains.industry import api as industry_api
 from app.domains.lab import api as lab_api
 from app.domains.open_source.api import open_source
 from app.domains.shared.api import (
@@ -119,3 +120,6 @@ api_router.include_router(lab_api.router)
 
 # Competition domain (v4.0)
 api_router.include_router(competition_api.router)
+
+# Industry domain (v5.0)
+api_router.include_router(industry_api.router)
