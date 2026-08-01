@@ -32,6 +32,7 @@ from app.domains.open_source.schemas.open_source import (
     OSDeveloperCompareResponse,
     OSDeveloperDetail,
     OSJDMatchResponse,
+    OSPurgePreview,
     OSRepositoryContributor,
     OSSearchRequest,
     OSStatsResponse,
@@ -118,6 +119,12 @@ class OpenSourceService:
 
     async def delete_repo_config(self, repo_config_id: int) -> bool:
         return await self._collection.delete_repo_config(repo_config_id)
+
+    async def preview_repo_purge(self, repo_config_id: int) -> OSPurgePreview:
+        return await self._collection.preview_repo_purge(repo_config_id)
+
+    async def purge_repo(self, repo_config_id: int, delete_config: bool = False) -> OSPurgePreview:
+        return await self._collection.purge_repo(repo_config_id, delete_config=delete_config)
 
     # ============= Collect Task =============
 

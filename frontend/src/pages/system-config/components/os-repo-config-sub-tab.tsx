@@ -28,9 +28,10 @@ import {
   ReloadOutlined,
   GithubOutlined,
   PlayCircleOutlined,
+  ClearOutlined,
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
-import type { OSRepoConfig } from '../../../types'
+import type { OSPurgePreview, OSRepoConfig } from '../../../types'
 import { getErrorMessage } from './utils'
 
 const { Text } = Typography
@@ -70,6 +71,13 @@ const OSRepoConfigSubTab: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [batchCollectModalVisible, setBatchCollectModalVisible] = useState(false)
   const [batchContributorsPerRepo, setBatchContributorsPerRepo] = useState<number>(0)
+  const [purgeModalVisible, setPurgeModalVisible] = useState(false)
+  const [purgeRecord, setPurgeRecord] = useState<OSRepoConfig | null>(null)
+  const [purgePreview, setPurgePreview] = useState<OSPurgePreview | null>(null)
+  const [purgeLoading, setPurgeLoading] = useState(false)
+  const [purgeExecuting, setPurgeExecuting] = useState(false)
+  const [purgeConfirmText, setPurgeConfirmText] = useState('')
+  const [purgeDeleteConfig, setPurgeDeleteConfig] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -143,6 +151,49 @@ const OSRepoConfigSubTab: React.FC = () => {
   const handleCollect = (record: OSRepoConfig) => {
     setCollectRecord(record)
     setCollectModalVisible(true)
+  }
+
+  const handlePurge = async (record: OSRepoConfig) => {
+    setPurgeRecord(record)
+    setPurgePreview(null)
+    setPurgeConfirmText('')
+    setPurgeDeleteConfig(false)
+    setPurgeModalVisible(true)
+    setPurgeLoading(true)
+    try {
+      const response = await api.openSource.purgeRepoConfigData(record.repo_config_id, {
+        dry_run: true,
+      })
+      setPurgePreview(response.data)
+    } catch (error) {
+      message.error(getErrorMessage(error, '获取清理预览失败'))
+      setPurgeModalVisible(false)
+    } finally {
+      setPurgeLoading(false)
+    }
+  }
+
+  const handleConfirmPurge = async () => {
+    if (!purgeRecord) return
+    setPurgeExecuting(true)
+    try {
+      const response = await api.openSource.purgeRepoConfigData(purgeRecord.repo_config_id, {
+        dry_run: false,
+        delete_config: purgeDeleteConfig,
+      })
+      const result: OSPurgePreview = response.data
+      message.success(
+        `已清理 ${result.repo_full_name} 的采集数据：删除贡献 ${result.contributions} 条、` +
+          `独占人才 ${result.developers_exclusive} 名` +
+          (result.config_deleted ? '，仓库配置已一并删除' : '')
+      )
+      setPurgeModalVisible(false)
+      loadData()
+    } catch (error) {
+      message.error(getErrorMessage(error, '清理失败'))
+    } finally {
+      setPurgeExecuting(false)
+    }
   }
 
   const handleConfirmCollect = async () => {
@@ -277,6 +328,17 @@ const OSRepoConfigSubTab: React.FC = () => {
               删除
             </Button>
           </Popconfirm>
+          <Tooltip title="清理该仓库的采集数据（贡献/独占人才等）">
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<ClearOutlined />}
+              onClick={() => handlePurge(record)}
+            >
+              清理数据
+            </Button>
+          </Tooltip>
         </Space>
       ),
     },
@@ -462,6 +524,68 @@ const OSRepoConfigSubTab: React.FC = () => {
           onChange={(v) => setBatchContributorsPerRepo(v ?? 0)}
           style={{ width: '100%' }}
         />
+      </Modal>
+      {/* Purge Confirm Modal */}
+      <Modal
+        title={`清理采集数据 - ${purgeRecord?.repo_full_name ?? ''}`}
+        open={purgeModalVisible}
+        onCancel={() => setPurgeModalVisible(false)}
+        onOk={handleConfirmPurge}
+        okText="确认清理"
+        cancelText="取消"
+        okButtonProps={{
+          danger: true,
+          disabled: purgeConfirmText !== purgeRecord?.repo_full_name,
+          loading: purgeExecuting,
+        }}
+        width={520}
+      >
+        <Spin spinning={purgeLoading}>
+          {purgePreview && !purgePreview.repo_found && (
+            <p style={{ fontSize: 14 }}>
+              该仓库尚未采集过数据（无仓库与贡献记录），清理不会产生任何删除。
+            </p>
+          )}
+          {purgePreview && purgePreview.repo_found && (
+            <div style={{ fontSize: 14 }}>
+              <p>
+                将删除 <strong>{purgePreview.contributions}</strong> 条贡献记录、
+                <strong style={{ color: '#cf1322' }}> {purgePreview.developers_exclusive} </strong>
+                名独占人才（连带语言技能 {purgePreview.skills} 条、向量 {purgePreview.embeddings}{' '}
+                条、原始数据 {purgePreview.raw} 条），以及该仓库本身。
+              </p>
+              <p>
+                <strong>{purgePreview.developers_shared}</strong> 名人才因被其他仓库引用而保留，
+                <strong> {purgePreview.developers_protected} </strong>
+                名人才因被收藏或加入人才池而保留。
+              </p>
+              <p style={{ color: '#cf1322' }}>此操作不可恢复，采集任务历史记录会保留。</p>
+            </div>
+          )}
+          {!purgeLoading && (
+            <>
+              <div style={{ margin: '12px 0 8px' }}>
+                <Text type="secondary">
+                  请输入仓库全名 <Text code>{purgeRecord?.repo_full_name}</Text> 以确认清理
+                </Text>
+              </div>
+              <Input
+                value={purgeConfirmText}
+                onChange={(e) => setPurgeConfirmText(e.target.value)}
+                placeholder={purgeRecord?.repo_full_name}
+              />
+              <div style={{ marginTop: 12 }}>
+                <Switch
+                  checked={purgeDeleteConfig}
+                  onChange={setPurgeDeleteConfig}
+                  size="small"
+                  style={{ marginRight: 8 }}
+                />
+                <Text type="secondary">同时删除该仓库的配置行</Text>
+              </div>
+            </>
+          )}
+        </Spin>
       </Modal>
     </Card>
   )

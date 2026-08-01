@@ -4,19 +4,21 @@ Open Source — Repo Config endpoints.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.exceptions import NotFoundError
 from app.domains.open_source.api.auth import require_admin, require_super_admin
 from app.domains.open_source.schemas.open_source import (
+    OSPurgePreview,
     OSRepoConfigCreate,
     OSRepoConfigResponse,
     OSRepoConfigUpdate,
 )
 from app.domains.open_source.services.open_source_service import OpenSourceService
 from app.domains.shared.schemas.common import PaginatedResponse, SuccessResponse
+from app.domains.shared.services.audit_service import AuditService
 
 router = APIRouter(prefix="/open-source", tags=["Open Source Talent"])
 
@@ -109,3 +111,42 @@ async def delete_repo_config(
     if not success:
         raise NotFoundError("Repo config", repo_config_id)
     return SuccessResponse(message="Deleted")
+
+
+@router.post("/repo-configs/{repo_config_id}/purge", response_model=OSPurgePreview)
+async def purge_repo_config_data(
+    repo_config_id: int,
+    dry_run: bool = Query(True, description="仅预览影响范围，不执行删除"),
+    delete_config: bool = Query(False, description="执行删除时同时删除仓库配置行"),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_super_admin),
+    request: Request = None,  # type: ignore[assignment]
+) -> OSPurgePreview:
+    """清理仓库采集数据：删除该仓库的贡献记录与独占人才，保护共享/收藏/入池人才。"""
+    service = OpenSourceService(session)
+    if dry_run:
+        return await service.preview_repo_purge(repo_config_id)
+
+    result = await service.purge_repo(repo_config_id, delete_config=delete_config)
+    await AuditService.log_data_operation(
+        user_id=int(current_user["sub"]) if current_user.get("sub") else None,
+        operation="purge",
+        resource_type="os_repo_config",
+        resource_id=str(repo_config_id),
+        status="success",
+        user_ip=request.client.host if request and request.client else None,
+        request_id=getattr(request.state, "request_id", None) if request else None,
+        detail={
+            "repo_full_name": result.repo_full_name,
+            "delete_config": delete_config,
+            "contributions": result.contributions,
+            "developers_total": result.developers_total,
+            "developers_exclusive": result.developers_exclusive,
+            "developers_protected": result.developers_protected,
+            "developers_shared": result.developers_shared,
+            "skills": result.skills,
+            "embeddings": result.embeddings,
+            "raw": result.raw,
+        },
+    )
+    return result

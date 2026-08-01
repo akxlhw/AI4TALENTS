@@ -17,6 +17,7 @@ import logging
 import re
 from datetime import datetime, timezone
 from typing import Any
+from typing import cast as tcast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +29,7 @@ from app.domains.open_source.models.open_source import (
     OSRepoConfig,
 )
 from app.domains.open_source.repositories.open_source import OpenSourceRepository
+from app.domains.open_source.schemas.open_source import OSPurgePreview
 
 logger = logging.getLogger(__name__)
 
@@ -217,6 +219,58 @@ class OSCollectionService:
             bool: 是否删除成功
         """
         return await self.repo.delete_repo_config(repo_config_id)
+
+    async def preview_repo_purge(self, repo_config_id: int) -> OSPurgePreview:
+        """
+        预览仓库采集数据清理的影响范围（不执行删除）
+
+        Args:
+            repo_config_id: 配置ID
+
+        Returns:
+            OSPurgePreview: 各表将删除/保留的计数
+
+        Raises:
+            NotFoundError: 配置不存在
+        """
+        config = await self.repo.get_repo_config(repo_config_id)
+        if not config:
+            raise NotFoundError("Repo config", repo_config_id)
+        repo_full_name = tcast(str, config.repo_full_name)
+        counts = await self.repo.get_repo_purge_preview(repo_full_name)
+        return OSPurgePreview(
+            repo_full_name=repo_full_name,
+            config_deleted=False,
+            **counts,
+        )
+
+    async def purge_repo(self, repo_config_id: int, delete_config: bool = False) -> OSPurgePreview:
+        """
+        执行仓库采集数据清理（硬删除），可选同时删除仓库配置行
+
+        Args:
+            repo_config_id: 配置ID
+            delete_config: 是否同时删除仓库配置
+
+        Returns:
+            OSPurgePreview: 实际删除/保留的计数
+
+        Raises:
+            NotFoundError: 配置不存在
+        """
+        config = await self.repo.get_repo_config(repo_config_id)
+        if not config:
+            raise NotFoundError("Repo config", repo_config_id)
+        repo_full_name = tcast(str, config.repo_full_name)
+        counts = await self.repo.purge_repo_data(repo_full_name)
+        config_deleted = False
+        if delete_config:
+            config_deleted = await self.repo.delete_repo_config(repo_config_id)
+        return OSPurgePreview(
+            repo_full_name=repo_full_name,
+            config_deleted=config_deleted,
+            **counts,
+        )
 
     # ============= Collect Task =============
 

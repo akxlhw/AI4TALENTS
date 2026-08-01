@@ -10,7 +10,7 @@ import logging
 from typing import Any
 from typing import cast as tcast
 
-from sqlalchemy import and_, cast, exists, func, or_, select
+from sqlalchemy import and_, cast, delete, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import array as pg_array
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -741,6 +741,219 @@ class OpenSourceCoreRepository:
             login = tcast(str, raw.github_login)
             mapping[login] = tcast("dict[str, Any] | None", raw.raw_data) or {}
         return mapping
+
+    # ========== Repo Data Purge ==========
+
+    @staticmethod
+    def _empty_purge_counts() -> dict[str, Any]:
+        """Zeroed purge counts used when the repo has no collected data."""
+        return {
+            "repo_found": False,
+            "contributions": 0,
+            "developers_total": 0,
+            "developers_exclusive": 0,
+            "developers_protected": 0,
+            "developers_shared": 0,
+            "skills": 0,
+            "embeddings": 0,
+            "raw": 0,
+        }
+
+    async def _classify_repo_developers(
+        self,
+        repo: OSRepository,
+    ) -> dict[str, set[int]]:
+        """Classify developers involved with a repo for purge.
+
+        Involved developers = contributors of this repo + repo owner.
+        Returns disjoint sets of developer IDs:
+        - exclusive: no other contributions and owns no other repos; will be deleted
+        - protected: exclusive to this repo but kept due to active favourite or pool membership
+        - shared: still referenced by other repos (contribution or ownership); kept
+        """
+        repo_id = tcast(int, repo.repo_id)
+        owner_id = tcast(int, repo.developer_id)
+
+        contributor_rows = await self.session.execute(
+            select(OSContribution.developer_id).where(OSContribution.repo_id == repo_id)
+        )
+        involved_ids: set[int] = {tcast(int, row[0]) for row in contributor_rows.all()}
+        involved_ids.add(owner_id)
+
+        if not involved_ids:
+            return {"exclusive": set(), "protected": set(), "shared": set()}
+
+        other_contrib_rows = await self.session.execute(
+            select(OSContribution.developer_id)
+            .where(
+                OSContribution.developer_id.in_(involved_ids),
+                OSContribution.repo_id != repo_id,
+            )
+            .distinct()
+        )
+        other_owner_rows = await self.session.execute(
+            select(OSRepository.developer_id)
+            .where(
+                OSRepository.developer_id.in_(involved_ids),
+                OSRepository.repo_id != repo_id,
+            )
+            .distinct()
+        )
+        shared_ids = {tcast(int, row[0]) for row in other_contrib_rows.all()}
+        shared_ids.update(tcast(int, row[0]) for row in other_owner_rows.all())
+
+        candidate_ids = involved_ids - shared_ids
+        protected_ids: set[int] = set()
+        if candidate_ids:
+            favourite_rows = await self.session.execute(
+                select(OSFavourite.developer_id)
+                .where(
+                    OSFavourite.developer_id.in_(candidate_ids),
+                    OSFavourite.is_active.is_(True),
+                )
+                .distinct()
+            )
+            protected_ids.update(tcast(int, row[0]) for row in favourite_rows.all())
+            pool_rows = await self.session.execute(
+                select(OSPoolMember.developer_id)
+                .where(OSPoolMember.developer_id.in_(candidate_ids))
+                .distinct()
+            )
+            protected_ids.update(tcast(int, row[0]) for row in pool_rows.all())
+
+        return {
+            "exclusive": candidate_ids - protected_ids,
+            "protected": protected_ids,
+            "shared": shared_ids,
+        }
+
+    async def _count_exclusive_cascades(self, exclusive_ids: set[int]) -> dict[str, int]:
+        """Count language skills / embeddings / raw data belonging to exclusive developers."""
+        counts = {"skills": 0, "embeddings": 0, "raw": 0}
+        if not exclusive_ids:
+            return counts
+
+        counts["skills"] = (
+            await self.session.scalar(
+                select(func.count())
+                .select_from(OSLanguageSkill)
+                .where(OSLanguageSkill.developer_id.in_(exclusive_ids))
+            )
+            or 0
+        )
+        counts["embeddings"] = (
+            await self.session.scalar(
+                select(func.count())
+                .select_from(OSEmbedding)
+                .where(OSEmbedding.developer_id.in_(exclusive_ids))
+            )
+            or 0
+        )
+        login_rows = await self.session.execute(
+            select(OSDeveloper.github_login).where(OSDeveloper.developer_id.in_(exclusive_ids))
+        )
+        logins = [tcast(str, row[0]) for row in login_rows.all()]
+        if logins:
+            counts["raw"] = (
+                await self.session.scalar(
+                    select(func.count())
+                    .select_from(OSRawDeveloper)
+                    .where(OSRawDeveloper.github_login.in_(logins))
+                )
+                or 0
+            )
+        return counts
+
+    async def get_repo_purge_preview(self, repo_full_name: str) -> dict[str, Any]:
+        """Compute purge impact counts for a repo's collected data (no deletion)."""
+        repo = await self.get_repository_by_full_name(repo_full_name)
+        if repo is None:
+            return self._empty_purge_counts()
+
+        classification = await self._classify_repo_developers(repo)
+        contributions = (
+            await self.session.scalar(
+                select(func.count())
+                .select_from(OSContribution)
+                .where(OSContribution.repo_id == repo.repo_id)
+            )
+            or 0
+        )
+        cascades = await self._count_exclusive_cascades(classification["exclusive"])
+
+        return {
+            "repo_found": True,
+            "contributions": contributions,
+            "developers_total": sum(len(ids) for ids in classification.values()),
+            "developers_exclusive": len(classification["exclusive"]),
+            "developers_protected": len(classification["protected"]),
+            "developers_shared": len(classification["shared"]),
+            **cascades,
+        }
+
+    async def purge_repo_data(self, repo_full_name: str) -> dict[str, Any]:
+        """Hard-delete collected data for a repo.
+
+        Deletion order: this repo's contributions -> repo row (exclusive developers
+        may own this repo) -> exclusive developers' language skills / embeddings /
+        raw data -> exclusive developers.
+        Shared and protected developers are kept; collect task history is preserved.
+        """
+        repo = await self.get_repository_by_full_name(repo_full_name)
+        if repo is None:
+            return self._empty_purge_counts()
+
+        classification = await self._classify_repo_developers(repo)
+        exclusive_ids = classification["exclusive"]
+
+        contrib_result = await self.session.execute(
+            delete(OSContribution).where(OSContribution.repo_id == repo.repo_id)
+        )
+        contributions = contrib_result.rowcount or 0
+
+        # 先删仓库行 R：独占人才可能就是 R 的属主，os_repository.developer_id 有外键约束
+        await self.session.delete(repo)
+        await self.session.flush()
+
+        skills = embeddings = raw = 0
+        if exclusive_ids:
+            skills = (
+                await self.session.execute(
+                    delete(OSLanguageSkill).where(OSLanguageSkill.developer_id.in_(exclusive_ids))
+                )
+            ).rowcount or 0
+            embeddings = (
+                await self.session.execute(
+                    delete(OSEmbedding).where(OSEmbedding.developer_id.in_(exclusive_ids))
+                )
+            ).rowcount or 0
+            login_rows = await self.session.execute(
+                select(OSDeveloper.github_login).where(OSDeveloper.developer_id.in_(exclusive_ids))
+            )
+            logins = [tcast(str, row[0]) for row in login_rows.all()]
+            if logins:
+                raw = (
+                    await self.session.execute(
+                        delete(OSRawDeveloper).where(OSRawDeveloper.github_login.in_(logins))
+                    )
+                ).rowcount or 0
+            await self.session.execute(
+                delete(OSDeveloper).where(OSDeveloper.developer_id.in_(exclusive_ids))
+            )
+
+        await self.session.commit()
+
+        return {
+            "repo_found": True,
+            "contributions": contributions,
+            "developers_total": sum(len(ids) for ids in classification.values()),
+            "developers_exclusive": len(exclusive_ids),
+            "developers_protected": len(classification["protected"]),
+            "developers_shared": len(classification["shared"]),
+            "skills": skills,
+            "embeddings": embeddings,
+            "raw": raw,
+        }
 
     async def get_collected_repos_for_developers(
         self,

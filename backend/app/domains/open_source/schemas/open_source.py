@@ -60,6 +60,22 @@ class OSRepoConfigResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class OSPurgePreview(BaseModel):
+    """Repo collected-data purge preview / execution result."""
+
+    repo_full_name: str
+    repo_found: bool = Field(..., description="os_repository 中是否存在对应采集数据")
+    contributions: int = Field(..., description="将/已删除的贡献记录数")
+    developers_total: int = Field(..., description="涉及人才总数")
+    developers_exclusive: int = Field(..., description="将/已删除的独占人才数")
+    developers_protected: int = Field(..., description="因收藏/人才池被保护而保留的人数")
+    developers_shared: int = Field(..., description="因被其他仓库共享而保留的人数")
+    skills: int = Field(..., description="级联删除的语言技能记录数")
+    embeddings: int = Field(..., description="级联删除的向量记录数")
+    raw: int = Field(..., description="级联删除的原始数据记录数")
+    config_deleted: bool = Field(default=False, description="是否同时删除了仓库配置行")
+
+
 # ============= Developer =============
 
 

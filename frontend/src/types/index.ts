@@ -485,6 +485,20 @@ export interface OSRepoConfig {
   updated_at: string
 }
 
+export interface OSPurgePreview {
+  repo_full_name: string
+  repo_found: boolean
+  contributions: number
+  developers_total: number
+  developers_exclusive: number
+  developers_protected: number
+  developers_shared: number
+  skills: number
+  embeddings: number
+  raw: number
+  config_deleted: boolean
+}
+
 export interface OSCollectTask {
   task_id: number
   task_name: string

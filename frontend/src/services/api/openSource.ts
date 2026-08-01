@@ -86,6 +86,8 @@ export const openSourceApi = {
     apiClient.put(`/open-source/repo-configs/${id}`, data),
   deleteRepoConfig: (id: number) =>
     apiClient.delete(`/open-source/repo-configs/${id}`),
+  purgeRepoConfigData: (id: number, params?: { dry_run?: boolean; delete_config?: boolean }) =>
+    apiClient.post(`/open-source/repo-configs/${id}/purge`, null, { params }),
   collectRepo: (id: number, contributorsPerRepo?: number) =>
     apiClient.post(`/open-source/repo-configs/${id}/collect`, null, { params: { contributors_per_repo: contributorsPerRepo } }),
   collectBatchRepos: (repoConfigIds: number[], contributorsPerRepo?: number) =>
