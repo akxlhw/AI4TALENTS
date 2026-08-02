@@ -142,6 +142,17 @@ export const industryApi = {
       patch
     ),
 
+  // ---- Batch management (super_admin) ----
+  listBatches: (positionId: number) =>
+    apiClient.get<{ batch: string; count: number; latest: string | null }[]>(
+      `/industry/positions/${positionId}/batches`
+    ),
+
+  deleteBatch: (positionId: number, batch: string) =>
+    apiClient.delete<{ links_deleted: number; talents_deleted: number }>(
+      `/industry/positions/${positionId}/batches/${encodeURIComponent(batch)}`
+    ),
+
   // ---- Import (super_admin upload) ----
   importUpload: (file: File, positionId: number, batch?: string) => {
     const formData = new FormData()

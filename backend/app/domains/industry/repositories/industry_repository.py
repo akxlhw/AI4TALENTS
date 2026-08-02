@@ -273,3 +273,52 @@ class IndustryRepository:
         self.session.add(link)
         await self.session.flush()
         return link
+
+    async def list_batches(self, position_id: int) -> list[dict[str, Any]]:
+        """List distinct batches for a position with counts."""
+        result = await self.session.execute(
+            select(
+                IndustryPositionTalent.batch,
+                func.count().label("count"),
+                func.max(IndustryPositionTalent.created_at).label("latest"),
+            )
+            .where(
+                IndustryPositionTalent.position_id == position_id,
+                IndustryPositionTalent.batch.isnot(None),
+            )
+            .group_by(IndustryPositionTalent.batch)
+            .order_by(func.max(IndustryPositionTalent.created_at).desc())
+        )
+        return [
+            {"batch": row.batch, "count": row.count, "latest": row.latest} for row in result.all()
+        ]
+
+    async def delete_batch(self, position_id: int, batch: str) -> tuple[int, int]:
+        """Delete all links for a (position_id, batch). Returns (links_deleted, orphan_talents_deleted).
+
+        After deleting links, also removes talent records that no longer have
+        any position association (orphan cleanup).
+        """
+        from sqlalchemy import delete as sa_delete
+
+        # 1. Delete links for this batch
+        result = await self.session.execute(
+            sa_delete(IndustryPositionTalent).where(
+                IndustryPositionTalent.position_id == position_id,
+                IndustryPositionTalent.batch == batch,
+            )
+        )
+        links_deleted = result.rowcount or 0
+
+        # 2. Delete orphan talents (no remaining links anywhere)
+        talent_with_links = select(IndustryPositionTalent.talent_id).distinct()
+        orphan_result = await self.session.execute(
+            sa_delete(IndustryTalent).where(
+                IndustryTalent.is_visible.is_(True),
+                ~IndustryTalent.talent_id.in_(talent_with_links),
+            )
+        )
+        orphans_deleted = orphan_result.rowcount or 0
+
+        await self.session.flush()
+        return links_deleted, orphans_deleted

@@ -94,3 +94,19 @@ class IndustryPositionService:
             )
         rows = await self.repo.list_positions(status=status)
         return [self._to_response(position, count, avg) for position, count, avg in rows]
+
+    async def list_batches(self, position_id: int) -> list[dict[str, Any]]:
+        """List import batches for a position."""
+        position = await self.repo.get_position(position_id)
+        if position is None:
+            raise NotFoundError("IndustryPosition", position_id)
+        return await self.repo.list_batches(position_id)
+
+    async def delete_batch(self, position_id: int, batch: str) -> dict[str, int]:
+        """Delete all candidate links for a batch. Also cleans up orphan talents."""
+        position = await self.repo.get_position(position_id)
+        if position is None:
+            raise NotFoundError("IndustryPosition", position_id)
+        links_deleted, orphans_deleted = await self.repo.delete_batch(position_id, batch)
+        await self.session.commit()
+        return {"links_deleted": links_deleted, "talents_deleted": orphans_deleted}

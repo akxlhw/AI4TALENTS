@@ -5,15 +5,17 @@ import {
   Card,
   Descriptions,
   Input,
+  Popconfirm,
   Select,
   Space,
+  Table,
   Tag,
   Typography,
   Upload,
   message,
 } from 'antd'
 import type { UploadProps } from 'antd'
-import { BuildOutlined, InboxOutlined, UploadOutlined } from '@ant-design/icons'
+import { BuildOutlined, DeleteOutlined, InboxOutlined, UploadOutlined } from '@ant-design/icons'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from '../../../services/api'
 import type { IndustryImportReport } from '../../../services/api/industry'
@@ -217,8 +219,119 @@ const IndustryImportTab: React.FC = () => {
           )}
         </Card>
       )}
+
+      {/* Batch management — delete bad imports */}
+      <Card title="导入批次管理">
+        <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+          选择岗位查看已导入的批次。如果某次导入的数据质量不满意，可以删除该批次（候选人关联和打分会一并删除；不再被任何岗位关联的人才也会被清理）。
+        </Text>
+        <BatchManager />
+      </Card>
     </Space>
   )
 }
 
 export default IndustryImportTab
+
+// --- Batch Manager sub-component ---
+
+const BatchManager: React.FC = () => {
+  const queryClient = useQueryClient()
+  const { data: positions } = useIndustryPositions()
+  const [selectedPosition, setSelectedPosition] = useState<number | null>(null)
+  const [batches, setBatches] = useState<{ batch: string; count: number; latest: string | null }[]>([])
+  const [loading, setLoading] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  const loadBatches = async (positionId: number) => {
+    setLoading(true)
+    try {
+      const res = await api.industry.listBatches(positionId)
+      setBatches(res.data)
+    } catch (e) {
+      message.error(getErrorMessage(e, '加载批次失败'))
+      setBatches([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async (batchName: string) => {
+    if (!selectedPosition) return
+    setDeleting(batchName)
+    try {
+      const res = await api.industry.deleteBatch(selectedPosition, batchName)
+      message.success(`已删除 ${res.data.links_deleted} 条关联，清理 ${res.data.talents_deleted} 个孤立人才`)
+      queryClient.invalidateQueries({ queryKey: queryKeys.industry.all })
+      await loadBatches(selectedPosition)
+    } catch (e) {
+      message.error(getErrorMessage(e, '删除失败'))
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  return (
+    <>
+      <Select
+        placeholder="选择岗位查看批次"
+        style={{ width: '100%', maxWidth: 400, marginBottom: 16 }}
+        value={selectedPosition ?? undefined}
+        onChange={v => { setSelectedPosition(v); if (v) loadBatches(v); else setBatches([]) }}
+        options={(positions || []).map(p => ({
+          value: p.position_id,
+          label: p.title,
+        }))}
+        allowClear
+        showSearch
+        optionFilterProp="label"
+      />
+
+      {selectedPosition && (
+        <Table
+          size="small"
+          loading={loading}
+          dataSource={batches}
+          rowKey="batch"
+          pagination={false}
+          locale={{ emptyText: '暂无导入批次' }}
+          columns={[
+            { title: '批次', dataIndex: 'batch', key: 'batch' },
+            { title: '候选人数', dataIndex: 'count', key: 'count', width: 100 },
+            {
+              title: '导入时间',
+              dataIndex: 'latest',
+              key: 'latest',
+              width: 180,
+              render: (v: string | null) => v ? v.slice(0, 19).replace('T', ' ') : '—',
+            },
+            {
+              title: '操作',
+              key: 'action',
+              width: 100,
+              render: (_: unknown, record: { batch: string }) => (
+                <Popconfirm
+                  title="确认删除该批次？"
+                  description="该批次的全部候选人关联和打分将被删除。"
+                  okText="删除"
+                  cancelText="取消"
+                  okButtonProps={{ danger: true }}
+                  onConfirm={() => handleDelete(record.batch)}
+                >
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    loading={deleting === record.batch}
+                  >
+                    删除
+                  </Button>
+                </Popconfirm>
+              ),
+            },
+          ]}
+        />
+      )}
+    </>
+  )
+}

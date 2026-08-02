@@ -79,3 +79,33 @@ async def update_position(
     """
     service = IndustryPositionService(session)
     return await service.update_position(position_id, data)
+
+
+@router.get(
+    "/positions/{position_id}/batches",
+    summary="List import batches for a position",
+)
+async def list_batches(
+    position_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: dict = Depends(require_super_admin),
+) -> list[dict]:
+    """List distinct import batches with candidate counts."""
+    service = IndustryPositionService(session)
+    return await service.list_batches(position_id)
+
+
+@router.delete(
+    "/positions/{position_id}/batches/{batch}",
+    summary="Delete all candidates from a specific import batch",
+)
+async def delete_batch(
+    position_id: int,
+    batch: str,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: dict = Depends(require_super_admin),
+) -> dict:
+    """Delete all candidate links for a batch. Orphan talents (no remaining
+    position association) are also cleaned up."""
+    service = IndustryPositionService(session)
+    return await service.delete_batch(position_id, batch)
