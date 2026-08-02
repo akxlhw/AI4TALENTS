@@ -5,7 +5,7 @@ import {
   Badge, Select, Button,
 } from 'antd'
 import {
-  BuildOutlined, SearchOutlined, TeamOutlined, TrophyOutlined, UserOutlined,
+  SearchOutlined, TeamOutlined, TrophyOutlined, UserOutlined,
   ClearOutlined, FireOutlined, StarOutlined,
 } from '@ant-design/icons'
 import { useIndustryTalents, useIndustryPositions, useTechDirectionOptions } from '../../hooks/useIndustryQueries'

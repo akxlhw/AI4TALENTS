@@ -59,8 +59,8 @@ const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
       onClick={goDetail}
     >
       {/* Header: avatar + identity | score ring */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-        <Space align="start">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 8, overflow: 'hidden' }}>
+        <Space align="start" style={{ minWidth: 0, flex: 1 }}>
           <Avatar
             size={40}
             src={talent.photo_url || undefined}
@@ -71,11 +71,11 @@ const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
           >
             {talent.name.slice(0, 1)}
           </Avatar>
-          <div>
-            <Text strong style={{ fontSize: 14, display: 'block' }}>
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
+            <Text strong ellipsis style={{ fontSize: 14, display: 'block' }}>
               {talent.name}
             </Text>
-            <Text type="secondary" style={{ fontSize: 12 }} ellipsis>
+            <Text type="secondary" style={{ fontSize: 12, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {[talent.current_title, talent.current_org].filter(Boolean).join(' · ') || '—'}
             </Text>
           </div>
@@ -83,6 +83,7 @@ const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
         <Progress
           type="circle" size={48} percent={score ?? 0} strokeColor={color} strokeWidth={7}
           trailColor="#f1f5f9"
+          style={{ flexShrink: 0 }}
           format={() => (
             <span style={{ fontSize: 15, fontWeight: 700, color, lineHeight: 1 }}>{formatScore(score)}</span>
           )}
