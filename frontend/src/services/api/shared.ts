@@ -56,6 +56,8 @@ export const sharedApi = {
       apiClient.put(`/users/${userId}`, data),
     deactivateUser: (userId: number) =>
       apiClient.delete(`/users/${userId}`),
+    activateUser: (userId: number) =>
+      apiClient.post(`/users/${userId}/activate`),
     approveUser: (userId: number) =>
       apiClient.post(`/users/${userId}/approve`),
     rejectUser: (userId: number) =>

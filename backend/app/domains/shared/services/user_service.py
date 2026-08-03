@@ -94,6 +94,10 @@ class UserService:
         """禁用用户并提交"""
         return await self.user_repo.deactivate_user_and_commit(user_id)
 
+    async def activate_user_and_commit(self, user_id: int) -> bool:
+        """启用用户并提交"""
+        return await self.user_repo.activate_user_and_commit(user_id)
+
     async def approve_user_and_commit(self, user_id: int) -> UserAccount | None:
         """审批通过用户注册并提交"""
         return await self.user_repo.approve_user_and_commit(user_id)

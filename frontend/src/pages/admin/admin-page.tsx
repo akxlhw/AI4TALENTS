@@ -249,6 +249,19 @@ const AdminPage: React.FC = () => {
     }
   }
 
+  const handleActivateUser = async (userId: number) => {
+    try {
+      await api.admin.activateUser(userId)
+      message.success('用户已启用')
+      loadUsers()
+    } catch (error: unknown) {
+      const detail = error instanceof Error && 'response' in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      message.error(detail || '操作失败')
+    }
+  }
+
   const handleManageScopes = async (userId: number) => {
     setSelectedUserId(userId)
     try {
@@ -484,6 +497,18 @@ const AdminPage: React.FC = () => {
                   禁用
                 </Button>
               </Popconfirm>
+              {record.is_active === false && (
+                <Popconfirm
+                  title="确定要启用该用户吗？"
+                  onConfirm={() => handleActivateUser(record.user_id)}
+                  okText="确定"
+                  cancelText="取消"
+                >
+                  <Button type="link" size="small" style={{ color: '#52c41a' }}>
+                    启用
+                  </Button>
+                </Popconfirm>
+              )}
             </>
           )}
         </Space>

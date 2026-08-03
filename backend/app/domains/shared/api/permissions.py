@@ -489,6 +489,40 @@ async def deactivate_user(
 
 
 @router.post(
+    "/{user_id}/activate",
+    response_model=SuccessResponse,
+    summary="启用用户",
+    description="启用已禁用的用户账户",
+)
+async def activate_user(
+    request: Request,
+    user_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = Depends(require_super_admin),
+):
+    """Activate user (admin only)."""
+    client_ip = request.client.host if request.client else None
+    request_id = getattr(request.state, "request_id", None)
+
+    service = UserService(session)
+    success = await service.activate_user_and_commit(user_id)
+
+    if not success:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await AuditService.log_user_event(
+        admin_id=current_user["user_id"],
+        operation="activate",
+        target_user_id=user_id,
+        status="success",
+        user_ip=client_ip,
+        request_id=request_id,
+    )
+
+    return SuccessResponse(message="User activated")
+
+
+@router.post(
     "/{user_id}/approve",
     response_model=UserResponse,
     summary="审批通过用户注册",
