@@ -42,10 +42,10 @@ class TestRepoConfig:
         assert data["total"] >= 1
 
     @pytest.mark.asyncio
-    async def test_list_repo_configs_as_user_forbidden(self, auth_client: AsyncClient):
-        """Normal user cannot list repo configs."""
+    async def test_list_repo_configs_as_user_allowed(self, auth_client: AsyncClient):
+        """Normal user can list repo configs (read-only browse endpoint)."""
         response = await auth_client.get("/api/v1/open-source/repo-configs")
-        assert response.status_code == 403
+        assert response.status_code == 200
 
     @pytest.mark.asyncio
     async def test_create_repo_config(self, super_admin_client: AsyncClient):
@@ -690,9 +690,14 @@ class TestSecurity:
 
     @pytest.mark.asyncio
     async def test_admin_endpoints_forbidden_to_user(self, auth_client: AsyncClient):
-        """Admin-only endpoints return 403 for normal user."""
+        """Admin-only endpoints return 403 for normal user.
+
+        Note: GET /repo-configs is intentionally excluded — it was downgraded
+        from require_admin to get_current_user so normal users can browse the
+        Trending repos list (commit 4acb438). Only write/collect operations
+        remain admin-only.
+        """
         endpoints = [
-            ("GET", "/api/v1/open-source/repo-configs"),
             ("POST", "/api/v1/open-source/repo-configs"),
             ("GET", "/api/v1/open-source/collect/tasks"),
             ("POST", "/api/v1/open-source/collect/tasks"),
