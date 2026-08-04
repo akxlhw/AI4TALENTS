@@ -34,6 +34,19 @@ _github_breaker = CircuitBreaker(
 logger = logging.getLogger(__name__)
 
 
+class RateLimitExhaustedError(Exception):
+    """All tokens in the pool are rate-limited; fail fast instead of sleeping.
+
+    Carries ``retry_after`` (seconds until the earliest reset window) so the
+    task layer can mark the task as retryable and surface the wait time,
+    rather than blocking the request path for up to an hour.
+    """
+
+    def __init__(self, message: str, retry_after: int | None = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
 def _is_retryable(exc: BaseException) -> bool:
     """Determine if an exception is worth retrying.
 
@@ -231,15 +244,20 @@ class GitHubClient:
                 await self._rebuild_client()
                 response = await self._do_get_request(path, params)
             elif reset_at and response.status_code != 401:
-                # Rate-limited (403/429) with no tokens left; wait for the reset
-                # window. Skipped for 401: bad credentials won't heal by waiting.
+                # Rate-limited (403/429) with no tokens left. Fail fast and let
+                # the task layer decide when to retry — never sleep inside the
+                # request path (previously blocked up to 1h, deadlocking the
+                # whole collection pipeline). Skipped for 401: bad credentials
+                # won't heal by waiting.
                 wait_seconds = max(0, int(reset_at) - int(time.time()) + 1)
-                wait_seconds = min(wait_seconds, 3600)  # Cap at 1 hour
                 logger.warning(
-                    f"All tokens exhausted. Waiting {wait_seconds}s for rate limit reset."
+                    f"All tokens exhausted for {path}; failing fast "
+                    f"(retry_after={wait_seconds}s)"
                 )
-                await asyncio.sleep(wait_seconds)
-                response = await self._do_get_request(path, params)
+                raise RateLimitExhaustedError(
+                    f"GitHub rate limit exhausted for all tokens, " f"retry after {wait_seconds}s",
+                    retry_after=wait_seconds,
+                )
 
         response.raise_for_status()
         return response.json()
@@ -405,6 +423,10 @@ class GitHubClient:
             should_stop = False
             for i, commits in enumerate(results):
                 page_num = current_page + i
+                if isinstance(commits, RateLimitExhaustedError):
+                    # Token pool exhausted: abort the traversal fast instead of
+                    # grinding through hundreds of futile pages.
+                    raise commits
                 if isinstance(commits, Exception):
                     logger.warning(
                         f"Failed to fetch commits page {page_num} for {owner}/{repo}: {commits}"

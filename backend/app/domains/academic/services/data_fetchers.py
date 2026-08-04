@@ -9,7 +9,9 @@ import asyncio
 import json
 import logging
 import os
+import time
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 import aiohttp
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +24,7 @@ from tenacity import (
 )
 
 from app.core.config import settings
+from app.core.metrics import record_upstream_request
 from app.domains.academic.models.raw_data import RawAuthor, RawInstitution, RawWork
 from app.domains.academic.models.venue import Venue
 from app.domains.academic.repositories.raw_data_repository import (
@@ -61,6 +64,16 @@ class RetryableError(Exception):
     """可重试的错误（如速率限制、临时网络问题）"""
 
     pass
+
+
+# Host label for upstream metrics on the aiohttp path (the httpx clients are
+# instrumented centrally by HttpClientFactory event hooks).
+_UPSTREAM_HOST = urlparse(OPENALEX_API_BASE).hostname or "api.openalex.org"
+
+
+def _record_upstream(status: int, started: float) -> None:
+    """Record one outbound OpenAlex call (request count / latency / 429s)."""
+    record_upstream_request(_UPSTREAM_HOST, status, time.monotonic() - started)
 
 
 def with_retry(max_attempts: int = 3, min_wait: float = 1.0, max_wait: float = 60.0):
@@ -155,9 +168,11 @@ class WorkFetcher:
         """
 
         async def _do_fetch() -> dict:
+            started = time.monotonic()
             async with http_session.get(
                 url, params=params, headers=headers, proxy=proxy
             ) as response:
+                _record_upstream(response.status, started)
                 if response.status == 429:
                     # 速率限制，触发重试
                     raise RetryableError("Rate limited (HTTP 429)")
@@ -184,9 +199,11 @@ class WorkFetcher:
 
         async def _do_fetch() -> int:
             async with self.client.create_session(timeout=DEFAULT_TIMEOUT) as http_session:
+                started = time.monotonic()
                 async with http_session.get(
                     url, params=params, headers=headers, proxy=proxy
                 ) as response:
+                    _record_upstream(response.status, started)
                     if response.status == 429:
                         raise RetryableError("Rate limited (HTTP 429)")
                     if response.status >= 500:
@@ -399,9 +416,11 @@ class WorkFetcher:
         works = []
         proxy = self.client.get_proxy_for_request(url)
         async with self.client.create_session() as http_session:
+            started = time.monotonic()
             async with http_session.get(
                 url, params=params, headers=headers, proxy=proxy
             ) as response:
+                _record_upstream(response.status, started)
                 if response.status != 200:
                     logger.warning(
                         f"Failed to fetch works for author {openalex_author_id}: HTTP {response.status}"
@@ -598,9 +617,11 @@ class AuthorFetcher:
         """带重试和熔断保护的批量获取"""
 
         async def _do_fetch() -> dict:
+            started = time.monotonic()
             async with http_session.get(
                 url, params=params, headers=headers, proxy=proxy
             ) as response:
+                _record_upstream(response.status, started)
                 if response.status == 429:
                     raise RetryableError("Rate limited (HTTP 429)")
                 if response.status >= 500:
@@ -765,9 +786,11 @@ class InstitutionFetcher:
         """带重试和熔断保护的批量获取"""
 
         async def _do_fetch() -> dict:
+            started = time.monotonic()
             async with http_session.get(
                 url, params=params, headers=headers, proxy=proxy
             ) as response:
+                _record_upstream(response.status, started)
                 if response.status == 429:
                     raise RetryableError("Rate limited (HTTP 429)")
                 if response.status >= 500:

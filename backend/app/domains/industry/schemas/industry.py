@@ -143,3 +143,4 @@ class IndustryImportReport(BaseModel):
     skipped: int = 0
     skip_reasons: list[SkipReason] = Field(default_factory=list)
     warnings: int = 0  # rows missing current_org (weak dedup discrimination)
+    aborted: bool = False  # True when 0 valid rows parsed — nothing was written

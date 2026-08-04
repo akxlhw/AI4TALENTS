@@ -18,6 +18,8 @@ from collections.abc import Callable
 from enum import Enum
 from typing import Any
 
+from app.core.metrics import record_circuit_breaker_state
+
 logger = logging.getLogger(__name__)
 
 
@@ -68,6 +70,11 @@ class CircuitBreaker:
         self._window: deque[bool] = deque(maxlen=window_size)
         self._opened_at: float = 0.0
         self._consecutive_failures = 0
+        record_circuit_breaker_state(self.name, self._state.value)
+
+    def _export_state(self) -> None:
+        """Export the current state to the Prometheus gauge."""
+        record_circuit_breaker_state(self.name, self._state.value)
 
     @property
     def state(self) -> CircuitState:
@@ -94,6 +101,7 @@ class CircuitBreaker:
             self._state = CircuitState.HALF_OPEN
             self._consecutive_failures = 0
             logger.warning(f"Circuit breaker '{self.name}' entering HALF_OPEN after timeout")
+            self._export_state()
             return True
         return False
 
@@ -105,6 +113,7 @@ class CircuitBreaker:
                 self._state = CircuitState.CLOSED
                 self._window.clear()
                 logger.info(f"Circuit breaker '{self.name}' CLOSED (recovered)")
+            self._export_state()
 
     async def _record_failure(self) -> None:
         async with self._lock:
@@ -123,6 +132,7 @@ class CircuitBreaker:
                     f"(consecutive={self._consecutive_failures}, "
                     f"window_failures={sum(1 for ok in self._window if not ok)}/{len(self._window)})"
                 )
+            self._export_state()
 
     async def call(self, func: Callable, *args: Any, **kwargs: Any) -> Any:
         """Execute *func* if the circuit allows it.

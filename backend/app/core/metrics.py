@@ -292,6 +292,31 @@ MV_REFRESH_SUCCESSES = metrics.counter(
     "Total number of materialized view refresh successes",
 )
 
+# Upstream API Metrics (GitHub / OpenAlex / other outbound HTTP)
+UPSTREAM_REQUESTS_TOTAL = metrics.counter(
+    "upstream_requests_total",
+    "Total number of upstream API requests",
+)
+
+UPSTREAM_REQUEST_DURATION = metrics.histogram(
+    "upstream_request_duration_seconds",
+    "Upstream API request latency in seconds",
+    buckets=[0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0],
+)
+
+UPSTREAM_RATE_LIMIT_TOTAL = metrics.counter(
+    "upstream_rate_limit_total",
+    "Total number of upstream API 429 (rate limit) responses",
+)
+
+# Circuit breaker state gauge: 0=closed, 1=half_open, 2=open
+CIRCUIT_BREAKER_STATE = metrics.gauge(
+    "circuit_breaker_state",
+    "Circuit breaker state (0=closed, 1=half_open, 2=open)",
+)
+
+_CIRCUIT_STATE_VALUES = {"closed": 0.0, "half_open": 1.0, "open": 2.0}
+
 
 # ============================================
 # Helper Functions
@@ -319,6 +344,21 @@ def record_cache_request(hit: bool, key: str | None = None) -> None:
 def record_db_query(duration: float, query_type: str = "select") -> None:
     """Record a database query."""
     metrics.histogram("db_query_duration_seconds", labels={"type": query_type}).observe(duration)
+
+
+def record_upstream_request(host: str, status: int, duration: float) -> None:
+    """Record an outbound (upstream API) request: count, latency, 429s."""
+    metrics.counter("upstream_requests_total", labels={"host": host, "status": str(status)}).inc()
+    metrics.histogram("upstream_request_duration_seconds", labels={"host": host}).observe(duration)
+    if status == 429:
+        metrics.counter("upstream_rate_limit_total", labels={"host": host}).inc()
+
+
+def record_circuit_breaker_state(name: str, state: str) -> None:
+    """Export a circuit breaker's current state as a gauge (0/1/2)."""
+    metrics.gauge("circuit_breaker_state", labels={"name": name}).set(
+        _CIRCUIT_STATE_VALUES.get(state, 0.0)
+    )
 
 
 def _normalize_path(path: str) -> str:

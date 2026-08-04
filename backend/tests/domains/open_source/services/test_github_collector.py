@@ -15,6 +15,11 @@ from app.domains.open_source.services.collectors.github_collector import (
     CollectContext,
     GitHubCollector,
 )
+from app.domains.open_source.services.github_client import RateLimitExhaustedError
+from app.domains.open_source.services.os_collection_service import (
+    OSCollectionService,
+    _get_repo_lock,
+)
 
 
 class _FailingClient:
@@ -97,3 +102,63 @@ async def test_not_found_user_is_soft_skip_not_failure(test_session: AsyncSessio
     updated = await _read_task(task.task_id)
     assert updated.status == "completed"
     assert updated.error_message is None
+
+
+class _RateLimitedClient(_FailingClient):
+    """GitHub client stub whose per-user calls hit an exhausted token pool."""
+
+    async def get_user(self, login: str) -> dict:
+        raise RateLimitExhaustedError("all tokens exhausted", retry_after=42)
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_aborts_run_fast(test_session: AsyncSession) -> None:
+    """RateLimitExhaustedError is not a per-contributor failure: the run aborts."""
+    task = await _make_task(test_session)
+    collector = GitHubCollector(_RateLimitedClient())  # type: ignore[arg-type]
+    ctx = _make_context(task.task_id)
+
+    with pytest.raises(RateLimitExhaustedError):
+        await collector.collect(ctx)
+
+    assert ctx.rate_limited is not None
+    assert ctx.rate_limited.retry_after == 42
+    assert ctx.failed_contributors == 0  # not counted as contributor failures
+
+
+@pytest.mark.asyncio
+async def test_background_marks_task_rate_limited(
+    test_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Task layer: rate-limited run marks the task rate_limited with retry_after."""
+    task = await _make_task(test_session)
+
+    async def _boom(self: GitHubCollector, ctx: CollectContext) -> None:
+        raise RateLimitExhaustedError("all tokens exhausted", retry_after=42)
+
+    monkeypatch.setattr(GitHubCollector, "collect", _boom)
+
+    service = OSCollectionService(test_session)
+    await service.run_repo_collection_background(
+        task_id=task.task_id,
+        repo_config_id=1,
+        repo_full_name="o/r",
+        tech_element="ai",
+        contributors_per_repo=10,
+    )
+
+    updated = await _read_task(task.task_id)
+    assert updated.status == "rate_limited"
+    assert updated.error_message is not None
+    assert "42" in updated.error_message
+
+
+@pytest.mark.asyncio
+async def test_repo_locks_are_per_repository() -> None:
+    """Same repo serializes on one lock; different repos get different locks."""
+    lock_a1 = await _get_repo_lock("o/a")
+    lock_a2 = await _get_repo_lock("o/a")
+    lock_b = await _get_repo_lock("o/b")
+
+    assert lock_a1 is lock_a2
+    assert lock_a1 is not lock_b

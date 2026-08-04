@@ -190,13 +190,13 @@ const IndustryImportTab: React.FC = () => {
             />
           )}
 
-          {report.total_parsed === 0 && (
+          {report.aborted && (
             <Alert
               style={{ marginTop: 16 }}
-              type="warning"
+              type="error"
               showIcon
-              message="未写入任何数据"
-              description="文件中没有可导入的有效记录（空文件或全部行无效）。"
+              message="导入已中止：未写入任何数据"
+              description="文件中没有可导入的有效记录（空文件或全部行无效），请检查文件内容后重新上传。"
             />
           )}
 
@@ -239,7 +239,9 @@ const BatchManager: React.FC = () => {
   const queryClient = useQueryClient()
   const { data: positions } = useIndustryPositions()
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null)
-  const [batches, setBatches] = useState<{ batch: string; count: number; latest: string | null }[]>([])
+  const [batches, setBatches] = useState<{ batch: string; count: number; latest: string | null }[]>(
+    []
+  )
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
 
@@ -261,7 +263,9 @@ const BatchManager: React.FC = () => {
     setDeleting(batchName)
     try {
       const res = await api.industry.deleteBatch(selectedPosition, batchName)
-      message.success(`已删除 ${res.data.links_deleted} 条关联，清理 ${res.data.talents_deleted} 个孤立人才`)
+      message.success(
+        `已删除 ${res.data.links_deleted} 条关联，清理 ${res.data.talents_deleted} 个孤立人才`
+      )
       queryClient.invalidateQueries({ queryKey: queryKeys.industry.all })
       await loadBatches(selectedPosition)
     } catch (e) {
@@ -277,7 +281,11 @@ const BatchManager: React.FC = () => {
         placeholder="选择岗位查看批次"
         style={{ width: '100%', maxWidth: 400, marginBottom: 16 }}
         value={selectedPosition ?? undefined}
-        onChange={v => { setSelectedPosition(v); if (v) loadBatches(v); else setBatches([]) }}
+        onChange={v => {
+          setSelectedPosition(v)
+          if (v) loadBatches(v)
+          else setBatches([])
+        }}
         options={(positions || []).map(p => ({
           value: p.position_id,
           label: p.title,
@@ -303,7 +311,7 @@ const BatchManager: React.FC = () => {
               dataIndex: 'latest',
               key: 'latest',
               width: 180,
-              render: (v: string | null) => v ? v.slice(0, 19).replace('T', ' ') : '—',
+              render: (v: string | null) => (v ? v.slice(0, 19).replace('T', ' ') : '—'),
             },
             {
               title: '操作',

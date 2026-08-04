@@ -12,7 +12,6 @@ Endpoint layer continues to import OpenSourceService — no API changes needed.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import re
 from typing import Any
@@ -46,7 +45,6 @@ logger = logging.getLogger(__name__)
 
 VALID_TECH_ELEMENTS = {"ai", "robotics", "data_science", "networks", "systems", "security"}
 REPO_FULL_NAME_PATTERN = re.compile(r"^[\w.-]+/[\w.-]+$")
-COLLECTION_SEMAPHORE = asyncio.Semaphore(1)
 
 
 class OpenSourceService:

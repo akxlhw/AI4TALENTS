@@ -336,3 +336,83 @@ async def test_row_position_id_overrides_param(
     assert report.links_inserted == 1
     link = (await test_session.execute(select(IndustryPositionTalent))).scalar_one()
     assert link.position_id == position2.position_id
+
+
+# ============ hard guards (lab/competition standard) ============
+
+
+@pytest.mark.asyncio
+async def test_empty_file_aborts_without_writing(
+    test_session: AsyncSession, position: IndustryPosition
+) -> None:
+    """Hard guard: an empty file writes nothing and is explicitly flagged."""
+    report = await IndustryImportService(test_session).import_jsonl(
+        "", position_id=position.position_id
+    )
+    assert report.aborted is True
+    assert report.total_parsed == 0
+    talent_count = await test_session.scalar(select(func.count()).select_from(IndustryTalent))
+    link_count = await test_session.scalar(select(func.count()).select_from(IndustryPositionTalent))
+    assert talent_count == 0
+    assert link_count == 0
+
+
+@pytest.mark.asyncio
+async def test_all_invalid_lines_abort_without_writing(
+    test_session: AsyncSession, position: IndustryPosition
+) -> None:
+    """Hard guard: a fully-invalid file is an error signal, not a silent success."""
+    content = "\n".join(
+        [
+            "{not valid json",
+            json.dumps({"current_org": "某公司"}),  # missing name
+        ]
+    )
+    report = await IndustryImportService(test_session).import_jsonl(
+        content, position_id=position.position_id
+    )
+    assert report.aborted is True
+    assert report.total_parsed == 0
+    assert report.skipped == 2
+    talent_count = await test_session.scalar(select(func.count()).select_from(IndustryTalent))
+    assert talent_count == 0
+
+
+@pytest.mark.asyncio
+async def test_single_row_db_error_isolated(
+    test_session: AsyncSession,
+    position: IndustryPosition,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A DB error on one row rolls that row back alone; other rows still commit."""
+    from sqlalchemy.exc import OperationalError
+
+    original_upsert_link = IndustryImportService._upsert_link
+
+    async def flaky_upsert_link(self, talent, row, default_batch):  # type: ignore[no-untyped-def]
+        if row.get("name") == "坏行":
+            raise OperationalError("INSERT", {}, Exception("simulated DB failure"))
+        return await original_upsert_link(self, talent, row, default_batch)
+
+    monkeypatch.setattr(IndustryImportService, "_upsert_link", flaky_upsert_link)
+
+    content = _jsonl(
+        {"name": "正常", "current_org": "某公司", "match_score": 50},
+        {"name": "坏行", "current_org": "坏公司", "match_score": 60},
+    )
+    report = await IndustryImportService(test_session).import_jsonl(
+        content, position_id=position.position_id
+    )
+
+    assert report.aborted is False
+    assert report.talents_inserted == 1
+    assert report.links_inserted == 1
+    assert report.skipped == 1
+    assert report.skip_reasons[0].reason.startswith("db error")
+
+    # The bad row's talent insert rolled back with its savepoint; the good
+    # row committed atomically in the outer transaction.
+    talents = (await test_session.execute(select(IndustryTalent))).scalars().all()
+    assert [t.name for t in talents] == ["正常"]
+    links = (await test_session.execute(select(IndustryPositionTalent))).scalars().all()
+    assert len(links) == 1

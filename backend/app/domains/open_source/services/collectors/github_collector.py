@@ -15,7 +15,10 @@ from typing import Any
 from app.core.database import AsyncSessionLocal
 from app.domains.open_source.models.open_source import OSCollectTask
 from app.domains.open_source.services.collectors.sync_service import SyncService
-from app.domains.open_source.services.github_client import GitHubClient
+from app.domains.open_source.services.github_client import (
+    GitHubClient,
+    RateLimitExhaustedError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +34,9 @@ class CollectContext:
     contributors_per_repo: int
     failed_contributors: int = 0
     cancelled: asyncio.Event = field(default_factory=asyncio.Event)
+    # Set when any API call hits a fully-exhausted token pool; the run aborts
+    # fast and the task layer marks the task rate_limited (retryable).
+    rate_limited: RateLimitExhaustedError | None = None
 
 
 class GitHubCollector:
@@ -137,6 +143,8 @@ class GitHubCollector:
 
         async def _process_one(contributor: dict[str, Any]) -> None:
             nonlocal processed
+            if ctx.rate_limited is not None:
+                return  # token pool already exhausted; abort remaining work fast
             if await self._is_cancelled(ctx):
                 return
 
@@ -150,6 +158,11 @@ class GitHubCollector:
                         sync = SyncService(session)
                         await self._process_contributor(ctx, login, sync, repo_info, contributor)
                         await session.commit()
+                except RateLimitExhaustedError as e:
+                    # Not a per-contributor failure: the whole token pool is
+                    # exhausted. Record it and let the run abort after gather.
+                    ctx.rate_limited = e
+                    return
                 except Exception as e:
                     logger.exception(f"Failed to process contributor {login}: {e}")
                     ctx.failed_contributors += 1
@@ -165,6 +178,10 @@ class GitHubCollector:
                 )
 
         await asyncio.gather(*[_process_one(c) for c in contributors])
+
+        # Rate limit hit mid-run: abort fast, task layer marks it retryable.
+        if ctx.rate_limited is not None:
+            raise ctx.rate_limited
 
         # Step 6: Done — report honestly when some/all contributors failed
         failed = ctx.failed_contributors

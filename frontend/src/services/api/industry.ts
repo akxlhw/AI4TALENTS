@@ -112,6 +112,7 @@ export interface IndustryImportReport {
   skipped: number
   skip_reasons: { line: number; reason: string }[]
   warnings: number
+  aborted: boolean // true = 0 valid rows parsed, nothing was written
 }
 
 export const industryApi = {

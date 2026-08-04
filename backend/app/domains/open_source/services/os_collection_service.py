@@ -36,12 +36,23 @@ logger = logging.getLogger(__name__)
 VALID_TECH_ELEMENTS = {"ai", "robotics", "data_science", "networks", "systems", "security"}
 REPO_FULL_NAME_PATTERN = re.compile(r"^[\w.-]+/[\w.-]+$")
 
-# Global semaphore to limit concurrent repository collection tasks.
-# Each GitHubClient instance has its own _min_interval throttle (5 req/s),
-# so without global control N concurrent tasks = N x 5 req/s which easily
-# exceeds GitHub's 5000 req/hour rate limit. Limiting to 1 concurrent
-# collection ensures sequential execution across all batch/single operations.
-COLLECTION_SEMAPHORE = asyncio.Semaphore(1)
+# Per-repository collection locks: the same repo collects serially, different
+# repos may run in parallel. (Previously a single global Semaphore(1) forced
+# all collections to serialize; combined with in-request rate-limit sleeps
+# that deadlocked the whole pipeline. Rate-limit waits now fail fast, so
+# parallel repos are safe — the token pool itself throttles aggregate load.)
+_REPO_LOCKS: dict[str, asyncio.Lock] = {}
+_REPO_LOCKS_GUARD = asyncio.Lock()
+
+
+async def _get_repo_lock(repo_full_name: str) -> asyncio.Lock:
+    """Get (or create) the lock serializing collection of one repository."""
+    async with _REPO_LOCKS_GUARD:
+        lock = _REPO_LOCKS.get(repo_full_name)
+        if lock is None:
+            lock = asyncio.Lock()
+            _REPO_LOCKS[repo_full_name] = lock
+        return lock
 
 
 class OSCollectionService:
@@ -494,13 +505,17 @@ class OSCollectionService:
             CollectContext,
             GitHubCollector,
         )
-        from app.domains.open_source.services.github_client import GitHubClient
+        from app.domains.open_source.services.github_client import (
+            GitHubClient,
+            RateLimitExhaustedError,
+        )
         from app.domains.shared.services.config_service import ConfigService
 
         try:
-            # Wait for global collection semaphore to ensure sequential
-            # execution across all single/batch collection tasks.
-            async with COLLECTION_SEMAPHORE:
+            # Serialize per repository: same repo runs one collection at a
+            # time, different repos run in parallel.
+            repo_lock = await _get_repo_lock(repo_full_name)
+            async with repo_lock:
                 async with AsyncSessionLocal() as session:
                     inner_service = OSCollectionService(session)
                     task = await inner_service.get_collect_task(task_id)
@@ -549,6 +564,23 @@ class OSCollectionService:
                 task = await inner_service.get_collect_task(task_id)
                 if task:
                     task.status = "cancelled"
+                    await session.commit()
+        except RateLimitExhaustedError as e:
+            # Fast-fail path: token pool exhausted. Mark the task rate_limited
+            # (terminal, retryable — not pending/running, so the user can
+            # re-trigger collection once the reset window passes) and record
+            # retry_after instead of blocking the pipeline.
+            logger.warning(f"Task {task_id} rate-limited: {e}")
+            async with AsyncSessionLocal() as session:
+                inner_service = OSCollectionService(session)
+                task = await inner_service.get_collect_task(task_id)
+                if task:
+                    task.status = "rate_limited"  # type: ignore[assignment]
+                    task.current_step = "rate_limited"  # type: ignore[assignment]
+                    task.error_message = (  # type: ignore[assignment]
+                        f"GitHub rate limit exhausted for all tokens; "
+                        f"retry after {e.retry_after}s"
+                    )[: settings.COLLECT_ERROR_MAX_LENGTH]
                     await session.commit()
         except Exception as e:
             logger.exception(f"Task {task_id} failed: {e}")

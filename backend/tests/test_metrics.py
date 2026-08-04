@@ -362,6 +362,124 @@ class TestPredefinedMetrics:
         assert COLLECTION_ERRORS_TOTAL.name == "collection_errors_total"
 
 
+class TestUpstreamMetrics:
+    """Tests for upstream API metrics (request count / latency / 429 / breaker state)."""
+
+    def test_record_upstream_request(self):
+        """Counts by host+status, observes latency, counts 429s separately."""
+        from app.core.metrics import metrics, record_upstream_request
+
+        record_upstream_request("api.test-upstream-1.com", 200, 0.12)
+        record_upstream_request("api.test-upstream-1.com", 429, 0.05)
+
+        counter_200 = metrics.counter(
+            "upstream_requests_total",
+            labels={"host": "api.test-upstream-1.com", "status": "200"},
+        )
+        counter_429 = metrics.counter(
+            "upstream_requests_total",
+            labels={"host": "api.test-upstream-1.com", "status": "429"},
+        )
+        rate_limit = metrics.counter(
+            "upstream_rate_limit_total", labels={"host": "api.test-upstream-1.com"}
+        )
+        duration = metrics.histogram(
+            "upstream_request_duration_seconds", labels={"host": "api.test-upstream-1.com"}
+        )
+
+        assert counter_200.value == 1
+        assert counter_429.value == 1
+        assert rate_limit.value == 1
+        assert duration.count == 2
+
+    def test_record_circuit_breaker_state(self):
+        """Breaker state maps to gauge values 0/1/2."""
+        from app.core.metrics import metrics, record_circuit_breaker_state
+
+        record_circuit_breaker_state("test_breaker_gauge", "open")
+        gauge = metrics.gauge("circuit_breaker_state", labels={"name": "test_breaker_gauge"})
+        assert gauge.value == 2.0
+
+        record_circuit_breaker_state("test_breaker_gauge", "half_open")
+        assert gauge.value == 1.0
+
+        record_circuit_breaker_state("test_breaker_gauge", "closed")
+        assert gauge.value == 0.0
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_exports_state_on_trip(self):
+        """Tripping a breaker flips its exported gauge to OPEN (2)."""
+        from app.domains.shared.services.common.circuit_breaker import CircuitBreaker
+
+        breaker = CircuitBreaker(
+            name="test_breaker_trip", failure_threshold=2, recovery_timeout=60, window_size=10
+        )
+
+        async def fail() -> None:
+            raise RuntimeError("boom")
+
+        for _ in range(2):
+            with pytest.raises(RuntimeError):
+                await breaker.call(fail)
+
+        gauge = metrics.gauge("circuit_breaker_state", labels={"name": "test_breaker_trip"})
+        assert gauge.value == 2.0
+
+    @pytest.mark.asyncio
+    async def test_factory_client_records_upstream_metrics(self):
+        """Clients from HttpClientFactory carry the upstream-metrics hooks."""
+        import httpx
+
+        from app.domains.shared.services.common.http_client import HttpClientFactory
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"ok": True})
+
+        client = HttpClientFactory.create_client_for_url(
+            "https://api.test-factory-metrics.com",
+            transport=httpx.MockTransport(handler),
+        )
+        async with client:
+            response = await client.get("https://api.test-factory-metrics.com/ping")
+            assert response.status_code == 200
+
+        counter = metrics.counter(
+            "upstream_requests_total",
+            labels={"host": "api.test-factory-metrics.com", "status": "200"},
+        )
+        assert counter.value == 1
+
+    @pytest.mark.asyncio
+    async def test_factory_preserves_caller_event_hooks(self):
+        """Caller-supplied event hooks are kept alongside the metrics hooks."""
+        import httpx
+
+        from app.domains.shared.services.common.http_client import HttpClientFactory
+
+        seen: list[str] = []
+
+        async def custom_hook(response: httpx.Response) -> None:
+            seen.append("custom")
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"ok": True})
+
+        client = HttpClientFactory.create_client_for_url(
+            "https://api.test-factory-hooks.com",
+            transport=httpx.MockTransport(handler),
+            event_hooks={"response": [custom_hook]},
+        )
+        async with client:
+            await client.get("https://api.test-factory-hooks.com/ping")
+
+        assert seen == ["custom"]
+        counter = metrics.counter(
+            "upstream_requests_total",
+            labels={"host": "api.test-factory-hooks.com", "status": "200"},
+        )
+        assert counter.value == 1
+
+
 class TestMetricsConcurrency:
     """Tests for metrics thread safety."""
 

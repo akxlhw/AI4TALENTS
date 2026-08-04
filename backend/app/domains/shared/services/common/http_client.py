@@ -9,11 +9,27 @@ from __future__ import annotations
 
 import fnmatch
 import logging
+import time
+from typing import Any
 from urllib.parse import urlparse, urlunparse
 
 import httpx
 
+from app.core.metrics import record_upstream_request
+
 logger = logging.getLogger(__name__)
+
+
+async def _metrics_on_request(request: httpx.Request) -> None:
+    """httpx event hook: stamp the request start time for latency tracking."""
+    request.extensions["upstream_metrics_start"] = time.perf_counter()
+
+
+async def _metrics_on_response(response: httpx.Response) -> None:
+    """httpx event hook: record upstream request count / latency / 429s."""
+    start = response.request.extensions.get("upstream_metrics_start")
+    duration = time.perf_counter() - start if isinstance(start, float) else 0.0
+    record_upstream_request(response.request.url.host or "unknown", response.status_code, duration)
 
 
 class HttpClientFactory:
@@ -133,6 +149,15 @@ class HttpClientFactory:
         return cls._proxy_url
 
     @classmethod
+    def _merge_metrics_hooks(cls, kwargs: dict[str, Any]) -> None:
+        """Attach upstream-metrics event hooks, preserving caller-supplied hooks."""
+        existing = kwargs.pop("event_hooks", None) or {}
+        merged: dict[str, list[Any]] = {key: list(funcs) for key, funcs in existing.items()}
+        merged.setdefault("request", []).append(_metrics_on_request)
+        merged.setdefault("response", []).append(_metrics_on_response)
+        kwargs["event_hooks"] = merged
+
+    @classmethod
     def create_client_for_url(
         cls,
         target_url: str,
@@ -144,12 +169,18 @@ class HttpClientFactory:
         Note: trust_env=False is set to prevent httpx from reading system
         environment variables (HTTP_PROXY, HTTPS_PROXY, NO_PROXY), ensuring
         our own proxy/no_proxy configuration takes full control.
+
+        Every client gets upstream-metrics event hooks (request count by
+        host+status, latency histogram, 429 counter) so all outbound HTTP
+        through the factory is observable at /api/v1/metrics.
         """
         # Disable httpx's automatic proxy detection from environment variables
         kwargs["trust_env"] = False
 
         if "verify" not in kwargs:
             kwargs["verify"] = cls._ssl_verify
+
+        cls._merge_metrics_hooks(kwargs)
 
         if cls.should_use_proxy(target_url):
             proxy = cls._build_authenticated_proxy_url()

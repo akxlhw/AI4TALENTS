@@ -9,7 +9,10 @@ import httpx
 import pytest
 
 from app.core.config import settings
-from app.domains.open_source.services.github_client import GitHubClient
+from app.domains.open_source.services.github_client import (
+    GitHubClient,
+    RateLimitExhaustedError,
+)
 
 
 def _make_response(
@@ -75,3 +78,63 @@ async def test_401_single_token_raises_without_sleep(monkeypatch: pytest.MonkeyP
 
     sleep_mock.assert_not_called()
     assert client._token_remaining[0] == 0
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_exhausted_fails_fast(monkeypatch: pytest.MonkeyPatch) -> None:
+    """All tokens exhausted (403 + reset): fail fast with Retry-After info, never sleep."""
+    client = GitHubClient(token="only")
+    reset_at = str(int(time.time()) + 1800)
+    monkeypatch.setattr(
+        client,
+        "_do_get_request",
+        AsyncMock(
+            return_value=_make_response(
+                403,
+                headers={"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": reset_at},
+            )
+        ),
+    )
+    sleep_mock = AsyncMock()
+    monkeypatch.setattr("app.domains.open_source.services.github_client.asyncio.sleep", sleep_mock)
+
+    with pytest.raises(RateLimitExhaustedError) as exc_info:
+        await client._do_get("/x")
+
+    sleep_mock.assert_not_called()
+    assert exc_info.value.retry_after is not None
+    assert 1700 < exc_info.value.retry_after <= 1801
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_exhausted_is_not_retried(monkeypatch: pytest.MonkeyPatch) -> None:
+    """RateLimitExhaustedError must propagate through tenacity on first attempt."""
+    client = GitHubClient(token="only")
+    calls = 0
+
+    async def fake_do_get(path: str, params: dict | None = None) -> None:
+        nonlocal calls
+        calls += 1
+        raise RateLimitExhaustedError("exhausted", retry_after=100)
+
+    monkeypatch.setattr(client, "_do_get", fake_do_get)
+
+    with pytest.raises(RateLimitExhaustedError):
+        await client._get_with_retry("/x")
+
+    assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_commits_traversal_aborts_on_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """list_contributors_via_commits re-raises RateLimitExhaustedError instead of
+    grinding through hundreds of futile pages."""
+    client = GitHubClient(token="only")
+
+    async def fake_list_commits(*args: object, **kwargs: object) -> None:
+        raise RateLimitExhaustedError("exhausted", retry_after=100)
+
+    monkeypatch.setattr(client, "list_commits", fake_list_commits)
+
+    with pytest.raises(RateLimitExhaustedError):
+        await client.list_contributors_via_commits("o", "r")

@@ -107,6 +107,13 @@ class IndustryImportService:
 
         ``position_id`` is the default target position; a row-level
         ``position_id`` field overrides it (contract schema v1.0).
+
+        Guards (aligned with lab/competition import services):
+        - Hard guard: an empty file or one with 0 valid rows writes nothing
+          and returns ``aborted=True`` — never a silent success.
+        - Row-level isolation: each row upserts under a SAVEPOINT, so a
+          single row's DB error rolls back alone and lands in skip_reasons.
+        - Atomicity: all surviving rows commit in one outer transaction.
         """
         lines = jsonl_content.splitlines()
         total_lines = len(lines)
@@ -154,6 +161,7 @@ class IndustryImportService:
                 )
 
             record["_position_id"] = row_position_id
+            record["_line"] = lineno
             parsed.append(record)
 
         # Deduplicate within the batch on (position_id, dedup_hash), keep last
@@ -166,21 +174,46 @@ class IndustryImportService:
             merged[(row["_position_id"], dedup_hash)] = row
 
         report.total_parsed = len(merged)
-        report.skipped = len(skips)
-        report.skip_reasons = skips[:50]  # cap to avoid huge payloads
 
+        # Hard guard (lab/competition standard): an empty or fully-invalid
+        # file writes nothing and is explicitly flagged, not a silent success.
+        if not merged:
+            logger.warning(
+                "[IndustryImport] Aborting: 0 valid rows parsed from %d lines, "
+                "skipped=%d — no data written",
+                total_lines,
+                len(skips),
+            )
+            report.aborted = True
+            report.skipped = len(skips)
+            report.skip_reasons = skips[:50]
+            return report
+
+        # Upsert loop: per-row SAVEPOINT isolation inside one outer
+        # transaction. A single row's DB error (constraint violation,
+        # unserializable JSON, ...) rolls that row back alone and lands in
+        # skip_reasons; all surviving rows commit together below.
         for row in merged.values():
-            talent, created = await self._upsert_talent(row)
+            try:
+                async with self.session.begin_nested():
+                    talent, created = await self._upsert_talent(row)
+                    link_created = await self._upsert_link(talent, row, batch)
+            except Exception as e:
+                row_line: int = row.get("_line", 0)
+                logger.warning("[IndustryImport] line %d DB error, row skipped: %s", row_line, e)
+                skips.append(SkipReason(line=row_line, reason=f"db error: {str(e)[:200]}"))
+                continue
             if created:
                 report.talents_inserted += 1
             else:
                 report.talents_updated += 1
-
-            link_created = await self._upsert_link(talent, row, batch)
             if link_created:
                 report.links_inserted += 1
             else:
                 report.links_updated += 1
+
+        report.skipped = len(skips)
+        report.skip_reasons = skips[:50]  # cap to avoid huge payloads
 
         await self.session.commit()
 
