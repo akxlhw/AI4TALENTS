@@ -1,10 +1,22 @@
 """
 LLM Error types and handling.
 LLM 错误类型定义
+
+错误处理契约：LLM 调用链内部只 raise `LLMError`，底层 SDK 异常统一经
+`llm_error_from_exception` 转换；边界处（health probe / API 层）再统一
+转换为布尔或 HTTP 响应，禁止布尔/元组/字符串状态码作为错误通道。
 """
 
 from dataclasses import dataclass
 from enum import Enum
+
+from openai import APIConnectionError, APIError, RateLimitError
+
+# Default wait (seconds) when a rate-limit error carries no retry-after hint
+DEFAULT_RATE_LIMIT_RETRY_AFTER = 60
+
+# Upstream service overloaded HTTP status (e.g. DeepSeek 529)
+HTTP_STATUS_SERVICE_OVERLOADED = 529
 
 
 class LLMErrorType(Enum):
@@ -18,6 +30,7 @@ class LLMErrorType(Enum):
     MODEL_NOT_FOUND = "model_not_found"  # 模型不存在
     CONTENT_FILTER = "content_filter"  # 内容过滤
     NETWORK_ERROR = "network_error"  # 网络错误
+    CONFIG_ERROR = "config_error"  # 配置缺失（如嵌入服务未配置）
 
 
 @dataclass
@@ -49,6 +62,39 @@ class LLMError(Exception):
             LLMErrorType.NETWORK_ERROR,
             LLMErrorType.API_ERROR,
         )
+
+
+def llm_error_from_exception(exc: Exception) -> LLMError:
+    """统一将底层 SDK 异常转换为领域异常 LLMError（唯一转换点）。
+
+    LLM 调用方一律 raise 本函数产出的 LLMError，由边界处统一转换，
+    禁止以布尔/元组/字符串状态码传递错误。
+    """
+    if isinstance(exc, LLMError):
+        return exc
+    if isinstance(exc, RateLimitError):
+        return LLMError(
+            error_type=LLMErrorType.RATE_LIMIT,
+            message="Rate limit exceeded",
+            retry_after=getattr(exc, "retry_after", DEFAULT_RATE_LIMIT_RETRY_AFTER),
+            original_error=exc,
+        )
+    if isinstance(exc, APIConnectionError):
+        return LLMError(error_type=LLMErrorType.NETWORK_ERROR, message=str(exc), original_error=exc)
+    if isinstance(exc, APIError):
+        status_code = getattr(exc, "status_code", None)
+        if status_code == HTTP_STATUS_SERVICE_OVERLOADED:
+            return LLMError(
+                error_type=LLMErrorType.API_ERROR,
+                message=f"Service overloaded: {exc}",
+                original_error=exc,
+            )
+        return LLMError(error_type=LLMErrorType.API_ERROR, message=str(exc), original_error=exc)
+    return LLMError(
+        error_type=LLMErrorType.API_ERROR,
+        message=f"Unexpected error: {exc}",
+        original_error=exc,
+    )
 
 
 class SearchError(Exception):

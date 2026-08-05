@@ -11,11 +11,13 @@ import logging
 import os
 import time
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 
 import aiohttp
 from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import (
+    RetryCallState,
     before_sleep_log,
     retry,
     retry_if_exception_type,
@@ -61,9 +63,44 @@ DEFAULT_TIMEOUT = aiohttp.ClientTimeout(
 
 
 class RetryableError(Exception):
-    """可重试的错误（如速率限制、临时网络问题）"""
+    """可重试的错误（如速率限制、临时网络问题）
 
-    pass
+    Attributes:
+        retry_after: 上游 429 响应 Retry-After 头给出的等待秒数（无提示则为 None）
+    """
+
+    def __init__(self, message: str, retry_after: float | None = None):
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+# Retry-After 等待上限（秒），防止上游给出超大值堵死采集链路
+RETRY_AFTER_MAX_WAIT = 300.0
+
+
+def _parse_retry_after(value: str | None) -> float | None:
+    """Parse a Retry-After header (delta-seconds or HTTP-date) into seconds."""
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value.strip()))
+    except ValueError:
+        pass
+    try:
+        retry_at = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if retry_at.tzinfo is None:
+        retry_at = retry_at.replace(tzinfo=timezone.utc)
+    return max(0.0, (retry_at - datetime.now(timezone.utc)).total_seconds())
+
+
+def _rate_limited_error(response: aiohttp.ClientResponse) -> RetryableError:
+    """Build a RetryableError honoring the upstream Retry-After hint."""
+    return RetryableError(
+        "Rate limited (HTTP 429)",
+        retry_after=_parse_retry_after(response.headers.get("Retry-After")),
+    )
 
 
 # Host label for upstream metrics on the aiohttp path (the httpx clients are
@@ -74,6 +111,19 @@ _UPSTREAM_HOST = urlparse(OPENALEX_API_BASE).hostname or "api.openalex.org"
 def _record_upstream(status: int, started: float) -> None:
     """Record one outbound OpenAlex call (request count / latency / 429s)."""
     record_upstream_request(_UPSTREAM_HOST, status, time.monotonic() - started)
+
+
+def _wait_honoring_retry_after(min_wait: float, max_wait: float):
+    """等待策略：429 时优先尊重上游 Retry-After（封顶 RETRY_AFTER_MAX_WAIT），否则指数退避。"""
+    backoff = wait_exponential(multiplier=1, min=min_wait, max=max_wait)
+
+    def wait(retry_state: RetryCallState) -> float:
+        exc = retry_state.outcome.exception() if retry_state.outcome else None
+        if isinstance(exc, RetryableError) and exc.retry_after is not None:
+            return min(exc.retry_after, RETRY_AFTER_MAX_WAIT)
+        return backoff(retry_state)
+
+    return wait
 
 
 def with_retry(max_attempts: int = 3, min_wait: float = 1.0, max_wait: float = 60.0):
@@ -89,7 +139,7 @@ def with_retry(max_attempts: int = 3, min_wait: float = 1.0, max_wait: float = 6
     """
     return retry(
         stop=stop_after_attempt(max_attempts),
-        wait=wait_exponential(multiplier=1, min=min_wait, max=max_wait),
+        wait=_wait_honoring_retry_after(min_wait, max_wait),
         retry=retry_if_exception_type(RetryableError),
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
@@ -174,8 +224,8 @@ class WorkFetcher:
             ) as response:
                 _record_upstream(response.status, started)
                 if response.status == 429:
-                    # 速率限制，触发重试
-                    raise RetryableError("Rate limited (HTTP 429)")
+                    # 速率限制，触发重试（尊重 Retry-After 头）
+                    raise _rate_limited_error(response)
                 if response.status >= 500:
                     # 服务器错误（5xx）也触发重试，提升企业内网稳定性
                     raise RetryableError(f"Server error (HTTP {response.status})")
@@ -205,7 +255,7 @@ class WorkFetcher:
                 ) as response:
                     _record_upstream(response.status, started)
                     if response.status == 429:
-                        raise RetryableError("Rate limited (HTTP 429)")
+                        raise _rate_limited_error(response)
                     if response.status >= 500:
                         raise RetryableError(f"Server error (HTTP {response.status})")
                     if response.status != 200:
@@ -623,7 +673,7 @@ class AuthorFetcher:
             ) as response:
                 _record_upstream(response.status, started)
                 if response.status == 429:
-                    raise RetryableError("Rate limited (HTTP 429)")
+                    raise _rate_limited_error(response)
                 if response.status >= 500:
                     raise RetryableError(f"Server error (HTTP {response.status})")
                 if response.status != 200:
@@ -792,7 +842,7 @@ class InstitutionFetcher:
             ) as response:
                 _record_upstream(response.status, started)
                 if response.status == 429:
-                    raise RetryableError("Rate limited (HTTP 429)")
+                    raise _rate_limited_error(response)
                 if response.status >= 500:
                     raise RetryableError(f"Server error (HTTP {response.status})")
                 if response.status != 200:

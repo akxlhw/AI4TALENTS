@@ -17,10 +17,12 @@ import asyncio
 import logging
 import time
 
-from openai import APIError, RateLimitError
-
 from app.core.config import settings
-from app.domains.shared.services.llm.errors import LLMError, LLMErrorType
+from app.domains.shared.services.llm.errors import (
+    LLMError,
+    LLMErrorType,
+    llm_error_from_exception,
+)
 from app.domains.shared.services.llm.protocols import (
     EmbeddingResult,
 )
@@ -96,19 +98,19 @@ class LLMEmbeddingMixin:
                 embedding=embedding, model=self.embedding_model, tokens_used=tokens_used
             )
 
-        except RateLimitError as e:
-            logger.warning(f"Rate limit hit during embedding: {e}")
-            raise LLMError(
-                error_type=LLMErrorType.RATE_LIMIT,
-                message="Rate limit exceeded",
-                retry_after=getattr(e, "retry_after", 60),
-            ) from e
+        except LLMError:
+            raise
 
-        except APIError as e:
-            logger.error(f"API error during embedding: {e}")
-            raise LLMError(error_type=LLMErrorType.API_ERROR, message=str(e)) from e
+        except Exception as e:
+            # 底层 SDK 异常统一转换为领域异常（唯一转换点见 errors.py）
+            converted = llm_error_from_exception(e)
+            if converted.error_type == LLMErrorType.RATE_LIMIT:
+                logger.warning(f"Rate limit hit during embedding: {e}")
+            else:
+                logger.error(f"API error during embedding: {e}")
+            raise converted from e
 
-    @with_retry(max_retries=3)
+    @with_retry(max_retries=settings.LLM_MAX_RETRIES)
     async def generate_embedding_batch(self, texts: list[str]) -> list[EmbeddingResult]:
         """
         批量生成嵌入向量
@@ -130,8 +132,8 @@ class LLMEmbeddingMixin:
                 LLMErrorType.CONFIG_ERROR, "嵌入模型未配置。请配置嵌入 API Key 和 API 地址。"
             )
 
-        # 动态超时：每条 2 秒，最少 30 秒
-        timeout_seconds = max(30.0, len(texts) * 2.0)
+        # 动态超时：每条 2 秒，最少 LLM_TIMEOUT 秒
+        timeout_seconds = max(settings.LLM_TIMEOUT, len(texts) * 2.0)
 
         try:
             start_time = time.time()
@@ -188,17 +190,17 @@ class LLMEmbeddingMixin:
                 message=f"LLM API 超时 ({timeout_seconds}s)",
             ) from None
 
-        except RateLimitError as e:
-            logger.warning(f"Rate limit hit during batch embedding: {e}")
-            raise LLMError(
-                error_type=LLMErrorType.RATE_LIMIT,
-                message="Rate limit exceeded",
-                retry_after=getattr(e, "retry_after", 60),
-            ) from e
+        except LLMError:
+            raise
 
-        except APIError as e:
-            logger.error(f"API error during batch embedding: {e}")
-            raise LLMError(error_type=LLMErrorType.API_ERROR, message=str(e)) from e
+        except Exception as e:
+            # 底层 SDK 异常统一转换为领域异常（唯一转换点见 errors.py）
+            converted = llm_error_from_exception(e)
+            if converted.error_type == LLMErrorType.RATE_LIMIT:
+                logger.warning(f"Rate limit hit during batch embedding: {e}")
+            else:
+                logger.error(f"API error during batch embedding: {e}")
+            raise converted from e
 
     async def _generate_embedding_batch_minimax(self, texts: list[str]) -> list[EmbeddingResult]:
         """MiniMax 专用的嵌入生成方法
@@ -246,7 +248,7 @@ class LLMEmbeddingMixin:
                 )
 
                 # 重试机制
-                max_retries = 3
+                max_retries = settings.LLM_MAX_RETRIES
                 for retry in range(max_retries):
                     try:
                         # MiniMax 嵌入 API 请求格式

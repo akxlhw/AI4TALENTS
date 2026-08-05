@@ -1,5 +1,9 @@
 """
 Authentication API endpoints.
+
+Schemas live in `app.domains.shared.schemas.auth`; current-user dependencies
+live in `app.domains.shared.api.auth_deps`. Both are re-exported here so
+existing `from app.domains.shared.api.auth import ...` callers keep working.
 """
 
 from __future__ import annotations
@@ -7,8 +11,6 @@ from __future__ import annotations
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import (
@@ -16,172 +18,48 @@ from app.core.auth import (
     create_refresh_token,
     hash_password,
     validate_password_strength,
-    verify_access_token,
     verify_password,
     verify_refresh_token,
 )
 from app.core.database import get_async_session
+from app.domains.shared.api.auth_deps import (
+    get_current_user,
+    require_admin,
+    require_super_admin,
+    require_user,
+    security,
+)
 from app.domains.shared.models.enums import UserRoleType
+from app.domains.shared.schemas.auth import (
+    ChangePasswordRequest,
+    CurrentUser,
+    LoginRequest,
+    LoginResponse,
+    RefreshRequest,
+    RegisterRequest,
+    UserInfo,
+)
 from app.domains.shared.schemas.common import SuccessResponse
 from app.domains.shared.services.audit_service import AuditService
 from app.domains.shared.services.user_service import UserService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-security = HTTPBearer(auto_error=False)
 
-
-# Pydantic models
-class LoginRequest(BaseModel):
-    """Login request body."""
-
-    username: str = Field(..., min_length=1, max_length=100)
-    password: str = Field(..., min_length=1, max_length=100)
-
-
-class LoginResponse(BaseModel):
-    """Login response."""
-
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    expires_in: int = 8 * 3600  # 8 hours in seconds
-    user: UserInfo
-
-
-class RefreshRequest(BaseModel):
-    """Refresh token request."""
-
-    refresh_token: str
-
-
-class UserInfo(BaseModel):
-    """User information."""
-
-    user_id: int
-    username: str
-    email: str
-    role: str
-    display_name: str | None = None
-    department: str | None = None
-
-
-class ChangePasswordRequest(BaseModel):
-    """Change password request."""
-
-    current_password: str
-    new_password: str = Field(..., min_length=8, max_length=100)
-
-
-class RegisterRequest(BaseModel):
-    """User registration request."""
-
-    username: str = Field(..., min_length=3, max_length=100)
-    email: str = Field(..., max_length=255)
-    password: str = Field(..., min_length=8, max_length=100)
-    employee_id: str = Field(..., pattern=r"^[a-zA-Z]\d{8}$")
-    display_name: str | None = Field(default=None, max_length=100)
-    privacy_policy_accepted: bool = Field(default=False)
-    terms_of_use_accepted: bool = Field(default=False)
-    storage_consent_level: str = Field(default="necessary")
-
-
-class CurrentUser(BaseModel):
-    """Current user response."""
-
-    user_id: int
-    username: str
-    email: str
-    role: str
-    display_name: str | None = None
-    department: str | None = None
-    is_active: bool
-    last_login_at: datetime | None = None
-    privacy_policy_accepted_at: datetime | None = None
-    privacy_policy_version: str | None = None
-    terms_of_use_accepted_at: datetime | None = None
-    terms_of_use_version: str | None = None
-    storage_consent_level: str = "necessary"
-
-
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(security),
-    session: AsyncSession = Depends(get_async_session),
-) -> dict | None:
-    """
-    Get current user from JWT token.
-    Returns None if no valid token provided.
-    """
-    if not credentials:
-        return None
-
-    token = credentials.credentials
-    payload = verify_access_token(token)
-
-    if not payload:
-        return None
-
-    user_id = int(payload.get("sub", 0))
-
-    # Verify user exists and is active
-    service = UserService(session)
-    user = await service.get_by_id(user_id)
-
-    if not user or not user.is_active:
-        return None
-
-    return {
-        "user_id": user.user_id,
-        "username": user.username,
-        "email": user.email,
-        "role": user.role_type,
-        "display_name": user.display_name,
-    }
-
-
-async def require_user(
-    current_user: dict | None = Depends(get_current_user),
-) -> dict:
-    """
-    Require a valid authenticated user.
-    Raises 401 if not authenticated.
-    """
-    if not current_user:
-        raise HTTPException(
-            status_code=401,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return current_user
-
-
-async def require_admin(
-    current_user: dict = Depends(require_user),
-) -> dict:
-    """
-    Require admin or super_admin role.
-    Raises 403 if not authorized.
-    """
-    if current_user["role"] not in [UserRoleType.ADMIN.value, UserRoleType.SUPER_ADMIN.value]:
-        raise HTTPException(
-            status_code=403,
-            detail="Admin access required",
-        )
-    return current_user
-
-
-async def require_super_admin(
-    current_user: dict = Depends(require_user),
-) -> dict:
-    """
-    Require super_admin role.
-    Raises 403 if not authorized.
-    """
-    if current_user["role"] != UserRoleType.SUPER_ADMIN.value:
-        raise HTTPException(
-            status_code=403,
-            detail="Super admin access required",
-        )
-    return current_user
+__all__ = [
+    "router",
+    "security",
+    "get_current_user",
+    "require_user",
+    "require_admin",
+    "require_super_admin",
+    "LoginRequest",
+    "LoginResponse",
+    "RefreshRequest",
+    "UserInfo",
+    "ChangePasswordRequest",
+    "RegisterRequest",
+    "CurrentUser",
+]
 
 
 @router.post(
@@ -260,7 +138,6 @@ async def register(
 
     # Create user with pending approval status
     password_hash = hash_password(data.password)
-    from datetime import datetime
 
     from app.core.config import settings
 

@@ -18,10 +18,14 @@ import logging
 import time
 from typing import Any
 
-from openai import APIConnectionError, APIError, AsyncOpenAI, RateLimitError
+from openai import AsyncOpenAI
 
 from app.core.config import settings
-from app.domains.shared.services.llm.errors import LLMError, LLMErrorType
+from app.domains.shared.services.llm.errors import (
+    LLMError,
+    LLMErrorType,
+    llm_error_from_exception,
+)
 from app.domains.shared.services.llm.llm_embedding_mixin import LLMEmbeddingMixin
 from app.domains.shared.services.llm.protocols import (
     JDFeatures,
@@ -155,8 +159,8 @@ class LLMGateway(LLMEmbeddingMixin, LLMGatewayProtocol):
             self.embedding_client = None
             logger.info("LLM Gateway: embedding client not configured (no embedding_api_base)")
 
-    @with_retry(max_retries=5)
-    @with_timeout(timeout_seconds=60.0)
+    @with_retry(max_retries=settings.LLM_MAX_RETRIES)
+    @with_timeout(timeout_seconds=settings.LLM_TIMEOUT)
     async def parse_jd(self, jd_text: str) -> JDFeatures:
         """
         解析 JD 文本
@@ -235,42 +239,21 @@ class LLMGateway(LLMEmbeddingMixin, LLMGatewayProtocol):
                 error_type=LLMErrorType.INVALID_RESPONSE, message=f"Invalid JSON response: {e}"
             ) from e
 
-        except RateLimitError as e:
-            logger.warning(f"Rate limit hit: {e}")
-            raise LLMError(
-                error_type=LLMErrorType.RATE_LIMIT,
-                message="Rate limit exceeded",
-                retry_after=getattr(e, "retry_after", 60),
-            ) from e
-
-        except APIConnectionError as e:
-            logger.error(f"API connection error: {e}")
-            raise LLMError(error_type=LLMErrorType.NETWORK_ERROR, message=str(e)) from e
-
-        except APIError as e:
-            # 检查是否是 529 服务过载错误
-            status_code = getattr(e, "status_code", None)
-            if status_code == 529:
-                logger.warning(f"Service overloaded (529), will retry: {e}")
-                raise LLMError(
-                    error_type=LLMErrorType.API_ERROR, message=f"Service overloaded: {e}"
-                ) from e
-            # 其他 API 错误
-            logger.error(f"API error: {e}")
-            raise LLMError(error_type=LLMErrorType.API_ERROR, message=str(e)) from e
-
         except LLMError:
             # 让 LLMError 继续向上传播给重试装饰器
             raise
 
         except Exception as e:
-            logger.error(f"Unexpected error during JD parsing: {e}")
-            raise LLMError(
-                error_type=LLMErrorType.API_ERROR, message=f"Unexpected error: {e}"
-            ) from e
+            # 底层 SDK 异常统一转换为领域异常（唯一转换点见 errors.py）
+            converted = llm_error_from_exception(e)
+            if converted.error_type == LLMErrorType.RATE_LIMIT:
+                logger.warning(f"Rate limit hit: {e}")
+            else:
+                logger.error(f"LLM API call failed: {e}")
+            raise converted from e
 
-    @with_retry(max_retries=3)
-    @with_timeout(timeout_seconds=60.0)
+    @with_retry(max_retries=settings.LLM_MAX_RETRIES)
+    @with_timeout(timeout_seconds=settings.LLM_TIMEOUT)
     async def health_check(self) -> bool:
         """
         健康检查
@@ -283,6 +266,7 @@ class LLMGateway(LLMEmbeddingMixin, LLMGatewayProtocol):
             await self.client.models.list()
             return True
         except Exception as e:
+            # 边界探测：统一在此转换为布尔结果（契约见 errors.py 模块 docstring）
             logger.warning(f"Health check failed: {e}")
             return False
 

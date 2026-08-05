@@ -194,6 +194,7 @@ Data flows: Raw → Standardized (via Normalizers) → Serving (via Sync service
 - 支持 DeepSeek / OpenAI / 智谱 / 通义千问
 - 对话模型与嵌入模型可分别配置
 - 用于 JD 解析、岗位匹配、相似推荐
+- 错误处理契约：内部只 raise `LLMError`（底层 SDK 异常统一经 `errors.py` 的 `llm_error_from_exception` 转换），边界处再转换为布尔/HTTP 响应；超时/重试/批大小读 `config.py`（详见 AGENTS.md「错误处理契约」）
 
 ### Frontend Architecture
 

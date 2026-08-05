@@ -325,6 +325,10 @@ make docker-logs          # docker-compose logs -f
 - 禁止做法：`import httpx`、`from aiohttp import ClientSession` 等
 - 例外文件（已基线化）：`domains/shared/services/common/http_client.py`（HttpClientFactory 本身）、`domains/academic/services/data_fetchers.py`（aiohttp）、`domains/academic/services/openalex_client.py`（httpx）、`domains/open_source/services/github_client.py`（httpx）、`domains/shared/services/system_config_test_service.py`（函数内 httpx）
 
+### 错误处理契约
+
+Service/基础设施层一律 raise 领域自定义异常（如 LLM 链路统一经 `llm/errors.py` 的 `llm_error_from_exception` 转换底层 SDK 异常），边界处（API 层异常处理器、health 探测、后台任务）再统一转换为 HTTP 响应/布尔/任务状态，禁止以布尔/元组/字符串状态码作为错误通道；可调参数（超时、重试次数、批大小）必须读 `config.py` 或域 `constants/`，禁止内联魔法值。
+
 ### 三层数据架构（学术域）
 
 | 层级 | 代表表 | 作用 |
