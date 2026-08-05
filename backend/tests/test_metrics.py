@@ -264,49 +264,6 @@ class TestHelperFunctions:
         # The /550 gets replaced by /{id} first, then remaining is not matched as UUID
         assert "{id}" in result or "{uuid}" in result  # Accept either normalization
 
-    def test_record_cache_request_hit(self):
-        """Test record_cache_request for cache hit."""
-        from app.core.metrics import metrics, record_cache_request
-
-        metrics.reset_all()
-        record_cache_request(hit=True, key="test:key")
-
-        # Verify counter was incremented
-        cache_hits = metrics.counter("cache_hits_total")
-        cache_misses = metrics.counter("cache_misses_total")
-
-        assert cache_hits.value == 1
-        assert cache_misses.value == 0
-
-    def test_record_cache_request_miss(self):
-        """Test record_cache_request for cache miss."""
-        from app.core.metrics import metrics, record_cache_request
-
-        metrics.reset_all()
-        record_cache_request(hit=False, key="test:key")
-
-        cache_hits = metrics.counter("cache_hits_total")
-        cache_misses = metrics.counter("cache_misses_total")
-
-        assert cache_hits.value == 0
-        assert cache_misses.value == 1
-
-    def test_record_db_query(self):
-        """Test record_db_query function."""
-        from app.core.metrics import metrics, record_db_query
-
-        # Get the histogram first (creates it with labels)
-        histogram_select = metrics.histogram("db_query_duration_seconds", labels={"type": "select"})
-        histogram_insert = metrics.histogram("db_query_duration_seconds", labels={"type": "insert"})
-
-        # These are different histograms due to different labels
-        record_db_query(0.05, query_type="select")
-        record_db_query(0.15, query_type="insert")
-
-        # Verify the histograms were created and used
-        assert histogram_select.count == 1
-        assert histogram_insert.count == 1
-
     def test_histogram_observe_values(self):
         """Test histogram observe and value tracking."""
         histogram = HistogramMetric(

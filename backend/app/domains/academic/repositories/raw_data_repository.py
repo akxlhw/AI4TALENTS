@@ -9,7 +9,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select, text, update
+from sqlalchemy import select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -87,21 +87,6 @@ class RawWorkRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def get_author_ids_by_source(
-        self, source_id: str, year_from: int | None = None, year_to: int | None = None
-    ) -> set[str]:
-        """Extract unique author IDs from works of a source"""
-        works = await self.get_by_source(source_id, year_from, year_to)
-        author_ids = set()
-        for work in works:
-            if work.author_ids:
-                try:
-                    ids = json.loads(work.author_ids)
-                    author_ids.update(ids)
-                except (json.JSONDecodeError, TypeError):
-                    pass
-        return author_ids
-
     async def get_author_ids_by_task(self, task_id: int) -> set[str]:
         """Extract unique author IDs from works collected in a specific task.
 
@@ -114,26 +99,6 @@ class RawWorkRepository:
         result = await self.session.execute(
             select(RawWork.author_ids).where(RawWork.fetch_task_id == task_id)
         )
-        author_ids = set()
-        for row in result.fetchall():
-            if row[0]:
-                try:
-                    ids = json.loads(row[0])
-                    author_ids.update(ids)
-                except (json.JSONDecodeError, TypeError):
-                    pass
-        return author_ids
-
-    async def get_all_author_ids(self, limit: int = 10000) -> set[str]:
-        """Extract unique author IDs from all works.
-
-        Args:
-            limit: Maximum number of works to process
-
-        Returns:
-            Set of unique OpenAlex author IDs
-        """
-        result = await self.session.execute(select(RawWork.author_ids).limit(limit))
         author_ids = set()
         for row in result.fetchall():
             if row[0]:
@@ -465,15 +430,6 @@ class RawAuthorRepository:
                 )
             )
 
-    async def count_by_status(self) -> dict:
-        """Count authors by processing status"""
-        result = await self.session.execute(
-            select(RawAuthor.processed_status, func.count(RawAuthor.raw_author_id)).group_by(
-                RawAuthor.processed_status
-            )
-        )
-        return {row[0]: row[1] for row in result.all()}
-
 
 class RawInstitutionRepository:
     """Raw institution repository"""
@@ -685,29 +641,3 @@ class AuthorTechBelongRepository:
             select(AuthorTechBelong).where(AuthorTechBelong.tech_domain_id == tech_domain_id)
         )
         return list(result.scalars().all())
-
-    async def get_by_author(self, openalex_author_id: str) -> list[AuthorTechBelong]:
-        """Get all tech domains for an author"""
-        result = await self.session.execute(
-            select(AuthorTechBelong).where(
-                AuthorTechBelong.openalex_author_id == openalex_author_id
-            )
-        )
-        return list(result.scalars().all())
-
-    async def count_by_tech_domain(self, tech_domain_id: int) -> int:
-        """Count authors for a tech domain"""
-        result = await self.session.execute(
-            select(func.count(AuthorTechBelong.belong_id)).where(
-                AuthorTechBelong.tech_domain_id == tech_domain_id
-            )
-        )
-        return result.scalar() or 0
-
-    async def batch_create(self, belongs: list[AuthorTechBelong]) -> int:
-        """Batch create relationships"""
-        count = 0
-        for belong in belongs:
-            await self.upsert(belong)
-            count += 1
-        return count

@@ -7,6 +7,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.domains.shared.services.jsonl_import import SkipReason
+
 # ============ Position ============
 
 
@@ -122,13 +124,6 @@ class CandidateStatusPatch(BaseModel):
 
 
 # ============ Import ============
-
-
-class SkipReason(BaseModel):
-    """Reason a JSONL line was skipped during import."""
-
-    line: int
-    reason: str
 
 
 class IndustryImportReport(BaseModel):

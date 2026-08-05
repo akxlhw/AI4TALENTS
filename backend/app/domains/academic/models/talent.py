@@ -87,24 +87,6 @@ class Talent(Base, TimestampMixin):
     std_author = relationship("StdAuthor", back_populates="talent")
     embedding = relationship("TalentEmbedding", back_populates="talent", uselist=False)
 
-    def update_topic_tags_from_tech_tags(self) -> None:
-        """
-        Update topic_tags from the tech_tags relationship.
-
-        This method should be called after modifying tech_tags to keep
-        the cached topic_tags field in sync. The topic_tags field is a
-        denormalized cache for quick filtering and display.
-        """
-        if self.tech_tags:
-            # Get unique tech domain names from tech_tags
-            domain_names = set()
-            for tag in self.tech_tags:
-                if tag.is_enabled and tag.tech_domain:
-                    domain_names.add(tag.tech_domain.domain_name)  # type: ignore[union-attr]
-            self.topic_tags = sorted(domain_names)  # type: ignore[assignment]
-        else:
-            self.topic_tags = []  # type: ignore[assignment]
-
     @property
     def primary_school_id(self) -> int | None:
         """Get primary school ID (education -> company -> legacy)."""

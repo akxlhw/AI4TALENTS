@@ -21,7 +21,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.academic.models.school import School, SchoolAlias
+from app.domains.academic.models.school import School
 from app.domains.academic.models.talent import Talent
 
 logger = logging.getLogger(__name__)
@@ -129,23 +129,6 @@ class SchoolRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_aliases(self, school_id: int) -> list[SchoolAlias]:
-        """
-        Get all aliases for a school.
-
-        Args:
-            school_id: School ID
-
-        Returns:
-            List of SchoolAlias instances
-        """
-        result = await self.session.execute(
-            select(SchoolAlias)
-            .where(SchoolAlias.school_id == school_id)
-            .order_by(SchoolAlias.alias_id)
-        )
-        return list(result.scalars().all())
-
     async def search(
         self,
         keyword: str,
@@ -178,25 +161,6 @@ class SchoolRepository:
 
         result = await self.session.execute(query)
         return list(result.scalars().all())
-
-    async def get_count_by_country(self) -> dict[str, int]:
-        """
-        Get school counts grouped by country code.
-
-        Returns:
-            Dictionary mapping country_code to count
-        """
-        query = (
-            select(School.country_code, func.count(School.school_id).label("count"))
-            .where(
-                School.is_visible.is_(True),
-                School.country_code.isnot(None),
-            )
-            .group_by(School.country_code)
-        )
-
-        result = await self.session.execute(query)
-        return {row.country_code: row.count for row in result.all()}
 
     async def get_talent_counts(self, school_id: int) -> dict[str, int]:
         """

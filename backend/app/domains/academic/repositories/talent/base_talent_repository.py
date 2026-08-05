@@ -294,19 +294,6 @@ class BaseTalentRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_orcid(self, orcid: str) -> Talent | None:
-        """
-        Get talent by ORCID.
-
-        Args:
-            orcid: ORCID identifier
-
-        Returns:
-            Talent instance or None
-        """
-        result = await self.session.execute(select(Talent).where(Talent.orcid == orcid))
-        return result.scalar_one_or_none()
-
     async def get_role_profile(self, talent_id: int) -> RoleProfile | None:
         """
         Get role profile for a talent.
@@ -340,54 +327,3 @@ class BaseTalentRepository:
             .limit(limit)
         )
         return list(result.scalars().all())
-
-    async def get_count_by_role(self, school_id: int | None = None) -> dict[str, int]:
-        """
-        Get talent counts grouped by role type.
-
-        Args:
-            school_id: Optional school to filter by
-
-        Returns:
-            Dictionary with counts by role type
-        """
-        query = select(Talent.role_type, func.count(Talent.talent_id).label("count")).where(
-            Talent.is_visible.is_(True)
-        )
-
-        if school_id:
-            query = query.where(Talent.school_id == school_id)
-
-        query = query.group_by(Talent.role_type)
-
-        result = await self.session.execute(query)
-        counts = {"professor": 0, "student": 0, "graduate": 0, "unknown": 0, "total": 0}
-
-        for row in result.all():
-            counts[row.role_type] = row.count
-            counts["total"] += row.count
-
-        return counts
-
-    async def get_count_by_school(self, country_code: str | None = None) -> dict[int, int]:
-        """
-        Get talent counts grouped by school.
-
-        Args:
-            country_code: Optional country code to filter schools by
-
-        Returns:
-            Dictionary mapping school_id to count
-        """
-        query = select(Talent.school_id, func.count(Talent.talent_id).label("count")).where(
-            Talent.is_visible.is_(True),
-            Talent.school_id.isnot(None),
-        )
-
-        if country_code:
-            query = query.join(School).where(School.country_code == country_code.upper())
-
-        query = query.group_by(Talent.school_id)
-
-        result = await self.session.execute(query)
-        return {row.school_id: row.count for row in result.all()}

@@ -206,45 +206,6 @@ def get_country_name_cn(country_code: str | None) -> str:
     return COUNTRY_NAMES_CN.get(code, country_code)
 
 
-def get_country_name_en(country_code: str | None) -> str:
-    """
-    Get English name for a country code.
-
-    Args:
-        country_code: ISO 3166-1 alpha-2 country code
-
-    Returns:
-        English name, or the country code itself if not found
-    """
-    if not country_code:
-        return "Unknown"
-
-    code = country_code.upper()
-    return COUNTRY_NAMES_EN.get(code, country_code)
-
-
-def get_region_for_country(country_code: str | None) -> str:
-    """
-    Get the region for a country code.
-
-    Args:
-        country_code: ISO 3166-1 alpha-2 country code
-
-    Returns:
-        Region key ('north_america', 'asia_pacific', 'europe', or 'other')
-    """
-    if not country_code:
-        return "other"
-
-    code = country_code.upper()
-
-    for region, codes in REGION_MAPPING.items():
-        if code in codes:
-            return region
-
-    return "other"
-
-
 def normalize_country_code(country_code: str | None) -> str:
     """
     Normalize country code, mapping Taiwan to China.

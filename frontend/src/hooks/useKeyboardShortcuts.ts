@@ -72,40 +72,4 @@ export function useKeyboardShortcuts(
   }, [handleKeyDown, enabled])
 }
 
-/**
- * Common shortcuts factory
- */
-export function createCommonShortcuts(
-  actions: {
-    focusSearch?: () => void
-    closeModal?: () => void
-  }
-): KeyboardShortcut[] {
-  const shortcuts: KeyboardShortcut[] = []
-
-  if (actions.focusSearch) {
-    shortcuts.push({
-      key: '/',
-      action: actions.focusSearch,
-      description: '快速搜索',
-    })
-    shortcuts.push({
-      key: 'f',
-      ctrlKey: true,
-      action: actions.focusSearch,
-      description: '聚焦搜索框',
-    })
-  }
-
-  if (actions.closeModal) {
-    shortcuts.push({
-      key: 'Escape',
-      action: actions.closeModal,
-      description: '关闭弹窗',
-    })
-  }
-
-  return shortcuts
-}
-
 export default useKeyboardShortcuts

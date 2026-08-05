@@ -332,20 +332,6 @@ def record_request(method: str, path: str, status: int, duration: float) -> None
     ).observe(duration)
 
 
-def record_cache_request(hit: bool, key: str | None = None) -> None:
-    """Record a cache request."""
-    metrics.counter("cache_requests_total").inc()
-    if hit:
-        metrics.counter("cache_hits_total").inc()
-    else:
-        metrics.counter("cache_misses_total").inc()
-
-
-def record_db_query(duration: float, query_type: str = "select") -> None:
-    """Record a database query."""
-    metrics.histogram("db_query_duration_seconds", labels={"type": query_type}).observe(duration)
-
-
 def record_upstream_request(host: str, status: int, duration: float) -> None:
     """Record an outbound (upstream API) request: count, latency, 429s."""
     metrics.counter("upstream_requests_total", labels={"host": host, "status": str(status)}).inc()

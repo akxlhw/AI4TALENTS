@@ -11,7 +11,6 @@ docs/v5.0.0/02-技术设计.md §5. Incremental upsert with three boundary rules
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import re
 import unicodedata
@@ -22,6 +21,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domains.industry.models.industry import IndustryTalent
 from app.domains.industry.repositories.industry_repository import IndustryRepository
 from app.domains.industry.schemas.industry import IndustryImportReport, SkipReason
+from app.domains.shared.services.jsonl_import import (
+    abort_if_empty,
+    cap_skip_reasons,
+    count_jsonl_lines,
+    iter_jsonl_records,
+    run_row_isolated,
+)
+from app.domains.shared.services.jsonl_import import trimmed_str as _str
 
 logger = logging.getLogger(__name__)
 
@@ -69,13 +76,6 @@ def parse_years_of_exp(value: Any) -> float | None:
     return float(match.group()) if match else None
 
 
-def _str(value: Any, max_len: int) -> str | None:
-    """Trimmed string truncated to max_len, or None when absent/blank."""
-    if not isinstance(value, str) or not value.strip():
-        return None
-    return value.strip()[:max_len]
-
-
 def _float(value: Any) -> float | None:
     """Coerce to float, or None when absent/invalid."""
     if isinstance(value, bool) or value is None:
@@ -115,8 +115,7 @@ class IndustryImportService:
           single row's DB error rolls back alone and lands in skip_reasons.
         - Atomicity: all surviving rows commit in one outer transaction.
         """
-        lines = jsonl_content.splitlines()
-        total_lines = len(lines)
+        total_lines = count_jsonl_lines(jsonl_content)
 
         known_positions = await self.repo.list_position_ids()
         report = IndustryImportReport(total_lines=total_lines, total_parsed=0)
@@ -124,15 +123,12 @@ class IndustryImportService:
         parsed: list[dict[str, Any]] = []
         skips: list[SkipReason] = []
 
-        for lineno, raw_line in enumerate(lines, start=1):
-            line = raw_line.strip()
-            if not line:
+        for jl in iter_jsonl_records(jsonl_content):
+            lineno = jl.lineno
+            if jl.error is not None:
+                skips.append(SkipReason(line=lineno, reason=jl.error))
                 continue
-            try:
-                record = json.loads(line)
-            except json.JSONDecodeError:
-                skips.append(SkipReason(line=lineno, reason="invalid JSON"))
-                continue
+            record = jl.record
             if not isinstance(record, dict):
                 skips.append(SkipReason(line=lineno, reason="not a JSON object"))
                 continue
@@ -177,7 +173,7 @@ class IndustryImportService:
 
         # Hard guard (lab/competition standard): an empty or fully-invalid
         # file writes nothing and is explicitly flagged, not a silent success.
-        if not merged:
+        def _zero_valid_report() -> IndustryImportReport:
             logger.warning(
                 "[IndustryImport] Aborting: 0 valid rows parsed from %d lines, "
                 "skipped=%d — no data written",
@@ -186,23 +182,32 @@ class IndustryImportService:
             )
             report.aborted = True
             report.skipped = len(skips)
-            report.skip_reasons = skips[:50]
+            report.skip_reasons = cap_skip_reasons(skips)
             return report
+
+        aborted = abort_if_empty(merged, on_abort=_zero_valid_report)
+        if aborted is not None:
+            return aborted
 
         # Upsert loop: per-row SAVEPOINT isolation inside one outer
         # transaction. A single row's DB error (constraint violation,
         # unserializable JSON, ...) rolls that row back alone and lands in
         # skip_reasons; all surviving rows commit together below.
         for row in merged.values():
-            try:
-                async with self.session.begin_nested():
-                    talent, created = await self._upsert_talent(row)
-                    link_created = await self._upsert_link(talent, row, batch)
-            except Exception as e:
-                row_line: int = row.get("_line", 0)
-                logger.warning("[IndustryImport] line %d DB error, row skipped: %s", row_line, e)
-                skips.append(SkipReason(line=row_line, reason=f"db error: {str(e)[:200]}"))
+            row_line: int = row.get("_line", 0)
+
+            async def work(row: dict[str, Any] = row) -> tuple[bool, bool]:
+                return await self._upsert_row(row, batch)
+
+            def on_error(e: Exception, line: int = row_line) -> None:
+                logger.warning("[IndustryImport] line %d DB error, row skipped: %s", line, e)
+
+            outcome = await run_row_isolated(self.session, work, on_error=on_error)
+            if outcome.error is not None:
+                skips.append(SkipReason(line=row_line, reason=outcome.error))
                 continue
+            assert outcome.value is not None  # error is None → upsert succeeded
+            created, link_created = outcome.value
             if created:
                 report.talents_inserted += 1
             else:
@@ -213,7 +218,7 @@ class IndustryImportService:
                 report.links_updated += 1
 
         report.skipped = len(skips)
-        report.skip_reasons = skips[:50]  # cap to avoid huge payloads
+        report.skip_reasons = cap_skip_reasons(skips)  # cap to avoid huge payloads
 
         await self.session.commit()
 
@@ -230,6 +235,16 @@ class IndustryImportService:
             report.warnings,
         )
         return report
+
+    async def _upsert_row(self, row: dict[str, Any], batch: str | None) -> tuple[bool, bool]:
+        """Upsert one talent plus its position link. Returns (talent_created, link_created).
+
+        Runs as a single unit of work inside the row-level SAVEPOINT opened by
+        the import loop, so a failure anywhere in the pair rolls the row back.
+        """
+        talent, created = await self._upsert_talent(row)
+        link_created = await self._upsert_link(talent, row, batch)
+        return created, link_created
 
     async def _upsert_talent(self, row: dict[str, Any]) -> tuple[IndustryTalent, bool]:
         """Upsert one talent by dedup_hash. Returns (talent, created).

@@ -1,19 +1,9 @@
 /**
  * Utilities index
  */
-export {
-  formatUTCToLocal,
-  formatUTCToLocalDate,
-  formatUTCToRelative,
-  getLocalISOTime,
-} from './datetime'
+export { formatUTCToLocal, formatUTCToLocalDate } from './datetime'
 
-export {
-  formatCompactNumber,
-  formatFileSize,
-  formatNumber,
-  formatPercent,
-} from './format'
+export { formatNumber } from './format'
 
 export { getErrorMessage } from './error'
 

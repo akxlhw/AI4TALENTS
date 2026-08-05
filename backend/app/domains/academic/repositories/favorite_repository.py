@@ -234,21 +234,3 @@ class FavoriteRepository:
         if success:
             await self.session.commit()
         return success
-
-    async def hard_remove_favorite(self, user_id: int, talent_id: int) -> bool:
-        """
-        Permanently remove a talent from user's favorites.
-
-        Args:
-            user_id: User ID
-            talent_id: Talent ID
-
-        Returns:
-            True if removed, False if not found
-        """
-        favorite = await self.get_by_user_and_talent(user_id, talent_id)
-        if favorite:
-            await self.session.delete(favorite)
-            await self.session.flush()
-            return True
-        return False

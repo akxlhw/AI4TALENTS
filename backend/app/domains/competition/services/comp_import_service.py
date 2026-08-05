@@ -8,7 +8,6 @@ The admin upload endpoint is the only HTTP entry point using this service.
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import time
 from datetime import datetime
@@ -19,6 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domains.competition.models.competition import CompTalent
 from app.domains.competition.repositories.competition_repository import CompetitionRepository
 from app.domains.competition.schemas.competition import CompImportReport, SkipReason
+from app.domains.shared.services.jsonl_import import (
+    abort_if_empty,
+    count_jsonl_lines,
+    iter_jsonl_records,
+)
+from app.domains.shared.services.jsonl_import import trimmed_str as _str
 
 logger = logging.getLogger(__name__)
 
@@ -44,13 +49,6 @@ def _parse_dt(value: Any) -> datetime | None:
         return None
 
 
-def _str(value: Any, max_len: int) -> str | None:
-    """Trimmed string truncated to max_len, or None when absent/blank."""
-    if not isinstance(value, str) or not value.strip():
-        return None
-    return value.strip()[:max_len]
-
-
 class CompImportService:
     """Parse JSONL and replace one contest's results atomically."""
 
@@ -71,15 +69,12 @@ class CompImportService:
         skips: list[SkipReason] = []
         stage = "meta"  # meta → series → contest → body
 
-        for lineno, raw_line in enumerate(jsonl_content.splitlines(), start=1):
-            line = raw_line.strip()
-            if not line:
+        for jl in iter_jsonl_records(jsonl_content):
+            lineno = jl.lineno
+            if jl.error is not None:
+                skips.append(SkipReason(line=lineno, reason=jl.error))
                 continue
-            try:
-                record = json.loads(line)
-            except json.JSONDecodeError:
-                skips.append(SkipReason(line=lineno, reason="invalid JSON"))
-                continue
+            record = jl.record
             rtype = record.get("type")
             if rtype not in _VALID_TYPES:
                 skips.append(SkipReason(line=lineno, reason=f"unknown type: {rtype}"))
@@ -178,15 +173,14 @@ class CompImportService:
             source_code=source_code,
             contest_external_id=external_id,
             contest_name=_str(contest.get("name"), 500) or "",
-            total_lines=len([ln for ln in jsonl_content.splitlines() if ln.strip()]),
+            total_lines=count_jsonl_lines(jsonl_content, skip_blank=True),
             persons_parsed=len(persons),
             teams_parsed=len(teams),
             skipped=len(skips),
             skip_reasons=skips,
         )
 
-        # Hard guard (lab V3.1.0 lesson): never delete when nothing valid parsed
-        if not persons and not teams:
+        def _zero_valid_report() -> CompImportReport:
             logger.warning(
                 "[CompImport] %s:%s — 0 valid records, aborting without touching DB",
                 source_code,
@@ -194,6 +188,11 @@ class CompImportService:
             )
             report.duration_ms = int((time.monotonic() - started) * 1000)
             return report
+
+        # Hard guard (lab V3.1.0 lesson): never delete when nothing valid parsed
+        aborted = abort_if_empty(persons or teams, on_abort=_zero_valid_report)
+        if aborted is not None:
+            return aborted
 
         # Batch dedup: dup handle → keep last; dup team → merge members, keep last result
         persons = list({p["handle"].strip().lower(): p for p in persons}.values())

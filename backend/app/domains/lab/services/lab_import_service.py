@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import html
-import json
 import logging
 import re
 from datetime import datetime
@@ -20,6 +19,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domains.lab.constants.role_mapping import map_role
 from app.domains.lab.repositories.lab_talent_repository import LabTalentRepository
 from app.domains.lab.schemas.lab_talent import LabImportReport, SkipReason
+from app.domains.shared.services.jsonl_import import (
+    abort_if_empty,
+    cap_skip_reasons,
+    count_jsonl_lines,
+    iter_jsonl_records,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -121,8 +126,7 @@ class LabImportService:
         Supports the v2 JSONL format where the first line is a ``type: lab``
         metadata record and subsequent lines are ``type: person`` talent records.
         """
-        lines = jsonl_content.splitlines()
-        total_lines = len(lines)
+        total_lines = count_jsonl_lines(jsonl_content)
 
         parsed: list[dict[str, Any]] = []
         skip_reasons: list[SkipReason] = []
@@ -130,17 +134,13 @@ class LabImportService:
         lab_logo_url: str | None = None
         lab_metadata: dict[str, Any] | None = None
 
-        for idx, raw_line in enumerate(lines, start=1):
-            line = raw_line.strip()
-            if not line:
+        for jl in iter_jsonl_records(jsonl_content):
+            idx = jl.lineno
+            if jl.error is not None:
+                skip_reasons.append(SkipReason(line=idx, reason=jl.error))
                 continue
 
-            try:
-                record = json.loads(line)
-            except json.JSONDecodeError:
-                skip_reasons.append(SkipReason(line=idx, reason="invalid JSON"))
-                continue
-
+            record = jl.record
             record_type = (record.get("type") or "person").lower()
 
             if record_type == "lab":
@@ -181,20 +181,14 @@ class LabImportService:
         # Safety guard: refuse to delete existing data if the import produced
         # zero valid records (all lines were empty/invalid). This prevents
         # a malformed JSONL from wiping out an entire lab's data.
-        if not deduped:
-            logger.warning(
-                "[LabImport] Refusing to replace %s: 0 valid records parsed from %d lines",
-                resolved_parent_lab,
-                total_lines,
-            )
-            return LabImportReport(
-                parent_lab=resolved_parent_lab,
-                total_lines=total_lines,
-                total_parsed=0,
-                inserted=0,
-                skipped=len(skip_reasons),
-                skip_reasons=skip_reasons[:50],
-            )
+        aborted = abort_if_empty(
+            deduped,
+            on_abort=lambda: self._zero_valid_report(
+                resolved_parent_lab, total_lines, skip_reasons
+            ),
+        )
+        if aborted is not None:
+            return aborted
 
         # Atomic replace: delete + insert in one transaction
         deleted = await self.repo.delete_by_parent_lab(resolved_parent_lab)
@@ -224,7 +218,26 @@ class LabImportService:
             total_parsed=len(deduped),
             inserted=inserted,
             skipped=len(skip_reasons),
-            skip_reasons=skip_reasons[:50],  # cap reasons to avoid huge payloads
+            skip_reasons=cap_skip_reasons(skip_reasons),  # cap to avoid huge payloads
+        )
+
+    @staticmethod
+    def _zero_valid_report(
+        parent_lab: str, total_lines: int, skip_reasons: list[SkipReason]
+    ) -> LabImportReport:
+        """Aborted report for the 0-valid-row hard guard (nothing is written)."""
+        logger.warning(
+            "[LabImport] Refusing to replace %s: 0 valid records parsed from %d lines",
+            parent_lab,
+            total_lines,
+        )
+        return LabImportReport(
+            parent_lab=parent_lab,
+            total_lines=total_lines,
+            total_parsed=0,
+            inserted=0,
+            skipped=len(skip_reasons),
+            skip_reasons=cap_skip_reasons(skip_reasons),
         )
 
     async def _upsert_lab_info(self, lab_record: dict[str, Any], parent_lab: str) -> None:

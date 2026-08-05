@@ -18,7 +18,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import is_postgres as _is_postgres
@@ -66,21 +66,6 @@ class EmbeddingRepository:
             )
         )
         return result.scalar_one_or_none()
-
-    async def get_all_by_talent_id(self, talent_id: int) -> list[TalentEmbedding]:
-        """
-        获取人才的所有向量类型嵌入
-
-        Args:
-            talent_id: 人才 ID
-
-        Returns:
-            List[TalentEmbedding]: 该人才的所有嵌入记录
-        """
-        result = await self.session.execute(
-            select(TalentEmbedding).where(TalentEmbedding.talent_id == talent_id)
-        )
-        return list(result.scalars().all())
 
     async def get_by_talent_ids(
         self, talent_ids: list[int], vector_type: str | None = None
@@ -315,36 +300,6 @@ class EmbeddingRepository:
                     talent_id, embedding, model_name, source_text_hash, vector_type
                 )
 
-    async def delete_by_talent_id(self, talent_id: int) -> bool:
-        """
-        删除嵌入记录
-
-        Args:
-            talent_id: 人才 ID
-
-        Returns:
-            bool: 是否删除成功
-        """
-        result = await self.session.execute(
-            delete(TalentEmbedding).where(TalentEmbedding.talent_id == talent_id)
-        )
-        return result.rowcount > 0
-
-    async def delete_by_model(self, model_name: str) -> int:
-        """
-        删除指定模型的所有嵌入记录
-
-        Args:
-            model_name: 模型名称
-
-        Returns:
-            int: 删除的记录数
-        """
-        result = await self.session.execute(
-            delete(TalentEmbedding).where(TalentEmbedding.model_name == model_name)
-        )
-        return result.rowcount
-
     async def count(self) -> int:
         """
         统计嵌入记录总数
@@ -462,22 +417,6 @@ class EmbeddingRepository:
                 existing_ids.add(row[0])
 
         return [tid for tid in talent_ids if tid not in existing_ids]
-
-    async def get_existing_talent_ids(self, vector_type: str | None = None) -> set[int]:
-        """
-        获取所有已有嵌入向量的人才 ID
-
-        Args:
-            vector_type: 可选的向量类型过滤
-
-        Returns:
-            set[int]: 已有嵌入的人才 ID 集合
-        """
-        query = select(TalentEmbedding.talent_id)
-        if vector_type:
-            query = query.where(TalentEmbedding.vector_type == vector_type)
-        result = await self.session.execute(query)
-        return {row[0] for row in result.fetchall()}
 
     def _str_to_embedding(self, embedding_str: str) -> list[float]:
         """

@@ -111,23 +111,6 @@ class DataVersionRepository:
         await self.session.commit()
         return version
 
-    async def update_statistics(
-        self,
-        version_id: int,
-        total_talents: int,
-        total_schools: int,
-        total_works: int,
-    ) -> DataVersion | None:
-        """Update version statistics."""
-        version = await self.get_by_id(version_id)
-        if not version:
-            return None
-
-        version.total_talents = total_talents
-        version.total_schools = total_schools
-        version.total_works = total_works
-        return version
-
     async def publish_version(
         self,
         version_id: int,
@@ -150,17 +133,6 @@ class DataVersionRepository:
         version.published_at = datetime.now()
         version.published_by = published_by
 
-        return version
-
-    async def publish_version_and_commit(
-        self,
-        version_id: int,
-        published_by: int,
-    ) -> DataVersion | None:
-        """Publish a version (make it active) and commit."""
-        version = await self.publish_version(version_id, published_by)
-        if version:
-            await self.session.commit()
         return version
 
     async def publish_version_with_record(
@@ -222,27 +194,6 @@ class DataPublishRecordRepository:
         records = list(result.scalars().all())
 
         return records, total
-
-    async def create_record(
-        self,
-        version_id: int,
-        action: str,
-        operated_by: int,
-        previous_version_id: int | None = None,
-        notes: str | None = None,
-    ) -> DataPublishRecord:
-        """Create a publish record."""
-        record = DataPublishRecord(
-            version_id=version_id,
-            action=action,
-            previous_version_id=previous_version_id,
-            operated_by=operated_by,
-            operated_at=datetime.now(),
-            notes=notes,
-        )
-        self.session.add(record)
-        await self.session.flush()
-        return record
 
 
 class DataCorrectionRepository:
@@ -381,81 +332,3 @@ class DataQualityRepository:
 
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
-
-    async def list_summaries(
-        self,
-        version_id: int | None = None,
-        page: int = 1,
-        page_size: int = 20,
-    ) -> tuple[list[DataQualitySummary], int]:
-        """List quality summaries with pagination."""
-        query = select(DataQualitySummary)
-
-        if version_id:
-            query = query.where(DataQualitySummary.version_id == version_id)
-
-        # Count
-        count_query = select(func.count()).select_from(query.subquery())
-        total_result = await self.session.execute(count_query)
-        total = total_result.scalar() or 0
-
-        # Paginate
-        offset = (page - 1) * page_size
-        query = (
-            query.offset(offset).limit(page_size).order_by(DataQualitySummary.summary_date.desc())
-        )
-
-        result = await self.session.execute(query)
-        summaries = list(result.scalars().all())
-
-        return summaries, total
-
-    async def create_summary(
-        self,
-        version_id: int,
-        summary_date: datetime,
-        talent_total: int = 0,
-        talent_with_orcid: int = 0,
-        talent_with_affiliation: int = 0,
-        talent_with_works: int = 0,
-        talent_completeness_avg: int = 0,
-        school_total: int = 0,
-        school_with_ror: int = 0,
-        school_with_country: int = 0,
-        work_total: int = 0,
-        work_with_doi: int = 0,
-        tech_tag_total: int = 0,
-        tech_tag_confirmed: int = 0,
-        tech_tag_auto_identified: int = 0,
-        tech_tag_pending_confirm: int = 0,
-        issues_critical: int = 0,
-        issues_warning: int = 0,
-        issues_info: int = 0,
-        details: dict | None = None,
-    ) -> DataQualitySummary:
-        """Create a quality summary."""
-        summary = DataQualitySummary(
-            version_id=version_id,
-            summary_date=summary_date,
-            talent_total=talent_total,
-            talent_with_orcid=talent_with_orcid,
-            talent_with_affiliation=talent_with_affiliation,
-            talent_with_works=talent_with_works,
-            talent_completeness_avg=talent_completeness_avg,
-            school_total=school_total,
-            school_with_ror=school_with_ror,
-            school_with_country=school_with_country,
-            work_total=work_total,
-            work_with_doi=work_with_doi,
-            tech_tag_total=tech_tag_total,
-            tech_tag_confirmed=tech_tag_confirmed,
-            tech_tag_auto_identified=tech_tag_auto_identified,
-            tech_tag_pending_confirm=tech_tag_pending_confirm,
-            issues_critical=issues_critical,
-            issues_warning=issues_warning,
-            issues_info=issues_info,
-            details=details,
-        )
-        self.session.add(summary)
-        await self.session.flush()
-        return summary

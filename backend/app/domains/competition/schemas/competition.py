@@ -7,12 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
-class SkipReason(BaseModel):
-    """Reason a JSONL line was skipped during import."""
-
-    line: int
-    reason: str
+from app.domains.shared.services.jsonl_import import SkipReason
 
 
 class CompImportReport(BaseModel):

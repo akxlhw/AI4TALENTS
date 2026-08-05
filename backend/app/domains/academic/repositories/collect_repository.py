@@ -176,56 +176,6 @@ class CollectTaskRepository(BaseRepository[CollectTask]):
             current_step="执行失败",
         )
 
-    async def update_task_counts(
-        self,
-        task_id: int,
-        total_records: int | None = None,
-        processed_records: int | None = None,
-        success_records: int | None = None,
-        failed_records: int | None = None,
-        skipped_records: int | None = None,
-    ) -> CollectTask | None:
-        """Update task record counts."""
-        task = await self.get_by_id(task_id)
-        if not task:
-            return None
-
-        if total_records is not None:
-            task.total_records = total_records
-        if processed_records is not None:
-            task.processed_records = processed_records
-        if success_records is not None:
-            task.success_records = success_records
-        if failed_records is not None:
-            task.failed_records = failed_records
-        if skipped_records is not None:
-            task.skipped_records = skipped_records
-
-        return task
-
-    async def complete_task(
-        self,
-        task_id: int,
-        success: bool,
-        result_summary: dict | None = None,
-        error_message: str | None = None,
-    ) -> CollectTask | None:
-        """Mark task as completed."""
-        task = await self.get_by_id(task_id)
-        if not task:
-            return None
-
-        task.status = "completed" if success else "failed"
-        task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
-        task.progress_percent = 100
-
-        if result_summary:
-            task.result_summary = result_summary
-        if error_message:
-            task.error_message = error_message
-
-        return task
-
     async def get_active_tasks(self) -> list[CollectTask]:
         """Get all currently active (pending or running) tasks."""
         result = await self.session.execute(
@@ -329,16 +279,3 @@ class TechDomainCollectRepository:
             select(TechDomain).where(TechDomain.tech_domain_id == tech_domain_id)
         )
         return result.scalar_one_or_none()
-
-    async def update_last_collect_time(
-        self,
-        tech_domain_id: int,
-        collect_at: datetime | None = None,
-    ) -> TechDomain | None:
-        """Update last collect time for a tech domain."""
-        domain = await self.get_by_id(tech_domain_id)
-        if not domain:
-            return None
-
-        domain.last_collect_at = collect_at or datetime.now(timezone.utc).replace(tzinfo=None)
-        return domain

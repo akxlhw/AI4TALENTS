@@ -31,25 +31,6 @@ from app.domains.shared.services.llm.retry import with_retry
 logger = logging.getLogger(__name__)
 
 
-# System prompt for JD parsing
-# v1.4.1: Simplified to only output research_areas (English keywords)
-JD_PARSE_PROMPT = """你是一个专业的招聘助手。请分析以下职位描述（JD），提取研究方向关键词。
-
-请直接返回 JSON 格式，不要有任何分析过程或解释。
-
-返回格式：
-{
-    "research_areas": ["area1", "area2", ...]
-}
-
-字段说明：
-- research_areas: 学术研究领域，必须使用英文关键词，如 ["Natural Language Processing", "Computer Vision", "Deep Learning", "Machine Learning", "Speech Recognition", "Reinforcement Learning", "Generative AI", "Large Language Models"]
-
-重要：research_areas 必须输出英文关键词，以便与学术数据库匹配。
-
-直接返回 JSON 对象，从 { 开始，以 } 结束，不要有任何其他内容。"""
-
-
 class LLMEmbeddingMixin:
     """Embedding generation mixin for LLM Gateway."""
 

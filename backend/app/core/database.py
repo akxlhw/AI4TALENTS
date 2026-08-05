@@ -5,8 +5,7 @@ Database connection and session management.
 无 SQLite 降级方案。
 """
 
-from collections.abc import AsyncGenerator, Generator
-from typing import Any
+from collections.abc import AsyncGenerator
 
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
@@ -83,12 +82,3 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
             yield session
         finally:
             await session.close()
-
-
-def get_sync_session() -> Generator[Any, None, None]:
-    """Dependency for getting sync database session (for migrations)."""
-    session = SyncSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()

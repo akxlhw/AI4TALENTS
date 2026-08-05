@@ -7,6 +7,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.domains.shared.services.jsonl_import import SkipReason
+
 
 class LabTalentSummary(BaseModel):
     """List item — lightweight talent info for search results."""
@@ -77,13 +79,6 @@ class LabStatsResponse(BaseModel):
     role_distribution: list[dict[str, Any]] = Field(default_factory=list)
     academic_level_distribution: list[dict[str, Any]] = Field(default_factory=list)
     top_labs: list[dict[str, Any]] = Field(default_factory=list)
-
-
-class SkipReason(BaseModel):
-    """Reason a JSONL line was skipped during import."""
-
-    line: int
-    reason: str
 
 
 class LabImportReport(BaseModel):

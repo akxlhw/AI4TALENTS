@@ -41,18 +41,6 @@ class TaskStatus(str, Enum):
         }
         return colors.get(self, "default")
 
-    @property
-    def badge_status(self) -> str:
-        """Get Ant Design Badge status for the status."""
-        statuses = {
-            TaskStatus.PENDING: "default",
-            TaskStatus.RUNNING: "processing",
-            TaskStatus.COMPLETED: "success",
-            TaskStatus.FAILED: "error",
-            TaskStatus.CANCELLED: "warning",
-        }
-        return statuses.get(self, "default")
-
 
 class VenueType(str, Enum):
     """Venue type enum for academic venues."""

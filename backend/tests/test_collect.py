@@ -174,39 +174,6 @@ class TestCollectTaskRepository:
             assert result.current_step == "Fetching works"
 
     @pytest.mark.asyncio
-    async def test_complete_task_success(self, repo, mock_session):
-        """测试完成任务（成功）"""
-        mock_task = MagicMock(spec=CollectTask)
-        mock_task.task_id = 1
-
-        with patch.object(repo, "get_by_id", return_value=mock_task):
-            result = await repo.complete_task(
-                task_id=1,
-                success=True,
-                result_summary={"works": 100, "authors": 50},
-            )
-
-            assert result.status == "completed"
-            assert result.progress_percent == 100
-            assert result.result_summary["works"] == 100
-
-    @pytest.mark.asyncio
-    async def test_complete_task_failure(self, repo, mock_session):
-        """测试完成任务（失败）"""
-        mock_task = MagicMock(spec=CollectTask)
-        mock_task.task_id = 1
-
-        with patch.object(repo, "get_by_id", return_value=mock_task):
-            result = await repo.complete_task(
-                task_id=1,
-                success=False,
-                error_message="API connection failed",
-            )
-
-            assert result.status == "failed"
-            assert result.error_message == "API connection failed"
-
-    @pytest.mark.asyncio
     async def test_get_active_tasks(self, repo, mock_session):
         """测试获取活动任务"""
         mock_result = MagicMock()
@@ -242,21 +209,6 @@ class TestTechDomainCollectRepository:
 
         assert len(domains) == 1
         assert domains[0].tech_domain_id == 1
-
-    @pytest.mark.asyncio
-    async def test_update_last_collect_time(self, repo, mock_session):
-        """测试更新最后采集时间"""
-        mock_domain = MagicMock(spec=TechDomain)
-        mock_domain.tech_domain_id = 1
-
-        with patch.object(repo, "get_by_id", return_value=mock_domain):
-            collect_time = datetime.utcnow()
-            result = await repo.update_last_collect_time(
-                tech_domain_id=1,
-                collect_at=collect_time,
-            )
-
-            assert result.last_collect_at == collect_time
 
 
 class TestVenueSubTaskRepository:
@@ -333,16 +285,15 @@ class TestCollectTaskIntegration:
             task.current_step = f"Processing {progress}%"
             await test_session.commit()
 
-        # 4. 完成任务
-        await repo.complete_task(
-            task_id=task.task_id,
-            success=True,
-            result_summary={
-                "works_fetched": 100,
-                "authors_fetched": 50,
-                "schools_normalized": 10,
-            },
-        )
+        # 4. 完成任务（直接更新最终状态字段）
+        task.status = "completed"
+        task.completed_at = datetime.utcnow()
+        task.progress_percent = 100
+        task.result_summary = {
+            "works_fetched": 100,
+            "authors_fetched": 50,
+            "schools_normalized": 10,
+        }
         await test_session.commit()
 
         # 5. 验证最终状态
@@ -615,40 +566,6 @@ class TestEdgeCases:
         )
 
         assert tech_domain_has_active is True
-
-    @pytest.mark.asyncio
-    async def test_task_progress_consistency(self, test_session: AsyncSession, test_data_setup):
-        """
-        测试任务进度一致性
-        """
-        repo = CollectTaskRepository(test_session)
-
-        task = await repo.create_task(
-            task_code="PROGRESS-001",
-            tech_domain_id=test_data_setup["tech_domain"].tech_domain_id,
-            collect_mode="full",
-        )
-        await test_session.commit()
-
-        # 更新记录数
-        await repo.update_task_counts(
-            task_id=task.task_id,
-            total_records=100,
-            processed_records=50,
-            success_records=45,
-            failed_records=5,
-        )
-        await test_session.commit()
-
-        # 验证一致性
-        updated = await repo.get_by_id(task.task_id)
-        assert updated.total_records == 100
-        assert updated.processed_records == 50
-        assert updated.success_records == 45
-        assert updated.failed_records == 5
-        # 进度应该匹配
-        int(50 / 100 * 100) if updated.total_records > 0 else 0
-        # 注：实际进度由业务逻辑设置，这里只验证数据存储正确
 
     @pytest.mark.asyncio
     async def test_empty_collect_sources(self, test_session: AsyncSession, test_data_setup):

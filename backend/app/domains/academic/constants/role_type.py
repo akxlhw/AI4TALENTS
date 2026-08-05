@@ -37,29 +37,3 @@ class RoleType(str, Enum):
             RoleType.UNKNOWN: "default",
         }
         return colors.get(self, "default")
-
-
-# Legacy role type mappings for backward compatibility
-LEGACY_ROLE_TYPE_MAP: dict[str, str] = {
-    "graduated": "graduate",
-    "teaching_research": "professor",
-    "associate_professor": "professor",
-    "researcher": "graduate",
-    "phd_student": "student",
-    "master_student": "student",
-}
-
-
-def normalize_role_type(role_type: str) -> str:
-    """
-    Normalize role type string with backward compatibility.
-
-    Args:
-        role_type: Role type string (may be legacy or current)
-
-    Returns:
-        Normalized role type string
-    """
-    if role_type in LEGACY_ROLE_TYPE_MAP:
-        return LEGACY_ROLE_TYPE_MAP[role_type]
-    return role_type

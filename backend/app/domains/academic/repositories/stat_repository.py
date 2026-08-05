@@ -5,7 +5,6 @@ Repository for statistics operations.
 from __future__ import annotations
 
 from sqlalchemy import func, select
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.school import School
@@ -125,18 +124,3 @@ class StatisticsRepository:
             )
         )
         return result.scalar() or 0
-
-    async def check_database_connection(self) -> bool:
-        """
-        Check database connection by executing a simple query.
-
-        Returns:
-            True if connection is healthy, False otherwise
-        """
-        from sqlalchemy import text
-
-        try:
-            result = await self.session.execute(text("SELECT 1"))
-            return result.scalar() == 1
-        except SQLAlchemyError:
-            return False

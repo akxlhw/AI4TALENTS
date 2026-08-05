@@ -8,7 +8,6 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -61,65 +60,3 @@ class BaseBuilder(ABC):
             error_msg = f"[Record {record_id}] {error_msg}"
         logger.error(error_msg)
         self.errors.append(error_msg)
-
-    def log_warning(self, message: str) -> None:
-        """Log a warning during building."""
-        logger.warning(f"[Batch {self.batch_id}] {message}")
-
-
-def normalize_name(name: str) -> str:
-    """
-    Normalize a name for comparison.
-
-    Args:
-        name: Original name
-
-    Returns:
-        Normalized name (lowercase, trimmed)
-    """
-    if not name:
-        return ""
-    return name.strip().lower()
-
-
-def extract_openalex_id(url_or_id: str) -> str:
-    """
-    Extract OpenAlex ID from URL or return as-is.
-
-    Args:
-        url_or_id: Full URL or just ID
-
-    Returns:
-        Just the ID part
-    """
-    if not url_or_id:
-        return ""
-
-    if url_or_id.startswith("https://"):
-        return url_or_id.rstrip("/").split("/")[-1]
-
-    return url_or_id
-
-
-def calculate_quality_score(data: dict[str, Any], required_fields: list[str]) -> float:
-    """
-    Calculate a quality score for a data record.
-
-    Args:
-        data: The data dictionary
-        required_fields: Fields that should be present
-
-    Returns:
-        Quality score between 0 and 1
-    """
-    if not data:
-        return 0.0
-
-    score = 1.0
-
-    # Check required fields
-    for field in required_fields:
-        if field not in data or not data[field]:
-            score -= 0.2
-
-    return max(0.0, min(1.0, score))
