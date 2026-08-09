@@ -525,10 +525,20 @@ const ApiKeyConfig: React.FC = () => {
           style={{ marginTop: 16 }}
           message="调用示例"
           description={
-            <pre style={{ margin: 0, fontSize: 12, overflow: 'auto' }}>{`curl -X POST "${window.location.origin}/api/v1/industry/import?position_id=<岗位ID>&batch=<批次>" \\
+            <>
+              <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                第一步：查询岗位 ID
+              </Text>
+              <pre style={{ margin: 0, fontSize: 12, overflow: 'auto' }}>{`curl "${window.location.origin}/api/v1/industry/positions?status=open" \\
+  -H "X-API-Key: <你的Key>"`}</pre>
+              <Text type="secondary" style={{ display: 'block', margin: '12px 0 8px' }}>
+                第二步：导入候选人 JSONL
+              </Text>
+              <pre style={{ margin: 0, fontSize: 12, overflow: 'auto' }}>{`curl -X POST "${window.location.origin}/api/v1/industry/import?position_id=<岗位ID>&batch=<批次>" \\
   -H "X-API-Key: <你的Key>" \\
   -H "Content-Type: application/x-jsonlines" \\
   --data-binary @scored.jsonl`}</pre>
+            </>
           }
         />
       )}

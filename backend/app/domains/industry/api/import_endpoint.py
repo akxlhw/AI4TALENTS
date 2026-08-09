@@ -29,7 +29,10 @@ from fastapi import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.industry.schemas.industry import IndustryImportReport
+from app.domains.industry.schemas.industry import (
+    IndustryImportReport,
+    IndustryPositionResponse,
+)
 from app.domains.industry.services.industry_import_service import IndustryImportService
 from app.domains.industry.services.industry_position_service import IndustryPositionService
 from app.domains.shared.api.auth import require_super_admin
@@ -103,6 +106,24 @@ async def import_industry_talents_upload(
 
     service = IndustryImportService(session)
     return await service.import_jsonl(content, position_id=position_id, batch=batch)
+
+
+@router.get(
+    "/positions",
+    response_model=list[IndustryPositionResponse],
+    summary="List positions (API Key channel for Agent/skill)",
+)
+async def list_positions_for_agent(
+    status: str | None = Query(None, description="Filter by status: open/closed/archived"),
+    session: AsyncSession = Depends(get_async_session),
+    _agent: dict = Depends(verify_industry_api_key),
+) -> list[IndustryPositionResponse]:
+    """Agent-facing position lookup. Returns the same shape as the admin
+    GET /industry/positions endpoint but guarded by X-API-Key instead of JWT,
+    so the sourcing skill can discover position_id values before pushing JSONL.
+    """
+    service = IndustryPositionService(session)
+    return await service.list_positions(status=status)
 
 
 @router.post(

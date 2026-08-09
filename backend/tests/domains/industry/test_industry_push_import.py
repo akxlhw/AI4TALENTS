@@ -241,3 +241,42 @@ async def test_push_import_audit_logged(client: AsyncClient, test_session: Async
     assert detail["source"] == "api_key"
     assert detail["batch"] == "audit-test"
     assert detail["position_id"] == pos.position_id
+
+
+@pytest.mark.asyncio
+async def test_agent_can_list_positions_with_api_key(
+    client: AsyncClient, test_session: AsyncSession
+) -> None:
+    """Agent discovers position_id via GET /industry/positions with X-API-Key.
+
+    This closes the loop: before pushing JSONL, the sourcing skill needs to
+    know which position_id to target. The admin GET /industry/positions
+    requires JWT; this endpoint accepts the same API Key as the push channel.
+    """
+    await _set_api_key(test_session)
+    pos1 = await _make_position(test_session)
+    pos2 = IndustryPosition(title="第二个岗位", status="open")
+    test_session.add(pos2)
+    await test_session.commit()
+
+    resp = await client.get(
+        "/api/v1/industry/positions",
+        headers={"X-API-Key": _API_KEY},
+    )
+    assert resp.status_code == 200
+    items = resp.json()
+    ids = {item["position_id"] for item in items}
+    assert pos1.position_id in ids
+    assert pos2.position_id in ids
+    # Each item must carry the fields an agent needs
+    sample = items[0]
+    assert "position_id" in sample
+    assert "title" in sample
+    assert "status" in sample
+
+
+@pytest.mark.asyncio
+async def test_agent_list_positions_requires_api_key(client: AsyncClient) -> None:
+    """Without X-API-Key, the agent positions endpoint returns 401."""
+    resp = await client.get("/api/v1/industry/positions")
+    assert resp.status_code == 401
