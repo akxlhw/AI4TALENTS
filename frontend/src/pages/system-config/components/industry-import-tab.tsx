@@ -15,7 +15,13 @@ import {
   message,
 } from 'antd'
 import type { UploadProps } from 'antd'
-import { BuildOutlined, DeleteOutlined, InboxOutlined, UploadOutlined } from '@ant-design/icons'
+import {
+  BuildOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  InboxOutlined,
+  UploadOutlined,
+} from '@ant-design/icons'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from '../../../services/api'
 import type { IndustryImportReport } from '../../../services/api/industry'
@@ -244,6 +250,7 @@ const BatchManager: React.FC = () => {
   )
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [exporting, setExporting] = useState<string | null>(null)
 
   const loadBatches = async (positionId: number) => {
     setLoading(true)
@@ -275,25 +282,65 @@ const BatchManager: React.FC = () => {
     }
   }
 
+  const handleExport = async (batchName?: string) => {
+    if (!selectedPosition) return
+    const key = batchName ?? '__all__'
+    setExporting(key)
+    try {
+      const res = await api.industry.exportPosition(selectedPosition, batchName)
+      // Trigger browser download from the blob
+      const disposition = res.headers['content-disposition'] || ''
+      const match = disposition.match(/filename="?([^"]+)"?/)
+      const filename =
+        match?.[1] || `industry_position_${selectedPosition}${batchName ? `_${batchName}` : '_all'}.jsonl`
+      const url = window.URL.createObjectURL(
+        new Blob([res.data], { type: 'application/x-jsonlines' })
+      )
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+      message.success(`已导出 ${filename}`)
+    } catch (e) {
+      message.error(getErrorMessage(e, '导出失败'))
+    } finally {
+      setExporting(null)
+    }
+  }
+
   return (
     <>
-      <Select
-        placeholder="选择岗位查看批次"
-        style={{ width: '100%', maxWidth: 400, marginBottom: 16 }}
-        value={selectedPosition ?? undefined}
-        onChange={v => {
-          setSelectedPosition(v)
-          if (v) loadBatches(v)
-          else setBatches([])
-        }}
-        options={(positions || []).map(p => ({
-          value: p.position_id,
-          label: p.title,
-        }))}
-        allowClear
-        showSearch
-        optionFilterProp="label"
-      />
+      <Space style={{ marginBottom: 16 }}>
+        <Select
+          placeholder="选择岗位查看批次"
+          style={{ width: 360 }}
+          value={selectedPosition ?? undefined}
+          onChange={v => {
+            setSelectedPosition(v)
+            if (v) loadBatches(v)
+            else setBatches([])
+          }}
+          options={(positions || []).map(p => ({
+            value: p.position_id,
+            label: p.title,
+          }))}
+          allowClear
+          showSearch
+          optionFilterProp="label"
+        />
+        {selectedPosition && (
+          <Button
+            icon={<DownloadOutlined />}
+            loading={exporting === '__all__'}
+            onClick={() => handleExport(undefined)}
+          >
+            导出全部
+          </Button>
+        )}
+      </Space>
 
       {selectedPosition && (
         <Table
@@ -316,25 +363,35 @@ const BatchManager: React.FC = () => {
             {
               title: '操作',
               key: 'action',
-              width: 100,
+              width: 180,
               render: (_: unknown, record: { batch: string }) => (
-                <Popconfirm
-                  title="确认删除该批次？"
-                  description="该批次的全部候选人关联和打分将被删除。"
-                  okText="删除"
-                  cancelText="取消"
-                  okButtonProps={{ danger: true }}
-                  onConfirm={() => handleDelete(record.batch)}
-                >
+                <Space size={4}>
                   <Button
                     size="small"
-                    danger
-                    icon={<DeleteOutlined />}
-                    loading={deleting === record.batch}
+                    icon={<DownloadOutlined />}
+                    loading={exporting === record.batch}
+                    onClick={() => handleExport(record.batch)}
                   >
-                    删除
+                    导出
                   </Button>
-                </Popconfirm>
+                  <Popconfirm
+                    title="确认删除该批次？"
+                    description="该批次的全部候选人关联和打分将被删除。"
+                    okText="删除"
+                    cancelText="取消"
+                    okButtonProps={{ danger: true }}
+                    onConfirm={() => handleDelete(record.batch)}
+                  >
+                    <Button
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      loading={deleting === record.batch}
+                    >
+                      删除
+                    </Button>
+                  </Popconfirm>
+                </Space>
               ),
             },
           ]}

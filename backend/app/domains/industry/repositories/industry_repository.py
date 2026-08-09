@@ -274,6 +274,30 @@ class IndustryRepository:
         await self.session.flush()
         return link
 
+    async def list_for_export(
+        self, position_id: int, batch: str | None = None
+    ) -> list[Row[tuple[IndustryTalent, IndustryPositionTalent]]]:
+        """Bulk load (talent, link) pairs for JSONL export.
+
+        Joins industry_talent + industry_position_talent by position_id,
+        optional batch filter. No pagination, no is_visible filter — export
+        everything linked to the position. Ordered by talent_id for stable
+        output.
+        """
+        stmt = (
+            select(IndustryTalent, IndustryPositionTalent)
+            .join(
+                IndustryPositionTalent,
+                IndustryPositionTalent.talent_id == IndustryTalent.talent_id,
+            )
+            .where(IndustryPositionTalent.position_id == position_id)
+            .order_by(IndustryTalent.talent_id)
+        )
+        if batch is not None:
+            stmt = stmt.where(IndustryPositionTalent.batch == batch)
+        result = await self.session.execute(stmt)
+        return list(result.all())
+
     async def list_batches(self, position_id: int) -> list[dict[str, Any]]:
         """List distinct batches for a position with counts."""
         result = await self.session.execute(

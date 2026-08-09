@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -119,3 +120,43 @@ class IndustryTalentService:
         position = await self.repo.get_position(position_id)
         title = str(position.title) if position is not None else ""
         return IndustryPositionMatchDetail(**link.to_match_dict(title))
+
+    async def export_jsonl(self, position_id: int, batch: str | None = None) -> tuple[str, int]:
+        """Export (position_id, batch) talents as JSONL for cross-server migration.
+
+        Each line is a JSON object matching the import contract (the exact
+        fields that ``IndustryImportService._upsert_talent`` and
+        ``_upsert_link`` read). Operational state (touched/status/notes) is
+        deliberately omitted — the importer preserves the target server's
+        values, so exporting them would be misleading.
+
+        Returns (jsonl_content, row_count). Caller raises 404 on row_count=0.
+        """
+        rows = await self.repo.list_for_export(position_id, batch)
+        lines: list[str] = []
+        for talent, link in rows:
+            record: dict[str, Any] = {
+                # talent profile fields (read by _upsert_talent)
+                "name": talent.name,
+                "current_org": talent.current_org,
+                "current_title": talent.current_title,
+                "degree": talent.degree,
+                "years_of_exp": talent.years_of_exp,
+                "experiences": talent.experiences,
+                "expect": talent.expect,
+                "location": talent.location,
+                "profile_url": talent.profile_url,
+                "photo_url": talent.photo_url,
+                "source": talent.source,
+                # link fields (read by _upsert_link)
+                "position_id": link.position_id,
+                "match_score": link.match_score,
+                "score_school": link.score_school,
+                "score_company": link.score_company,
+                "score_direction": link.score_direction,
+                "match_tags": link.match_tags,
+                "match_reason": link.match_reason,
+                "batch": link.batch,
+            }
+            lines.append(json.dumps(record, ensure_ascii=False))
+        return "\n".join(lines), len(lines)

@@ -166,4 +166,11 @@ export const industryApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
+
+  // ---- Export (super_admin download, cross-server migration) ----
+  exportPosition: (positionId: number, batch?: string) =>
+    apiClient.get(`/industry/positions/${positionId}/export`, {
+      params: batch ? { batch } : undefined,
+      responseType: 'blob',
+    }),
 }
