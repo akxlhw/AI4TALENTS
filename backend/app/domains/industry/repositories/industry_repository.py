@@ -8,6 +8,7 @@ from sqlalchemy import Row, cast, func, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domains.industry.constants.status_config import NULL_BATCH_SENTINEL
 from app.domains.industry.models.industry import (
     IndustryPosition,
     IndustryPositionTalent,
@@ -293,13 +294,19 @@ class IndustryRepository:
             .where(IndustryPositionTalent.position_id == position_id)
             .order_by(IndustryTalent.talent_id)
         )
-        if batch is not None:
+        if batch == NULL_BATCH_SENTINEL:
+            stmt = stmt.where(IndustryPositionTalent.batch.is_(None))
+        elif batch is not None:
             stmt = stmt.where(IndustryPositionTalent.batch == batch)
         result = await self.session.execute(stmt)
         return list(result.all())
 
     async def list_batches(self, position_id: int) -> list[dict[str, Any]]:
-        """List distinct batches for a position with counts."""
+        """List distinct batches for a position with counts.
+
+        Includes the NULL-batch group (imports that carried no batch
+        identifier) — they must be visible for deletion, not a blind spot.
+        """
         result = await self.session.execute(
             select(
                 IndustryPositionTalent.batch,
@@ -308,7 +315,6 @@ class IndustryRepository:
             )
             .where(
                 IndustryPositionTalent.position_id == position_id,
-                IndustryPositionTalent.batch.isnot(None),
             )
             .group_by(IndustryPositionTalent.batch)
             .order_by(func.max(IndustryPositionTalent.created_at).desc())
@@ -317,19 +323,25 @@ class IndustryRepository:
             {"batch": row.batch, "count": row.count, "latest": row.latest} for row in result.all()
         ]
 
-    async def delete_batch(self, position_id: int, batch: str) -> tuple[int, int]:
+    async def delete_batch(self, position_id: int, batch: str | None) -> tuple[int, int]:
         """Delete all links for a (position_id, batch). Returns (links_deleted, orphan_talents_deleted).
 
-        After deleting links, also removes talent records that no longer have
-        any position association (orphan cleanup).
+        ``batch=None`` deletes the NULL-batch group. After deleting links,
+        also removes talent records that no longer have any position
+        association (orphan cleanup).
         """
         from sqlalchemy import delete as sa_delete
 
         # 1. Delete links for this batch
+        batch_filter = (
+            IndustryPositionTalent.batch.is_(None)
+            if batch is None
+            else IndustryPositionTalent.batch == batch
+        )
         result = await self.session.execute(
             sa_delete(IndustryPositionTalent).where(
                 IndustryPositionTalent.position_id == position_id,
-                IndustryPositionTalent.batch == batch,
+                batch_filter,
             )
         )
         links_deleted = result.rowcount or 0

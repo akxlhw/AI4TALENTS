@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.domains.industry.constants.status_config import POSITION_STATUSES
+from app.domains.industry.constants.status_config import NULL_BATCH_SENTINEL, POSITION_STATUSES
 from app.domains.industry.models.industry import IndustryPosition
 from app.domains.industry.repositories.industry_repository import IndustryRepository
 from app.domains.industry.schemas.industry import (
@@ -103,10 +103,15 @@ class IndustryPositionService:
         return await self.repo.list_batches(position_id)
 
     async def delete_batch(self, position_id: int, batch: str) -> dict[str, int]:
-        """Delete all candidate links for a batch. Also cleans up orphan talents."""
+        """Delete all candidate links for a batch. Also cleans up orphan talents.
+
+        ``batch`` may be the NULL_BATCH_SENTINEL to target rows imported
+        without a batch identifier.
+        """
         position = await self.repo.get_position(position_id)
         if position is None:
             raise NotFoundError("IndustryPosition", position_id)
-        links_deleted, orphans_deleted = await self.repo.delete_batch(position_id, batch)
+        batch_value = None if batch == NULL_BATCH_SENTINEL else batch
+        links_deleted, orphans_deleted = await self.repo.delete_batch(position_id, batch_value)
         await self.session.commit()
         return {"links_deleted": links_deleted, "talents_deleted": orphans_deleted}

@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
+from app.domains.industry.constants.status_config import NULL_BATCH_SENTINEL
 from app.domains.industry.schemas.industry import (
     IndustryPositionCreate,
     IndustryPositionResponse,
@@ -199,7 +200,11 @@ async def export_position_talents(
     )
 
     # Sanitize batch for filename (allow only alnum, dash, underscore, dot)
-    safe_batch = re.sub(r"[^A-Za-z0-9._-]", "", batch) if batch else None
+    safe_batch: str | None
+    if batch == NULL_BATCH_SENTINEL:
+        safe_batch = "nobatch"
+    else:
+        safe_batch = re.sub(r"[^A-Za-z0-9._-]", "", batch) if batch else None
     suffix = f"_{safe_batch}" if safe_batch else "_all"
     filename = f"industry_position_{position_id}{suffix}.jsonl"
 

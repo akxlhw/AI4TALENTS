@@ -250,9 +250,9 @@ const BatchManager: React.FC = () => {
   const queryClient = useQueryClient()
   const { data: positions } = useIndustryPositions()
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null)
-  const [batches, setBatches] = useState<{ batch: string; count: number; latest: string | null }[]>(
-    []
-  )
+  const [batches, setBatches] = useState<
+    { batch: string | null; count: number; latest: string | null }[]
+  >([])
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [exporting, setExporting] = useState<string | null>(null)
@@ -270,9 +270,9 @@ const BatchManager: React.FC = () => {
     }
   }
 
-  const handleDelete = async (batchName: string) => {
+  const handleDelete = async (batchName: string | null) => {
     if (!selectedPosition) return
-    setDeleting(batchName)
+    setDeleting(batchName ?? '__none__')
     try {
       const res = await api.industry.deleteBatch(selectedPosition, batchName)
       message.success(
@@ -287,9 +287,9 @@ const BatchManager: React.FC = () => {
     }
   }
 
-  const handleExport = async (batchName?: string) => {
+  const handleExport = async (batchName?: string | null) => {
     if (!selectedPosition) return
-    const key = batchName ?? '__all__'
+    const key = batchName === null ? '__none__' : (batchName ?? '__all__')
     setExporting(key)
     try {
       const res = await api.industry.exportPosition(selectedPosition, batchName)
@@ -297,7 +297,8 @@ const BatchManager: React.FC = () => {
       const disposition = res.headers['content-disposition'] || ''
       const match = disposition.match(/filename="?([^"]+)"?/)
       const filename =
-        match?.[1] || `industry_position_${selectedPosition}${batchName ? `_${batchName}` : '_all'}.jsonl`
+        match?.[1] ||
+        `industry_position_${selectedPosition}${batchName ? `_${batchName}` : '_all'}.jsonl`
       const url = window.URL.createObjectURL(
         new Blob([res.data], { type: 'application/x-jsonlines' })
       )
@@ -352,11 +353,16 @@ const BatchManager: React.FC = () => {
           size="small"
           loading={loading}
           dataSource={batches}
-          rowKey="batch"
+          rowKey={(r: { batch: string | null }) => r.batch ?? '__none__'}
           pagination={false}
           locale={{ emptyText: '暂无导入批次' }}
           columns={[
-            { title: '批次', dataIndex: 'batch', key: 'batch' },
+            {
+              title: '批次',
+              dataIndex: 'batch',
+              key: 'batch',
+              render: (v: string | null) => v ?? '（无批次）',
+            },
             { title: '候选人数', dataIndex: 'count', key: 'count', width: 100 },
             {
               title: '导入时间',
@@ -369,12 +375,12 @@ const BatchManager: React.FC = () => {
               title: '操作',
               key: 'action',
               width: 180,
-              render: (_: unknown, record: { batch: string }) => (
+              render: (_: unknown, record: { batch: string | null }) => (
                 <Space size={4}>
                   <Button
                     size="small"
                     icon={<DownloadOutlined />}
-                    loading={exporting === record.batch}
+                    loading={exporting === (record.batch ?? '__none__')}
                     onClick={() => handleExport(record.batch)}
                   >
                     导出
@@ -391,7 +397,7 @@ const BatchManager: React.FC = () => {
                       size="small"
                       danger
                       icon={<DeleteOutlined />}
-                      loading={deleting === record.batch}
+                      loading={deleting === (record.batch ?? '__none__')}
                     >
                       删除
                     </Button>

@@ -319,3 +319,45 @@ async def test_export_preserves_merge_semantics(
     assert link.status == "contacted"  # preserved
     assert link.notes == "已通过内推联系"  # preserved
     assert link.match_score == 92  # refreshed from export (same value here)
+
+
+@pytest.mark.asyncio
+async def test_null_batch_listed_and_deletable(
+    admin_client: AsyncClient,
+    export_position: IndustryPosition,
+    test_session: AsyncSession,
+) -> None:
+    """Rows imported without a batch id must show up as a (null) batch group
+    and be deletable via the __none__ sentinel — no blind spot."""
+    pid = export_position.position_id
+    service = IndustryImportService(test_session)
+    await service.import_jsonl(
+        _jsonl({"name": "孙八", "current_org": "美团", "match_score": 66}),
+        position_id=pid,
+        batch=None,
+    )
+
+    # 1. list_batches includes the null group alongside b1/b2
+    resp = await admin_client.get(f"/api/v1/industry/positions/{pid}/batches")
+    assert resp.status_code == 200
+    batches = {row["batch"]: row["count"] for row in resp.json()}
+    assert batches.get("b1") == 2
+    assert batches.get("b2") == 1
+    assert batches.get(None) == 1  # null-batch group visible
+
+    # 2. delete via the __none__ sentinel removes only the null-batch rows
+    del_resp = await admin_client.delete(f"/api/v1/industry/positions/{pid}/batches/__none__")
+    assert del_resp.status_code == 200
+    assert del_resp.json()["links_deleted"] == 1
+
+    remaining = await test_session.execute(
+        select(IndustryPositionTalent).where(IndustryPositionTalent.position_id == pid)
+    )
+    remaining_batches = sorted(link.batch for link in remaining.scalars().all())
+    assert remaining_batches == ["b1", "b1", "b2"]
+
+    # 3. export with the sentinel filters exactly the null group (now empty → 404)
+    exp_resp = await admin_client.get(
+        f"/api/v1/industry/positions/{pid}/export", params={"batch": "__none__"}
+    )
+    assert exp_resp.status_code == 404

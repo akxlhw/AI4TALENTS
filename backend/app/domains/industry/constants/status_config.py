@@ -24,3 +24,7 @@ CANDIDATE_STATUS_LABELS: dict[str, str] = {
 
 # Known source platforms (informational; import does not hard-reject others)
 SOURCE_PLATFORMS: list[str] = ["maimai", "linkedin"]
+
+# Sentinel for "no batch" (batch IS NULL) in batch-management APIs — a real
+# batch name can never be this value because path params can't carry NULL
+NULL_BATCH_SENTINEL = "__none__"

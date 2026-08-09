@@ -144,14 +144,16 @@ export const industryApi = {
     ),
 
   // ---- Batch management (super_admin) ----
+  // batch=null represents the NULL-batch group (imports without a batch id);
+  // it travels as the __none__ sentinel on the wire
   listBatches: (positionId: number) =>
-    apiClient.get<{ batch: string; count: number; latest: string | null }[]>(
+    apiClient.get<{ batch: string | null; count: number; latest: string | null }[]>(
       `/industry/positions/${positionId}/batches`
     ),
 
-  deleteBatch: (positionId: number, batch: string) =>
+  deleteBatch: (positionId: number, batch: string | null) =>
     apiClient.delete<{ links_deleted: number; talents_deleted: number }>(
-      `/industry/positions/${positionId}/batches/${encodeURIComponent(batch)}`
+      `/industry/positions/${positionId}/batches/${encodeURIComponent(batch ?? '__none__')}`
     ),
 
   // ---- Import (super_admin upload) ----
@@ -168,9 +170,11 @@ export const industryApi = {
   },
 
   // ---- Export (super_admin download, cross-server migration) ----
-  exportPosition: (positionId: number, batch?: string) =>
+  // batch: string filters that batch; null exports the NULL-batch group;
+  // undefined exports the whole position
+  exportPosition: (positionId: number, batch?: string | null) =>
     apiClient.get(`/industry/positions/${positionId}/export`, {
-      params: batch ? { batch } : undefined,
+      params: batch === null ? { batch: '__none__' } : batch ? { batch } : undefined,
       responseType: 'blob',
     }),
 }
