@@ -2,6 +2,8 @@
 Schemas for system configuration API.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -9,10 +11,10 @@ class SystemConfigItem(BaseModel):
     """System configuration item."""
 
     key: str = Field(description="配置键")
-    value: str | int | float | bool | None = Field(description="配置值")
-    display_value: str | int | float | bool | None = Field(description="显示值")
+    value: Any = Field(description="配置值（json 类型可为 dict/list）")
+    display_value: Any = Field(description="显示值（敏感配置已脱敏）")
     type: str = Field(description="值类型")
-    is_sensitive: bool = Field(description="是否为敏感信息")
+    is_sensitive: bool = Field(description="是否敏感信息")
     description: str | None = Field(default=None, description="配置说明")
 
 
