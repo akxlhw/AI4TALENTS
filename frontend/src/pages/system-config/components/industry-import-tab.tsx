@@ -16,6 +16,7 @@ import {
 } from 'antd'
 import type { UploadProps } from 'antd'
 import {
+  ApiOutlined,
   BuildOutlined,
   DeleteOutlined,
   DownloadOutlined,
@@ -98,6 +99,22 @@ const IndustryImportTab: React.FC = () => {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Alert
+        type="info"
+        showIcon
+        icon={<ApiOutlined />}
+        message="Agent 自动导入通道"
+        description={
+          <span>
+            配置 API Key 后，采集 Agent 可通过{' '}
+            <Text code>POST /api/v1/industry/import</Text>{' '}
+            自动推送 JSONL 数据，无需手动上传。在
+            <a href="/system-config" target="_blank" rel="noreferrer"> 系统配置 </a>
+            中添加配置项 <Text code>INDUSTRY_IMPORT_API_KEY</Text>（标记为敏感）即可启用。
+            调用时需带 <Text code>X-API-Key</Text> 请求头。
+          </span>
+        }
+      />
       <Card>
         <Title level={5}>
           <BuildOutlined style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }} />

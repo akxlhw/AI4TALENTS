@@ -80,7 +80,13 @@ class ConfigService:
     _cache_ttl: int = 300  # 5 minutes default TTL
 
     # Sensitive keys that should be masked
-    SENSITIVE_KEYS = {"LLM_API_KEY", "PROXY_PASSWORD", "LLM_EMBEDDING_API_KEY", "GITHUB_TOKENS"}
+    SENSITIVE_KEYS = {
+        "LLM_API_KEY",
+        "PROXY_PASSWORD",
+        "LLM_EMBEDDING_API_KEY",
+        "GITHUB_TOKENS",
+        "INDUSTRY_IMPORT_API_KEY",
+    }
 
     @classmethod
     def mask_sensitive_value(cls, key: str, value: str) -> str:

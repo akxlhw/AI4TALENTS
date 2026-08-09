@@ -132,14 +132,20 @@ class AuditService:
         request_id: str | None = None,
         detail: dict | None = None,
         error_message: str | None = None,
+        event_subtype: str = "export",
     ) -> None:
-        """Log a data operation event (e.g., export)."""
+        """Log a data operation event (export/import/etc.).
+
+        ``event_subtype`` defaults to ``"export"`` for backward compatibility;
+        callers performing imports should pass ``event_subtype="import"`` so the
+        two flows can be distinguished in the audit log.
+        """
         await cls._write_log(
             event_time=datetime.now(),
             user_id=user_id,
             user_ip=user_ip,
             event_type="data_operation",
-            event_subtype="export",
+            event_subtype=event_subtype,
             resource_type=resource_type,
             resource_id=resource_id,
             operation=operation,
