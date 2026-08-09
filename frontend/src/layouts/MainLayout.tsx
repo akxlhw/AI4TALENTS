@@ -38,6 +38,9 @@ const domainNavItems: DomainNavItem[] = [
 ]
 
 const DOMAIN_PATH_PREFIXES: Record<string, Domain> = {
+  // Home page is academic content — without this entry, a persisted domain
+  // (e.g. industry) survives login and mismatches the home page content
+  '/': 'academic',
   '/academic': 'academic',
   '/opensource': 'opensource',
   '/lab': 'lab',
