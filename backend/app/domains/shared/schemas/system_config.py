@@ -27,6 +27,13 @@ class UpdateConfigRequest(BaseModel):
     """Request for updating a configuration value."""
 
     value: str | int | float | bool = Field(..., description="Configuration value")
+    description: str | None = Field(
+        default=None, description="可选的配置说明（备注名称），便于在配置总览中识别用途"
+    )
+    is_sensitive: bool | None = Field(
+        default=None,
+        description="可选，是否标记为敏感（脱敏显示）。对 API Key 类配置应设为 true",
+    )
 
 
 class LLMConfigRequest(BaseModel):

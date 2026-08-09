@@ -473,6 +473,20 @@ async def update_config(
 
     config = await config_service.set_and_commit(key, request.value, config_type)
 
+    # Apply optional metadata (description / is_sensitive) if provided
+    # Re-fetch on the same session to update metadata columns that
+    # set_value/set_and_commit do not touch.
+    changed = False
+    if request.description is not None and config.description != request.description:
+        config.description = request.description
+        changed = True
+    if request.is_sensitive is not None and config.is_sensitive != request.is_sensitive:
+        config.is_sensitive = request.is_sensitive
+        changed = True
+    if changed:
+        await session.commit()
+        await session.refresh(config)
+
     # Clear cache for this key
     if key in ConfigService._cache:
         del ConfigService._cache[key]

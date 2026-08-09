@@ -409,10 +409,12 @@ const BatchManager: React.FC = () => {
 // --- API Key Config sub-component ---
 
 const API_KEY_CONFIG_KEY = 'INDUSTRY_IMPORT_API_KEY'
+const API_KEY_DESCRIPTION = '行业人才库 Agent 导入通道 API Key'
 
 const ApiKeyConfig: React.FC = () => {
   const [configured, setConfigured] = useState<boolean | null>(null) // null = loading
   const [maskedValue, setMaskedValue] = useState('')
+  const [description, setDescription] = useState('')
   const [inputValue, setInputValue] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -423,9 +425,11 @@ const ApiKeyConfig: React.FC = () => {
       if (item && item.value) {
         setConfigured(true)
         setMaskedValue(String(item.display_value || item.value || ''))
+        setDescription(String(item.description || ''))
       } else {
         setConfigured(false)
         setMaskedValue('')
+        setDescription('')
       }
     } catch {
       setConfigured(null)
@@ -443,7 +447,10 @@ const ApiKeyConfig: React.FC = () => {
     }
     setSaving(true)
     try {
-      await api.systemConfig.updateConfig(API_KEY_CONFIG_KEY, inputValue.trim())
+      await api.systemConfig.updateConfig(API_KEY_CONFIG_KEY, inputValue.trim(), {
+        description: API_KEY_DESCRIPTION,
+        is_sensitive: true,
+      })
       message.success('API Key 已保存，Agent 自动导入通道已启用')
       setInputValue('')
       await loadStatus()
@@ -488,6 +495,13 @@ const ApiKeyConfig: React.FC = () => {
           </Text>
         )}
       </Space>
+
+      {configured && description && (
+        <div style={{ marginBottom: 16 }}>
+          <Text type="secondary">备注：</Text>
+          <Text>{description}</Text>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <Input.Password

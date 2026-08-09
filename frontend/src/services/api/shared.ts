@@ -133,8 +133,11 @@ export const sharedApi = {
     }) => apiClient.put('/system-config/github', data),
     testGitHub: () =>
       apiClient.post('/system-config/github/test'),
-    updateConfig: (key: string, value: string | number | boolean) =>
-      apiClient.put(`/system-config/${key}`, { value }),
+    updateConfig: (
+      key: string,
+      value: string | number | boolean,
+      options?: { description?: string; is_sensitive?: boolean }
+    ) => apiClient.put(`/system-config/${key}`, { value, ...options }),
     testLLM: (data?: { api_format?: string; api_key?: string; api_base?: string; model?: string }) =>
       apiClient.post('/system-config/test-llm', data || {}),
     testEmbedding: (data?: { api_format?: string; api_key?: string; api_base?: string; embedding_model?: string }) =>
