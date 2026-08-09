@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Alert,
   Button,
@@ -10,6 +10,7 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
   Typography,
   Upload,
   message,
@@ -99,22 +100,9 @@ const IndustryImportTab: React.FC = () => {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Alert
-        type="info"
-        showIcon
-        icon={<ApiOutlined />}
-        message="Agent 自动导入通道"
-        description={
-          <span>
-            配置 API Key 后，采集 Agent 可通过{' '}
-            <Text code>POST /api/v1/industry/import</Text>{' '}
-            自动推送 JSONL 数据，无需手动上传。在
-            <a href="/system-config" target="_blank" rel="noreferrer"> 系统配置 </a>
-            中添加配置项 <Text code>INDUSTRY_IMPORT_API_KEY</Text>（标记为敏感）即可启用。
-            调用时需带 <Text code>X-API-Key</Text> 请求头。
-          </span>
-        }
-      />
+      <Card title={<><ApiOutlined style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }} />Agent 自动导入通道</>}>
+        <ApiKeyConfig />
+      </Card>
       <Card>
         <Title level={5}>
           <BuildOutlined style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }} />
@@ -415,5 +403,121 @@ const BatchManager: React.FC = () => {
         />
       )}
     </>
+  )
+}
+
+// --- API Key Config sub-component ---
+
+const API_KEY_CONFIG_KEY = 'INDUSTRY_IMPORT_API_KEY'
+
+const ApiKeyConfig: React.FC = () => {
+  const [configured, setConfigured] = useState<boolean | null>(null) // null = loading
+  const [maskedValue, setMaskedValue] = useState('')
+  const [inputValue, setInputValue] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const loadStatus = async () => {
+    try {
+      const res = await api.systemConfig.list()
+      const item = (res.data.items || []).find((c: { key: string }) => c.key === API_KEY_CONFIG_KEY)
+      if (item && item.value) {
+        setConfigured(true)
+        setMaskedValue(String(item.display_value || item.value || ''))
+      } else {
+        setConfigured(false)
+        setMaskedValue('')
+      }
+    } catch {
+      setConfigured(null)
+    }
+  }
+
+  useEffect(() => {
+    loadStatus()
+  }, [])
+
+  const handleSave = async () => {
+    if (!inputValue.trim()) {
+      message.warning('请输入 API Key')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.systemConfig.updateConfig(API_KEY_CONFIG_KEY, inputValue.trim())
+      message.success('API Key 已保存，Agent 自动导入通道已启用')
+      setInputValue('')
+      await loadStatus()
+    } catch (e) {
+      message.error(getErrorMessage(e, '保存失败'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const generateKey = () => {
+    // Generate a 32-char random string (crypto.getRandomValues for browser)
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    const arr = new Uint8Array(32)
+    crypto.getRandomValues(arr)
+    const key = Array.from(arr, b => chars[b % chars.length]).join('')
+    setInputValue(key)
+    message.info('已生成随机 Key，点击保存以启用')
+  }
+
+  return (
+    <div>
+      <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+        配置 API Key 后，采集 Agent 可通过{' '}
+        <Text code>POST /api/v1/industry/import</Text>{' '}
+        自动推送候选人 JSONL 数据，无需手动上传（调用时需带{' '}
+        <Text code>X-API-Key</Text> 请求头）。
+      </Text>
+
+      <Space align="center" style={{ marginBottom: 16 }}>
+        <Text strong>当前状态：</Text>
+        {configured === null ? (
+          <Tag>检查中…</Tag>
+        ) : configured ? (
+          <Tag color="success">已启用</Tag>
+        ) : (
+          <Tag color="warning">未配置</Tag>
+        )}
+        {configured && maskedValue && (
+          <Text type="secondary" style={{ fontFamily: 'monospace' }}>
+            {maskedValue}
+          </Text>
+        )}
+      </Space>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Input.Password
+          placeholder={configured ? '输入新 Key 以替换…' : '输入 API Key（建议 32 位以上随机串）'}
+          style={{ maxWidth: 400, flex: 1 }}
+          value={inputValue}
+          onChange={e => setInputValue(e.target.value)}
+          onPressEnter={handleSave}
+        />
+        <Tooltip title="生成 32 位随机字符串">
+          <Button onClick={generateKey}>生成</Button>
+        </Tooltip>
+        <Button type="primary" loading={saving} onClick={handleSave}>
+          保存
+        </Button>
+      </div>
+
+      {configured && (
+        <Alert
+          type="info"
+          style={{ marginTop: 16 }}
+          message="调用示例"
+          description={
+            <pre style={{ margin: 0, fontSize: 12, overflow: 'auto' }}>{`curl -X POST "${window.location.origin}/api/v1/industry/import?position_id=<岗位ID>&batch=<批次>" \\
+  -H "X-API-Key: <你的Key>" \\
+  -H "Content-Type: application/x-jsonlines" \\
+  --data-binary @scored.jsonl`}</pre>
+          }
+        />
+      )}
+    </div>
   )
 }
