@@ -249,9 +249,8 @@ async def test_agent_can_list_positions_with_api_key(
 ) -> None:
     """Agent discovers position_id via GET /industry/positions with X-API-Key.
 
-    This closes the loop: before pushing JSONL, the sourcing skill needs to
-    know which position_id to target. The admin GET /industry/positions
-    requires JWT; this endpoint accepts the same API Key as the push channel.
+    GET /industry/positions accepts both JWT (admin UI) and API Key (sourcing
+    skill). This test verifies the API Key path works and returns position_id.
     """
     await _set_api_key(test_session)
     pos1 = await _make_position(test_session)
@@ -268,7 +267,6 @@ async def test_agent_can_list_positions_with_api_key(
     ids = {item["position_id"] for item in items}
     assert pos1.position_id in ids
     assert pos2.position_id in ids
-    # Each item must carry the fields an agent needs
     sample = items[0]
     assert "position_id" in sample
     assert "title" in sample
@@ -276,7 +274,35 @@ async def test_agent_can_list_positions_with_api_key(
 
 
 @pytest.mark.asyncio
-async def test_agent_list_positions_requires_api_key(client: AsyncClient) -> None:
-    """Without X-API-Key, the agent positions endpoint returns 401."""
+async def test_list_positions_no_credentials_returns_401(client: AsyncClient) -> None:
+    """Without any credential (no JWT, no X-API-Key), returns 401."""
     resp = await client.get("/api/v1/industry/positions")
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_list_positions_works_with_jwt_user(
+    client: AsyncClient, test_session: AsyncSession
+) -> None:
+    """Regression: a logged-in user (JWT) must still access GET /industry/positions.
+
+    This was broken when the API-Key position endpoint was registered in
+    import_endpoint.py (registered before positions.py), shadowing the JWT
+    endpoint and returning 401 for all normal users — kicking them back to
+    the login page. The endpoints are now merged into one dual-auth endpoint.
+    """
+    from app.domains.shared.api.auth import get_current_user
+    from app.main import app
+
+    await _make_position(test_session)
+    app.dependency_overrides[get_current_user] = lambda: {
+        "user_id": 1,
+        "username": "normal_user",
+        "role": "user",
+    }
+    try:
+        resp = await client.get("/api/v1/industry/positions")
+        assert resp.status_code == 200
+        assert len(resp.json()) >= 1
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+import secrets
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,8 +18,35 @@ from app.domains.industry.services.industry_position_service import IndustryPosi
 from app.domains.industry.services.industry_talent_service import IndustryTalentService
 from app.domains.shared.api.auth import get_current_user, require_super_admin
 from app.domains.shared.services.audit_service import AuditService
+from app.domains.shared.services.config_service import ConfigService
 
 router = APIRouter(prefix="/industry", tags=["Industry Talent"])
+
+# sys_config key for the import push-channel API Key (shared with import_endpoint.py)
+_API_KEY_CONFIG = "INDUSTRY_IMPORT_API_KEY"
+
+
+async def _user_or_api_key(
+    api_key: str | None = Header(None, alias="X-API-Key"),
+    user: dict | None = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """Accept either a valid JWT (logged-in user) or a valid X-API-Key.
+
+    JWT takes precedence: if the request carries a Bearer token that resolves
+    to a real user, that user is the principal. Otherwise we fall back to
+    checking the X-API-Key header against the configured INDUSTRY_IMPORT_API_KEY.
+    This lets the same GET /industry/positions endpoint serve both the admin
+    UI (JWT) and the sourcing skill (API Key) without route conflicts.
+    """
+    if user is not None:
+        return user
+    if api_key:
+        configured = await ConfigService(session).get_value(_API_KEY_CONFIG, "")
+        if configured and secrets.compare_digest(api_key, configured):
+            return {"role": "import_agent", "source": "api_key"}
+        raise HTTPException(status_code=401, detail="Invalid API key.")
+    raise HTTPException(status_code=401, detail="Authentication required (JWT or X-API-Key).")
 
 
 @router.post(
@@ -43,9 +72,13 @@ async def create_position(
 async def list_positions(
     status: str | None = Query(None, description="Filter by status: open/closed/archived"),
     session: AsyncSession = Depends(get_async_session),
-    _user: dict | None = Depends(get_current_user),
+    _principal: dict = Depends(_user_or_api_key),
 ) -> list[IndustryPositionResponse]:
-    """List positions with candidate count and average match score (F-POS-04)."""
+    """List positions with candidate count and average match score.
+
+    Accepts either JWT (admin UI) or X-API-Key (sourcing skill) so agents can
+    discover position_id values before pushing JSONL via POST /industry/import.
+    """
     service = IndustryPositionService(session)
     return await service.list_positions(status=status)
 
