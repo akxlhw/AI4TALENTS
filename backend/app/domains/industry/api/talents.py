@@ -13,7 +13,7 @@ from app.domains.industry.schemas.industry import (
     IndustryTalentSummary,
 )
 from app.domains.industry.services.industry_talent_service import IndustryTalentService
-from app.domains.shared.api.auth import get_current_user, require_user
+from app.domains.shared.api.auth import get_current_user, require_super_admin, require_user
 from app.domains.shared.schemas.common import PaginatedResponse
 
 router = APIRouter(prefix="/industry", tags=["Industry Talent"])
@@ -106,6 +106,30 @@ async def patch_candidate_status(
     session: AsyncSession = Depends(get_async_session),
     _user: dict = Depends(require_user),
 ) -> IndustryPositionMatchDetail:
-    """Update status/touched/notes of a talent under one position (F-TAL-05)."""
+    """Update status/touched/notes and/or scores of a talent under one position."""
     service = IndustryTalentService(session)
     return await service.patch_candidate_status(talent_id, position_id, patch)
+
+
+@router.delete(
+    "/talents/{talent_id}/positions/{position_id}",
+    summary="Remove a talent from a position (super_admin)",
+)
+async def remove_talent_from_position(
+    talent_id: int,
+    position_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: dict = Depends(require_super_admin),
+) -> dict:
+    """Delete the (talent_id, position_id) link.
+
+    If the talent no longer has any position association after this removal,
+    the talent record itself is also cleaned up (orphan cleanup, same logic
+    as batch deletion).
+    """
+    service = IndustryTalentService(session)
+    link_deleted, orphan_deleted = await service.remove_from_position(talent_id, position_id)
+    return {
+        "link_deleted": link_deleted,
+        "orphan_talent_deleted": orphan_deleted,
+    }

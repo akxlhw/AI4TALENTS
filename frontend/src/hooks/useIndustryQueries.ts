@@ -81,6 +81,23 @@ export function useUpdateCandidateStatus() {
   })
 }
 
+/**
+ * Remove a talent from a position (delete the link). Invalidates industry
+ * queries so list/detail stay consistent.
+ */
+export function useRemoveFromPosition() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (vars: { talentId: number; positionId: number }) => {
+      const response = await api.industry.removeFromPosition(vars.talentId, vars.positionId)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.industry.all })
+    },
+  })
+}
+
 // ---- Tech directions (core_tech_direction via /tech-domains, academic) ----
 
 export interface TechDirectionOption {

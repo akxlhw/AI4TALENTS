@@ -9,6 +9,8 @@ import {
   Descriptions,
   Divider,
   Input,
+  InputNumber,
+  Popconfirm,
   Progress,
   Select,
   Space,
@@ -18,8 +20,8 @@ import {
   Typography,
   message,
 } from 'antd'
-import { ArrowLeftOutlined, ExportOutlined } from '@ant-design/icons'
-import { useIndustryTalent, useUpdateCandidateStatus } from '../../hooks/useIndustryQueries'
+import { ArrowLeftOutlined, DeleteOutlined, ExportOutlined } from '@ant-design/icons'
+import { useIndustryTalent, useRemoveFromPosition, useUpdateCandidateStatus } from '../../hooks/useIndustryQueries'
 import { applyDomainCssVars } from '../../theme'
 import { getErrorMessage } from '../../utils'
 import { navigateBack } from '../../utils/navigation'
@@ -27,6 +29,7 @@ import PageSkeleton from '../../components/PageSkeleton'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import BreadcrumbNav from '../../components/BreadcrumbNav'
 import type {
+  CandidateStatusPatch,
   IndustryPositionMatchDetail,
   IndustryTalentDetail,
 } from '../../services/api/industry'
@@ -340,30 +343,89 @@ const PositionMatchCard: React.FC<{
   match: IndustryPositionMatchDetail
 }> = ({ talentId, match }) => {
   const updateStatus = useUpdateCandidateStatus()
+  const removeMutation = useRemoveFromPosition()
+  const navigate = useNavigate()
   const [status, setStatus] = useState(match.status)
   const [touched, setTouched] = useState(match.touched)
   const [notes, setNotes] = useState(match.notes || '')
+  const [matchScore, setMatchScore] = useState<number | null>(match.match_score)
+  const [scoreSchool, setScoreSchool] = useState<number | null>(match.score_school)
+  const [scoreCompany, setScoreCompany] = useState<number | null>(match.score_company)
+  const [scoreDirection, setScoreDirection] = useState<number | null>(match.score_direction)
   const [saving, setSaving] = useState(false)
 
   const dirty =
-    status !== match.status || touched !== match.touched || notes !== (match.notes || '')
+    status !== match.status ||
+    touched !== match.touched ||
+    notes !== (match.notes || '')
+
+  const scoreDirty =
+    matchScore !== match.match_score ||
+    scoreSchool !== match.score_school ||
+    scoreCompany !== match.score_company ||
+    scoreDirection !== match.score_direction
 
   const hasSubScores = SUB_SCORES.some(s => match[s.key] !== null)
-  const color = scoreColor(match.match_score)
+  const color = scoreColor(matchScore ?? undefined)
 
   const handleSave = async () => {
     setSaving(true)
     try {
+      // Build patch with only the dirty score fields + recruiting state
+      const patch: Record<string, unknown> = { status, touched, notes }
+      if (matchScore !== match.match_score) patch.match_score = matchScore
+      if (scoreSchool !== match.score_school) patch.score_school = scoreSchool
+      if (scoreCompany !== match.score_company) patch.score_company = scoreCompany
+      if (scoreDirection !== match.score_direction) patch.score_direction = scoreDirection
+
       await updateStatus.mutateAsync({
         talentId,
         positionId: match.position_id,
-        patch: { status, touched, notes },
+        patch: patch as CandidateStatusPatch,
       })
       message.success('已保存')
     } catch (e) {
       message.error(getErrorMessage(e, '保存失败'))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleScoreChange = async (
+    field: 'match_score' | 'score_school' | 'score_company' | 'score_direction',
+    value: number | null
+  ) => {
+    try {
+      await updateStatus.mutateAsync({
+        talentId,
+        positionId: match.position_id,
+        patch: { [field]: value ?? 0 } as CandidateStatusPatch,
+      })
+      // No success toast — inline edit should be quiet
+    } catch (e) {
+      message.error(getErrorMessage(e, '分数更新失败'))
+      // Revert local state on failure
+      if (field === 'match_score') setMatchScore(match.match_score)
+      else if (field === 'score_school') setScoreSchool(match.score_school)
+      else if (field === 'score_company') setScoreCompany(match.score_company)
+      else if (field === 'score_direction') setScoreDirection(match.score_direction)
+    }
+  }
+
+  const handleRemove = async () => {
+    try {
+      const result = await removeMutation.mutateAsync({
+        talentId,
+        positionId: match.position_id,
+      })
+      if (result.orphan_talent_deleted) {
+        message.success('候选人已移出岗位，且因无其他关联已自动清理')
+        navigate('/industry')
+      } else {
+        message.success('已移出本岗位')
+      }
+    } catch (e) {
+      message.error(getErrorMessage(e, '移出失败'))
     }
   }
 
@@ -384,13 +446,22 @@ const PositionMatchCard: React.FC<{
             </Tag>
           </div>
 
-          {/* Total score bar */}
+          {/* Total score bar — editable */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
-            <Text style={{ fontSize: 22, fontWeight: 700, color, lineHeight: 1, minWidth: 40 }}>
-              {formatScore(match.match_score)}
-            </Text>
+            <InputNumber
+              value={matchScore ?? undefined}
+              min={0}
+              max={100}
+              precision={1}
+              size="small"
+              style={{ width: 64, fontWeight: 700, color }}
+              variant="borderless"
+              onChange={v => setMatchScore(v)}
+              onBlur={() => matchScore !== match.match_score && handleScoreChange('match_score', matchScore)}
+              onPressEnter={() => matchScore !== match.match_score && handleScoreChange('match_score', matchScore)}
+            />
             <Progress
-              percent={match.match_score ?? 0}
+              percent={matchScore ?? 0}
               strokeColor={color}
               trailColor="#f1f5f9"
               showInfo={false}
@@ -398,27 +469,54 @@ const PositionMatchCard: React.FC<{
             />
           </div>
 
-          {/* Three-dimension sub scores (degrade to total-only when absent) */}
-          {hasSubScores && (
-            <div style={{ display: 'flex', gap: 20, marginTop: 10, flexWrap: 'wrap' }}>
-              {SUB_SCORES.filter(s => match[s.key] !== null).map(s => (
+          {/* Three-dimension sub scores — editable */}
+          <div style={{ display: 'flex', gap: 20, marginTop: 10, flexWrap: 'wrap' }}>
+            {SUB_SCORES.map(s => {
+              const currentValue =
+                s.key === 'score_school'
+                  ? scoreSchool
+                  : s.key === 'score_company'
+                    ? scoreCompany
+                    : scoreDirection
+              const setter =
+                s.key === 'score_school'
+                  ? setScoreSchool
+                  : s.key === 'score_company'
+                    ? setScoreCompany
+                    : setScoreDirection
+              const original = match[s.key]
+              return (
                 <div key={s.key} style={{ minWidth: 120, flex: 1 }}>
                   <div
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
+                      alignItems: 'center',
                       fontSize: 12,
                       color: '#94a3b8',
                       marginBottom: 2,
                     }}
                   >
                     <span>{s.label}</span>
-                    <span style={{ color: '#475569', fontWeight: 500 }}>
-                      {formatScore(match[s.key])}
-                    </span>
+                    <InputNumber
+                      value={currentValue ?? undefined}
+                      min={0}
+                      max={100}
+                      precision={1}
+                      size="small"
+                      style={{ width: 52, fontSize: 12, color: '#475569' }}
+                      variant="borderless"
+                      onChange={v => setter(v)}
+                      onBlur={() =>
+                        currentValue !== original && handleScoreChange(s.key, currentValue)
+                      }
+                      onPressEnter={() =>
+                        currentValue !== original && handleScoreChange(s.key, currentValue)
+                      }
+                    />
                   </div>
                   <Progress
-                    percent={match[s.key] ?? 0}
+                    percent={currentValue ?? 0}
                     size="small"
                     strokeColor="#a3b3c9"
                     trailColor="#f1f5f9"
@@ -426,9 +524,9 @@ const PositionMatchCard: React.FC<{
                     style={{ margin: 0 }}
                   />
                 </div>
-              ))}
-            </div>
-          )}
+              )
+            })}
+          </div>
 
           {match.match_tags.length > 0 && (
             <Space size={4} wrap style={{ marginTop: 12 }}>
@@ -508,6 +606,25 @@ const PositionMatchCard: React.FC<{
           >
             保存
           </Button>
+          <Popconfirm
+            title="确认移出本岗位？"
+            description="候选人与该岗位的关联将被删除。如果该候选人没有其他岗位关联，人才记录也会被清理。"
+            okText="移出"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+            onConfirm={handleRemove}
+          >
+            <Button
+              danger
+              size="small"
+              block
+              icon={<DeleteOutlined />}
+              loading={removeMutation.isPending}
+              style={{ marginTop: 8 }}
+            >
+              移出本岗位
+            </Button>
+          </Popconfirm>
         </div>
       </div>
     </Card>

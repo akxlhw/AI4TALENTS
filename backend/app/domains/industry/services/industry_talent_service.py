@@ -104,7 +104,7 @@ class IndustryTalentService:
     async def patch_candidate_status(
         self, talent_id: int, position_id: int, patch: CandidateStatusPatch
     ) -> IndustryPositionMatchDetail:
-        """Update recruiting state (status/touched/notes) on one link."""
+        """Update recruiting state and/or scores on one link."""
         if patch.status is not None and patch.status not in CANDIDATE_STATUSES:
             raise BadRequestError(
                 f"invalid status: {patch.status!r} (expected one of {CANDIDATE_STATUSES})"
@@ -120,6 +120,18 @@ class IndustryTalentService:
         position = await self.repo.get_position(position_id)
         title = str(position.title) if position is not None else ""
         return IndustryPositionMatchDetail(**link.to_match_dict(title))
+
+    async def remove_from_position(self, talent_id: int, position_id: int) -> tuple[bool, bool]:
+        """Remove a talent from a position (delete the link).
+
+        Returns (link_deleted, orphan_talent_deleted). Raises NotFoundError
+        if the link does not exist.
+        """
+        link_deleted, orphan_deleted = await self.repo.delete_link(talent_id, position_id)
+        if not link_deleted:
+            raise NotFoundError("IndustryPositionTalent", f"{position_id}/{talent_id}")
+        await self.session.commit()
+        return link_deleted, orphan_deleted
 
     async def export_jsonl(self, position_id: int, batch: str | None = None) -> tuple[str, int]:
         """Export (position_id, batch) talents as JSONL for cross-server migration.

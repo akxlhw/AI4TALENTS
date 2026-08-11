@@ -100,6 +100,12 @@ export interface CandidateStatusPatch {
   status?: string
   touched?: boolean
   notes?: string
+  // Score editing (0-100, optional)
+  match_score?: number
+  score_school?: number
+  score_company?: number
+  score_direction?: number
+  match_reason?: string
 }
 
 export interface IndustryImportReport {
@@ -141,6 +147,11 @@ export const industryApi = {
     apiClient.patch<IndustryPositionMatchDetail>(
       `/industry/talents/${talentId}/positions/${positionId}`,
       patch
+    ),
+
+  removeFromPosition: (talentId: number, positionId: number) =>
+    apiClient.delete<{ link_deleted: boolean; orphan_talent_deleted: boolean }>(
+      `/industry/talents/${talentId}/positions/${positionId}`
     ),
 
   // ---- Batch management (super_admin) ----

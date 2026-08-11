@@ -358,3 +358,42 @@ class IndustryRepository:
 
         await self.session.flush()
         return links_deleted, orphans_deleted
+
+    async def delete_link(self, talent_id: int, position_id: int) -> tuple[bool, bool]:
+        """Delete a single (talent_id, position_id) link.
+
+        Returns (link_deleted, orphan_talent_deleted). After deleting the
+        link, runs the same orphan cleanup as delete_batch — if the talent
+        no longer has any position association anywhere, the talent record
+        is also removed.
+        """
+        from sqlalchemy import delete as sa_delete
+
+        link = await self.get_link(talent_id, position_id)
+        if link is None:
+            return False, False
+
+        await self.session.execute(
+            sa_delete(IndustryPositionTalent).where(
+                IndustryPositionTalent.id == link.id,
+            )
+        )
+
+        # Orphan cleanup: remove the talent if it has no remaining links
+        remaining = await self.session.scalar(
+            select(func.count())
+            .select_from(IndustryPositionTalent)
+            .where(IndustryPositionTalent.talent_id == talent_id)
+        )
+        orphan_deleted = False
+        if (remaining or 0) == 0:
+            await self.session.execute(
+                sa_delete(IndustryTalent).where(
+                    IndustryTalent.talent_id == talent_id,
+                    IndustryTalent.is_visible.is_(True),
+                )
+            )
+            orphan_deleted = True
+
+        await self.session.flush()
+        return True, orphan_deleted

@@ -116,11 +116,21 @@ class IndustryTalentDetail(IndustryTalentSummary):
 
 
 class CandidateStatusPatch(BaseModel):
-    """PATCH body for recruiting state on a position-talent link."""
+    """PATCH body for recruiting state and scores on a position-talent link.
+
+    All fields optional (partial update). Score fields accept 0-100; when
+    omitted, existing values are preserved.
+    """
 
     status: str | None = Field(default=None, max_length=20)
     touched: bool | None = None
     notes: str | None = None
+    # Score editing (0-100 range enforced by pydantic ge/le)
+    match_score: float | None = Field(default=None, ge=0, le=100)
+    score_school: float | None = Field(default=None, ge=0, le=100)
+    score_company: float | None = Field(default=None, ge=0, le=100)
+    score_direction: float | None = Field(default=None, ge=0, le=100)
+    match_reason: str | None = Field(default=None, max_length=10000)
 
 
 # ============ Import ============
