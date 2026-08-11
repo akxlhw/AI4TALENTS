@@ -1,4 +1,4 @@
-import { Avatar, Card, Progress, Select, Space, Tag, Typography, message, Row, Col } from 'antd'
+import { Avatar, Card, Progress, Select, Space, Tag, Typography, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import type { IndustryTalentSummary } from '../../../services/api/industry'
 import { useUpdateCandidateStatus } from '../../../hooks/useIndustryQueries'
@@ -58,37 +58,48 @@ const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
       }}
       onClick={goDetail}
     >
-      {/* Header: avatar + identity | score ring */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 8, overflow: 'hidden' }}>
-        <Space align="start" style={{ minWidth: 0, flex: 1 }}>
-          <Avatar
-            size={40}
-            src={talent.photo_url || undefined}
-            style={{
-              background: 'var(--domain-gradient, linear-gradient(135deg,#1A365D,#6B46C1))',
-              color: '#fff', fontWeight: 600, fontSize: 16, flexShrink: 0,
-            }}
-          >
-            {talent.name.slice(0, 1)}
-          </Avatar>
-          <div style={{ minWidth: 0, overflow: 'hidden' }}>
-            <Text strong ellipsis style={{ fontSize: 14, display: 'block' }}>
-              {talent.name}
-            </Text>
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {[talent.current_title, talent.current_org].filter(Boolean).join(' · ') || '—'}
-            </Text>
-          </div>
-        </Space>
+      {/* Header: avatar + name (left) | score ring (right) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+        <Avatar
+          size={36}
+          src={talent.photo_url || undefined}
+          style={{
+            background: 'var(--domain-gradient, linear-gradient(135deg,#1A365D,#6B46C1))',
+            color: '#fff', fontWeight: 600, fontSize: 15, flexShrink: 0,
+          }}
+        >
+          {talent.name.slice(0, 1)}
+        </Avatar>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Text strong ellipsis style={{ fontSize: 14, display: 'block' }}>
+            {talent.name}
+          </Text>
+        </div>
         <Progress
-          type="circle" size={48} percent={score ?? 0} strokeColor={color} strokeWidth={7}
+          type="circle" size={40} percent={score ?? 0} strokeColor={color} strokeWidth={8}
           trailColor="#f1f5f9"
           style={{ flexShrink: 0 }}
           format={() => (
-            <span style={{ fontSize: 15, fontWeight: 700, color, lineHeight: 1 }}>{formatScore(score)}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color, lineHeight: 1 }}>{formatScore(score)}</span>
           )}
         />
       </div>
+
+      {/* Current position — full width, no competition with score ring */}
+      <Text
+        type="secondary"
+        style={{
+          fontSize: 12,
+          display: 'block',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          marginBottom: 8,
+          paddingLeft: 46, // align with avatar right edge
+        }}
+      >
+        {[talent.current_title, talent.current_org].filter(Boolean).join(' · ') || '—'}
+      </Text>
 
       {/* Match tags */}
       {matchTags.length > 0 && (
@@ -102,48 +113,55 @@ const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
       )}
 
       {/* Stats row */}
-      <Row gutter={16} style={{ marginBottom: 8 }}>
-        <Col span={8}>
+      <div style={{ display: 'flex', gap: 16, marginBottom: 10 }}>
+        <div>
           <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>学历</Text>
           <div style={{ fontWeight: 600, fontSize: 12, color: '#333' }}>{talent.degree || '-'}</div>
-        </Col>
-        <Col span={8}>
+        </div>
+        <div>
           <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>年限</Text>
           <div style={{ fontWeight: 600, fontSize: 12, color: '#333' }}>{talent.years_of_exp || '-'}</div>
-        </Col>
-        <Col span={8}>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>地区</Text>
           <div style={{ fontWeight: 600, fontSize: 12, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {talent.location || '-'}
           </div>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
-      {/* Footer: status + position tags */}
+      {/* Footer: position tags (line 1) + status & action (line 2) */}
       <div
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px solid #f4f6f9' }}
+        style={{ paddingTop: 8, borderTop: '1px solid #f4f6f9' }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Position tags row */}
+        {(primary || otherPositions.length > 0) && (
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6 }}>
+            {primary && (
+              <Tag style={{ fontSize: 11, margin: 0, padding: '0 6px', lineHeight: '18px', borderRadius: 4,
+                background: 'var(--domain-light-bg, #FAF5FF)', color: 'var(--domain-badge-bg, #6B46C1)', border: 'none' }}
+                title={primary.title}>
+                {primary.title.length > 12 ? primary.title.slice(0, 12) + '…' : primary.title}
+              </Tag>
+            )}
+            {otherPositions.length > 0 && (
+              <Text type="secondary" style={{ fontSize: 11 }}>+{otherPositions.length}岗位</Text>
+            )}
+          </div>
+        )}
+
+        {/* Status + action row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Tag color={CANDIDATE_STATUS_COLORS[status] || 'default'} style={{ margin: 0, fontSize: 11, borderRadius: 10, padding: '0 8px' }}>
             {CANDIDATE_STATUS_LABELS[status] || status}
           </Tag>
           {primary && (
-            <Tag style={{ fontSize: 11, margin: 0, padding: '0 6px', lineHeight: '18px', borderRadius: 4,
-              background: 'var(--domain-light-bg, #FAF5FF)', color: 'var(--domain-badge-bg, #6B46C1)', border: 'none' }}
-              title={primary.title}>
-              {primary.title.length > 10 ? primary.title.slice(0, 10) + '…' : primary.title}
-            </Tag>
-          )}
-          {otherPositions.length > 0 && (
-            <Text type="secondary" style={{ fontSize: 11 }}>+{otherPositions.length}岗位</Text>
+            <Select size="small" variant="borderless" value={status} options={CANDIDATE_STATUS_OPTIONS}
+              loading={updateStatus.isPending} onChange={handleStatusChange}
+              style={{ width: 86, fontSize: 12 }} popupMatchSelectWidth={110} aria-label="修改候选人状态" />
           )}
         </div>
-        {primary && (
-          <Select size="small" variant="borderless" value={status} options={CANDIDATE_STATUS_OPTIONS}
-            loading={updateStatus.isPending} onChange={handleStatusChange}
-            style={{ width: 90, fontSize: 12 }} popupMatchSelectWidth={110} aria-label="修改候选人状态" />
-        )}
       </div>
     </Card>
   )
