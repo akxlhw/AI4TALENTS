@@ -85,21 +85,30 @@ const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
         />
       </div>
 
-      {/* Current position — full width, no competition with score ring */}
-      <Text
-        type="secondary"
+      {/* Current position — 2-line clamp so long titles don't get hidden */}
+      <div
         style={{
           fontSize: 12,
-          display: 'block',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          color: 'var(--text-secondary)',
           marginBottom: 8,
           paddingLeft: 46, // align with avatar right edge
+          overflow: 'hidden',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          lineHeight: '18px',
+          maxHeight: 36,
         }}
       >
-        {[talent.current_title, talent.current_org].filter(Boolean).join(' · ') || '—'}
-      </Text>
+        {talent.current_title && (
+          <span style={{ fontWeight: 500, color: '#475569' }}>{talent.current_title}</span>
+        )}
+        {talent.current_title && talent.current_org && (
+          <span style={{ color: '#94a3b8', margin: '0 3px' }}>·</span>
+        )}
+        {talent.current_org && <span>{talent.current_org}</span>}
+        {!talent.current_title && !talent.current_org && <span>—</span>}
+      </div>
 
       {/* Match tags */}
       {matchTags.length > 0 && (
