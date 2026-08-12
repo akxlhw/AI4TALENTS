@@ -310,10 +310,10 @@ const IndustryPositionsTab: React.FC = () => {
           <Form.Item name="department" label="所属部门">
             <Input placeholder="如：云平台事业部" maxLength={255} />
           </Form.Item>
-          <Form.Item name="tech_direction_codes" label="技术方向（多选）">
+          <Form.Item name="tech_direction_codes" label="技术方向（可多选或手动输入）">
             <Select
-              mode="multiple"
-              placeholder="选择关联的技术方向"
+              mode="tags"
+              placeholder="选择预设方向，或直接输入自定义方向后回车"
               options={directionOptions}
               optionFilterProp="label"
               showSearch
