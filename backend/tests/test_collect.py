@@ -41,8 +41,14 @@ from app.domains.shared.models.enums import RoleType, VisibilityStatus
 
 @pytest.fixture
 def mock_session():
-    """Create mock session for unit tests."""
-    return AsyncMock()
+    """Create mock session for unit tests.
+
+    session.add() is synchronous in SQLAlchemy, so we override it with a
+    MagicMock to avoid 'coroutine was never awaited' RuntimeWarnings.
+    """
+    session = AsyncMock()
+    session.add = MagicMock()
+    return session
 
 
 @pytest.fixture

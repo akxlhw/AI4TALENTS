@@ -15,6 +15,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   return <>{children}</>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useFavorites = () => {
   return useFavoritesStore()
 }

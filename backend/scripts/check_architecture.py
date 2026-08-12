@@ -121,6 +121,11 @@ CROSS_DOMAIN_BANNED: list[tuple[re.Pattern[str], str]] = [
         "shared infrastructure must NOT import competition business domain — "
         "move code to competition/ or use dependency inversion",
     ),
+    (
+        re.compile(r"app\.domains\.industry\."),
+        "shared infrastructure must NOT import industry business domain — "
+        "move code to industry/ or use dependency inversion",
+    ),
 ]
 
 # shared 内部允许 import 的模式（白名单）

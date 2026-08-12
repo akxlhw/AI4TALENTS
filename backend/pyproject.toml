@@ -40,6 +40,7 @@ dev = [
     "pre-commit==4.2.0",
     "types-python-dateutil==2.9.0.20240906",
     "aiosqlite==0.20.0",
+    "pip-audit>=2.10.1",
 ]
 
 [tool.black]
