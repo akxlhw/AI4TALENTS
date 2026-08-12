@@ -17,10 +17,11 @@ import {
   Tabs,
   Tag,
   Timeline,
+  Tooltip,
   Typography,
   message,
 } from 'antd'
-import { ArrowLeftOutlined, DeleteOutlined, ExportOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, DeleteOutlined, EditOutlined, ExportOutlined } from '@ant-design/icons'
 import { useIndustryTalent, useRemoveFromPosition, useUpdateCandidateStatus } from '../../hooks/useIndustryQueries'
 import { applyDomainCssVars } from '../../theme'
 import { getErrorMessage } from '../../utils'
@@ -437,32 +438,43 @@ const PositionMatchCard: React.FC<{
             >
               {CANDIDATE_STATUS_LABELS[match.status] || match.status}
             </Tag>
+            <Text type="secondary" style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 2 }}>
+              <EditOutlined style={{ fontSize: 10 }} />
+              分数可编辑
+            </Text>
           </div>
 
-          {/* Total score bar — editable */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
-            <InputNumber
-              value={matchScore ?? undefined}
-              min={0}
-              max={100}
-              precision={1}
-              size="small"
-              style={{ width: 64, fontWeight: 700, color }}
-              variant="borderless"
-              onChange={v => setMatchScore(v)}
-              onBlur={() => matchScore !== match.match_score && handleScoreChange('match_score', matchScore)}
-              onPressEnter={() => matchScore !== match.match_score && handleScoreChange('match_score', matchScore)}
-            />
-            <Progress
-              percent={matchScore ?? 0}
-              strokeColor={color}
-              trailColor="#f1f5f9"
-              showInfo={false}
-              style={{ flex: 1, margin: 0 }}
-            />
-          </div>
+          {/* Total score bar — editable (click number to edit) */}
+          <Tooltip title="点击修改分数">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+              <InputNumber
+                value={matchScore ?? undefined}
+                min={0}
+                max={100}
+                precision={1}
+                size="small"
+                style={{
+                  width: 64,
+                  fontWeight: 700,
+                  color,
+                  borderRadius: 6,
+                }}
+                variant="filled"
+                onChange={v => setMatchScore(v)}
+                onBlur={() => matchScore !== match.match_score && handleScoreChange('match_score', matchScore)}
+                onPressEnter={() => matchScore !== match.match_score && handleScoreChange('match_score', matchScore)}
+              />
+              <Progress
+                percent={matchScore ?? 0}
+                strokeColor={color}
+                trailColor="#f1f5f9"
+                showInfo={false}
+                style={{ flex: 1, margin: 0 }}
+              />
+            </div>
+          </Tooltip>
 
-          {/* Three-dimension sub scores — editable */}
+          {/* Three-dimension sub scores — editable (click number to edit) */}
           <div style={{ display: 'flex', gap: 20, marginTop: 10, flexWrap: 'wrap' }}>
             {SUB_SCORES.map(s => {
               const currentValue =
@@ -497,8 +509,8 @@ const PositionMatchCard: React.FC<{
                       max={100}
                       precision={1}
                       size="small"
-                      style={{ width: 52, fontSize: 12, color: '#475569' }}
-                      variant="borderless"
+                      style={{ width: 52, fontSize: 12, color: '#475569', borderRadius: 4 }}
+                      variant="filled"
                       onChange={v => setter(v)}
                       onBlur={() =>
                         currentValue !== original && handleScoreChange(s.key, currentValue)
