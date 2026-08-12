@@ -1,4 +1,4 @@
-import { Avatar, Card, Progress, Select, Space, Tag, Typography, message } from 'antd'
+import { Avatar, Card, Progress, Select, Tag, Typography, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import type { IndustryTalentSummary } from '../../../services/api/industry'
 import { useUpdateCandidateStatus } from '../../../hooks/useIndustryQueries'

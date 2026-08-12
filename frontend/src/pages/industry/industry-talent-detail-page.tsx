@@ -359,13 +359,6 @@ const PositionMatchCard: React.FC<{
     touched !== match.touched ||
     notes !== (match.notes || '')
 
-  const scoreDirty =
-    matchScore !== match.match_score ||
-    scoreSchool !== match.score_school ||
-    scoreCompany !== match.score_company ||
-    scoreDirection !== match.score_direction
-
-  const hasSubScores = SUB_SCORES.some(s => match[s.key] !== null)
   const color = scoreColor(matchScore ?? undefined)
 
   const handleSave = async () => {
