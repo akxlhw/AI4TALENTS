@@ -175,6 +175,11 @@ async def export_position_talents(
     talent_service = IndustryTalentService(session)
     content, count = await talent_service.export_jsonl(position_id, batch)
 
+    # Fetch position title for the filename
+    position_service = IndustryPositionService(session)
+    position_data = await position_service.get_position(position_id)
+    position_title = position_data.title if hasattr(position_data, "title") else str(position_id)
+
     if count == 0:
         await AuditService.log_data_operation(
             user_id=admin.get("user_id"),
@@ -205,8 +210,11 @@ async def export_position_talents(
         safe_batch = "nobatch"
     else:
         safe_batch = re.sub(r"[^A-Za-z0-9._-]", "", batch) if batch else None
-    suffix = f"_{safe_batch}" if safe_batch else "_all"
-    filename = f"industry_position_{position_id}{suffix}.jsonl"
+    # Sanitize position title for filename (keep CJK + alnum, remove spaces/special chars)
+    safe_title = re.sub(r"[\s/\\:*?\"<>|]", "", position_title)[:30] if position_title else ""
+    title_part = safe_title if safe_title else str(position_id)
+    batch_suffix = f"_{safe_batch}" if safe_batch else "_all"
+    filename = f"industry_{title_part}{batch_suffix}.jsonl"
 
     buffer = io.BytesIO(content.encode("utf-8"))
     buffer.seek(0)
