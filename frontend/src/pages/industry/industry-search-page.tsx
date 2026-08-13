@@ -96,7 +96,8 @@ const IndustrySearchPage: React.FC = () => {
 
   return (
     <div style={{ paddingTop: 64, background: 'var(--color-bg-gray-light)', minHeight: '100vh' }}>
-      {/* ═══ Hero Section ═══ */}
+      {/* ═══ Hero Section — homepage only ═══ */}
+      {!browseMode && (
       <div style={{
         background: 'var(--domain-gradient, linear-gradient(135deg,#1A365D,#6B46C1))',
         padding: '64px 32px 48px', color: '#fff', position: 'relative', overflow: 'hidden', textAlign: 'center',
@@ -148,8 +149,10 @@ const IndustrySearchPage: React.FC = () => {
           )}
         </div>
       </div>
+      )}
 
-      {/* ═══ Stats ═══ */}
+      {/* ═══ Stats — homepage only ═══ */}
+      {!browseMode && (
       <Row gutter={[16, 16]} style={{ maxWidth: 1200, margin: '24px auto 24px', padding: '0 32px' }}>
         {[
           { title: '在招岗位', value: openPositions.length, icon: <TrophyOutlined />, link: undefined },
@@ -169,9 +172,24 @@ const IndustrySearchPage: React.FC = () => {
           </Col>
         ))}
       </Row>
+      )}
 
       {/* ═══ Main: Position sidebar + Talent list ═══ */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px 64px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: browseMode ? '24px 32px 64px' : '0 32px 64px' }}>
+        {browseMode && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Title level={3} style={{ margin: 0 }}>行业人才搜索</Title>
+            <Input.Search
+              placeholder="搜索姓名 / 公司 / 职位..."
+              size="middle"
+              value={kw}
+              onChange={e => { setKw(e.target.value); if (!e.target.value) state.setFilter('keyword', '') }}
+              onSearch={v => state.setFilter('keyword', v.trim())}
+              style={{ width: 320 }}
+              allowClear
+            />
+          </div>
+        )}
         <Row gutter={[24, 24]}>
           {/* Left: Position sidebar — always visible (filters only in browse mode) */}
           <Col xs={24} sm={8} md={7} lg={6}>
