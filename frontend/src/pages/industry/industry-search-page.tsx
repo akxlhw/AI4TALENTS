@@ -65,8 +65,11 @@ const IndustrySearchPage: React.FC = () => {
   const total = data?.total || 0
   const openPositions = positions || []
   const totalCandidates = openPositions.reduce((s, p) => s + (p.candidate_count || 0), 0)
-  const avgScore = openPositions.length > 0
-    ? Math.round(openPositions.reduce((s, p) => s + (p.avg_match_score || 0), 0) / openPositions.length) : 0
+  // Only include positions that actually have candidates when computing the average —
+  // empty positions return avg_match_score=null, which would drag the average down to 0
+  const scoredPositions = openPositions.filter(p => p.candidate_count > 0 && p.avg_match_score != null)
+  const avgScore = scoredPositions.length > 0
+    ? Math.round(scoredPositions.reduce((s, p) => s + (p.avg_match_score || 0), 0) / scoredPositions.length) : 0
 
   const handlePositionClick = (positionId: number | null) => {
     state.setFilter('positionId', positionId)
