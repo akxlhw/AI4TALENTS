@@ -65,13 +65,13 @@ export const MIN_SCORE_OPTIONS = [
   { value: 90, label: '90 分以上' },
 ]
 
-/** Match-score visual tiers: S 金紫 / A+ 蓝 / A 绿 / B+ 橙 / C 灰 */
+/** Match-score visual tiers: S 橙 / A+ 紫 / A 蓝 / B+ 绿 / C 灰 */
 export function scoreColor(score: number | null | undefined): string {
   if (score === null || score === undefined) return '#94a3b8'
-  if (score >= 100) return '#722ed1' // S — 金紫
-  if (score >= 95) return '#1677ff'  // A+ — 蓝
-  if (score >= 90) return '#389e0d'  // A — 绿
-  if (score >= 80) return '#d4660a'  // B+ — 橙
+  if (score >= 100) return '#ea580c' // S — 橙
+  if (score >= 95) return '#7c3aed'  // A+ — 紫
+  if (score >= 90) return '#2563eb'  // A — 蓝
+  if (score >= 80) return '#16a34a'  // B+ — 绿
   return '#94a3b8'                   // C — 灰
 }
 
@@ -156,10 +156,10 @@ export function badgeStyle(
   }
 
   const tiers: { min: number; bg: string; glow: string }[] = [
-    { min: 100, bg: 'linear-gradient(135deg, #fbbf24 0%, #7c3aed 60%, #5b21b6 100%)', glow: `drop-shadow(0 0 ${glowSize}px rgba(124,58,237,0.6))` },
-    { min: 95, bg: 'linear-gradient(135deg, #60a5fa, #2563eb)', glow: `drop-shadow(0 2px ${glowSize}px rgba(37,99,235,0.45))` },
-    { min: 90, bg: 'linear-gradient(135deg, #4ade80, #16a34a)', glow: `drop-shadow(0 2px ${glowSize}px rgba(22,163,74,0.45))` },
-    { min: 80, bg: 'linear-gradient(135deg, #fb923c, #ea580c)', glow: `drop-shadow(0 2px ${glowSize}px rgba(234,88,12,0.45))` },
+    { min: 100, bg: 'linear-gradient(135deg, #fb923c, #ea580c)', glow: `drop-shadow(0 0 ${glowSize}px rgba(234,88,12,0.5))` },
+    { min: 95, bg: 'linear-gradient(135deg, #a78bfa, #7c3aed)', glow: `drop-shadow(0 2px ${glowSize}px rgba(124,58,237,0.45))` },
+    { min: 90, bg: 'linear-gradient(135deg, #60a5fa, #2563eb)', glow: `drop-shadow(0 2px ${glowSize}px rgba(37,99,235,0.45))` },
+    { min: 80, bg: 'linear-gradient(135deg, #4ade80, #16a34a)', glow: `drop-shadow(0 2px ${glowSize}px rgba(22,163,74,0.45))` },
   ]
 
   for (const tier of tiers) {
