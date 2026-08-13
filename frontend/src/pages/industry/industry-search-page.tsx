@@ -76,6 +76,20 @@ const IndustrySearchPage: React.FC = () => {
   const hasFilters = state.keyword || state.positionId || state.minScore ||
     state.status || state.sourcePlatform || state.techDirection
 
+  // Browse mode: when user clicks "查看全部" or sets any filter, show the
+  // full sidebar + filter bar. Homepage mode (default) is a clean landing
+  // with hero + stats + recommended candidates only.
+  const browseMode = searchParams.get('browse') === '1' || hasFilters
+
+  const enterBrowse = () => {
+    setSearchParams({ browse: '1' }, { replace: true })
+  }
+  const exitBrowse = () => {
+    setKw('')
+    state.resetFilters()
+    setSearchParams({}, { replace: true })
+  }
+
   return (
     <div style={{ paddingTop: 64, background: 'var(--color-bg-gray-light)', minHeight: '100vh' }}>
       {/* ═══ Hero Section ═══ */}
@@ -152,28 +166,37 @@ const IndustrySearchPage: React.FC = () => {
       {/* ═══ Main: Position sidebar + Talent list ═══ */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px 64px' }}>
         <Row gutter={[24, 24]}>
-          {/* Left: Position sidebar + filters */}
-          <Col xs={24} sm={8} md={7} lg={6}>
-            <PositionSidebar
-              positions={openPositions}
-              activePositionId={state.positionId}
-              onPositionClick={handlePositionClick}
-              state={state}
-            />
-          </Col>
+          {/* Left: Position sidebar + filters — only in browse mode */}
+          {browseMode && (
+            <Col xs={24} sm={8} md={7} lg={6}>
+              <PositionSidebar
+                positions={openPositions}
+                activePositionId={state.positionId}
+                onPositionClick={handlePositionClick}
+                state={state}
+              />
+            </Col>
+          )}
 
           {/* Right: Talent cards */}
-          <Col xs={24} sm={16} md={17} lg={18}>
+          <Col xs={24} sm={browseMode ? 16 : 24} md={browseMode ? 17 : 24} lg={browseMode ? 18 : 24}>
             {/* Section header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Title level={4} style={{ margin: 0 }}>
                 <FireOutlined style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }} />
-                {hasFilters ? `搜索结果（${total} 人）` : '推荐候选人'}
+                {browseMode && hasFilters ? `搜索结果（${total} 人）` : '推荐候选人'}
               </Title>
-              <Button type="link" onClick={() => state.resetFilters()}
-                style={{ fontSize: 14, padding: 0, display: hasFilters ? 'inline-block' : 'none' }}>
-                清除筛选，查看全部 ↓
-              </Button>
+              {browseMode ? (
+                <Button type="link" onClick={exitBrowse}
+                  style={{ fontSize: 14, padding: 0 }}>
+                  ← 返回首页
+                </Button>
+              ) : (
+                <Button type="link" onClick={enterBrowse}
+                  style={{ fontSize: 14, padding: 0 }}>
+                  查看全部 ↓
+                </Button>
+              )}
             </div>
 
             <Spin spinning={isLoading}>
@@ -189,7 +212,7 @@ const IndustrySearchPage: React.FC = () => {
                 <>
                   <Row gutter={[16, 16]}>
                     {items.map(t => (
-                      <Col xs={24} sm={12} lg={8} key={t.talent_id}>
+                      <Col xs={24} sm={browseMode ? 12 : 12} lg={browseMode ? 8 : 6} key={t.talent_id}>
                         <IndustryTalentCard talent={t} />
                       </Col>
                     ))}
