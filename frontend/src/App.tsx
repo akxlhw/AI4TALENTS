@@ -173,6 +173,7 @@ function AppRoutes() {
         <Route path="competition/talents/:id" element={<CompetitionTalentDetailPage />} />
         <Route path="competition/contests/:id" element={<CompetitionContestDetailPage />} />
         <Route path="industry" element={<IndustrySearchPage />} />
+        <Route path="industry/search" element={<IndustrySearchPage />} />
         <Route path="industry/talents/:id" element={<IndustryTalentDetailPage />} />
         <Route path="talents/:id" element={<TalentDetailPage />} />
         <Route path="schools/:id" element={<SchoolDetailPage />} />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Col, Pagination, Row, Spin, Typography, Card, Statistic, Input, Tag,
   Badge, Select, Button,
@@ -22,6 +22,7 @@ import {
 const { Text, Title, Paragraph } = Typography
 
 const IndustrySearchPage: React.FC = () => {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const state = useIndustrySearchStore()
   const [kw, setKw] = useState(state.keyword)
@@ -74,23 +75,23 @@ const IndustrySearchPage: React.FC = () => {
   const handlePositionClick = (positionId: number | null) => {
     state.setFilter('positionId', positionId)
     state.setFilter('page', 1)
+    if (!browseMode && positionId !== null) navigate('/industry/search')
   }
 
   const hasFilters = state.keyword || state.positionId || state.minScore ||
     state.status || state.sourcePlatform || state.techDirection
 
-  // Browse mode: when user clicks "查看全部" or sets any filter, show the
-  // full sidebar + filter bar. Homepage mode (default) is a clean landing
-  // with hero + stats + recommended candidates only.
-  const browseMode = Boolean(searchParams.get('browse') === '1' || hasFilters)
+  // Browse mode is route-driven: /industry/search = full search page,
+  // /industry = clean homepage. This matches the open-source domain pattern.
+  const browseMode = window.location.pathname === '/industry/search'
 
   const enterBrowse = () => {
-    setSearchParams({ browse: '1' }, { replace: true })
+    navigate('/industry/search')
   }
   const exitBrowse = () => {
     setKw('')
     state.resetFilters()
-    setSearchParams({}, { replace: true })
+    navigate('/industry')
   }
 
   return (
@@ -123,7 +124,10 @@ const IndustrySearchPage: React.FC = () => {
             size="large"
             value={kw}
             onChange={e => { setKw(e.target.value); if (!e.target.value) state.setFilter('keyword', '') }}
-            onSearch={v => state.setFilter('keyword', v.trim())}
+            onSearch={v => {
+              state.setFilter('keyword', v.trim())
+              if (!browseMode && v.trim()) navigate('/industry/search')
+            }}
             enterButton={<span style={{ fontWeight: 500 }}><SearchOutlined /> 搜索</span>}
             style={{ width: '100%', margin: '0 auto' }}
             allowClear
