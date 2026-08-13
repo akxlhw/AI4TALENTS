@@ -79,7 +79,7 @@ const IndustrySearchPage: React.FC = () => {
   // Browse mode: when user clicks "查看全部" or sets any filter, show the
   // full sidebar + filter bar. Homepage mode (default) is a clean landing
   // with hero + stats + recommended candidates only.
-  const browseMode = searchParams.get('browse') === '1' || hasFilters
+  const browseMode = Boolean(searchParams.get('browse') === '1' || hasFilters)
 
   const enterBrowse = () => {
     setSearchParams({ browse: '1' }, { replace: true })
@@ -166,17 +166,16 @@ const IndustrySearchPage: React.FC = () => {
       {/* ═══ Main: Position sidebar + Talent list ═══ */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px 64px' }}>
         <Row gutter={[24, 24]}>
-          {/* Left: Position sidebar + filters — only in browse mode */}
-          {browseMode && (
-            <Col xs={24} sm={8} md={7} lg={6}>
-              <PositionSidebar
-                positions={openPositions}
-                activePositionId={state.positionId}
-                onPositionClick={handlePositionClick}
-                state={state}
-              />
-            </Col>
-          )}
+          {/* Left: Position sidebar — always visible (filters only in browse mode) */}
+          <Col xs={24} sm={8} md={7} lg={6}>
+            <PositionSidebar
+              positions={openPositions}
+              activePositionId={state.positionId}
+              onPositionClick={handlePositionClick}
+              state={state}
+              showFilters={browseMode}
+            />
+          </Col>
 
           {/* Right: Talent cards */}
           <Col xs={24} sm={browseMode ? 16 : 24} md={browseMode ? 17 : 24} lg={browseMode ? 18 : 24}>
@@ -244,7 +243,8 @@ const PositionSidebar: React.FC<{
   activePositionId: number | null
   onPositionClick: (id: number | null) => void
   state: IndustrySearchState
-}> = ({ positions, activePositionId, onPositionClick, state }) => {
+  showFilters?: boolean
+}> = ({ positions, activePositionId, onPositionClick, state, showFilters = true }) => {
   const { data: directions } = useTechDirectionOptions()
   const directionOptions = (directions || []).map(d => ({ value: d.code, label: d.name }))
 
@@ -277,35 +277,37 @@ const PositionSidebar: React.FC<{
         )}
       </Card>
 
-      {/* Filters */}
-      <Card className="domain-card" size="small" style={{ borderRadius: 12 }} title={
-        <span style={{ fontSize: 14, fontWeight: 600 }}>筛选条件</span>
-      }>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <Select placeholder="最低匹配分" size="small" style={{ width: '100%' }}
-            value={state.minScore ?? 0}
-            onChange={v => state.setFilter('minScore', v === 0 ? null : v)}
-            options={MIN_SCORE_OPTIONS} />
-          <Select placeholder="候选人状态" size="small" style={{ width: '100%' }}
-            value={state.status || undefined}
-            onChange={v => state.setFilter('status', v || '')}
-            options={CANDIDATE_STATUS_OPTIONS} allowClear />
-          <Select placeholder="来源平台" size="small" style={{ width: '100%' }}
-            value={state.sourcePlatform || undefined}
-            onChange={v => state.setFilter('sourcePlatform', v || '')}
-            options={SOURCE_PLATFORM_OPTIONS} allowClear />
-          <Select placeholder="技术方向" size="small" style={{ width: '100%' }}
-            value={state.techDirection || undefined}
-            onChange={v => state.setFilter('techDirection', v || '')}
-            options={directionOptions} allowClear showSearch optionFilterProp="label" />
-          <Select size="small" style={{ width: '100%' }}
-            value={state.sortBy} onChange={v => state.setFilter('sortBy', v)}
-            options={INDUSTRY_SORT_OPTIONS} />
-          <Button size="small" icon={<ClearOutlined />} onClick={() => state.resetFilters()}>
-            清除全部
-          </Button>
-        </div>
-      </Card>
+      {/* Filters — only in browse mode */}
+      {showFilters && (
+        <Card className="domain-card" size="small" style={{ borderRadius: 12 }} title={
+          <span style={{ fontSize: 14, fontWeight: 600 }}>筛选条件</span>
+        }>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Select placeholder="最低匹配分" size="small" style={{ width: '100%' }}
+              value={state.minScore ?? 0}
+              onChange={v => state.setFilter('minScore', v === 0 ? null : v)}
+              options={MIN_SCORE_OPTIONS} />
+            <Select placeholder="候选人状态" size="small" style={{ width: '100%' }}
+              value={state.status || undefined}
+              onChange={v => state.setFilter('status', v || '')}
+              options={CANDIDATE_STATUS_OPTIONS} allowClear />
+            <Select placeholder="来源平台" size="small" style={{ width: '100%' }}
+              value={state.sourcePlatform || undefined}
+              onChange={v => state.setFilter('sourcePlatform', v || '')}
+              options={SOURCE_PLATFORM_OPTIONS} allowClear />
+            <Select placeholder="技术方向" size="small" style={{ width: '100%' }}
+              value={state.techDirection || undefined}
+              onChange={v => state.setFilter('techDirection', v || '')}
+              options={directionOptions} allowClear showSearch optionFilterProp="label" />
+            <Select size="small" style={{ width: '100%' }}
+              value={state.sortBy} onChange={v => state.setFilter('sortBy', v)}
+              options={INDUSTRY_SORT_OPTIONS} />
+            <Button size="small" icon={<ClearOutlined />} onClick={() => state.resetFilters()}>
+              清除全部
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   )
 }
