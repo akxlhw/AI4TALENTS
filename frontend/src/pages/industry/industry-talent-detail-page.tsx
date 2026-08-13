@@ -464,6 +464,17 @@ const PositionMatchCard: React.FC<{
                 onBlur={() => matchScore !== match.match_score && handleScoreChange('match_score', matchScore)}
                 onPressEnter={() => matchScore !== match.match_score && handleScoreChange('match_score', matchScore)}
               />
+              <span
+                style={{
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color,
+                  minWidth: 28,
+                  textAlign: 'center',
+                }}
+              >
+                {formatScore(matchScore)}
+              </span>
               <Progress
                 percent={matchScore ?? 0}
                 strokeColor={color}

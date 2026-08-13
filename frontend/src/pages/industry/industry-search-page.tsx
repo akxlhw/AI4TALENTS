@@ -16,6 +16,7 @@ import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import IndustryTalentCard from './components/industry-talent-card'
 import {
   CANDIDATE_STATUS_OPTIONS, MIN_SCORE_OPTIONS, SOURCE_PLATFORM_OPTIONS, INDUSTRY_SORT_OPTIONS,
+  formatScore,
 } from './constants/industry-config'
 
 const { Text, Title, Paragraph } = Typography
@@ -134,14 +135,13 @@ const IndustrySearchPage: React.FC = () => {
           { title: '在招岗位', value: openPositions.length, icon: <TrophyOutlined />, link: undefined },
           { title: '候选人总数', value: totalCandidates, icon: <TeamOutlined />, link: undefined },
           { title: '当前结果', value: total, icon: <UserOutlined />, link: undefined },
-          { title: '平均匹配分', value: avgScore || '—', suffix: avgScore ? '分' : '', icon: <StarOutlined />, link: undefined },
+          { title: '平均匹配', value: avgScore ? formatScore(avgScore) : '—', icon: <StarOutlined />, link: undefined },
         ].map(s => (
           <Col xs={12} sm={6} key={s.title}>
             <Card className="domain-card" size="small" styles={{ body: { padding: '16px 20px' } }}>
               <Statistic
                 title={<Text style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{s.title}</Text>}
                 value={s.value}
-                suffix={s.suffix || ''}
                 prefix={<span style={{ color: 'var(--domain-badge-bg, #6B46C1)' }}>{s.icon}</span>}
                 valueStyle={{ color: 'var(--domain-badge-bg, #6B46C1)', fontSize: 24, fontWeight: 700 }}
               />
@@ -314,7 +314,7 @@ const PositionItem: React.FC<{
       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
         {department && <span>{department}</span>}
         {department && avgScore != null && <span> · </span>}
-        {avgScore != null && <span>均分 {Math.round(avgScore)}</span>}
+        {avgScore != null && <span>均匹配 {formatScore(avgScore)}</span>}
       </div>
     )}
   </div>
