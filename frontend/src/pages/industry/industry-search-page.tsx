@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import {
   Col, Pagination, Row, Spin, Typography, Card, Statistic, Input, Tag,
   Badge, Select, Button,
@@ -22,7 +22,6 @@ import {
 const { Text, Title, Paragraph } = Typography
 
 const IndustrySearchPage: React.FC = () => {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const state = useIndustrySearchStore()
   const [kw, setKw] = useState(state.keyword)
@@ -171,9 +170,9 @@ const IndustrySearchPage: React.FC = () => {
                 <FireOutlined style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }} />
                 {hasFilters ? `搜索结果（${total} 人）` : '推荐候选人'}
               </Title>
-              <Button type="link" onClick={() => navigate('/industry/search')}
-                style={{ fontSize: 14, padding: 0 }}>
-                查看全部 ↓
+              <Button type="link" onClick={() => state.resetFilters()}
+                style={{ fontSize: 14, padding: 0, display: hasFilters ? 'inline-block' : 'none' }}>
+                清除筛选，查看全部 ↓
               </Button>
             </div>
 
