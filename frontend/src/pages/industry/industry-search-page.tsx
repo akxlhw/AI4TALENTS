@@ -177,8 +177,8 @@ const IndustrySearchPage: React.FC = () => {
             />
           </Col>
 
-          {/* Right: Talent cards */}
-          <Col xs={24} sm={browseMode ? 16 : 24} md={browseMode ? 17 : 24} lg={browseMode ? 18 : 24}>
+          {/* Right: Talent cards — sidebar always takes lg=6, cards get lg=18 */}
+          <Col xs={24} sm={16} md={17} lg={18}>
             {/* Section header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Title level={4} style={{ margin: 0 }}>
@@ -211,7 +211,7 @@ const IndustrySearchPage: React.FC = () => {
                 <>
                   <Row gutter={[16, 16]}>
                     {items.map(t => (
-                      <Col xs={24} sm={browseMode ? 12 : 12} lg={browseMode ? 8 : 6} key={t.talent_id}>
+                      <Col xs={24} sm={12} lg={8} key={t.talent_id}>
                         <IndustryTalentCard talent={t} />
                       </Col>
                     ))}
