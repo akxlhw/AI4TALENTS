@@ -39,6 +39,7 @@ import {
   CANDIDATE_STATUS_OPTIONS,
   SOURCE_PLATFORM_LABELS,
   badgeStyle,
+  badgeWrap,
   formatScore,
   scoreColor,
 } from './constants/industry-config'
@@ -180,13 +181,13 @@ const TalentHeaderCard: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }
           )}
         </div>
 
-        {/* Best match grade badge */}
-        <div style={{ textAlign: 'center', flexShrink: 0 }}>
+        {/* Best match grade medal */}
+        <div style={{ textAlign: 'center', ...badgeWrap(84) }}>
           <div style={badgeStyle(talent.best_match_score, 84)}>
-            <span style={{ fontSize: 30 }}>
+            <span style={{ fontSize: 28 }}>
               {formatScore(talent.best_match_score)}
             </span>
-            <span style={{ fontSize: 10, opacity: 0.8, marginTop: 2 }}>
+            <span style={{ fontSize: 10, opacity: 0.85, marginTop: 2 }}>
               {talent.best_match_score != null ? `${Math.round(talent.best_match_score)}分` : ''}
             </span>
           </div>
@@ -436,13 +437,15 @@ const PositionMatchCard: React.FC<{
             </Text>
           </div>
 
-          {/* Total score — grade badge + inline edit */}
+          {/* Total score — grade medal + inline edit */}
           <Tooltip title="点击修改分数">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
-              <div style={badgeStyle(matchScore, 44)}>
-                <span style={{ fontSize: 17 }}>
-                  {formatScore(matchScore)}
-                </span>
+              <div style={badgeWrap(44)}>
+                <div style={badgeStyle(matchScore, 44)}>
+                  <span style={{ fontSize: 16 }}>
+                    {formatScore(matchScore)}
+                  </span>
+                </div>
               </div>
               <InputNumber
                 value={matchScore ?? undefined}
