@@ -1,4 +1,4 @@
-import { Avatar, Card, Progress, Select, Tag, Typography, message } from 'antd'
+import { Avatar, Card, Select, Tag, Typography, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import type { IndustryTalentSummary } from '../../../services/api/industry'
 import { useUpdateCandidateStatus } from '../../../hooks/useIndustryQueries'
@@ -8,6 +8,7 @@ import {
   CANDIDATE_STATUS_LABELS,
   CANDIDATE_STATUS_OPTIONS,
   formatScore,
+  scoreBg,
   scoreColor,
 } from '../constants/industry-config'
 
@@ -75,14 +76,24 @@ const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
             {talent.name}
           </Text>
         </div>
-        <Progress
-          type="circle" size={40} percent={score ?? 0} strokeColor={color} strokeWidth={8}
-          trailColor="#f1f5f9"
-          style={{ flexShrink: 0 }}
-          format={() => (
-            <span style={{ fontSize: 13, fontWeight: 700, color, lineHeight: 1 }}>{formatScore(score)}</span>
-          )}
-        />
+        {/* Grade badge — replaces circle ring for discrete grade display */}
+        <div
+          style={{
+            flexShrink: 0,
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            background: scoreBg(score),
+            border: `2px solid ${color}30`,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            lineHeight: 1,
+          }}
+        >
+          <span style={{ fontSize: 16, fontWeight: 800, color }}>{formatScore(score)}</span>
+        </div>
       </div>
 
       {/* Current position — 2-line clamp so long titles don't get hidden */}

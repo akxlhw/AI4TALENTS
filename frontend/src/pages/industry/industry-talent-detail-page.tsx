@@ -11,7 +11,6 @@ import {
   Input,
   InputNumber,
   Popconfirm,
-  Progress,
   Select,
   Space,
   Tabs,
@@ -40,6 +39,7 @@ import {
   CANDIDATE_STATUS_OPTIONS,
   SOURCE_PLATFORM_LABELS,
   formatScore,
+  scoreBg,
   scoreColor,
 } from './constants/industry-config'
 
@@ -181,24 +181,30 @@ const TalentHeaderCard: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }
           )}
         </div>
 
-        {/* Best match score ring */}
+        {/* Best match grade badge */}
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
-          <Progress
-            type="circle"
-            size={84}
-            percent={talent.best_match_score ?? 0}
-            strokeColor={color}
-            strokeWidth={6}
-            trailColor="#f1f5f9"
-            format={() => (
-              <div>
-                <div style={{ fontSize: 24, fontWeight: 700, color, lineHeight: 1.1 }}>
-                  {formatScore(talent.best_match_score)}
-                </div>
-                <div style={{ fontSize: 11, color: '#94a3b8' }}>最高匹配分</div>
-              </div>
-            )}
-          />
+          <div
+            style={{
+              width: 84,
+              height: 84,
+              borderRadius: 18,
+              background: scoreBg(talent.best_match_score),
+              border: `3px solid ${color}40`,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: 1,
+            }}
+          >
+            <span style={{ fontSize: 32, fontWeight: 800, color }}>
+              {formatScore(talent.best_match_score)}
+            </span>
+            <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+              {talent.best_match_score != null ? `${Math.round(talent.best_match_score)}分` : ''}
+            </span>
+          </div>
+          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>最高匹配</div>
         </div>
       </div>
     </Card>
@@ -444,44 +450,41 @@ const PositionMatchCard: React.FC<{
             </Text>
           </div>
 
-          {/* Total score bar — editable (click number to edit) */}
+          {/* Total score — grade badge + inline edit */}
           <Tooltip title="点击修改分数">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  background: scoreBg(matchScore),
+                  border: `2px solid ${color}30`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <span style={{ fontSize: 18, fontWeight: 800, color, lineHeight: 1 }}>
+                  {formatScore(matchScore)}
+                </span>
+              </div>
               <InputNumber
                 value={matchScore ?? undefined}
                 min={0}
                 max={100}
                 precision={1}
                 size="small"
-                style={{
-                  width: 64,
-                  fontWeight: 700,
-                  color,
-                  borderRadius: 6,
-                }}
+                style={{ width: 64, color: '#475569', borderRadius: 6 }}
                 variant="filled"
                 onChange={v => setMatchScore(v)}
                 onBlur={() => matchScore !== match.match_score && handleScoreChange('match_score', matchScore)}
                 onPressEnter={() => matchScore !== match.match_score && handleScoreChange('match_score', matchScore)}
               />
-              <span
-                style={{
-                  fontSize: 16,
-                  fontWeight: 800,
-                  color,
-                  minWidth: 28,
-                  textAlign: 'center',
-                }}
-              >
-                {formatScore(matchScore)}
-              </span>
-              <Progress
-                percent={matchScore ?? 0}
-                strokeColor={color}
-                trailColor="#f1f5f9"
-                showInfo={false}
-                style={{ flex: 1, margin: 0 }}
-              />
+              <div style={{ flex: 1, height: 6, borderRadius: 3, background: '#f1f5f9', overflow: 'hidden' }}>
+                <div style={{ width: `${matchScore ?? 0}%`, height: '100%', borderRadius: 3, background: color, transition: 'width 0.3s' }} />
+              </div>
             </div>
           </Tooltip>
 
@@ -510,35 +513,42 @@ const PositionMatchCard: React.FC<{
                       alignItems: 'center',
                       fontSize: 12,
                       color: '#94a3b8',
-                      marginBottom: 2,
+                      marginBottom: 4,
                     }}
                   >
                     <span>{s.label}</span>
-                    <InputNumber
-                      value={currentValue ?? undefined}
-                      min={0}
-                      max={100}
-                      precision={1}
-                      size="small"
-                      style={{ width: 52, fontSize: 12, color: '#475569', borderRadius: 4 }}
-                      variant="filled"
-                      onChange={v => setter(v)}
-                      onBlur={() =>
-                        currentValue !== original && handleScoreChange(s.key, currentValue)
-                      }
-                      onPressEnter={() =>
-                        currentValue !== original && handleScoreChange(s.key, currentValue)
-                      }
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: scoreColor(currentValue),
+                          minWidth: 16,
+                        }}
+                      >
+                        {formatScore(currentValue)}
+                      </span>
+                      <InputNumber
+                        value={currentValue ?? undefined}
+                        min={0}
+                        max={100}
+                        precision={1}
+                        size="small"
+                        style={{ width: 48, fontSize: 12, color: '#475569', borderRadius: 4 }}
+                        variant="filled"
+                        onChange={v => setter(v)}
+                        onBlur={() =>
+                          currentValue !== original && handleScoreChange(s.key, currentValue)
+                        }
+                        onPressEnter={() =>
+                          currentValue !== original && handleScoreChange(s.key, currentValue)
+                        }
+                      />
+                    </div>
                   </div>
-                  <Progress
-                    percent={currentValue ?? 0}
-                    size="small"
-                    strokeColor="#a3b3c9"
-                    trailColor="#f1f5f9"
-                    showInfo={false}
-                    style={{ margin: 0 }}
-                  />
+                  <div style={{ height: 4, borderRadius: 2, background: '#f1f5f9', overflow: 'hidden' }}>
+                    <div style={{ width: `${currentValue ?? 0}%`, height: '100%', borderRadius: 2, background: scoreColor(currentValue), transition: 'width 0.3s' }} />
+                  </div>
                 </div>
               )
             })}

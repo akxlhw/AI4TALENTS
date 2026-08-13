@@ -63,7 +63,7 @@ export const MIN_SCORE_OPTIONS = [
   { value: 90, label: '90 分以上' },
 ]
 
-/** Match-score visual tiers: S 紫 / A+ 蓝 / A 绿 / B+ 橙 / 其余灰 */
+/** Match-score visual tiers: S 紫 / A+ 蓝 / A 绿 / B+ 橙 / C 灰 */
 export function scoreColor(score: number | null | undefined): string {
   if (score === null || score === undefined) return '#94a3b8'
   if (score >= 100) return '#722ed1' // S — 紫色
@@ -71,6 +71,16 @@ export function scoreColor(score: number | null | undefined): string {
   if (score >= 90) return '#52c41a'  // A — 绿色
   if (score >= 80) return '#fa8c16'  // B+ — 橙色
   return '#94a3b8'                   // C — 灰色
+}
+
+/** Soft background tint for each grade tier (used in badges) */
+export function scoreBg(score: number | null | undefined): string {
+  if (score === null || score === undefined) return '#f1f5f9'
+  if (score >= 100) return '#f9f0ff' // S — 浅紫
+  if (score >= 95) return '#e6f4ff'  // A+ — 浅蓝
+  if (score >= 90) return '#f6ffed'  // A — 浅绿
+  if (score >= 80) return '#fff7e6'  // B+ — 浅橙
+  return '#f1f5f9'                   // C — 浅灰
 }
 
 export function formatScore(score: number | null | undefined): string {
