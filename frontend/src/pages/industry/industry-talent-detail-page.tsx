@@ -38,8 +38,8 @@ import {
   CANDIDATE_STATUS_LABELS,
   CANDIDATE_STATUS_OPTIONS,
   SOURCE_PLATFORM_LABELS,
+  badgeStyle,
   formatScore,
-  scoreBg,
   scoreColor,
 } from './constants/industry-config'
 
@@ -117,7 +117,6 @@ const IndustryTalentDetailPage: React.FC = () => {
 // ---------- Header identity card ----------
 
 const TalentHeaderCard: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }) => {
-  const color = scoreColor(talent.best_match_score)
   return (
     <Card style={{ borderRadius: 14, border: 'none', boxShadow: '0 2px 12px rgba(26,54,93,0.06)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap' }}>
@@ -183,24 +182,11 @@ const TalentHeaderCard: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }
 
         {/* Best match grade badge */}
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
-          <div
-            style={{
-              width: 84,
-              height: 84,
-              borderRadius: 18,
-              background: scoreBg(talent.best_match_score),
-              border: `3px solid ${color}40`,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              lineHeight: 1,
-            }}
-          >
-            <span style={{ fontSize: 32, fontWeight: 800, color }}>
+          <div style={badgeStyle(talent.best_match_score, 84)}>
+            <span style={{ fontSize: 30 }}>
               {formatScore(talent.best_match_score)}
             </span>
-            <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+            <span style={{ fontSize: 10, opacity: 0.8, marginTop: 2 }}>
               {talent.best_match_score != null ? `${Math.round(talent.best_match_score)}分` : ''}
             </span>
           </div>
@@ -453,20 +439,8 @@ const PositionMatchCard: React.FC<{
           {/* Total score — grade badge + inline edit */}
           <Tooltip title="点击修改分数">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 10,
-                  background: scoreBg(matchScore),
-                  border: `2px solid ${color}30`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <span style={{ fontSize: 18, fontWeight: 800, color, lineHeight: 1 }}>
+              <div style={badgeStyle(matchScore, 44)}>
+                <span style={{ fontSize: 17 }}>
                   {formatScore(matchScore)}
                 </span>
               </div>

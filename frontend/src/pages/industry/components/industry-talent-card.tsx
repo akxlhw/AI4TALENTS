@@ -7,8 +7,8 @@ import {
   CANDIDATE_STATUS_COLORS,
   CANDIDATE_STATUS_LABELS,
   CANDIDATE_STATUS_OPTIONS,
+  badgeStyle,
   formatScore,
-  scoreBg,
   scoreColor,
 } from '../constants/industry-config'
 
@@ -76,23 +76,9 @@ const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
             {talent.name}
           </Text>
         </div>
-        {/* Grade badge — replaces circle ring for discrete grade display */}
-        <div
-          style={{
-            flexShrink: 0,
-            width: 40,
-            height: 40,
-            borderRadius: 10,
-            background: scoreBg(score),
-            border: `2px solid ${color}30`,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            lineHeight: 1,
-          }}
-        >
-          <span style={{ fontSize: 16, fontWeight: 800, color }}>{formatScore(score)}</span>
+        {/* Grade badge */}
+        <div style={badgeStyle(score, 40)}>
+          <span style={{ fontSize: 15 }}>{formatScore(score)}</span>
         </div>
       </div>
 
