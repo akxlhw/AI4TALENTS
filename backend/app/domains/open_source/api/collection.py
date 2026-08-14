@@ -100,6 +100,29 @@ async def collect_batch_repos(
 # ============= Collect Tasks =============
 
 
+@router.get("/repo-configs/collect-check", response_model=list)
+async def check_collection_history(
+    ids: str = Query(..., description="Comma-separated repo_config_ids"),
+    session: AsyncSession = Depends(get_async_session),
+    _user: dict = Depends(require_super_admin),
+) -> list[dict]:
+    """Check which repos have been collected before.
+
+    Returns a list of repos that have at least one historical (non-active)
+    collection task, with the latest task's status/date/records. Repos with
+    no collection history are omitted from the result.
+    """
+    try:
+        repo_ids = [int(x.strip()) for x in ids.split(",") if x.strip()]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid ids format") from None
+    if not repo_ids:
+        return []
+
+    service = OpenSourceService(session)
+    return await service.check_collection_history(repo_ids)
+
+
 @router.get("/collect/tasks", response_model=PaginatedResponse[OSCollectTaskResponse])
 async def list_collect_tasks(
     page: int = Query(1, ge=1),

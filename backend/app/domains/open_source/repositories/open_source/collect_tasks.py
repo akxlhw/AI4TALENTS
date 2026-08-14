@@ -69,6 +69,41 @@ class CollectTasksMixin:
         )
         return tcast(OSCollectTask | None, result.scalar_one_or_none())
 
+    async def get_last_collection_status(
+        self,
+        repo_full_names: list[str],
+    ) -> dict[str, dict[str, Any]]:
+        """For each repo_full_name, return the latest non-active collection task.
+
+        Skips pending/running tasks (those are concurrent guards, not history).
+        Returns {repo_full_name: {"status": str, "completed_at": str|None, "records": int}}.
+        """
+        if not repo_full_names:
+            return {}
+        result = await self.session.execute(
+            select(OSCollectTask)
+            .where(
+                OSCollectTask.task_name.in_(repo_full_names),
+                ~OSCollectTask.status.in_(["pending", "running"]),
+            )
+            .order_by(OSCollectTask.created_at.desc())
+        )
+        rows = result.scalars().all()
+        # Keep only the latest per repo (rows are already DESC by created_at)
+        latest: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            if row.task_name not in latest:
+                latest[row.task_name] = {
+                    "status": row.status,
+                    "completed_at": (
+                        row.completed_at.isoformat()
+                        if row.completed_at
+                        else row.created_at.isoformat() if row.created_at else None
+                    ),
+                    "records": row.processed_records or 0,
+                }
+        return latest
+
     async def cancel_collect_task(self, task_id: int) -> OSCollectTask | None:
         """Cancel a collect task by setting status to cancelled."""
         task = await self.get_collect_task(task_id)

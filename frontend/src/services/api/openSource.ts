@@ -95,6 +95,10 @@ export const openSourceApi = {
       repo_config_ids: repoConfigIds,
       contributors_per_repo: contributorsPerRepo ?? 0,
     }),
+  checkCollectionHistory: (repoConfigIds: number[]) =>
+    apiClient.get('/open-source/repo-configs/collect-check', {
+      params: { ids: repoConfigIds.join(',') },
+    }),
 
   listCollectTasks: () =>
     apiClient.get('/open-source/collect/tasks'),

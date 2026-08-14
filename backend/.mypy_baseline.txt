@@ -905,11 +905,11 @@ app/domains/lab/services/lab_talent_service.py:125
 app/domains/lab/services/lab_talent_service.py:126
 app/domains/lab/services/lab_talent_service.py:127
 app/domains/lab/services/lab_talent_service.py:182
-app/domains/open_source/api/collection.py:104
-app/domains/open_source/api/collection.py:121
-app/domains/open_source/api/collection.py:141
-app/domains/open_source/api/collection.py:154
-app/domains/open_source/api/collection.py:169
+app/domains/open_source/api/collection.py:127
+app/domains/open_source/api/collection.py:144
+app/domains/open_source/api/collection.py:164
+app/domains/open_source/api/collection.py:177
+app/domains/open_source/api/collection.py:192
 app/domains/open_source/api/collection.py:33
 app/domains/open_source/api/collection.py:50
 app/domains/open_source/api/collection.py:61
@@ -951,6 +951,7 @@ app/domains/open_source/api/stats.py:75
 app/domains/open_source/api/stats.py:76
 app/domains/open_source/api/stats.py:88
 app/domains/open_source/api/stats.py:95
+app/domains/open_source/repositories/open_source/collect_tasks.py:96
 app/domains/open_source/services/collectors/github_collector.py:104
 app/domains/open_source/services/collectors/github_collector.py:332
 app/domains/open_source/services/collectors/github_collector.py:342
@@ -972,6 +973,8 @@ app/domains/open_source/services/open_source_embedding_service.py:207
 app/domains/open_source/services/open_source_embedding_service.py:214
 app/domains/open_source/services/open_source_embedding_service.py:234
 app/domains/open_source/services/open_source_embedding_service.py:62
+app/domains/open_source/services/open_source_service.py:104
+app/domains/open_source/services/open_source_service.py:93
 app/domains/open_source/services/os_collection_service.py:104
 app/domains/open_source/services/os_collection_service.py:106
 app/domains/open_source/services/os_collection_service.py:108

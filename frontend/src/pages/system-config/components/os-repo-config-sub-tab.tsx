@@ -68,9 +68,15 @@ const OSRepoConfigSubTab: React.FC = () => {
   const [collectingIds, setCollectingIds] = useState<Set<number>>(new Set())
   const [collectModalVisible, setCollectModalVisible] = useState(false)
   const [collectRecord, setCollectRecord] = useState<OSRepoConfig | null>(null)
+  const [collectHistory, setCollectHistory] = useState<{ last_status_label: string; last_collected_at: string; last_records: number } | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [batchCollectModalVisible, setBatchCollectModalVisible] = useState(false)
   const [batchContributorsPerRepo, setBatchContributorsPerRepo] = useState<number>(0)
+  const [batchHistoryModal, setBatchHistoryModal] = useState<{
+    visible: boolean
+    collected: { repo_config_id: number; repo_full_name: string; last_status_label: string; last_collected_at: string; last_records: number }[]
+    allIds: number[]
+  }>({ visible: false, collected: [], allIds: [] })
   const [purgeModalVisible, setPurgeModalVisible] = useState(false)
   const [purgeRecord, setPurgeRecord] = useState<OSRepoConfig | null>(null)
   const [purgePreview, setPurgePreview] = useState<OSPurgePreview | null>(null)
@@ -148,8 +154,17 @@ const OSRepoConfigSubTab: React.FC = () => {
     }
   }
 
-  const handleCollect = (record: OSRepoConfig) => {
+  const handleCollect = async (record: OSRepoConfig) => {
     setCollectRecord(record)
+    setCollectHistory(null)
+    try {
+      const res = await api.openSource.checkCollectionHistory([record.repo_config_id])
+      if (res.data && res.data.length > 0) {
+        setCollectHistory(res.data[0])
+      }
+    } catch {
+      // ignore — proceed without history check
+    }
     setCollectModalVisible(true)
   }
 
@@ -214,15 +229,27 @@ const OSRepoConfigSubTab: React.FC = () => {
     }
   }
 
-  const handleBatchCollect = () => {
+  const handleBatchCollect = async () => {
     if (selectedRowKeys.length === 0) return
-    setBatchCollectModalVisible(true)
+    const ids = selectedRowKeys.map((k) => Number(k))
+    try {
+      const res = await api.openSource.checkCollectionHistory(ids)
+      const collected = res.data || []
+      if (collected.length > 0) {
+        // Some repos already collected — show 3-choice modal
+        setBatchHistoryModal({ visible: true, collected, allIds: ids })
+      } else {
+        // No history — go straight to normal batch modal
+        setBatchCollectModalVisible(true)
+      }
+    } catch {
+      // Check failed — proceed without warning
+      setBatchCollectModalVisible(true)
+    }
   }
 
-  const handleConfirmBatchCollect = async () => {
+  const executeBatchCollect = async (ids: number[]) => {
     try {
-      setBatchCollectModalVisible(false)
-      const ids = selectedRowKeys.map((k) => Number(k))
       ids.forEach((id) => {
         setCollectingIds((prev) => new Set(prev).add(id))
       })
@@ -253,8 +280,6 @@ const OSRepoConfigSubTab: React.FC = () => {
     } catch (error) {
       message.error(getErrorMessage(error, '批量启动采集失败'))
     } finally {
-      // Clear loading state for selected ids
-      const ids = selectedRowKeys.map((k) => Number(k))
       ids.forEach((id) => {
         setCollectingIds((prev) => {
           const next = new Set(prev)
@@ -263,6 +288,12 @@ const OSRepoConfigSubTab: React.FC = () => {
         })
       })
     }
+  }
+
+  const handleConfirmBatchCollect = async () => {
+    setBatchCollectModalVisible(false)
+    const ids = selectedRowKeys.map((k) => Number(k))
+    await executeBatchCollect(ids)
   }
 
   const columns = [
@@ -492,13 +523,19 @@ const OSRepoConfigSubTab: React.FC = () => {
         open={collectModalVisible}
         onCancel={() => setCollectModalVisible(false)}
         onOk={handleConfirmCollect}
-        okText="确认"
+        okText="确认采集"
         cancelText="取消"
-        width={360}
+        width={420}
       >
         <p style={{ margin: 0, fontSize: 14 }}>
           确认要采集 <strong>{collectRecord?.repo_full_name}</strong> 的贡献者数据吗？
         </p>
+        {collectHistory && (
+          <div style={{ marginTop: 12, padding: '8px 12px', background: '#fffbe6', borderRadius: 8, border: '1px solid #ffe58f', fontSize: 13 }}>
+            ⚠️ 该仓库已于 {collectHistory.last_collected_at?.slice(0, 10)} {collectHistory.last_status_label}
+            {collectHistory.last_records > 0 && `（${collectHistory.last_records} 条记录）`}，确认要重新采集吗？
+          </div>
+        )}
       </Modal>
 
       {/* Batch Collect Confirm Modal */}
@@ -525,6 +562,61 @@ const OSRepoConfigSubTab: React.FC = () => {
           style={{ width: '100%' }}
         />
       </Modal>
+
+      {/* Batch History — 3-choice modal (some repos already collected) */}
+      <Modal
+        title="部分仓库已采集过"
+        open={batchHistoryModal.visible}
+        onCancel={() => setBatchHistoryModal((prev) => ({ ...prev, visible: false }))}
+        width={480}
+        footer={
+          <Space>
+            <Button onClick={() => setBatchHistoryModal((prev) => ({ ...prev, visible: false }))}>
+              取消
+            </Button>
+            <Button
+              disabled={batchHistoryModal.allIds.length === batchHistoryModal.collected.length}
+              onClick={async () => {
+                const collectedIds = new Set(batchHistoryModal.collected.map((c) => c.repo_config_id))
+                const uncollectedIds = batchHistoryModal.allIds.filter((id) => !collectedIds.has(id))
+                setBatchHistoryModal((prev) => ({ ...prev, visible: false }))
+                if (uncollectedIds.length > 0) {
+                  setBatchCollectModalVisible(true)
+                  setSelectedRowKeys(uncollectedIds as React.Key[])
+                }
+              }}
+            >
+              只采集未采集的（{batchHistoryModal.allIds.length - batchHistoryModal.collected.length} 个）
+            </Button>
+            <Button
+              type="primary"
+              onClick={async () => {
+                const allIds = batchHistoryModal.allIds
+                setBatchHistoryModal((prev) => ({ ...prev, visible: false }))
+                await executeBatchCollect(allIds)
+              }}
+            >
+              继续全部采集（{batchHistoryModal.allIds.length} 个）
+            </Button>
+          </Space>
+        }
+      >
+        <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fffbe6', borderRadius: 8, border: '1px solid #ffe58f', fontSize: 13 }}>
+          ⚠️ 以下 {batchHistoryModal.collected.length} 个仓库之前已采集过：
+        </div>
+        <div style={{ maxHeight: 240, overflow: 'auto', fontSize: 13, marginBottom: 16 }}>
+          {batchHistoryModal.collected.map((c) => (
+            <div key={c.repo_config_id} style={{ marginBottom: 4 }}>
+              • <strong>{c.repo_full_name}</strong> — {c.last_collected_at?.slice(0, 10)} {c.last_status_label}
+              {c.last_records > 0 && `（${c.last_records} 条）`}
+            </div>
+          ))}
+        </div>
+        <Text type="secondary" style={{ fontSize: 13 }}>
+          请选择操作方式：
+        </Text>
+      </Modal>
+
       {/* Purge Confirm Modal */}
       <Modal
         title={`清理采集数据 - ${purgeRecord?.repo_full_name ?? ''}`}

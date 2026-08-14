@@ -88,6 +88,42 @@ class OpenSourceService:
     async def get_repo_config(self, repo_config_id: int) -> OSRepoConfig | None:
         return await self._collection.get_repo_config(repo_config_id)
 
+    async def get_repo_full_names_by_ids(self, repo_config_ids: list[int]) -> dict[int, str]:
+        """Batch fetch {repo_config_id: repo_full_name}. Used by collect-check."""
+        return await self._collection.get_repo_full_names_by_ids(repo_config_ids)
+
+    async def check_collection_history(self, repo_config_ids: list[int]) -> list[dict]:
+        """Check which repos have historical (non-active) collection tasks.
+
+        Returns [{repo_config_id, repo_full_name, last_status, ...}] for repos
+        that have been collected before.
+        """
+        repo_map = await self.get_repo_full_names_by_ids(repo_config_ids)
+        if not repo_map:
+            return []
+        history = await self._collection.get_last_collection_status(list(repo_map.values()))
+        status_labels = {
+            "completed": "采集完成",
+            "failed": "采集失败",
+            "cancelled": "已取消",
+            "rate_limited": "速率限制",
+        }
+        result: list[dict] = []
+        for rid, full_name in repo_map.items():
+            if full_name in history:
+                h = history[full_name]
+                result.append(
+                    {
+                        "repo_config_id": rid,
+                        "repo_full_name": full_name,
+                        "last_status": h["status"],
+                        "last_status_label": status_labels.get(h["status"], h["status"]),
+                        "last_collected_at": h["completed_at"],
+                        "last_records": h["records"],
+                    }
+                )
+        return result
+
     async def create_repo_config(
         self,
         repo_full_name: str,

@@ -89,6 +89,20 @@ class RepoConfigsMixin:
         )
         return tcast(OSRepoConfig | None, result.scalar_one_or_none())
 
+    async def get_repo_full_names_by_ids(
+        self,
+        repo_config_ids: list[int],
+    ) -> dict[int, str]:
+        """Batch fetch {repo_config_id: repo_full_name}."""
+        if not repo_config_ids:
+            return {}
+        result = await self.session.execute(
+            select(OSRepoConfig.repo_config_id, OSRepoConfig.repo_full_name).where(
+                OSRepoConfig.repo_config_id.in_(repo_config_ids)
+            )
+        )
+        return {row.repo_config_id: row.repo_full_name for row in result.all()}
+
     async def create_repo_config(
         self,
         data: dict[str, Any],
