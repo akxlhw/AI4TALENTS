@@ -12,8 +12,11 @@ from app.domains.open_source.api.stats import router as stats_router
 
 router = APIRouter()
 
-router.include_router(repo_config_router)
+# collection_router must come first: its static path /repo-configs/collect-check
+# would otherwise be swallowed by repo_config_router's /repo-configs/{id} (int
+# parse 422), silently disabling the batch-collect history warning
 router.include_router(collection_router)
+router.include_router(repo_config_router)
 router.include_router(developers_router)
 router.include_router(favourites_router)
 router.include_router(stats_router)

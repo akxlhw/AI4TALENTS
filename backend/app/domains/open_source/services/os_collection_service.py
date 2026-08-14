@@ -100,6 +100,14 @@ class OSCollectionService:
 
     # ============= Repo Config =============
 
+    async def get_repo_full_names_by_ids(self, repo_config_ids: list[int]) -> dict[int, str]:
+        """Batch fetch {repo_config_id: repo_full_name}. Used by collect-check."""
+        return await self.repo.get_repo_full_names_by_ids(repo_config_ids)
+
+    async def get_last_collection_status(self, repo_full_names: list[str]) -> dict[str, dict]:
+        """Latest non-active collection task per repo_full_name."""
+        return await self.repo.get_last_collection_status(repo_full_names)
+
     async def list_repo_configs(
         self,
         page: int = 1,
