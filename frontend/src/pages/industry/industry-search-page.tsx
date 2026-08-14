@@ -52,6 +52,8 @@ const IndustrySearchPage: React.FC = () => {
   })
 
   const { data: positions } = useIndustryPositions('open')
+  const { data: directions } = useTechDirectionOptions()
+  const directionOptionsForFilter = (directions || []).map(d => ({ value: d.code, label: d.name }))
 
   if (error) {
     return (
@@ -174,85 +176,154 @@ const IndustrySearchPage: React.FC = () => {
       </Row>
       )}
 
-      {/* ═══ Main: Position sidebar + Talent list ═══ */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: browseMode ? '24px 32px 64px' : '0 32px 64px' }}>
-        {browseMode && (
+      {/* ═══ Main ═══ */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: browseMode ? '88px 32px 80px' : '0 32px 64px' }}>
+
+      {browseMode ? (
+        /* ── Search page: single-column full-width (matches open-source pattern) ── */
+        <>
+          {/* Title bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Title level={3} style={{ margin: 0 }}>行业人才搜索</Title>
+            <Button type="link" onClick={exitBrowse} style={{ fontSize: 14, padding: 0 }}>
+              ← 返回首页
+            </Button>
+          </div>
+
+          {/* Search + Filter card (full width, top) */}
+          <Card className="domain-card" style={{ marginBottom: 16, borderRadius: 12 }} styles={{ body: { padding: 20 } }}>
             <Input.Search
               placeholder="搜索姓名 / 公司 / 职位..."
-              size="middle"
+              size="large"
               value={kw}
               onChange={e => { setKw(e.target.value); if (!e.target.value) state.setFilter('keyword', '') }}
               onSearch={v => state.setFilter('keyword', v.trim())}
-              style={{ width: 320 }}
+              enterButton={<span style={{ fontWeight: 500 }}><SearchOutlined /> 搜索</span>}
+              style={{ width: '100%', marginBottom: 16 }}
               allowClear
             />
+            <Row gutter={[12, 12]}>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <Select placeholder="在招岗位" style={{ width: '100%' }}
+                  value={state.positionId ?? undefined}
+                  onChange={v => { state.setFilter('positionId', v ?? null); state.setFilter('page', 1) }}
+                  options={openPositions.map(p => ({ value: p.position_id, label: `${p.title} (${p.candidate_count})` }))}
+                  allowClear showSearch optionFilterProp="label" />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <Select placeholder="最低匹配分" style={{ width: '100%' }}
+                  value={state.minScore ?? 0}
+                  onChange={v => { state.setFilter('minScore', v === 0 ? null : v); state.setFilter('page', 1) }}
+                  options={MIN_SCORE_OPTIONS} />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <Select placeholder="候选人状态" style={{ width: '100%' }}
+                  value={state.status || undefined}
+                  onChange={v => { state.setFilter('status', v || ''); state.setFilter('page', 1) }}
+                  options={CANDIDATE_STATUS_OPTIONS} allowClear />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <Select placeholder="来源平台" style={{ width: '100%' }}
+                  value={state.sourcePlatform || undefined}
+                  onChange={v => { state.setFilter('sourcePlatform', v || ''); state.setFilter('page', 1) }}
+                  options={SOURCE_PLATFORM_OPTIONS} allowClear />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <Select placeholder="技术方向" style={{ width: '100%' }}
+                  value={state.techDirection || undefined}
+                  onChange={v => { state.setFilter('techDirection', v || ''); state.setFilter('page', 1) }}
+                  options={directionOptionsForFilter} allowClear showSearch optionFilterProp="label" />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <Select style={{ width: '100%' }}
+                  value={state.sortBy}
+                  onChange={v => state.setFilter('sortBy', v)}
+                  options={INDUSTRY_SORT_OPTIONS} />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <Button icon={<ClearOutlined />} onClick={() => { setKw(''); state.resetFilters() }} block>
+                  清除全部
+                </Button>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Results toolbar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Text style={{ fontSize: 14 }}>
+              共 <Text strong>{total}</Text> 条结果
+              {hasFilters && '（已筛选）'}
+            </Text>
           </div>
-        )}
+
+          {/* Results grid */}
+          <Spin spinning={isLoading}>
+            {items.length === 0 && !isLoading ? (
+              <Card className="domain-card" style={{ borderRadius: 12 }}>
+                <EmptyPlaceholder
+                  title="未找到匹配的候选人"
+                  description="试试调整关键词或放宽筛选条件"
+                  action={{ label: '清除全部筛选', onClick: () => { setKw(''); state.resetFilters() } }}
+                />
+              </Card>
+            ) : (
+              <>
+                <Row gutter={[16, 16]}>
+                  {items.map(t => (
+                    <Col xs={24} sm={12} lg={8} key={t.talent_id}>
+                      <IndustryTalentCard talent={t} />
+                    </Col>
+                  ))}
+                </Row>
+                <div style={{ textAlign: 'center', marginTop: 24 }}>
+                  <Pagination
+                    current={state.page} total={total} pageSize={state.pageSize}
+                    onChange={p => state.setFilter('page', p)}
+                    showTotal={t => `共 ${t} 人`}
+                  />
+                </div>
+              </>
+            )}
+          </Spin>
+        </>
+      ) : (
+        /* ── Homepage: sidebar + recommended cards ── */
         <Row gutter={[24, 24]}>
-          {/* Left: Position sidebar — always visible (filters only in browse mode) */}
+          {/* Left: Position sidebar */}
           <Col xs={24} sm={8} md={7} lg={6}>
             <PositionSidebar
               positions={openPositions}
               activePositionId={state.positionId}
               onPositionClick={handlePositionClick}
               state={state}
-              showFilters={browseMode}
+              showFilters={false}
             />
           </Col>
 
-          {/* Right: Talent cards — sidebar always takes lg=6, cards get lg=18 */}
+          {/* Right: Recommended candidates */}
           <Col xs={24} sm={16} md={17} lg={18}>
-            {/* Section header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Title level={4} style={{ margin: 0 }}>
                 <FireOutlined style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }} />
-                {browseMode && hasFilters ? `搜索结果（${total} 人）` : '推荐候选人'}
+                推荐候选人
               </Title>
-              {browseMode ? (
-                <Button type="link" onClick={exitBrowse}
-                  style={{ fontSize: 14, padding: 0 }}>
-                  ← 返回首页
-                </Button>
-              ) : (
-                <Button type="link" onClick={enterBrowse}
-                  style={{ fontSize: 14, padding: 0 }}>
-                  查看全部 ↓
-                </Button>
-              )}
+              <Button type="link" onClick={enterBrowse} style={{ fontSize: 14, padding: 0 }}>
+                查看全部 ↓
+              </Button>
             </div>
 
             <Spin spinning={isLoading}>
-              {items.length === 0 && !isLoading ? (
-                <Card className="domain-card" style={{ borderRadius: 12 }}>
-                  <EmptyPlaceholder
-                    title="未找到匹配的候选人"
-                    description="试试调整关键词或放宽筛选条件；也可以先在系统配置中导入人才数据"
-                    action={{ label: '清除全部筛选', onClick: () => { setKw(''); state.resetFilters() } }}
-                  />
-                </Card>
-              ) : (
-                <>
-                  <Row gutter={[16, 16]}>
-                    {items.map(t => (
-                      <Col xs={24} sm={12} lg={8} key={t.talent_id}>
-                        <IndustryTalentCard talent={t} />
-                      </Col>
-                    ))}
-                  </Row>
-                  <div style={{ textAlign: 'center', marginTop: 32 }}>
-                    <Pagination
-                      current={state.page} total={total} pageSize={state.pageSize}
-                      onChange={p => state.setFilter('page', p)}
-                      showTotal={t => `共 ${t} 人`}
-                    />
-                  </div>
-                </>
-              )}
+              <Row gutter={[16, 16]}>
+                {items.map(t => (
+                  <Col xs={24} sm={12} lg={8} key={t.talent_id}>
+                    <IndustryTalentCard talent={t} />
+                  </Col>
+                ))}
+              </Row>
             </Spin>
           </Col>
         </Row>
+      )}
       </div>
     </div>
   )
