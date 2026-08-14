@@ -23,6 +23,7 @@ import {
 } from 'antd'
 import {
   PlusOutlined,
+  DatabaseOutlined,
   EditOutlined,
   DeleteOutlined,
   ReloadOutlined,
@@ -83,6 +84,10 @@ const OSRepoConfigSubTab: React.FC = () => {
   const [purgeLoading, setPurgeLoading] = useState(false)
   const [purgeExecuting, setPurgeExecuting] = useState(false)
   const [purgeConfirmText, setPurgeConfirmText] = useState('')
+  const [batchAddModalVisible, setBatchAddModalVisible] = useState(false)
+  const [batchAddText, setBatchAddText] = useState('')
+  const [batchAddTech, setBatchAddTech] = useState('ai')
+  const [batchAddLoading, setBatchAddLoading] = useState(false)
   const [purgeDeleteConfig, setPurgeDeleteConfig] = useState(false)
 
   const loadData = useCallback(async () => {
@@ -208,6 +213,77 @@ const OSRepoConfigSubTab: React.FC = () => {
       message.error(getErrorMessage(error, '清理失败'))
     } finally {
       setPurgeExecuting(false)
+    }
+  }
+
+  const handleBatchAdd = async () => {
+    const lines = batchAddText.split('\n').map(l => l.trim()).filter(Boolean)
+    if (lines.length === 0) {
+      message.warning('请输入至少一个仓库链接')
+      return
+    }
+    setBatchAddLoading(true)
+    try {
+      const res = await api.openSource.batchCreateRepoConfigs({
+        repo_inputs: lines,
+        tech_element: batchAddTech,
+      })
+      const { created, skipped, failed } = res.data
+      setBatchAddModalVisible(false)
+      setBatchAddText('')
+
+      const parts: React.ReactNode[] = []
+      if (created.length > 0) {
+        parts.push(
+          <div key="created" style={{ marginBottom: 12 }}>
+            <Text strong style={{ color: '#52c41a' }}>✅ 创建成功 {created.length} 个</Text>
+            {created.map((c: { repo_full_name: string; language?: string; stars_count?: number }) => (
+              <div key={c.repo_full_name} style={{ fontSize: 12, marginLeft: 16, marginTop: 2 }}>
+                • {c.repo_full_name}
+                {c.language && ` (${c.language}`}
+                {c.stars_count != null && c.stars_count > 0 && `, ${c.stars_count >= 1000 ? `${(c.stars_count / 1000).toFixed(1)}k` : c.stars_count} stars`}
+                {c.language && ')'}
+              </div>
+            ))}
+          </div>
+        )
+      }
+      if (skipped.length > 0) {
+        parts.push(
+          <div key="skipped" style={{ marginBottom: 12 }}>
+            <Text strong style={{ color: '#faad14' }}>⚠️ 已存在/跳过 {skipped.length} 个</Text>
+            {skipped.map((s: { repo_input: string; reason: string }, i: number) => (
+              <div key={i} style={{ fontSize: 12, marginLeft: 16, marginTop: 2 }}>
+                • {s.repo_input}: {s.reason}
+              </div>
+            ))}
+          </div>
+        )
+      }
+      if (failed.length > 0) {
+        parts.push(
+          <div key="failed">
+            <Text strong style={{ color: '#ff4d4f' }}>❌ 获取失败 {failed.length} 个</Text>
+            {failed.map((f: { repo_input: string; reason: string }, i: number) => (
+              <div key={i} style={{ fontSize: 12, marginLeft: 16, marginTop: 2 }}>
+                • {f.repo_input}: {f.reason}
+              </div>
+            ))}
+          </div>
+        )
+      }
+      if (parts.length > 0) {
+        Modal.info({
+          title: '批量添加结果',
+          width: 520,
+          content: <div style={{ maxHeight: 400, overflow: 'auto' }}>{parts}</div>,
+        })
+      }
+      loadData()
+    } catch (error) {
+      message.error(getErrorMessage(error, '批量添加失败'))
+    } finally {
+      setBatchAddLoading(false)
     }
   }
 
@@ -404,6 +480,9 @@ const OSRepoConfigSubTab: React.FC = () => {
               <Button icon={<ReloadOutlined />} onClick={loadData}>刷新</Button>
               <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
                 新增仓库
+              </Button>
+              <Button icon={<DatabaseOutlined />} onClick={() => setBatchAddModalVisible(true)}>
+                批量添加
               </Button>
             </Space>
           </Col>
@@ -615,6 +694,45 @@ const OSRepoConfigSubTab: React.FC = () => {
         <Text type="secondary" style={{ fontSize: 13 }}>
           请选择操作方式：
         </Text>
+      </Modal>
+
+      {/* Batch Add Modal */}
+      <Modal
+        title="批量添加仓库"
+        open={batchAddModalVisible}
+        onCancel={() => { setBatchAddModalVisible(false); setBatchAddText('') }}
+        onOk={handleBatchAdd}
+        confirmLoading={batchAddLoading}
+        okText={`添加并自动获取信息${batchAddText.split('\n').filter(l => l.trim()).length > 0 ? ` (${batchAddText.split('\n').filter(l => l.trim()).length} 个)` : ''}`}
+        cancelText="取消"
+        width={560}
+      >
+        <div style={{ marginBottom: 12 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>技术方向（统一应用到整批）</Text>
+          <Select
+            style={{ width: '100%', marginTop: 4 }}
+            value={batchAddTech}
+            onChange={setBatchAddTech}
+            options={TECH_ELEMENTS}
+          />
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            仓库链接（每行一个，支持 GitHub URL 或 owner/repo 格式）
+          </Text>
+        </div>
+        <Input.TextArea
+          rows={8}
+          placeholder={'https://github.com/openai/whisper\nhttps://github.com/langchain-ai/langchain\nmicrosoft/DeepSpeed'}
+          value={batchAddText}
+          onChange={e => setBatchAddText(e.target.value)}
+          style={{ fontFamily: 'monospace, monospace', fontSize: 12 }}
+        />
+        <div style={{ marginTop: 8 }}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            系统将自动通过 GitHub API 获取仓库名称、描述、主要语言和 Star 数
+          </Text>
+        </div>
       </Modal>
 
       {/* Purge Confirm Modal */}

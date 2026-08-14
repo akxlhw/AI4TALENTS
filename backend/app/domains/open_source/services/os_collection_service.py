@@ -33,6 +33,35 @@ from app.domains.open_source.schemas.open_source import OSPurgePreview
 
 logger = logging.getLogger(__name__)
 
+# Regex to extract owner/repo from various GitHub URL formats or plain owner/repo
+_REPO_URL_RE = re.compile(
+    r"(?:https?://github\.com/)?"  # optional URL prefix
+    r"([\w.-]+)/([\w.-]+?)"  # owner/repo (non-greedy repo to allow trailing path)
+    r"(?:\.git)?(?:/.*)?$"  # optional .git suffix and/or trailing path (/tree/main, /blob/...)
+)
+
+
+def parse_repo_input(raw: str) -> str | None:
+    """Parse a user-provided repo input into 'owner/repo' format.
+
+    Accepts:
+      https://github.com/owner/repo
+      https://github.com/owner/repo.git
+      https://github.com/owner/repo/tree/main
+      owner/repo
+      owner/repo.git
+
+    Returns 'owner/repo' or None if the input cannot be parsed.
+    """
+    raw = raw.strip()
+    if not raw:
+        return None
+    m = _REPO_URL_RE.match(raw)
+    if m:
+        return f"{m.group(1)}/{m.group(2)}"
+    return None
+
+
 VALID_TECH_ELEMENTS = {"ai", "robotics", "data_science", "networks", "systems", "security"}
 REPO_FULL_NAME_PATTERN = re.compile(r"^[\w.-]+/[\w.-]+$")
 
@@ -197,6 +226,91 @@ class OSCollectionService:
                 "stars_count": stars_count,
             }
         )
+
+    async def batch_create_repo_configs(
+        self,
+        repo_inputs: list[str],
+        tech_element: str,
+        created_by: int | None = None,
+    ) -> dict[str, list]:
+        """Batch create repo configs with auto-fetched GitHub metadata.
+
+        Each input is parsed (URL or owner/repo), then GitHub API is called
+        to fetch repo metadata (name, description, language, stars). Existing
+        repos are skipped, invalid/unreachable repos go to failed.
+
+        Returns {"created": [...], "skipped": [...], "failed": [...]}.
+        """
+        from app.domains.open_source.services.github_client import GitHubClient
+        from app.domains.shared.services.config_service import ConfigService
+
+        if tech_element not in VALID_TECH_ELEMENTS:
+            raise BadRequestError(
+                f"Invalid tech_element: {tech_element}. Must be one of: {', '.join(sorted(VALID_TECH_ELEMENTS))}"
+            )
+
+        # Get GitHub token once for the whole batch
+        config_service = ConfigService(self.session)
+        github_config = await config_service.get_github_config()
+        token = github_config.tokens if github_config.tokens else None
+
+        created: list[dict[str, Any]] = []
+        skipped: list[dict[str, str]] = []
+        failed: list[dict[str, str]] = []
+
+        for raw_input in repo_inputs:
+            raw_input = raw_input.strip()
+            if not raw_input:
+                continue
+
+            repo_full_name = parse_repo_input(raw_input)
+            if not repo_full_name:
+                failed.append({"repo_input": raw_input, "reason": "无法解析仓库地址"})
+                continue
+
+            # Check duplicate
+            existing = await self.repo.get_repo_config_by_full_name(repo_full_name)
+            if existing:
+                skipped.append({"repo_input": raw_input, "reason": "仓库配置已存在"})
+                continue
+
+            # Fetch metadata from GitHub
+            try:
+                async with GitHubClient(token=token) as client:
+                    owner, repo_name = repo_full_name.split("/", 1)
+                    repo_info = await client.get_repo(owner, repo_name)
+
+                if not repo_info:
+                    failed.append(
+                        {"repo_input": raw_input, "reason": "GitHub 返回 404（仓库不存在）"}
+                    )
+                    continue
+
+                config = await self.repo.create_repo_config(
+                    {
+                        "repo_full_name": repo_full_name,
+                        "tech_element": tech_element,
+                        "display_name": repo_info.get("name") or repo_full_name.split("/")[-1],
+                        "description": (repo_info.get("description") or "")[:65000],
+                        "language": repo_info.get("language"),
+                        "created_by": created_by,
+                        "stars_count": repo_info.get("stargazers_count", 0) or 0,
+                    }
+                )
+                created.append(
+                    {
+                        "repo_config_id": config.repo_config_id,
+                        "repo_full_name": config.repo_full_name,
+                        "display_name": config.display_name,
+                        "language": config.language,
+                        "stars_count": config.stars_count,
+                    }
+                )
+            except Exception as e:
+                failed.append({"repo_input": raw_input, "reason": str(e)[:200]})
+                logger.warning(f"Batch create failed for {repo_full_name}: {e}")
+
+        return {"created": created, "skipped": skipped, "failed": failed}
 
     async def update_repo_config(
         self, repo_config_id: int, update_data: dict[str, Any]

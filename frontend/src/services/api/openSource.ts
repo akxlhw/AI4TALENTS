@@ -82,6 +82,8 @@ export const openSourceApi = {
     apiClient.get('/open-source/repositories', { params }),
   createRepoConfig: (data: Record<string, unknown>) =>
     apiClient.post('/open-source/repo-configs', data),
+  batchCreateRepoConfigs: (data: { repo_inputs: string[]; tech_element: string }) =>
+    apiClient.post('/open-source/repo-configs/batch', data),
   updateRepoConfig: (id: number, data: Record<string, unknown>) =>
     apiClient.put(`/open-source/repo-configs/${id}`, data),
   deleteRepoConfig: (id: number) =>

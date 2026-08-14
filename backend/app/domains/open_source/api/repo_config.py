@@ -11,6 +11,8 @@ from app.core.database import get_async_session
 from app.core.exceptions import NotFoundError
 from app.domains.open_source.api.auth import get_current_user, require_super_admin
 from app.domains.open_source.schemas.open_source import (
+    OSBatchRepoCreateRequest,
+    OSBatchRepoCreateResponse,
     OSPurgePreview,
     OSRepoConfigCreate,
     OSRepoConfigResponse,
@@ -71,6 +73,31 @@ async def create_repo_config(
         created_by=int(user.get("sub")) if user.get("sub") else None,
     )
     return OSRepoConfigResponse.model_validate(config)
+
+
+@router.post(
+    "/repo-configs/batch",
+    response_model=OSBatchRepoCreateResponse,
+    status_code=201,
+)
+async def batch_create_repo_configs(
+    data: OSBatchRepoCreateRequest,
+    session: AsyncSession = Depends(get_async_session),
+    user: dict = Depends(require_super_admin),
+):
+    """Batch create repo configs from GitHub URLs.
+
+    Each input is parsed (URL or owner/repo), then GitHub API is called
+    to auto-fill display name, description, language, and stars. Existing
+    repos are skipped, invalid repos go to failed.
+    """
+    service = OpenSourceService(session)
+    result = await service.batch_create_repo_configs(
+        repo_inputs=data.repo_inputs,
+        tech_element=data.tech_element,
+        created_by=int(user.get("sub")) if user.get("sub") else None,
+    )
+    return OSBatchRepoCreateResponse(**result)
 
 
 @router.get("/repo-configs/{repo_config_id}", response_model=OSRepoConfigResponse)

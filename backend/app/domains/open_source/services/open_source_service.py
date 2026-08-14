@@ -146,6 +146,19 @@ class OpenSourceService:
             created_by=created_by,
         )
 
+    async def batch_create_repo_configs(
+        self,
+        repo_inputs: list[str],
+        tech_element: str,
+        created_by: int | None = None,
+    ) -> dict[str, list]:
+        """Batch create repo configs with auto-fetched GitHub metadata."""
+        return await self._collection.batch_create_repo_configs(
+            repo_inputs=repo_inputs,
+            tech_element=tech_element,
+            created_by=created_by,
+        )
+
     async def update_repo_config(
         self, repo_config_id: int, update_data: dict[str, Any]
     ) -> OSRepoConfig | None:

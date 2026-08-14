@@ -459,3 +459,38 @@ class OSRepositoryContributor(BaseModel):
     roles: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ============ Batch Repo Create ============
+
+
+class OSBatchRepoCreateRequest(BaseModel):
+    """Request body for batch creating repo configs from GitHub URLs."""
+
+    repo_inputs: list[str] = Field(..., description="GitHub URLs or owner/repo strings")
+    tech_element: str = Field(..., description="Tech element applied to all repos")
+
+
+class OSBatchRepoCreatedItem(BaseModel):
+    """One successfully created repo config."""
+
+    repo_config_id: int
+    repo_full_name: str
+    display_name: str | None = None
+    language: str | None = None
+    stars_count: int = 0
+
+
+class OSBatchRepoSkipItem(BaseModel):
+    """One skipped or failed repo."""
+
+    repo_input: str
+    reason: str
+
+
+class OSBatchRepoCreateResponse(BaseModel):
+    """Response for batch repo creation."""
+
+    created: list[OSBatchRepoCreatedItem] = Field(default_factory=list)
+    skipped: list[OSBatchRepoSkipItem] = Field(default_factory=list)
+    failed: list[OSBatchRepoSkipItem] = Field(default_factory=list)
