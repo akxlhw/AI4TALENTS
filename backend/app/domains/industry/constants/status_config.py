@@ -13,13 +13,11 @@ POSITION_STATUS_LABELS: dict[str, str] = {
 }
 
 # Candidate recruiting status on a position-talent link
-CANDIDATE_STATUSES: list[str] = ["new", "contacted", "interviewed", "rejected", "hired"]
+CANDIDATE_STATUSES: list[str] = ["new", "connected", "terminated"]
 CANDIDATE_STATUS_LABELS: dict[str, str] = {
     "new": "新候选人",
-    "contacted": "已触达",
-    "interviewed": "面试中",
-    "rejected": "已淘汰",
-    "hired": "已入职",
+    "connected": "已连接",
+    "terminated": "已终止",
 }
 
 # Known source platforms (informational; import does not hard-reject others)

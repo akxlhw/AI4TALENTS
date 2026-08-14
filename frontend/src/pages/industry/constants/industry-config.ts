@@ -8,19 +8,15 @@ import type { CSSProperties } from 'react'
 // Candidate recruiting status (position-talent link)
 export const CANDIDATE_STATUS_LABELS: Record<string, string> = {
   new: '新候选人',
-  contacted: '已触达',
-  interviewed: '面试中',
-  rejected: '已淘汰',
-  hired: '已入职',
+  connected: '已连接',
+  terminated: '已终止',
 }
 
-// Ant Design Tag preset colors: new 蓝 / contacted 橙 / interviewed 紫 / rejected 灰 / hired 绿
+// Ant Design Tag preset colors
 export const CANDIDATE_STATUS_COLORS: Record<string, string> = {
   new: 'blue',
-  contacted: 'orange',
-  interviewed: 'purple',
-  rejected: 'default',
-  hired: 'green',
+  connected: 'green',
+  terminated: 'default',
 }
 
 export const CANDIDATE_STATUS_OPTIONS = Object.entries(CANDIDATE_STATUS_LABELS).map(
