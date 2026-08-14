@@ -18,8 +18,10 @@ class OSRepoConfigCreate(BaseModel):
     repo_full_name: str = Field(..., description="GitHub repo full name, e.g. 'pytorch/pytorch'")
     display_name: str | None = Field(default=None, description="Display name")
     description: str | None = Field(default=None, description="Repository description")
-    tech_element: str = Field(
-        ..., description="Tech element code: ai/robotics/data_science/networks/systems/security"
+    tech_element: list[str] = Field(
+        ...,
+        min_length=1,
+        description="Tech element codes: ai/robotics/data_science/networks/systems/security",
     )
     tech_direction_id: int | None = Field(default=None, description="Optional tech direction ID")
     language: str | None = Field(default=None, description="Primary programming language")
@@ -31,7 +33,7 @@ class OSRepoConfigUpdate(BaseModel):
 
     display_name: str | None = Field(default=None)
     description: str | None = Field(default=None)
-    tech_element: str | None = Field(default=None)
+    tech_element: list[str] | None = Field(default=None, min_length=1)
     tech_direction_id: int | None = Field(default=None)
     language: str | None = Field(default=None)
     is_active: bool | None = Field(default=None)
@@ -46,7 +48,7 @@ class OSRepoConfigResponse(BaseModel):
     repo_full_name: str
     display_name: str | None
     description: str | None
-    tech_element: str
+    tech_element: list[str] = Field(default_factory=list)
     tech_direction_id: int | None
     language: str | None
     stars_count: int

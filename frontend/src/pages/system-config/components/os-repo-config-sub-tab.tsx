@@ -398,10 +398,19 @@ const OSRepoConfigSubTab: React.FC = () => {
       title: '技术领域',
       dataIndex: 'tech_element',
       key: 'tech_element',
-      width: 120,
-      render: (code: string) => (
-        <Tag color={getTechElementColor(code)}>{getTechElementLabel(code)}</Tag>
-      ),
+      width: 140,
+      render: (codes: string[] | string) => {
+        const list = Array.isArray(codes) ? codes : [codes]
+        return (
+          <Space size={2} wrap>
+            {list.map((code) => (
+              <Tag key={code} color={getTechElementColor(code)} style={{ margin: 0 }}>
+                {getTechElementLabel(code)}
+              </Tag>
+            ))}
+          </Space>
+        )
+      },
     },
 
     {
@@ -566,10 +575,10 @@ const OSRepoConfigSubTab: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 name="tech_element"
-                label="技术领域"
+                label="技术领域（可多选）"
                 rules={[{ required: true, message: '请选择技术领域' }]}
               >
-                <Select placeholder="选择技术领域" options={TECH_ELEMENTS} />
+                <Select mode="multiple" placeholder="选择技术领域" options={TECH_ELEMENTS} />
               </Form.Item>
             </Col>
             <Col span={12}>

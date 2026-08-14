@@ -31,7 +31,7 @@ class OSRepoConfig(Base, TimestampMixin):
     repo_full_name = Column(String(255), nullable=False, unique=True, index=True)
     display_name = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
-    tech_element = Column(String(50), nullable=False, index=True)
+    tech_element = Column(JSON().with_variant(JSONB, "postgresql"), nullable=False, default=list)
     tech_direction_id = Column(
         Integer, ForeignKey("core_tech_direction.tech_direction_id"), nullable=True
     )

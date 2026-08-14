@@ -9,7 +9,8 @@ from __future__ import annotations
 from typing import Any
 from typing import cast as tcast
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, cast, func, or_, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.open_source.models.open_source import (
@@ -41,7 +42,13 @@ class RepoConfigsMixin:
         q = filters.get("q")
 
         if tech_elements:
-            conditions.append(OSRepoConfig.tech_element.in_(tech_elements))
+            # tech_element is a JSON array now — match repos containing ANY of the given codes
+            conditions.append(
+                or_(
+                    OSRepoConfig.tech_element.cast(JSONB).op("@>")(cast([te], JSONB))
+                    for te in tech_elements
+                )
+            )
         if is_active is not None:
             conditions.append(OSRepoConfig.is_active == is_active)
         if collect_enabled is not None:

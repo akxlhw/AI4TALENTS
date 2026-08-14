@@ -245,6 +245,60 @@ class DevelopersMixin:
         result = await self.session.execute(stmt)
         return tcast("list[tuple[OSDeveloper, OSContribution]]", list(result.all())), total
 
+    async def get_developer_ids_by_repo_full_name(self, repo_full_name: str) -> list[int]:
+        """Get all developer IDs involved with a repo (contributors + owner)."""
+        repo = await self.get_repository_by_full_name(repo_full_name)
+        if repo is None:
+            return []
+        repo_id = tcast(int, repo.repo_id)
+
+        contributor_rows = await self.session.execute(
+            select(OSContribution.developer_id).where(OSContribution.repo_id == repo_id)
+        )
+        ids = {tcast(int, row[0]) for row in contributor_rows.all()}
+        if repo.developer_id is not None:
+            ids.add(tcast(int, repo.developer_id))
+        return list(ids)
+
+    async def get_union_tech_elements_for_developer(self, developer_id: int) -> list[str]:
+        """Union of tech_element arrays across all configured repos the developer
+        contributes to or owns. Unconfigured repos don't count."""
+        from app.domains.open_source.models.open_source import OSRepoConfig
+
+        contrib_rows = await self.session.execute(
+            select(OSRepoConfig.tech_element)
+            .join(OSRepository, OSRepository.full_name == OSRepoConfig.repo_full_name)
+            .join(OSContribution, OSContribution.repo_id == OSRepository.repo_id)
+            .where(OSContribution.developer_id == developer_id)
+        )
+        owner_rows = await self.session.execute(
+            select(OSRepoConfig.tech_element)
+            .join(OSRepository, OSRepository.full_name == OSRepoConfig.repo_full_name)
+            .where(OSRepository.developer_id == developer_id)
+        )
+
+        union: list[str] = []
+        seen: set[str] = set()
+        for row in list(contrib_rows.all()) + list(owner_rows.all()):
+            elements = row[0] if isinstance(row[0], list) else []
+            for e in elements:
+                if e not in seen:
+                    seen.add(e)
+                    union.append(e)
+        return union
+
+    async def batch_update_tech_tags(self, developer_ids: list[int], tech_tags: list[str]) -> int:
+        """Overwrite tech_tags for multiple developers. Returns updated count."""
+        if not developer_ids:
+            return 0
+        result = await self.session.execute(
+            OSDeveloper.__table__.update()
+            .where(OSDeveloper.developer_id.in_(developer_ids))
+            .values(tech_tags=tech_tags)
+        )
+        await self.session.flush()
+        return result.rowcount or 0
+
     async def count_repository_contributors(self, repo_id: int) -> int:
         """Count distinct contributors for a repository."""
         result = await self.session.scalar(

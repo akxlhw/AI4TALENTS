@@ -20,7 +20,6 @@ from app.domains.open_source.models.open_source import (
     OSDeveloper,
     OSEmbedding,
     OSLanguageSkill,
-    OSRepoConfig,
     OSRepository,
 )
 
@@ -56,10 +55,19 @@ class OpenSourceAdvancedRepository:
         for lang, lang_cnt in lang_result.all():
             language_distribution[lang] = lang_cnt
 
+        # tech_element is now a JSON array — unnest each element via LATERAL
+        # for the distribution. jsonb_typeof guard skips legacy scalar rows.
         tech_result = await self.session.execute(
-            select(OSRepoConfig.tech_element, func.count(OSRepoConfig.repo_config_id))
-            .where(OSRepoConfig.is_active.is_(True))
-            .group_by(OSRepoConfig.tech_element)
+            text(
+                "SELECT te, count(DISTINCT r.repo_config_id) AS cnt "
+                "FROM os_repo_config r, "
+                "jsonb_array_elements_text("
+                "  CASE WHEN jsonb_typeof(r.tech_element::jsonb) = 'array' "
+                "       THEN r.tech_element::jsonb ELSE '[]'::jsonb END"
+                ") AS te "
+                "WHERE r.is_active = true "
+                "GROUP BY te"
+            )
         )
         tech_element_distribution: dict[str, int] = {}
         for element, element_cnt in tech_result.all():

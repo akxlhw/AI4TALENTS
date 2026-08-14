@@ -156,10 +156,29 @@ class OSCollectionService:
         """
         return await self.repo.get_repo_config(repo_config_id)
 
+    def _validate_tech_elements(self, tech_element: list[str] | str) -> list[str]:
+        """Validate and normalize tech_element to a list of valid codes.
+
+        Accepts a single code (legacy str) or a list; raises BadRequestError
+        on any invalid entry. Returns the normalized list.
+        """
+        elements = [tech_element] if isinstance(tech_element, str) else list(tech_element or [])
+        if not elements:
+            raise BadRequestError("tech_element must contain at least one code")
+        invalid = [e for e in elements if e not in VALID_TECH_ELEMENTS]
+        if invalid:
+            raise BadRequestError(
+                f"Invalid tech_element: {', '.join(invalid)}. Must be one of: "
+                f"{', '.join(sorted(VALID_TECH_ELEMENTS))}"
+            )
+        # dedupe, preserve order
+        seen: set[str] = set()
+        return [e for e in elements if not (e in seen or seen.add(e))]
+
     async def create_repo_config(
         self,
         repo_full_name: str,
-        tech_element: str,
+        tech_element: list[str] | str,
         display_name: str | None = None,
         description: str | None = None,
         tech_direction_id: int | None = None,
@@ -172,7 +191,7 @@ class OSCollectionService:
 
         Args:
             repo_full_name: GitHub 仓库全名，如 'pytorch/pytorch'
-            tech_element: 技术要素编码
+            tech_element: 技术要素编码列表（兼容单个字符串）
             display_name: 显示名称
             description: 描述
             tech_direction_id: 技术方向ID
@@ -188,10 +207,7 @@ class OSCollectionService:
         """
         if not REPO_FULL_NAME_PATTERN.match(repo_full_name):
             raise BadRequestError("Invalid repo_full_name format. Expected 'owner/repo'")
-        if tech_element not in VALID_TECH_ELEMENTS:
-            raise BadRequestError(
-                f"Invalid tech_element: {tech_element}. Must be one of: {', '.join(sorted(VALID_TECH_ELEMENTS))}"
-            )
+        tech_elements = self._validate_tech_elements(tech_element)
 
         existing = await self.repo.get_repo_config_by_full_name(repo_full_name)
         if existing:
@@ -216,7 +232,7 @@ class OSCollectionService:
         return await self.repo.create_repo_config(
             {
                 "repo_full_name": repo_full_name,
-                "tech_element": tech_element,
+                "tech_element": tech_elements,
                 "display_name": display_name or repo_full_name.split("/")[-1],
                 "description": description,
                 "tech_direction_id": tech_direction_id,
@@ -244,10 +260,7 @@ class OSCollectionService:
         from app.domains.open_source.services.github_client import GitHubClient
         from app.domains.shared.services.config_service import ConfigService
 
-        if tech_element not in VALID_TECH_ELEMENTS:
-            raise BadRequestError(
-                f"Invalid tech_element: {tech_element}. Must be one of: {', '.join(sorted(VALID_TECH_ELEMENTS))}"
-            )
+        tech_elements = self._validate_tech_elements(tech_element)
 
         # Get GitHub token once for the whole batch
         config_service = ConfigService(self.session)
@@ -289,7 +302,7 @@ class OSCollectionService:
                 config = await self.repo.create_repo_config(
                     {
                         "repo_full_name": repo_full_name,
-                        "tech_element": tech_element,
+                        "tech_element": tech_elements,
                         "display_name": repo_info.get("name") or repo_full_name.split("/")[-1],
                         "description": (repo_info.get("description") or "")[:65000],
                         "language": repo_info.get("language"),
@@ -328,10 +341,42 @@ class OSCollectionService:
         Raises:
             ValueError: tech_element 不合法
         """
-        if "tech_element" in update_data and update_data["tech_element"] not in VALID_TECH_ELEMENTS:
-            raise BadRequestError("Invalid tech_element")
+        if "tech_element" in update_data:
+            update_data["tech_element"] = self._validate_tech_elements(update_data["tech_element"])
 
-        return await self.repo.update_repo_config(repo_config_id, update_data)
+        updated = await self.repo.update_repo_config(repo_config_id, update_data)
+
+        # Sync developer tech_tags when tech_element changed (union semantics:
+        # each affected developer's tags = union across all their configured repos)
+        if updated is not None and "tech_element" in update_data:
+            try:
+                await self.sync_developer_tech_tags(updated.repo_full_name)
+            except Exception as e:
+                logger.warning(
+                    f"Failed to sync developer tech_tags for {updated.repo_full_name}: {e}"
+                )
+
+        return updated
+
+    async def sync_developer_tech_tags(self, repo_full_name: str) -> int:
+        """Recalculate tech_tags for all developers involved with a repo.
+
+        For each developer (contributors + owner), the new tech_tags is the
+        union of tech_element arrays across ALL configured repos they
+        contribute to or own — not just this repo.
+
+        Returns the number of developers updated.
+        """
+        developer_ids = await self.repo.get_developer_ids_by_repo_full_name(repo_full_name)
+        if not developer_ids:
+            return 0
+
+        updated_count = 0
+        for dev_id in developer_ids:
+            union = await self.repo.get_union_tech_elements_for_developer(dev_id)
+            count = await self.repo.batch_update_tech_tags([dev_id], union)
+            updated_count += count
+        return updated_count
 
     async def delete_repo_config(self, repo_config_id: int) -> bool:
         """
@@ -607,7 +652,7 @@ class OSCollectionService:
         task_id: int,
         repo_config_id: int,
         repo_full_name: str,
-        tech_element: str,
+        tech_element: list[str] | str,
         contributors_per_repo: int,
     ) -> None:
         """Run single-repo collection in background.

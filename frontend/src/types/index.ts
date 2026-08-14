@@ -474,7 +474,7 @@ export interface OSRepoConfig {
   repo_full_name: string
   display_name?: string
   description?: string
-  tech_element: string
+  tech_element: string[]
   tech_direction_id?: number
   language?: string
   stars_count: number

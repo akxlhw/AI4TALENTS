@@ -95,7 +95,7 @@ class TestRepoConfigService:
         """Test updating with invalid tech_element raises ValueError."""
         with pytest.raises(BadRequestError, match="Invalid tech_element"):
             await service.update_repo_config(
-                sample_config.repo_config_id, {"tech_element": "invalid"}
+                sample_config.repo_config_id, {"tech_element": ["invalid"]}
             )
 
     @pytest.mark.asyncio

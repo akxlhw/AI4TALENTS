@@ -48,7 +48,7 @@ class TestOSRepoConfig:
         """Test creating a repo config with defaults."""
         config = OSRepoConfig(
             repo_full_name="test-org/test-repo",
-            tech_element="ai",
+            tech_element=["ai"],
             display_name="Test Repo",
             language="Python",
         )
@@ -57,7 +57,7 @@ class TestOSRepoConfig:
 
         assert config.repo_config_id is not None
         assert config.repo_full_name == "test-org/test-repo"
-        assert config.tech_element == "ai"
+        assert config.tech_element == ["ai"]
         assert config.stars_count == 0
         assert config.is_active is True
         assert config.collect_enabled is True

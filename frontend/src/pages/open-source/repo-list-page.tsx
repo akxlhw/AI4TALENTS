@@ -193,12 +193,17 @@ const RepoListPage: React.FC = () => {
                         <StarOutlined style={{ color: semanticColors.osOrange, marginRight: 4 }} />
                         {repo.stars_count || 0}
                       </Text>
-                      <Tag
-                        color={getTechElementColor(repo.tech_element)}
-                        style={{ fontSize: 11, lineHeight: '18px', margin: 0 }}
-                      >
-                        {getTechElementLabel(repo.tech_element)}
-                      </Tag>
+                      {(Array.isArray(repo.tech_element) ? repo.tech_element : [repo.tech_element]).map(
+                        (code) => (
+                          <Tag
+                            key={code}
+                            color={getTechElementColor(code)}
+                            style={{ fontSize: 11, lineHeight: '18px', margin: 0 }}
+                          >
+                            {getTechElementLabel(code)}
+                          </Tag>
+                        )
+                      )}
                       {repo.language && (
                         <Tag style={{ fontSize: 11, lineHeight: '18px', margin: 0 }}>
                           {repo.language}

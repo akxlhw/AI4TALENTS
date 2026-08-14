@@ -30,7 +30,7 @@ class CollectContext:
     task_id: int
     repo_config_id: int
     repo_full_name: str
-    tech_element: str
+    tech_element: list[str] | str
     contributors_per_repo: int
     failed_contributors: int = 0
     cancelled: asyncio.Event = field(default_factory=asyncio.Event)
@@ -378,7 +378,9 @@ class GitHubCollector:
             raise
 
     @staticmethod
-    def _build_developer_data(user: dict[str, Any], tech_element: str) -> dict[str, Any]:
+    def _build_developer_data(
+        user: dict[str, Any], tech_element: list[str] | str
+    ) -> dict[str, Any]:
         """Build OSDeveloper fields from GitHub user API response with normalization."""
         raw_name = user.get("name") or user.get("login") or ""
         name = raw_name.strip()[:100] if raw_name else ""
@@ -418,7 +420,7 @@ class GitHubCollector:
             "total_stars_received": 0,
             "total_forks_received": 0,
             "primary_languages": [],
-            "tech_tags": [tech_element],
+            "tech_tags": [tech_element] if isinstance(tech_element, str) else list(tech_element),
             "is_visible": True,
         }
 
