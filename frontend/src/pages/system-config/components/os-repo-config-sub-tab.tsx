@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { semanticColors } from '../../../theme'
 import {
   Card,
+  Collapse,
   Table,
   Typography,
   Tag,
@@ -31,6 +32,7 @@ import {
   PlayCircleOutlined,
   ClearOutlined,
   TagsOutlined,
+  RadarChartOutlined,
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
 import type { OSPurgePreview, OSRepoConfig } from '../../../types'
@@ -44,6 +46,7 @@ import {
   getTechElementColor,
   getTechElementLabel,
 } from './tech-elements'
+import OsDiscoverSubTab from './os-discover-sub-tab'
 
 const OSRepoConfigSubTab: React.FC = () => {
   const [data, setData] = useState<OSRepoConfig[]>([])
@@ -494,7 +497,28 @@ const OSRepoConfigSubTab: React.FC = () => {
   ]
 
   return (
-    <Card>
+    <div>
+      {/* ── Auto-discover panel (embedded) ── */}
+      <Collapse
+        style={{ marginBottom: 16, borderRadius: 12 }}
+        items={[
+          {
+            key: 'discover',
+            label: (
+              <span>
+                <RadarChartOutlined style={{ marginRight: 6, color: 'var(--domain-badge-bg, #6B46C1)' }} />
+                <Text strong>自动探测知名开源项目</Text>
+                <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                  按技术方向搜索 GitHub star 达标项目，勾选后导入下方仓库配置
+                </Text>
+              </span>
+            ),
+            children: <OsDiscoverSubTab onImported={loadData} />,
+          },
+        ]}
+      />
+
+      <Card>
       <Spin spinning={loading}>
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col flex="auto">
@@ -912,6 +936,7 @@ const OSRepoConfigSubTab: React.FC = () => {
         </Spin>
       </Modal>
     </Card>
+    </div>
   )
 }
 

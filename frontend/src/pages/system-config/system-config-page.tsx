@@ -20,7 +20,6 @@ const COLLECT_SUB_TAB_KEYS = [
   'genealogy',
   'opensource-repos',
   'opensource-tasks',
-  'os-discover',
   'lab-import',
   'comp-import',
   'industry-positions',

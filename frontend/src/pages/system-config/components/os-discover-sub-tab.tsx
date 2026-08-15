@@ -33,8 +33,10 @@ interface DiscoverStatus {
   params?: { direction_codes?: string[]; min_stars?: number }
 }
 
-/** Auto-discover well-known repos (stars >= threshold) by tech direction. */
-const OsDiscoverSubTab: React.FC = () => {
+/** Auto-discover well-known repos (stars >= threshold) by tech direction.
+ * Embedded inside the repo-config page: onImported refreshes the repo table
+ * after a successful import so new repos show up immediately. */
+const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported }) => {
   const { data: directions } = useTechDirectionOptions()
   const [selectedDirections, setSelectedDirections] = useState<string[]>([])
   const [minStars, setMinStars] = useState<number>(30000)
@@ -118,7 +120,8 @@ const OsDiscoverSubTab: React.FC = () => {
         `导入完成：成功 ${created.length}，已存在 ${skipped.length}，失败 ${failed.length}`
       )
       if (created.length > 0) {
-        message.success(`已导入 ${created.length} 个仓库，可在「开源仓库配置」中查看并采集`)
+        message.success(`已导入 ${created.length} 个仓库，见下方仓库配置列表`)
+        onImported?.()
       }
       // Refresh status to update exists_in_config flags
       fetchStatus()
