@@ -53,6 +53,10 @@ class TechDirection(Base, TimestampMixin):
     direction_code = Column(String(50), unique=True, nullable=False)
     direction_name = Column(String(100), nullable=False)
     direction_name_en = Column(String(100), nullable=True)
+    # Element layer (技术要素): grouping label between domain and direction.
+    # Nullable for legacy rows; populated by seeds / migration 062.
+    element_code = Column(String(50), nullable=True, index=True)
+    element_name = Column(String(100), nullable=True)
     tech_domain_id = Column(
         Integer, ForeignKey("core_tech_domain.tech_domain_id"), nullable=False, index=True
     )

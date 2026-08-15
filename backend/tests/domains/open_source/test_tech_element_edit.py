@@ -94,13 +94,13 @@ def test_parse_repo_input_invalid() -> None:
 async def test_update_repo_tech_element_multiple(test_session: AsyncSession) -> None:
     """Editing a repo's tech_element to multiple values succeeds."""
     service = OSCollectionService(test_session)
-    config = await service.create_repo_config("org/test-repo", "ai")
+    config = await service.create_repo_config("org/test-repo", "models")
 
     updated = await service.update_repo_config(
-        config.repo_config_id, {"tech_element": ["ai", "data_science"]}
+        config.repo_config_id, {"tech_element": ["models", "training"]}
     )
     assert updated is not None
-    assert sorted(updated.tech_element) == ["ai", "data_science"]
+    assert sorted(updated.tech_element) == ["models", "training"]
 
 
 @pytest.mark.asyncio
@@ -109,7 +109,7 @@ async def test_invalid_tech_element_rejected(test_session: AsyncSession) -> None
     from app.core.exceptions import BadRequestError
 
     service = OSCollectionService(test_session)
-    config = await service.create_repo_config("org/invalid-test", "ai")
+    config = await service.create_repo_config("org/invalid-test", "models")
 
     with pytest.raises(BadRequestError):
         await service.update_repo_config(config.repo_config_id, {"tech_element": ["ai", "bogus"]})
@@ -124,7 +124,7 @@ async def test_sync_exclusive_developer(test_session: AsyncSession) -> None:
     service = OSCollectionService(test_session)
 
     # Setup: repo A (ai), developer contributes to A only
-    await _add_repo_config(test_session, "org/repo-a", ["ai"])
+    await _add_repo_config(test_session, "org/repo-a", ["models"])
     dev = await _add_developer(test_session, "solo-dev")
     repo_a = await _add_repository(test_session, "org/repo-a", dev.developer_id)
     await _link(test_session, dev.developer_id, repo_a.repo_id)
@@ -132,12 +132,12 @@ async def test_sync_exclusive_developer(test_session: AsyncSession) -> None:
 
     # Edit: repo A tech_element → [ai, security]
     config = await service.repo.get_repo_config_by_full_name("org/repo-a")
-    await service.update_repo_config(config.repo_config_id, {"tech_element": ["ai", "security"]})
+    await service.update_repo_config(config.repo_config_id, {"tech_element": ["models", "sys_sec"]})
     await test_session.commit()
 
     # Verify developer tags = [ai, security]
     await test_session.refresh(dev)
-    assert sorted(dev.tech_tags) == ["ai", "security"]
+    assert sorted(dev.tech_tags) == ["models", "sys_sec"]
 
 
 @pytest.mark.asyncio
@@ -146,8 +146,8 @@ async def test_sync_developer_tags_union(test_session: AsyncSession) -> None:
     service = OSCollectionService(test_session)
 
     # Setup: dev owns repo-a, contributes to repo-b
-    await _add_repo_config(test_session, "org/repo-a", ["ai"])
-    await _add_repo_config(test_session, "org/repo-b", ["systems"])
+    await _add_repo_config(test_session, "org/repo-a", ["models"])
+    await _add_repo_config(test_session, "org/repo-b", ["cloud_native"])
     dev = await _add_developer(test_session, "multi-dev")
     repo_a = await _add_repository(test_session, "org/repo-a", dev.developer_id)
     other = await _add_developer(test_session, "other-owner")
@@ -159,13 +159,13 @@ async def test_sync_developer_tags_union(test_session: AsyncSession) -> None:
     # Edit repo-a: [ai] → [ai, data_science]
     config_a = await service.repo.get_repo_config_by_full_name("org/repo-a")
     await service.update_repo_config(
-        config_a.repo_config_id, {"tech_element": ["ai", "data_science"]}
+        config_a.repo_config_id, {"tech_element": ["models", "training"]}
     )
     await test_session.commit()
 
     # dev tags should be union: {ai, data_science} ∪ {systems}
     await test_session.refresh(dev)
-    assert sorted(dev.tech_tags) == ["ai", "data_science", "systems"]
+    assert sorted(dev.tech_tags) == ["cloud_native", "models", "training"]
 
 
 @pytest.mark.asyncio
@@ -174,7 +174,7 @@ async def test_unconfigured_repo_not_counted(test_session: AsyncSession) -> None
     service = OSCollectionService(test_session)
 
     # Only repo-a is configured; repo-unconfigured has no config row
-    await _add_repo_config(test_session, "org/repo-a", ["ai"])
+    await _add_repo_config(test_session, "org/repo-a", ["models"])
     dev = await _add_developer(test_session, "pick-dev")
     repo_a = await _add_repository(test_session, "org/repo-a", dev.developer_id)
     other = await _add_developer(test_session, "uc-owner")
@@ -185,12 +185,12 @@ async def test_unconfigured_repo_not_counted(test_session: AsyncSession) -> None
 
     # Trigger sync via edit
     config_a = await service.repo.get_repo_config_by_full_name("org/repo-a")
-    await service.update_repo_config(config_a.repo_config_id, {"tech_element": ["security"]})
+    await service.update_repo_config(config_a.repo_config_id, {"tech_element": ["sys_sec"]})
     await test_session.commit()
 
     # dev tags = only configured repo's element (unconfigured ignored)
     await test_session.refresh(dev)
-    assert dev.tech_tags == ["security"]
+    assert dev.tech_tags == ["sys_sec"]
 
 
 @pytest.mark.asyncio
@@ -199,8 +199,8 @@ async def test_batch_update_tech_element(test_session: AsyncSession) -> None:
     service = OSCollectionService(test_session)
 
     # Two repos, one shared developer contributing to both
-    await _add_repo_config(test_session, "org/batch-a", ["ai"])
-    await _add_repo_config(test_session, "org/batch-b", ["systems"])
+    await _add_repo_config(test_session, "org/batch-a", ["models"])
+    await _add_repo_config(test_session, "org/batch-b", ["cloud_native"])
     dev = await _add_developer(test_session, "batch-dev")
     repo_a = await _add_repository(test_session, "org/batch-a", dev.developer_id)
     other = await _add_developer(test_session, "batch-other")
@@ -214,7 +214,7 @@ async def test_batch_update_tech_element(test_session: AsyncSession) -> None:
 
     # Batch update both repos to [robotics, security]
     result = await service.batch_update_tech_element(
-        [config_a.repo_config_id, config_b.repo_config_id], ["robotics", "security"]
+        [config_a.repo_config_id, config_b.repo_config_id], ["robot_control", "sec_ops"]
     )
     await test_session.commit()
 
@@ -224,12 +224,12 @@ async def test_batch_update_tech_element(test_session: AsyncSession) -> None:
     # Both configs now carry the same elements
     await test_session.refresh(config_a)
     await test_session.refresh(config_b)
-    assert sorted(config_a.tech_element) == ["robotics", "security"]
-    assert sorted(config_b.tech_element) == ["robotics", "security"]
+    assert sorted(config_a.tech_element) == ["robot_control", "sec_ops"]
+    assert sorted(config_b.tech_element) == ["robot_control", "sec_ops"]
 
     # Shared developer's tags = union = same set (both repos identical now)
     await test_session.refresh(dev)
-    assert sorted(dev.tech_tags) == ["robotics", "security"]
+    assert sorted(dev.tech_tags) == ["robot_control", "sec_ops"]
 
 
 @pytest.mark.asyncio
@@ -238,10 +238,10 @@ async def test_batch_update_nonexistent_id_goes_to_failed(
 ) -> None:
     """A nonexistent repo_config_id lands in failed, not fatal."""
     service = OSCollectionService(test_session)
-    config = await service.create_repo_config("org/real-one", ["ai"])
+    config = await service.create_repo_config("org/real-one", ["models"])
     await test_session.commit()
 
-    result = await service.batch_update_tech_element([config.repo_config_id, 999999], ["security"])
+    result = await service.batch_update_tech_element([config.repo_config_id, 999999], ["sys_sec"])
     await test_session.commit()
 
     assert result["updated"] == 1

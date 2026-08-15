@@ -138,51 +138,35 @@ CONFIG_TABLES = [
     "iam_user_account",
 ]
 
-# Initial tech domain data (6 domains)
+# Tech domain data — single source of truth lives in
+# app/domains/shared/constants/tech_taxonomy.py (taxonomy v2: 10 domains /
+# 34 elements / 75 directions). Seeded here for fresh installs.
+from app.domains.shared.constants.tech_taxonomy import (
+    TECH_DIRECTIONS,
+    TECH_DOMAINS,
+    TECH_ELEMENTS,
+)
+
 TECH_DOMAINS_DATA = [
     {
-        "domain_code": "ai",
-        "domain_name": "Artificial Intelligence",
-        "domain_name_en": "Artificial Intelligence",
-        "domain_desc": "AI-related technologies",
-        "sort_order": 1,
-    },
-    {
-        "domain_code": "robotics",
-        "domain_name": "Robotics",
-        "domain_name_en": "Robotics",
-        "domain_desc": "Robotics-related domain",
-        "sort_order": 2,
-    },
-    {
-        "domain_code": "data_science",
-        "domain_name": "Data Science",
-        "domain_name_en": "Data Science",
-        "domain_desc": "Data Science & Analytics",
-        "sort_order": 3,
-    },
-    {
-        "domain_code": "networks",
-        "domain_name": "Networks & Communications",
-        "domain_name_en": "Networks & Communications",
-        "domain_desc": "Computer Networks & Communications",
-        "sort_order": 4,
-    },
-    {
-        "domain_code": "systems",
-        "domain_name": "Systems & Software",
-        "domain_name_en": "Systems & Software",
-        "domain_desc": "Computer Systems & Software Engineering",
-        "sort_order": 5,
-    },
-    {
-        "domain_code": "security",
-        "domain_name": "Information Security",
-        "domain_name_en": "Information Security",
-        "domain_desc": "Information Security & Cryptography",
-        "sort_order": 6,
-    },
+        "domain_code": dom["code"],
+        "domain_name": dom["name"],
+        "domain_name_en": dom["name_en"],
+        "domain_desc": f"{dom['name_en']} related technologies",
+        "sort_order": dom["sort"],
+    }
+    for dom in TECH_DOMAINS
 ]
+
+# Direction seeds derived from the shared taxonomy (element info included)
+TECH_DIRECTIONS_DATA = {
+    dom["code"]: [
+        (code, name, name_en, TECH_ELEMENTS[element]["name"])
+        for code, name, name_en, element in TECH_DIRECTIONS
+        if TECH_ELEMENTS[element]["domain"] == dom["code"]
+    ]
+    for dom in TECH_DOMAINS
+}
 
 
 # Known OpenAlex Source ID mappings
@@ -273,56 +257,56 @@ KNOWN_OPENALEX_SOURCES = {
 # Default open-source repo seed configs
 DEFAULT_REPO_CONFIGS = [
     # AI
-    {"repo_full_name": "pytorch/pytorch", "display_name": "PyTorch", "tech_element": "ai", "language": "Python", "description": "Tensors and Dynamic neural networks in Python with strong GPU acceleration"},
-    {"repo_full_name": "tensorflow/tensorflow", "display_name": "TensorFlow", "tech_element": "ai", "language": "Python", "description": "An Open Source Machine Learning Framework for Everyone"},
-    {"repo_full_name": "huggingface/transformers", "display_name": "Hugging Face Transformers", "tech_element": "ai", "language": "Python", "description": "State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow"},
-    {"repo_full_name": "scikit-learn/scikit-learn", "display_name": "scikit-learn", "tech_element": "ai", "language": "Python", "description": "scikit-learn: machine learning in Python"},
-    {"repo_full_name": "microsoft/DeepSpeed", "display_name": "DeepSpeed", "tech_element": "ai", "language": "Python", "description": "Deep learning optimization library"},
-    {"repo_full_name": "apache/spark", "display_name": "Apache Spark", "tech_element": "ai", "language": "Scala", "description": "Apache Spark - A unified analytics engine for large-scale data processing"},
-    {"repo_full_name": "langchain-ai/langchain", "display_name": "LangChain", "tech_element": "ai", "language": "Python", "description": "Build context-aware reasoning applications"},
-    {"repo_full_name": "langgenius/dify", "display_name": "Dify", "tech_element": "ai", "language": "TypeScript", "description": "Dify is an open-source LLM app development platform"},
-    {"repo_full_name": "huggingface/trl", "display_name": "TRL", "tech_element": "ai", "language": "Python", "description": "Train transformer language models with reinforcement learning"},
-    {"repo_full_name": "sgl-project/sglang", "display_name": "SGLang", "tech_element": "ai", "language": "Python", "description": "SGLang is a fast serving framework for large language models"},
-    {"repo_full_name": "huggingface/text-generation-inference", "display_name": "Text Generation Inference", "tech_element": "ai", "language": "Python", "description": "Large Language Model Text Generation Inference"},
-    {"repo_full_name": "ray-project/ray", "display_name": "Ray", "tech_element": "ai", "language": "Python", "description": "Ray is a unified framework for scaling AI and Python applications"},
-    {"repo_full_name": "NVIDIA/Megatron-LM", "display_name": "Megatron-LM", "tech_element": "ai", "language": "Python", "description": "Ongoing research training transformer models at scale"},
-    {"repo_full_name": "google/jax", "display_name": "JAX", "tech_element": "ai", "language": "Python", "description": "Composable transformations of Python+NumPy programs"},
-    {"repo_full_name": "apache/tvm", "display_name": "Apache TVM", "tech_element": "ai", "language": "Python", "description": "Open deep learning compiler stack for cpu, gpu and specialized accelerators"},
-    {"repo_full_name": "NVIDIA/cutlass", "display_name": "CUTLASS", "tech_element": "ai", "language": "C++", "description": "CUDA Templates for Linear Algebra Subroutines"},
+    {"repo_full_name": "pytorch/pytorch", "display_name": "PyTorch", "tech_element": "training", "language": "Python", "description": "Tensors and Dynamic neural networks in Python with strong GPU acceleration"},
+    {"repo_full_name": "tensorflow/tensorflow", "display_name": "TensorFlow", "tech_element": "training", "language": "Python", "description": "An Open Source Machine Learning Framework for Everyone"},
+    {"repo_full_name": "huggingface/transformers", "display_name": "Hugging Face Transformers", "tech_element": "models", "language": "Python", "description": "State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow"},
+    {"repo_full_name": "scikit-learn/scikit-learn", "display_name": "scikit-learn", "tech_element": "models", "language": "Python", "description": "scikit-learn: machine learning in Python"},
+    {"repo_full_name": "microsoft/DeepSpeed", "display_name": "DeepSpeed", "tech_element": "training", "language": "Python", "description": "Deep learning optimization library"},
+    {"repo_full_name": "apache/spark", "display_name": "Apache Spark", "tech_element": "db_storage", "language": "Scala", "description": "Apache Spark - A unified analytics engine for large-scale data processing"},
+    {"repo_full_name": "langchain-ai/langchain", "display_name": "LangChain", "tech_element": "agents", "language": "Python", "description": "Build context-aware reasoning applications"},
+    {"repo_full_name": "langgenius/dify", "display_name": "Dify", "tech_element": "agents", "language": "TypeScript", "description": "Dify is an open-source LLM app development platform"},
+    {"repo_full_name": "huggingface/trl", "display_name": "TRL", "tech_element": "training", "language": "Python", "description": "Train transformer language models with reinforcement learning"},
+    {"repo_full_name": "sgl-project/sglang", "display_name": "SGLang", "tech_element": "inference", "language": "Python", "description": "SGLang is a fast serving framework for large language models"},
+    {"repo_full_name": "huggingface/text-generation-inference", "display_name": "Text Generation Inference", "tech_element": "inference", "language": "Python", "description": "Large Language Model Text Generation Inference"},
+    {"repo_full_name": "ray-project/ray", "display_name": "Ray", "tech_element": "training", "language": "Python", "description": "Ray is a unified framework for scaling AI and Python applications"},
+    {"repo_full_name": "NVIDIA/Megatron-LM", "display_name": "Megatron-LM", "tech_element": "training", "language": "Python", "description": "Ongoing research training transformer models at scale"},
+    {"repo_full_name": "google/jax", "display_name": "JAX", "tech_element": "training", "language": "Python", "description": "Composable transformations of Python+NumPy programs"},
+    {"repo_full_name": "apache/tvm", "display_name": "Apache TVM", "tech_element": "inference", "language": "Python", "description": "Open deep learning compiler stack for cpu, gpu and specialized accelerators"},
+    {"repo_full_name": "NVIDIA/cutlass", "display_name": "CUTLASS", "tech_element": "hpc", "language": "C++", "description": "CUDA Templates for Linear Algebra Subroutines"},
     # Robotics
-    {"repo_full_name": "ros/ros", "display_name": "ROS", "tech_element": "robotics", "language": "Python", "description": "Robot Operating System"},
-    {"repo_full_name": "ros2/ros2", "display_name": "ROS2", "tech_element": "robotics", "language": "Python", "description": "ROS 2 - Robot Operating System 2"},
-    {"repo_full_name": "ArduPilot/ardupilot", "display_name": "ArduPilot", "tech_element": "robotics", "language": "C++", "description": "ArduPilot is the most advanced, full-featured open source autopilot software"},
-    {"repo_full_name": "NVIDIA-Omniverse/IsaacSim", "display_name": "NVIDIA Isaac Sim", "tech_element": "robotics", "language": "Python", "description": "NVIDIA Isaac Sim - Robotics simulation platform"},
-    {"repo_full_name": "google-research/google-research", "display_name": "Google Research", "tech_element": "robotics", "language": "Python", "description": "Google Research repository"},
+    {"repo_full_name": "ros/ros", "display_name": "ROS", "tech_element": "robot_control", "language": "Python", "description": "Robot Operating System"},
+    {"repo_full_name": "ros2/ros2", "display_name": "ROS2", "tech_element": "robot_control", "language": "Python", "description": "ROS 2 - Robot Operating System 2"},
+    {"repo_full_name": "ArduPilot/ardupilot", "display_name": "ArduPilot", "tech_element": "robot_control", "language": "C++", "description": "ArduPilot is the most advanced, full-featured open source autopilot software"},
+    {"repo_full_name": "NVIDIA-Omniverse/IsaacSim", "display_name": "NVIDIA Isaac Sim", "tech_element": "embodied", "language": "Python", "description": "NVIDIA Isaac Sim - Robotics simulation platform"},
+    {"repo_full_name": "google-research/google-research", "display_name": "Google Research", "tech_element": "models", "language": "Python", "description": "Google Research repository"},
     # Data Science
-    {"repo_full_name": "pandas-dev/pandas", "display_name": "pandas", "tech_element": "data_science", "language": "Python", "description": "Powerful data structures for data analysis"},
-    {"repo_full_name": "numpy/numpy", "display_name": "NumPy", "tech_element": "data_science", "language": "Python", "description": "The fundamental package for scientific computing with Python"},
-    {"repo_full_name": "jupyter/jupyter", "display_name": "Jupyter", "tech_element": "data_science", "language": "Python", "description": "Jupyter metapackage for installation and docs"},
-    {"repo_full_name": "matplotlib/matplotlib", "display_name": "Matplotlib", "tech_element": "data_science", "language": "Python", "description": "matplotlib: plotting with Python"},
-    {"repo_full_name": "apache/arrow", "display_name": "Apache Arrow", "tech_element": "data_science", "language": "C++", "description": "Apache Arrow is a multi-language toolbox for accelerated data interchange"},
-    {"repo_full_name": "dask/dask", "display_name": "Dask", "tech_element": "data_science", "language": "Python", "description": "Parallel computing with task scheduling"},
+    {"repo_full_name": "pandas-dev/pandas", "display_name": "pandas", "tech_element": "sci_compute", "language": "Python", "description": "Powerful data structures for data analysis"},
+    {"repo_full_name": "numpy/numpy", "display_name": "NumPy", "tech_element": "sci_compute", "language": "Python", "description": "The fundamental package for scientific computing with Python"},
+    {"repo_full_name": "jupyter/jupyter", "display_name": "Jupyter", "tech_element": "ai_engineering", "language": "Python", "description": "Jupyter metapackage for installation and docs"},
+    {"repo_full_name": "matplotlib/matplotlib", "display_name": "Matplotlib", "tech_element": "sci_compute", "language": "Python", "description": "matplotlib: plotting with Python"},
+    {"repo_full_name": "apache/arrow", "display_name": "Apache Arrow", "tech_element": "db_storage", "language": "C++", "description": "Apache Arrow is a multi-language toolbox for accelerated data interchange"},
+    {"repo_full_name": "dask/dask", "display_name": "Dask", "tech_element": "hpc", "language": "Python", "description": "Parallel computing with task scheduling"},
     # Networks
-    {"repo_full_name": "torvalds/linux", "display_name": "Linux Kernel", "tech_element": "networks", "language": "C", "description": "Linux kernel source tree"},
-    {"repo_full_name": "envoyproxy/envoy", "display_name": "Envoy", "tech_element": "networks", "language": "C++", "description": "Cloud-native high-performance edge/middle/service proxy"},
-    {"repo_full_name": "grpc/grpc", "display_name": "gRPC", "tech_element": "networks", "language": "C++", "description": "The C based gRPC (C++, Python, Ruby, Objective-C, PHP, C#)"},
-    {"repo_full_name": "openvswitch/ovs", "display_name": "Open vSwitch", "tech_element": "networks", "language": "C", "description": "Open vSwitch is a production quality, multilayer virtual switch"},
-    {"repo_full_name": "cloudflare/cloudflared", "display_name": "Cloudflared", "tech_element": "networks", "language": "Go", "description": "Cloudflare Tunnel client"},
-    {"repo_full_name": "FRRouting/frr", "display_name": "FRRouting", "tech_element": "networks", "language": "C", "description": "FRRouting is free software that manages TCP/IP based routing protocols"},
+    {"repo_full_name": "torvalds/linux", "display_name": "Linux Kernel", "tech_element": "os", "language": "C", "description": "Linux kernel source tree"},
+    {"repo_full_name": "envoyproxy/envoy", "display_name": "Envoy", "tech_element": "protocols", "language": "C++", "description": "Cloud-native high-performance edge/middle/service proxy"},
+    {"repo_full_name": "grpc/grpc", "display_name": "gRPC", "tech_element": "protocols", "language": "C++", "description": "The C based gRPC (C++, Python, Ruby, Objective-C, PHP, C#)"},
+    {"repo_full_name": "openvswitch/ovs", "display_name": "Open vSwitch", "tech_element": "protocols", "language": "C", "description": "Open vSwitch is a production quality, multilayer virtual switch"},
+    {"repo_full_name": "cloudflare/cloudflared", "display_name": "Cloudflared", "tech_element": "protocols", "language": "Go", "description": "Cloudflare Tunnel client"},
+    {"repo_full_name": "FRRouting/frr", "display_name": "FRRouting", "tech_element": "protocols", "language": "C", "description": "FRRouting is free software that manages TCP/IP based routing protocols"},
     # Systems
-    {"repo_full_name": "golang/go", "display_name": "Go", "tech_element": "systems", "language": "Go", "description": "The Go programming language"},
-    {"repo_full_name": "rust-lang/rust", "display_name": "Rust", "tech_element": "systems", "language": "Rust", "description": "Empowering everyone to build reliable and efficient software"},
-    {"repo_full_name": "kubernetes/kubernetes", "display_name": "Kubernetes", "tech_element": "systems", "language": "Go", "description": "Production-Grade Container Scheduling and Management"},
-    {"repo_full_name": "moby/moby", "display_name": "Docker", "tech_element": "systems", "language": "Go", "description": "Moby Project - a collaborative project for the container ecosystem"},
-    {"repo_full_name": "redis/redis", "display_name": "Redis", "tech_element": "systems", "language": "C", "description": "Redis is an in-memory database that persists on disk"},
-    {"repo_full_name": "apache/kafka", "display_name": "Apache Kafka", "tech_element": "systems", "language": "Java", "description": "Mirror of Apache Kafka"},
+    {"repo_full_name": "golang/go", "display_name": "Go", "tech_element": "languages", "language": "Go", "description": "The Go programming language"},
+    {"repo_full_name": "rust-lang/rust", "display_name": "Rust", "tech_element": "languages", "language": "Rust", "description": "Empowering everyone to build reliable and efficient software"},
+    {"repo_full_name": "kubernetes/kubernetes", "display_name": "Kubernetes", "tech_element": "cloud_native", "language": "Go", "description": "Production-Grade Container Scheduling and Management"},
+    {"repo_full_name": "moby/moby", "display_name": "Docker", "tech_element": "cloud_native", "language": "Go", "description": "Moby Project - a collaborative project for the container ecosystem"},
+    {"repo_full_name": "redis/redis", "display_name": "Redis", "tech_element": "db_storage", "language": "C", "description": "Redis is an in-memory database that persists on disk"},
+    {"repo_full_name": "apache/kafka", "display_name": "Apache Kafka", "tech_element": "middleware", "language": "Java", "description": "Mirror of Apache Kafka"},
     # Security
-    {"repo_full_name": "zaproxy/zaproxy", "display_name": "OWASP ZAP", "tech_element": "security", "language": "Java", "description": "The OWASP ZAP core project"},
-    {"repo_full_name": "rapid7/metasploit-framework", "display_name": "Metasploit", "tech_element": "security", "language": "Ruby", "description": "Metasploit Framework"},
-    {"repo_full_name": "sqlmapproject/sqlmap", "display_name": "sqlmap", "tech_element": "security", "language": "Python", "description": "Automatic SQL injection and database takeover tool"},
-    {"repo_full_name": "nmap/nmap", "display_name": "Nmap", "tech_element": "security", "language": "C", "description": "Nmap - the Network Mapper"},
-    {"repo_full_name": "mitmproxy/mitmproxy", "display_name": "mitmproxy", "tech_element": "security", "language": "Python", "description": "An interactive TLS-capable intercepting HTTP proxy"},
-    {"repo_full_name": "wireshark/wireshark", "display_name": "Wireshark", "tech_element": "security", "language": "C", "description": "Wireshark - Network traffic analyzer"},
+    {"repo_full_name": "zaproxy/zaproxy", "display_name": "OWASP ZAP", "tech_element": "sys_sec", "language": "Java", "description": "The OWASP ZAP core project"},
+    {"repo_full_name": "rapid7/metasploit-framework", "display_name": "Metasploit", "tech_element": "sec_ops", "language": "Ruby", "description": "Metasploit Framework"},
+    {"repo_full_name": "sqlmapproject/sqlmap", "display_name": "sqlmap", "tech_element": "sec_ops", "language": "Python", "description": "Automatic SQL injection and database takeover tool"},
+    {"repo_full_name": "nmap/nmap", "display_name": "Nmap", "tech_element": "sys_sec", "language": "C", "description": "Nmap - the Network Mapper"},
+    {"repo_full_name": "mitmproxy/mitmproxy", "display_name": "mitmproxy", "tech_element": "sys_sec", "language": "Python", "description": "An interactive TLS-capable intercepting HTTP proxy"},
+    {"repo_full_name": "wireshark/wireshark", "display_name": "Wireshark", "tech_element": "sys_sec", "language": "C", "description": "Wireshark - Network traffic analyzer"},
 ]
 
 

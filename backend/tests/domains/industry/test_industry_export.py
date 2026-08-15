@@ -288,7 +288,7 @@ async def test_export_preserves_merge_semantics(
     )
     link = link_result.scalar_one()
     link.touched = True
-    link.status = "contacted"
+    link.status = "connected"
     link.notes = "已通过内推联系"
     await test_session.commit()
 
@@ -316,7 +316,7 @@ async def test_export_preserves_merge_semantics(
     # 4. Operational state PRESERVED, scores refreshed from export
     await test_session.refresh(link)
     assert link.touched is True  # preserved
-    assert link.status == "contacted"  # preserved
+    assert link.status == "connected"  # preserved
     assert link.notes == "已通过内推联系"  # preserved
     assert link.match_score == 92  # refreshed from export (same value here)
 

@@ -31,7 +31,7 @@ class TestRepoConfigService:
         """Create a sample repo config."""
         config = OSRepoConfig(
             repo_full_name="test-org/test-repo",
-            tech_element="ai",
+            tech_element="models",
             display_name="Test Repo",
             stars_count=1000,
             is_active=True,
@@ -63,7 +63,7 @@ class TestRepoConfigService:
     async def test_create_repo_config_invalid_format(self, service: OpenSourceService):
         """Test creating repo config with invalid format raises ValueError."""
         with pytest.raises(BadRequestError, match="Invalid repo_full_name"):
-            await service.create_repo_config("invalid", "ai")
+            await service.create_repo_config("invalid", "models")
 
     @pytest.mark.asyncio
     @pytest.mark.unit
@@ -77,7 +77,7 @@ class TestRepoConfigService:
     async def test_create_repo_config_duplicate(self, service: OpenSourceService, sample_config):
         """Test creating duplicate repo config raises ValueError."""
         with pytest.raises(ConflictError, match="already exists"):
-            await service.create_repo_config("test-org/test-repo", "ai")
+            await service.create_repo_config("test-org/test-repo", "models")
 
     @pytest.mark.asyncio
     @pytest.mark.unit
@@ -204,7 +204,7 @@ class TestCollectTaskService:
         """Test collect single repo when disabled raises ValueError."""
         config = OSRepoConfig(
             repo_full_name="disabled/repo",
-            tech_element="ai",
+            tech_element="models",
             collect_enabled=False,
         )
         test_session.add(config)
@@ -228,7 +228,7 @@ class TestCollectTaskService:
 
         config = OSRepoConfig(
             repo_full_name="batch/repo1",
-            tech_element="ai",
+            tech_element="models",
             collect_enabled=True,
         )
         test_session.add(config)
@@ -258,7 +258,7 @@ class TestDeveloperService:
             location="Beijing",
             total_stars_received=15000,
             primary_languages=["Python"],
-            tech_tags=["ai"],
+            tech_tags=["models"],
             is_visible=True,
         )
         test_session.add(dev)

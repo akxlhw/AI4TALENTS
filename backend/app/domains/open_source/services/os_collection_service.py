@@ -62,7 +62,10 @@ def parse_repo_input(raw: str) -> str | None:
     return None
 
 
-VALID_TECH_ELEMENTS = {"ai", "robotics", "data_science", "networks", "systems", "security"}
+from app.domains.shared.constants.tech_taxonomy import (  # noqa: E402
+    VALID_TECH_ELEMENTS,
+)
+
 REPO_FULL_NAME_PATTERN = re.compile(r"^[\w.-]+/[\w.-]+$")
 
 # Per-repository collection locks: the same repo collects serially, different

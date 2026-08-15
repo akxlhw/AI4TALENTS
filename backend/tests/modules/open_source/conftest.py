@@ -105,7 +105,7 @@ async def sample_os_repo_config(test_session):
         repo_full_name="test-org/test-repo",
         display_name="Test Repo",
         description="A test repository",
-        tech_element=["ai"],
+        tech_element=["models"],
         language="Python",
         stars_count=1000,
         is_active=True,

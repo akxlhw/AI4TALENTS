@@ -255,10 +255,10 @@ async def test_talent_list_filters(
     lisi = next(t for t in talents if t["name"] == "李四")
     resp = await user_client.patch(
         f"/api/v1/industry/talents/{lisi['talent_id']}/positions/{p2.position_id}",
-        json={"status": "contacted", "touched": True, "notes": "已电话沟通"},
+        json={"status": "connected", "touched": True, "notes": "已电话沟通"},
     )
     assert resp.status_code == 200
-    assert await names(status="contacted") == ["李四"]
+    assert await names(status="connected") == ["李四"]
     assert await names(status="new") == ["张三", "李四"]  # 李四 still new on p1
 
     # source_platform / tech_direction
@@ -325,11 +325,11 @@ async def test_patch_candidate_status(
 
     response = await user_client.patch(
         f"/api/v1/industry/talents/{zhangsan['talent_id']}/positions/{p1.position_id}",
-        json={"status": "interviewed", "touched": True, "notes": "二面"},
+        json={"status": "connected", "touched": True, "notes": "二面"},
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "interviewed"
+    assert body["status"] == "connected"
     assert body["touched"] is True
     assert body["notes"] == "二面"
     assert body["match_score"] == 98  # scores untouched by the patch

@@ -55,21 +55,21 @@ class TestRepoConfig:
             json={
                 "repo_full_name": "new-org/new-repo",
                 "display_name": "New Repo",
-                "tech_element": ["ai"],
+                "tech_element": ["models"],
                 "language": "Python",
             },
         )
         assert response.status_code == 201
         data = response.json()
         assert data["repo_full_name"] == "new-org/new-repo"
-        assert data["tech_element"] == ["ai"]
+        assert data["tech_element"] == ["models"]
 
     @pytest.mark.asyncio
     async def test_create_repo_config_invalid_format(self, super_admin_client: AsyncClient):
         """Invalid repo_full_name format returns 400."""
         response = await super_admin_client.post(
             "/api/v1/open-source/repo-configs",
-            json={"repo_full_name": "invalid", "tech_element": ["ai"]},
+            json={"repo_full_name": "invalid", "tech_element": ["models"]},
         )
         assert response.status_code == 400
 
@@ -89,7 +89,10 @@ class TestRepoConfig:
         """Duplicate repo_full_name returns 409."""
         response = await super_admin_client.post(
             "/api/v1/open-source/repo-configs",
-            json={"repo_full_name": sample_os_repo_config.repo_full_name, "tech_element": ["ai"]},
+            json={
+                "repo_full_name": sample_os_repo_config.repo_full_name,
+                "tech_element": ["models"],
+            },
         )
         assert response.status_code == 409
 
@@ -647,7 +650,7 @@ class TestSecurity:
         """SQL injection in repo_full_name is blocked by validation."""
         response = await super_admin_client.post(
             "/api/v1/open-source/repo-configs",
-            json={"repo_full_name": "' OR '1'='1", "tech_element": ["ai"]},
+            json={"repo_full_name": "' OR '1'='1", "tech_element": ["models"]},
         )
         assert response.status_code == 400
 

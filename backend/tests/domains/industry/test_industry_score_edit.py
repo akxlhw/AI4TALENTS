@@ -186,12 +186,12 @@ async def test_patch_scores_and_status_together(
 
     resp = await admin_client.patch(
         f"/api/v1/industry/talents/{zhangsan_id}/positions/{p1.position_id}",
-        json={"match_score": 77, "status": "contacted", "notes": "已联系"},
+        json={"match_score": 77, "status": "connected", "notes": "已联系"},
     )
     assert resp.status_code == 200
     data = resp.json()
     assert data["match_score"] == 77
-    assert data["status"] == "contacted"
+    assert data["status"] == "connected"
 
 
 # ============ Remove from position ============

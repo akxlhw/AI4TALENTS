@@ -27,7 +27,7 @@ class TestRepoConfigRepository:
         """Create a sample repo config."""
         config = OSRepoConfig(
             repo_full_name="test-org/test-repo",
-            tech_element=["ai"],
+            tech_element=["models"],
             display_name="Test Repo",
             stars_count=1000,
             is_active=True,
@@ -52,9 +52,9 @@ class TestRepoConfigRepository:
     async def test_list_repo_configs_with_filter(self, test_session: AsyncSession, sample_config):
         """Test listing repo configs with tech_element filter."""
         repo = OpenSourceRepository(test_session)
-        items, total = await repo.list_repo_configs(filters={"tech_elements": ["ai"]})
+        items, total = await repo.list_repo_configs(filters={"tech_elements": ["models"]})
         assert total >= 1
-        assert all("ai" in i.tech_element for i in items)
+        assert all("models" in i.tech_element for i in items)
 
     @pytest.mark.asyncio
     @pytest.mark.unit
@@ -132,7 +132,7 @@ class TestDeveloperRepository:
             company="Test Corp",
             total_stars_received=15000,
             primary_languages=["Python", "Go"],
-            tech_tags=["ai", "systems"],
+            tech_tags=["models", "cloud_native"],
             is_visible=True,
         )
         test_session.add(dev)
@@ -514,7 +514,9 @@ class TestStatsRepository:
         skill = OSLanguageSkill(developer_id=dev.developer_id, language="Python", repo_count=5)
         test_session.add(skill)
 
-        config = OSRepoConfig(repo_full_name="statsdev/repo", tech_element=["ai"], is_active=True)
+        config = OSRepoConfig(
+            repo_full_name="statsdev/repo", tech_element=["models"], is_active=True
+        )
         test_session.add(config)
 
         await test_session.commit()

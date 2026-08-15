@@ -65,7 +65,7 @@ def _make_context(task_id: int) -> CollectContext:
         task_id=task_id,
         repo_config_id=1,
         repo_full_name="o/r",
-        tech_element="ai",
+        tech_element=["models"],
         contributors_per_repo=10,
     )
 
@@ -143,7 +143,7 @@ async def test_background_marks_task_rate_limited(
         task_id=task.task_id,
         repo_config_id=1,
         repo_full_name="o/r",
-        tech_element="ai",
+        tech_element=["models"],
         contributors_per_repo=10,
     )
 

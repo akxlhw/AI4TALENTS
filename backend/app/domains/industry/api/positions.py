@@ -216,10 +216,22 @@ async def export_position_talents(
     batch_suffix = f"_{safe_batch}" if safe_batch else "_all"
     filename = f"industry_{title_part}{batch_suffix}.jsonl"
 
+    # Content-Disposition is latin-1 — non-ASCII titles need RFC 5987 encoding
+    # (filename* takes precedence in modern browsers; filename= is the ASCII fallback)
+    if filename.isascii():
+        disposition = f'attachment; filename="{filename}"'
+    else:
+        from urllib.parse import quote
+
+        ascii_fallback = f"industry_{position_id}{batch_suffix}.jsonl"
+        disposition = (
+            f'attachment; filename="{ascii_fallback}"; ' f"filename*=UTF-8''{quote(filename)}"
+        )
+
     buffer = io.BytesIO(content.encode("utf-8"))
     buffer.seek(0)
     return StreamingResponse(
         buffer,
         media_type="application/x-jsonlines",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": disposition},
     )

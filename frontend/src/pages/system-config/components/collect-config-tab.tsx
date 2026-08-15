@@ -8,10 +8,12 @@ import {
   GithubOutlined,
   TrophyOutlined,
   BuildOutlined,
+  RadarChartOutlined,
 } from '@ant-design/icons'
 import LabIcon from '../../../components/lab-icon'
 import OSRepoConfigSubTab from './os-repo-config-sub-tab'
 import OSCollectTaskSubTab from './os-collect-task-sub-tab'
+import OsDiscoverSubTab from './os-discover-sub-tab'
 import LabImportTab from './lab-import-tab'
 import CompImportTab from './comp-import-tab'
 import IndustryPositionsTab from './industry-positions-tab'
@@ -126,6 +128,15 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
               </span>
             ),
             children: <OSCollectTaskSubTab />,
+          },
+          {
+            key: 'os-discover',
+            label: (
+              <span>
+                <RadarChartOutlined /> 自动探测
+              </span>
+            ),
+            children: <OsDiscoverSubTab />,
           },
           {
             key: 'lab-import',

@@ -282,6 +282,27 @@ class GitHubClient:
         """Fetch repository details."""
         return cast(dict[str, Any], await self._get(f"/repos/{owner}/{repo}"))
 
+    async def search_repositories(
+        self,
+        query: str,
+        sort: str = "stars",
+        order: str = "desc",
+        per_page: int = 20,
+    ) -> dict[str, Any]:
+        """Search repositories. Returns {"items": [...], "total_count": N}.
+
+        Note: the Search API has a separate rate limit (30 req/min
+        authenticated, 10 unauthenticated) — callers must throttle between
+        searches. The shared token rotation / 429 retry infra still applies.
+        """
+        return cast(
+            dict[str, Any],
+            await self._get(
+                "/search/repositories",
+                {"q": query, "sort": sort, "order": order, "per_page": per_page},
+            ),
+        )
+
     async def list_contributors(
         self, owner: str, repo: str, max_count: int = 30
     ) -> list[dict[str, Any]]:

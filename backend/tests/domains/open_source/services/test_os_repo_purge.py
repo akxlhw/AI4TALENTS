@@ -75,14 +75,14 @@ async def _seed_shared_scenario(test_session: AsyncSession) -> dict:
     config = OSRepoConfig(
         repo_full_name="org/r1",
         display_name="R1",
-        tech_element="ai",
+        tech_element=["models"],
         is_active=True,
         collect_enabled=True,
     )
     config_r2 = OSRepoConfig(
         repo_full_name="org/r2",
         display_name="R2",
-        tech_element="ai",
+        tech_element=["models"],
         is_active=True,
         collect_enabled=True,
     )
@@ -290,7 +290,7 @@ class TestRepoPurgeRepository:
         config = OSRepoConfig(
             repo_full_name="org/never-collected",
             display_name="NC",
-            tech_element="ai",
+            tech_element=["models"],
             is_active=True,
             collect_enabled=True,
         )
@@ -315,7 +315,7 @@ class TestRepoPurgeRepository:
         config = OSRepoConfig(
             repo_full_name="org/r1",
             display_name="R1",
-            tech_element="ai",
+            tech_element=["models"],
             is_active=True,
             collect_enabled=True,
         )

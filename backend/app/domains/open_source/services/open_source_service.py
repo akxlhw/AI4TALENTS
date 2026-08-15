@@ -43,7 +43,6 @@ from app.domains.open_source.services.os_favourite_service import OSFavouriteSer
 
 logger = logging.getLogger(__name__)
 
-VALID_TECH_ELEMENTS = {"ai", "robotics", "data_science", "networks", "systems", "security"}
 REPO_FULL_NAME_PATTERN = re.compile(r"^[\w.-]+/[\w.-]+$")
 
 

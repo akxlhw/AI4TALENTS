@@ -38,24 +38,12 @@ import { getErrorMessage } from './utils'
 
 const { Text } = Typography
 
-const TECH_ELEMENTS = [
-  { value: 'ai', label: '人工智能', color: semanticColors.osPurple },
-  { value: 'robotics', label: '机器人', color: semanticColors.osGreen },
-  { value: 'data_science', label: '数据科学', color: semanticColors.osBlue },
-  { value: 'networks', label: '网络与通信', color: semanticColors.osOrangeDark },
-  { value: 'systems', label: '系统与软件', color: semanticColors.osPurple },
-  { value: 'security', label: '信息安全', color: semanticColors.osRed },
-]
-
-const getTechElementLabel = (code: string) => {
-  const item = TECH_ELEMENTS.find((t) => t.value === code)
-  return item?.label || code
-}
-
-const getTechElementColor = (code: string) => {
-  const item = TECH_ELEMENTS.find((t) => t.value === code)
-  return item?.color || '#999'
-}
+// Taxonomy v2: 34 element codes grouped by 10 domains (shared module)
+import {
+  TECH_ELEMENT_GROUPS,
+  getTechElementColor,
+  getTechElementLabel,
+} from './tech-elements'
 
 const OSRepoConfigSubTab: React.FC = () => {
   const [data, setData] = useState<OSRepoConfig[]>([])
@@ -98,7 +86,7 @@ const OSRepoConfigSubTab: React.FC = () => {
     setLoading(true)
     try {
       const params: Record<string, unknown> = { page, page_size: 10 }
-      if (filterTechElement) params.tech_element = filterTechElement
+      if (filterTechElement) params.tech_elements = [filterTechElement]
       if (searchKeyword) params.q = searchKeyword
       const response = await api.openSource.listRepoConfigs(params)
       setData(response.data.items || [])
@@ -517,7 +505,7 @@ const OSRepoConfigSubTab: React.FC = () => {
                 style={{ width: 160 }}
                 value={filterTechElement}
                 onChange={(v) => { setFilterTechElement(v); setPage(1) }}
-                options={TECH_ELEMENTS}
+                options={TECH_ELEMENT_GROUPS}
               />
               <Input.Search
                 placeholder="搜索仓库名称..."
@@ -633,7 +621,7 @@ const OSRepoConfigSubTab: React.FC = () => {
                 label="技术领域（可多选）"
                 rules={[{ required: true, message: '请选择技术领域' }]}
               >
-                <Select mode="multiple" placeholder="选择技术领域" options={TECH_ELEMENTS} />
+                <Select mode="multiple" placeholder="选择技术领域" options={TECH_ELEMENT_GROUPS} />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -726,7 +714,7 @@ const OSRepoConfigSubTab: React.FC = () => {
           value={batchTechValue}
           onChange={setBatchTechValue}
           style={{ width: '100%' }}
-          options={TECH_ELEMENTS.map((t) => ({ value: t.value, label: t.label }))}
+          options={TECH_ELEMENT_GROUPS}
         />
         <div style={{ marginTop: 8 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
@@ -807,7 +795,7 @@ const OSRepoConfigSubTab: React.FC = () => {
             style={{ width: '100%', marginTop: 4 }}
             value={batchAddTech}
             onChange={setBatchAddTech}
-            options={TECH_ELEMENTS}
+            options={TECH_ELEMENT_GROUPS}
             placeholder="选择技术领域"
           />
         </div>
@@ -851,7 +839,7 @@ const OSRepoConfigSubTab: React.FC = () => {
           style={{ width: '100%' }}
           value={batchTechValue}
           onChange={setBatchTechValue}
-          options={TECH_ELEMENTS}
+          options={TECH_ELEMENT_GROUPS}
           placeholder="选择技术领域（可多选）"
         />
         <div style={{ marginTop: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 8, fontSize: 12 }}>

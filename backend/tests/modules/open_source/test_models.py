@@ -48,7 +48,7 @@ class TestOSRepoConfig:
         """Test creating a repo config with defaults."""
         config = OSRepoConfig(
             repo_full_name="test-org/test-repo",
-            tech_element=["ai"],
+            tech_element=["models"],
             display_name="Test Repo",
             language="Python",
         )
@@ -57,7 +57,7 @@ class TestOSRepoConfig:
 
         assert config.repo_config_id is not None
         assert config.repo_full_name == "test-org/test-repo"
-        assert config.tech_element == ["ai"]
+        assert config.tech_element == ["models"]
         assert config.stars_count == 0
         assert config.is_active is True
         assert config.collect_enabled is True
@@ -76,7 +76,7 @@ class TestOSDeveloper:
             company="Test Corp",
             total_stars_received=1000,
             primary_languages=["Python", "Go"],
-            tech_tags=["ai"],
+            tech_tags=["models"],
         )
         db_session.add(dev)
         db_session.commit()
@@ -89,7 +89,7 @@ class TestOSDeveloper:
         assert dev.total_forks_received == 0
         assert dev.is_visible is True
         assert dev.primary_languages == ["Python", "Go"]
-        assert dev.tech_tags == ["ai"]
+        assert dev.tech_tags == ["models"]
 
 
 class TestOSRepository:

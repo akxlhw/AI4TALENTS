@@ -175,7 +175,7 @@ async def test_link_upsert_preserves_recruiting_state(
         position_id=position.position_id,
     )
     link = (await test_session.execute(select(IndustryPositionTalent))).scalar_one()
-    link.status = "interviewed"
+    link.status = "connected"
     link.touched = True
     link.notes = "一面通过"
     await test_session.commit()
@@ -186,7 +186,7 @@ async def test_link_upsert_preserves_recruiting_state(
     )
     await test_session.refresh(link)
     assert link.match_score == 88
-    assert link.status == "interviewed"
+    assert link.status == "connected"
     assert link.touched is True
     assert link.notes == "一面通过"
 
@@ -225,7 +225,7 @@ async def test_same_talent_new_position_only_adds_link(
         position_id=position.position_id,
     )
     link1 = (await test_session.execute(select(IndustryPositionTalent))).scalar_one()
-    link1.status = "contacted"
+    link1.status = "connected"
     await test_session.commit()
 
     report = await service.import_jsonl(
@@ -240,7 +240,7 @@ async def test_same_talent_new_position_only_adds_link(
     links = (await test_session.execute(select(IndustryPositionTalent))).scalars().all()
     assert len(links) == 2
     old = next(link for link in links if link.position_id == position.position_id)
-    assert old.status == "contacted"  # other position's state untouched
+    assert old.status == "connected"  # other position's state untouched
     assert old.match_score == 90
 
 
