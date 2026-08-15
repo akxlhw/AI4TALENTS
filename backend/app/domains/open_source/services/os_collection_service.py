@@ -386,6 +386,44 @@ class OSCollectionService:
             updated_count += count
         return updated_count
 
+    async def batch_update_tech_element(
+        self,
+        repo_config_ids: list[int],
+        tech_element: list[str],
+    ) -> dict[str, Any]:
+        """Batch set tech_element on multiple repos, syncing developer tags.
+
+        Each repo goes through update_repo_config (which validates and
+        triggers sync_developer_tech_tags), so developer tags stay correct.
+        Individual failures are collected, not fatal.
+
+        Returns {"updated": int, "failed": [{repo_config_id, reason}]}.
+        """
+        elements = self._validate_tech_elements(tech_element)
+        updated = 0
+        failed: list[dict[str, str]] = []
+
+        for repo_config_id in repo_config_ids:
+            try:
+                result = await self.repo.update_repo_config(
+                    repo_config_id, {"tech_element": elements}
+                )
+                if result is None:
+                    failed.append({"repo_input": str(repo_config_id), "reason": "仓库配置不存在"})
+                    continue
+                # Trigger developer tag sync (same as single update path)
+                try:
+                    await self.sync_developer_tech_tags(result.repo_full_name)
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to sync developer tech_tags for {result.repo_full_name}: {e}"
+                    )
+                updated += 1
+            except Exception as e:
+                failed.append({"repo_input": str(repo_config_id), "reason": str(e)[:200]})
+
+        return {"updated": updated, "failed": failed}
+
     async def delete_repo_config(self, repo_config_id: int) -> bool:
         """
         删除仓库配置

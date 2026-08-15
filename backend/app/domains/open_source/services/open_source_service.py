@@ -159,6 +159,17 @@ class OpenSourceService:
             created_by=created_by,
         )
 
+    async def batch_update_tech_element(
+        self,
+        repo_config_ids: list[int],
+        tech_element: list[str],
+    ) -> dict:
+        """Batch set tech_element on multiple repos, syncing developer tags."""
+        return await self._collection.batch_update_tech_element(
+            repo_config_ids=repo_config_ids,
+            tech_element=tech_element,
+        )
+
     async def update_repo_config(
         self, repo_config_id: int, update_data: dict[str, Any]
     ) -> OSRepoConfig | None:

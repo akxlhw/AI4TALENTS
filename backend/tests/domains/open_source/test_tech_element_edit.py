@@ -191,3 +191,59 @@ async def test_unconfigured_repo_not_counted(test_session: AsyncSession) -> None
     # dev tags = only configured repo's element (unconfigured ignored)
     await test_session.refresh(dev)
     assert dev.tech_tags == ["security"]
+
+
+@pytest.mark.asyncio
+async def test_batch_update_tech_element(test_session: AsyncSession) -> None:
+    """Batch update sets the same elements on multiple repos and syncs tags."""
+    service = OSCollectionService(test_session)
+
+    # Two repos, one shared developer contributing to both
+    await _add_repo_config(test_session, "org/batch-a", ["ai"])
+    await _add_repo_config(test_session, "org/batch-b", ["systems"])
+    dev = await _add_developer(test_session, "batch-dev")
+    repo_a = await _add_repository(test_session, "org/batch-a", dev.developer_id)
+    other = await _add_developer(test_session, "batch-other")
+    repo_b = await _add_repository(test_session, "org/batch-b", other.developer_id)
+    await _link(test_session, dev.developer_id, repo_a.repo_id)
+    await _link(test_session, dev.developer_id, repo_b.repo_id)
+    await test_session.commit()
+
+    config_a = await service.repo.get_repo_config_by_full_name("org/batch-a")
+    config_b = await service.repo.get_repo_config_by_full_name("org/batch-b")
+
+    # Batch update both repos to [robotics, security]
+    result = await service.batch_update_tech_element(
+        [config_a.repo_config_id, config_b.repo_config_id], ["robotics", "security"]
+    )
+    await test_session.commit()
+
+    assert result["updated"] == 2
+    assert result["failed"] == []
+
+    # Both configs now carry the same elements
+    await test_session.refresh(config_a)
+    await test_session.refresh(config_b)
+    assert sorted(config_a.tech_element) == ["robotics", "security"]
+    assert sorted(config_b.tech_element) == ["robotics", "security"]
+
+    # Shared developer's tags = union = same set (both repos identical now)
+    await test_session.refresh(dev)
+    assert sorted(dev.tech_tags) == ["robotics", "security"]
+
+
+@pytest.mark.asyncio
+async def test_batch_update_nonexistent_id_goes_to_failed(
+    test_session: AsyncSession,
+) -> None:
+    """A nonexistent repo_config_id lands in failed, not fatal."""
+    service = OSCollectionService(test_session)
+    config = await service.create_repo_config("org/real-one", ["ai"])
+    await test_session.commit()
+
+    result = await service.batch_update_tech_element([config.repo_config_id, 999999], ["security"])
+    await test_session.commit()
+
+    assert result["updated"] == 1
+    assert len(result["failed"]) == 1
+    assert result["failed"][0]["repo_input"] == "999999"

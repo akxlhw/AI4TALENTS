@@ -13,6 +13,8 @@ from app.domains.open_source.api.auth import get_current_user, require_super_adm
 from app.domains.open_source.schemas.open_source import (
     OSBatchRepoCreateRequest,
     OSBatchRepoCreateResponse,
+    OSBatchTechElementUpdateRequest,
+    OSBatchTechElementUpdateResponse,
     OSPurgePreview,
     OSRepoConfigCreate,
     OSRepoConfigResponse,
@@ -98,6 +100,30 @@ async def batch_create_repo_configs(
         created_by=int(user.get("sub")) if user.get("sub") else None,
     )
     return OSBatchRepoCreateResponse(**result)
+
+
+@router.put(
+    "/repo-configs/batch-tech-element",
+    response_model=OSBatchTechElementUpdateResponse,
+)
+async def batch_update_tech_element(
+    data: OSBatchTechElementUpdateRequest,
+    session: AsyncSession = Depends(get_async_session),
+    _user: dict = Depends(require_super_admin),
+):
+    """Batch set tech_element on multiple repos.
+
+    Applies the same tech element list to all given repos. Affected
+    developers' tech_tags are recalculated (union across their configured
+    repos) — same semantics as single-repo update.
+    """
+    service = OpenSourceService(session)
+    result = await service.batch_update_tech_element(
+        repo_config_ids=data.repo_config_ids,
+        tech_element=data.tech_element,
+    )
+    await session.commit()
+    return OSBatchTechElementUpdateResponse(**result)
 
 
 @router.get("/repo-configs/{repo_config_id}", response_model=OSRepoConfigResponse)

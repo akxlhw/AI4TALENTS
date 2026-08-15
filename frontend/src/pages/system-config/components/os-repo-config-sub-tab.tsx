@@ -30,6 +30,7 @@ import {
   GithubOutlined,
   PlayCircleOutlined,
   ClearOutlined,
+  TagsOutlined,
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
 import type { OSPurgePreview, OSRepoConfig } from '../../../types'
@@ -86,8 +87,11 @@ const OSRepoConfigSubTab: React.FC = () => {
   const [purgeConfirmText, setPurgeConfirmText] = useState('')
   const [batchAddModalVisible, setBatchAddModalVisible] = useState(false)
   const [batchAddText, setBatchAddText] = useState('')
-  const [batchAddTech, setBatchAddTech] = useState('ai')
+  const [batchAddTech, setBatchAddTech] = useState<string[]>(['ai'])
   const [batchAddLoading, setBatchAddLoading] = useState(false)
+  const [batchTechModalVisible, setBatchTechModalVisible] = useState(false)
+  const [batchTechValue, setBatchTechValue] = useState<string[]>([])
+  const [batchTechLoading, setBatchTechLoading] = useState(false)
   const [purgeDeleteConfig, setPurgeDeleteConfig] = useState(false)
 
   const loadData = useCallback(async () => {
@@ -284,6 +288,47 @@ const OSRepoConfigSubTab: React.FC = () => {
       message.error(getErrorMessage(error, '批量添加失败'))
     } finally {
       setBatchAddLoading(false)
+    }
+  }
+
+  const handleBatchTechUpdate = async () => {
+    if (batchTechValue.length === 0) {
+      message.warning('请选择至少一个技术领域')
+      return
+    }
+    const ids = selectedRowKeys.map((k) => Number(k))
+    if (ids.length === 0) return
+    setBatchTechLoading(true)
+    try {
+      const res = await api.openSource.batchUpdateTechElement({
+        repo_config_ids: ids,
+        tech_element: batchTechValue,
+      })
+      setBatchTechModalVisible(false)
+      const { updated, failed } = res.data
+      if (updated > 0) {
+        message.success(`已更新 ${updated} 个仓库的技术领域，关联人才标签已同步`)
+      }
+      if (failed.length > 0) {
+        Modal.warning({
+          title: `${failed.length} 个仓库更新失败`,
+          content: (
+            <div style={{ maxHeight: 240, overflow: 'auto' }}>
+              {failed.map((f: { repo_input: string; reason: string }, i: number) => (
+                <div key={i} style={{ marginBottom: 4, fontSize: 12 }}>
+                  • #{f.repo_input}: {f.reason}
+                </div>
+              ))}
+            </div>
+          ),
+        })
+      }
+      setSelectedRowKeys([])
+      loadData()
+    } catch (error) {
+      message.error(getErrorMessage(error, '批量更新失败'))
+    } finally {
+      setBatchTechLoading(false)
     }
   }
 
@@ -517,6 +562,16 @@ const OSRepoConfigSubTab: React.FC = () => {
                 取消选择
               </Button>
               <Button
+                size="small"
+                icon={<TagsOutlined />}
+                onClick={() => {
+                  setBatchTechValue([])
+                  setBatchTechModalVisible(true)
+                }}
+              >
+                批量设置技术领域
+              </Button>
+              <Button
                 type="primary"
                 size="small"
                 icon={<PlayCircleOutlined />}
@@ -651,6 +706,35 @@ const OSRepoConfigSubTab: React.FC = () => {
         />
       </Modal>
 
+      {/* Batch Tech Element Modal */}
+      <Modal
+        title="批量设置技术领域"
+        open={batchTechModalVisible}
+        onCancel={() => setBatchTechModalVisible(false)}
+        onOk={handleBatchTechUpdate}
+        okText="确认"
+        cancelText="取消"
+        confirmLoading={batchTechLoading}
+        width={440}
+      >
+        <p style={{ margin: '0 0 12px 0', fontSize: 14 }}>
+          为选中的 <strong>{selectedRowKeys.length}</strong> 个仓库设置技术领域（覆盖原有设置）：
+        </p>
+        <Select
+          mode="multiple"
+          placeholder="选择一个或多个技术领域"
+          value={batchTechValue}
+          onChange={setBatchTechValue}
+          style={{ width: '100%' }}
+          options={TECH_ELEMENTS.map((t) => ({ value: t.value, label: t.label }))}
+        />
+        <div style={{ marginTop: 8 }}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            更新后，这些仓库关联人才的技术标签将按新设置自动重算。
+          </Text>
+        </div>
+      </Modal>
+
       {/* Batch History — 3-choice modal (some repos already collected) */}
       <Modal
         title="部分仓库已采集过"
@@ -717,12 +801,14 @@ const OSRepoConfigSubTab: React.FC = () => {
         width={560}
       >
         <div style={{ marginBottom: 12 }}>
-          <Text type="secondary" style={{ fontSize: 13 }}>技术方向（统一应用到整批）</Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>技术领域（可多选，统一应用到整批）</Text>
           <Select
+            mode="multiple"
             style={{ width: '100%', marginTop: 4 }}
             value={batchAddTech}
             onChange={setBatchAddTech}
             options={TECH_ELEMENTS}
+            placeholder="选择技术领域"
           />
         </div>
         <div style={{ marginBottom: 8 }}>
@@ -741,6 +827,37 @@ const OSRepoConfigSubTab: React.FC = () => {
           <Text type="secondary" style={{ fontSize: 12 }}>
             系统将自动通过 GitHub API 获取仓库名称、描述、主要语言和 Star 数
           </Text>
+        </div>
+      </Modal>
+
+      {/* Batch Tech Element Modal */}
+      <Modal
+        title={`批量设置技术领域（${selectedRowKeys.length} 个仓库）`}
+        open={batchTechModalVisible}
+        onCancel={() => setBatchTechModalVisible(false)}
+        onOk={handleBatchTechUpdate}
+        confirmLoading={batchTechLoading}
+        okText="应用"
+        cancelText="取消"
+        width={480}
+      >
+        <div style={{ marginBottom: 12 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            将以下技术领域统一应用到全部选中的仓库（覆盖现有值）：
+          </Text>
+        </div>
+        <Select
+          mode="multiple"
+          style={{ width: '100%' }}
+          value={batchTechValue}
+          onChange={setBatchTechValue}
+          options={TECH_ELEMENTS}
+          placeholder="选择技术领域（可多选）"
+        />
+        <div style={{ marginTop: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 8, fontSize: 12 }}>
+          💡 应用后，这些仓库的关联人才的技术标签会自动按
+          <Text code>所有关联仓库的技术领域并集</Text>
+          重新计算。
         </div>
       </Modal>
 

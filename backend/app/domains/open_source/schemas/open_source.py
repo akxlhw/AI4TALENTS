@@ -470,7 +470,9 @@ class OSBatchRepoCreateRequest(BaseModel):
     """Request body for batch creating repo configs from GitHub URLs."""
 
     repo_inputs: list[str] = Field(..., description="GitHub URLs or owner/repo strings")
-    tech_element: str = Field(..., description="Tech element applied to all repos")
+    tech_element: list[str] = Field(
+        ..., min_length=1, description="Tech element codes applied to all repos"
+    )
 
 
 class OSBatchRepoCreatedItem(BaseModel):
@@ -496,3 +498,23 @@ class OSBatchRepoCreateResponse(BaseModel):
     created: list[OSBatchRepoCreatedItem] = Field(default_factory=list)
     skipped: list[OSBatchRepoSkipItem] = Field(default_factory=list)
     failed: list[OSBatchRepoSkipItem] = Field(default_factory=list)
+
+
+# ============ Batch Tech Element Update ============
+
+
+class OSBatchTechElementUpdateRequest(BaseModel):
+    """Request body for batch updating repo tech elements."""
+
+    repo_config_ids: list[int] = Field(..., min_length=1, description="Repo config IDs")
+    tech_element: list[str] = Field(
+        ..., min_length=1, description="New tech element codes applied to all repos"
+    )
+
+
+class OSBatchTechElementUpdateResponse(BaseModel):
+    """Response for batch tech element update."""
+
+    updated: int = 0
+    failed: list[OSBatchRepoSkipItem] = Field(default_factory=list)
+    developers_synced: int = 0
