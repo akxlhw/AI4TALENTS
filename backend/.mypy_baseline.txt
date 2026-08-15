@@ -967,7 +967,7 @@ app/domains/open_source/services/collectors/github_collector.py:349
 app/domains/open_source/services/collectors/github_collector.py:350
 app/domains/open_source/services/collectors/github_collector.py:351
 app/domains/open_source/services/collectors/github_collector.py:369
-app/domains/open_source/services/discover_service.py:291
+app/domains/open_source/services/discover_service.py:295
 app/domains/open_source/services/github_client.py:461
 app/domains/open_source/services/github_client.py:474
 app/domains/open_source/services/open_source_embedding_service.py:132

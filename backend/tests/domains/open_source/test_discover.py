@@ -210,3 +210,31 @@ async def test_discover_start_writes_status(
     )
     assert cfg is not None
     assert cfg["status"] in {"running", "completed", "error"}
+
+
+@pytest.mark.asyncio
+async def test_discover_start_empty_means_all_directions(
+    client: AsyncClient, super_admin_headers: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: an empty direction_codes list defaults to ALL seeded
+    directions — previously it ran 0 directions and 'completed' instantly
+    with no results (read as a silent failure)."""
+    from app.domains.open_source.services import discover_service
+
+    captured: dict = {}
+
+    async def _capture_run(direction_codes: list[str], min_stars: int) -> None:
+        captured["directions"] = direction_codes
+        captured["min_stars"] = min_stars
+
+    monkeypatch.setattr(discover_service, "run_discovery", _capture_run)
+
+    resp = await client.post(
+        "/api/v1/open-source/discover/start",
+        json={"direction_codes": [], "min_stars": 30000},
+        headers=super_admin_headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == len(DIRECTION_SEARCH_KEYWORDS)  # all 75
+    assert len(data["params"]["direction_codes"]) == len(DIRECTION_SEARCH_KEYWORDS)

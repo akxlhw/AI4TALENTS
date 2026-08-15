@@ -164,7 +164,7 @@ const OsDiscoverSubTab: React.FC = () => {
           <Col xs={24} md={14}>
             <Select
               mode="multiple"
-              placeholder="选择技术方向（留空 = 全部 22 个方向）"
+              placeholder="选择技术方向（留空 = 全部 75 个方向）"
               style={{ width: '100%' }}
               value={selectedDirections}
               onChange={setSelectedDirections}

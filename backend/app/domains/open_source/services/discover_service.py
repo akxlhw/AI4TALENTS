@@ -107,8 +107,12 @@ async def start_discovery(direction_codes: list[str], min_stars: int) -> dict[st
         if status["status"] == "running" and is_heartbeat_alive(status.get("heartbeat_at")):
             raise ConflictError("A discovery task is already running")
 
-        # Keep only directions that have keyword seeds
-        effective = [d for d in direction_codes if d in DIRECTION_SEARCH_KEYWORDS]
+        # Empty selection = ALL seeded directions; otherwise keep only
+        # directions that have keyword seeds
+        if not direction_codes:
+            effective = list(DIRECTION_SEARCH_KEYWORDS.keys())
+        else:
+            effective = [d for d in direction_codes if d in DIRECTION_SEARCH_KEYWORDS]
 
         status.update(
             {
