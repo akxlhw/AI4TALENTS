@@ -94,7 +94,9 @@ async def get_discovery_status() -> dict[str, Any]:
         return await load_status(config_service)
 
 
-async def start_discovery(direction_codes: list[str], min_stars: int) -> dict[str, Any]:
+async def start_discovery(
+    direction_codes: list[str], min_stars: int, min_contributors: int = 0
+) -> dict[str, Any]:
     """Launch the background discovery task. Raises ConflictError if running.
 
     Returns the initial status dict.
@@ -126,16 +128,22 @@ async def start_discovery(direction_codes: list[str], min_stars: int) -> dict[st
                 "heartbeat_at": utc_now_iso(),
                 "started_at": utc_now_iso(),
                 "finished_at": "",
-                "params": {"direction_codes": effective, "min_stars": min_stars},
+                "params": {
+                    "direction_codes": effective,
+                    "min_stars": min_stars,
+                    "min_contributors": min_contributors,
+                },
             }
         )
         await save_status(config_service, status)
 
-    asyncio.create_task(run_discovery(effective, min_stars))
+    asyncio.create_task(run_discovery(effective, min_stars, min_contributors))
     return status
 
 
-async def run_discovery(direction_codes: list[str], min_stars: int) -> None:
+async def run_discovery(
+    direction_codes: list[str], min_stars: int, min_contributors: int = 0
+) -> None:
     """Background coroutine: search GitHub per direction, persist results."""
     from app.domains.open_source.services.github_client import GitHubClient
     from app.domains.shared.services.config_service import ConfigService
@@ -147,7 +155,10 @@ async def run_discovery(direction_codes: list[str], min_stars: int) -> None:
         status["heartbeat_at"] = utc_now_iso()
         await save_status(config_service, status)
         logger.info(
-            "[Discover] started: %s directions, min_stars=%s", len(direction_codes), min_stars
+            "[Discover] started: %s directions, min_stars=%s, min_contributors=%s",
+            len(direction_codes),
+            min_stars,
+            min_contributors,
         )
 
         # repo_full_name → result record (dedup across directions)
@@ -173,6 +184,8 @@ async def run_discovery(direction_codes: list[str], min_stars: int) -> None:
                         first_search = False
 
                         full_query = f"{query} stars:>={threshold}"
+                        if min_contributors > 0:
+                            full_query += f" contributors:>={min_contributors}"
                         try:
                             resp = await client.search_repositories(full_query, per_page=30)
                         except Exception as e:

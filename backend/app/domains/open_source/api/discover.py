@@ -25,6 +25,9 @@ class DiscoverStartRequest(BaseModel):
         description="Tech direction codes to scan; empty = all seeded directions",
     )
     min_stars: int = Field(default=30000, ge=1000, le=500000, description="Star threshold")
+    min_contributors: int = Field(
+        default=0, ge=0, le=100000, description="Contributor count threshold (0 = no filter)"
+    )
 
 
 class DiscoverImportItem(BaseModel):
@@ -54,7 +57,7 @@ async def start_discovery_endpoint(
     # Seed session ensures the status key write below is durable even if
     # the caller's request scope closes immediately.
     await session.commit()
-    return await start_discovery(data.direction_codes, data.min_stars)
+    return await start_discovery(data.direction_codes, data.min_stars, data.min_contributors)
 
 
 @router.get("/discover/status")

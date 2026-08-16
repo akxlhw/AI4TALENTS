@@ -86,8 +86,11 @@ export const openSourceApi = {
     apiClient.post('/open-source/repo-configs/batch', data),
   batchUpdateTechElement: (data: { repo_config_ids: number[]; tech_element: string[] }) =>
     apiClient.put('/open-source/repo-configs/batch-tech-element', data),
-  startDiscovery: (data: { direction_codes: string[]; min_stars: number }) =>
-    apiClient.post('/open-source/discover/start', data),
+  startDiscovery: (data: {
+    direction_codes: string[]
+    min_stars: number
+    min_contributors?: number
+  }) => apiClient.post('/open-source/discover/start', data),
   getDiscoveryStatus: () =>
     apiClient.get('/open-source/discover/status'),
   importDiscovered: (repos: { repo_full_name: string; tech_element: string[] }[]) =>

@@ -257,7 +257,7 @@ class OSCollectionService:
     async def batch_create_repo_configs(
         self,
         repo_inputs: list[str],
-        tech_element: str,
+        tech_element: list[str] | str,
         created_by: int | None = None,
     ) -> dict[str, list]:
         """Batch create repo configs with auto-fetched GitHub metadata.

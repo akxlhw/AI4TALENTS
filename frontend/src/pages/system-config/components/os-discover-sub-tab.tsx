@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Alert, Button, Card, Col, Collapse, InputNumber, Progress, Row, Select,
-  Space, Spin, Table, Tag, Typography, message,
+  Space, Spin, Table, Tag, Tooltip, Typography, message,
 } from 'antd'
 import { RadarChartOutlined, ImportOutlined, ReloadOutlined } from '@ant-design/icons'
 import { api } from '../../../services/api'
@@ -40,6 +40,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
   const { data: directions } = useTechDirectionOptions()
   const [selectedDirections, setSelectedDirections] = useState<string[]>([])
   const [minStars, setMinStars] = useState<number>(30000)
+  const [minContributors, setMinContributors] = useState<number>(0)
   const [starting, setStarting] = useState(false)
   const [status, setStatus] = useState<DiscoverStatus | null>(null)
   const [selectedRepos, setSelectedRepos] = useState<React.Key[]>([])
@@ -91,6 +92,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
       await api.openSource.startDiscovery({
         direction_codes: selectedDirections,
         min_stars: minStars || 30000,
+        min_contributors: minContributors || 0,
       })
       message.success('探测任务已启动，结果将实时更新')
       fetchStatus()
@@ -160,11 +162,11 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
           自动探测知名开源项目
         </Title>
         <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
-          按技术方向搜索 GitHub 上 star 达标的知名开源项目（只预览不入库，勾选后可导入仓库配置）。
-          探测 22 个方向约需 2-5 分钟（受 GitHub Search API 限速约束）。
+          按技术方向搜索 GitHub 上 star/贡献者达标的知名开源项目（只预览不入库，勾选后可导入仓库配置）。
+          探测 75 个方向约需 2-5 分钟（受 GitHub Search API 限速约束）。
         </Text>
         <Row gutter={[12, 12]} align="middle">
-          <Col xs={24} md={14}>
+          <Col xs={24} md={12}>
             <Select
               mode="multiple"
               placeholder="选择技术方向（留空 = 全部 75 个方向）"
@@ -178,7 +180,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
               disabled={isRunning}
             />
           </Col>
-          <Col xs={12} md={5}>
+          <Col xs={8} md={4}>
             <InputNumber
               style={{ width: '100%' }}
               min={1000}
@@ -192,7 +194,21 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
               disabled={isRunning}
             />
           </Col>
-          <Col xs={12} md={5}>
+          <Col xs={8} md={4}>
+            <Tooltip title="贡献者人数下限（0 = 不限），过滤个人小项目">
+              <InputNumber
+                style={{ width: '100%' }}
+                min={0}
+                max={100000}
+                step={50}
+                value={minContributors}
+                onChange={v => setMinContributors(v ?? 0)}
+                addonBefore="贡献者 ≥"
+                disabled={isRunning}
+              />
+            </Tooltip>
+          </Col>
+          <Col xs={8} md={4}>
             <Button
               type="primary"
               block

@@ -184,7 +184,9 @@ async def test_discover_start_writes_status(
     from app.domains.open_source.services import discover_service
     from app.domains.shared.services.config_service import ConfigService
 
-    async def _fake_run_discovery(direction_codes: list[str], min_stars: int) -> None:
+    async def _fake_run_discovery(
+        direction_codes: list[str], min_stars: int, min_contributors: int = 0
+    ) -> None:
         """No-op stub: the real coroutine is what this test explicitly avoids."""
         return None
 
@@ -223,9 +225,12 @@ async def test_discover_start_empty_means_all_directions(
 
     captured: dict = {}
 
-    async def _capture_run(direction_codes: list[str], min_stars: int) -> None:
+    async def _capture_run(
+        direction_codes: list[str], min_stars: int, min_contributors: int = 0
+    ) -> None:
         captured["directions"] = direction_codes
         captured["min_stars"] = min_stars
+        captured["min_contributors"] = min_contributors
 
     monkeypatch.setattr(discover_service, "run_discovery", _capture_run)
 
