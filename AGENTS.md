@@ -27,7 +27,7 @@
 
 ### 后端
 
-- **Python 3.11+** / **FastAPI 0.115** / **Pydantic v2 + pydantic-settings**
+- **Python 3.11+** / **FastAPI 0.141** / **Pydantic v2 + pydantic-settings**
 - **SQLAlchemy 2.0（异步）+ Alembic** / **PostgreSQL 16+（无 SQLite 降级）** / asyncpg + psycopg2-binary
 - **pgvector**（语义搜索/推荐）/ **Redis**（可选缓存，支持降级）
 - httpx / aiohttp（必须经 `HttpClientFactory` 封装）/ tenacity / bcrypt + PyJWT

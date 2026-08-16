@@ -5,7 +5,9 @@ description = "智能人才库 - 多维度人才发现平台后端服务"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi==0.115.0",
+    "fastapi==0.141.1",
+    "starlette>=1.1.0",
+    "urllib3>=2.7.0",
     "uvicorn[standard]==0.32.1",
     "pydantic==2.11.0",
     "pydantic-settings==2.5.2",

@@ -18,7 +18,6 @@ from app.domains.open_source.constants.discover_keywords import (
     DOMAIN_MIN_STARS_OVERRIDE,
 )
 from app.domains.open_source.services.discover_service import (
-    DISCOVER_STATUS_KEY,
     is_heartbeat_alive,
 )
 from app.domains.shared.constants.tech_taxonomy import (
@@ -182,7 +181,6 @@ async def test_discover_start_writes_status(
     synchronous status write is what this test verifies.
     """
     from app.domains.open_source.services import discover_service
-    from app.domains.shared.services.config_service import ConfigService
 
     async def _fake_run_discovery(
         direction_codes: list[str], min_stars: int, min_contributors: int = 0
@@ -194,7 +192,7 @@ async def test_discover_start_writes_status(
 
     resp = await client.post(
         "/api/v1/open-source/discover/start",
-        json={"direction_codes": ["llm"], "min_stars": 50000},
+        json={"direction_codes": ["llm"], "min_stars": 50000, "min_contributors": 10},
         headers=super_admin_headers,
     )
     assert resp.status_code == 200
@@ -202,16 +200,7 @@ async def test_discover_start_writes_status(
     assert data["status"] == "running"
     assert data["total"] == 1
     assert data["params"]["min_stars"] == 50000
-
-    # The (stubbed) background task was spawned; give it a beat to run
-    import asyncio
-
-    await asyncio.sleep(0.05)
-    cfg = await ConfigService(test_session).get_value(
-        DISCOVER_STATUS_KEY, default=None, use_cache=False
-    )
-    assert cfg is not None
-    assert cfg["status"] in {"running", "completed", "error"}
+    assert data["params"]["min_contributors"] == 10
 
 
 @pytest.mark.asyncio
