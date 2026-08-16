@@ -44,8 +44,8 @@ const { Text } = Typography
 import {
   TECH_ELEMENT_GROUPS,
   getTechElementColor,
-  getTechElementLabel,
-} from './tech-elements'
+  getTechElementFullLabel,
+} from '@/constants/tech-elements'
 import OsDiscoverSubTab from './os-discover-sub-tab'
 
 const OSRepoConfigSubTab: React.FC = () => {
@@ -431,17 +431,17 @@ const OSRepoConfigSubTab: React.FC = () => {
       ),
     },
     {
-      title: '技术领域',
+      title: '技术领域（要素）',
       dataIndex: 'tech_element',
       key: 'tech_element',
-      width: 140,
+      width: 200,
       render: (codes: string[] | string) => {
         const list = Array.isArray(codes) ? codes : [codes]
         return (
           <Space size={2} wrap>
             {list.map((code) => (
               <Tag key={code} color={getTechElementColor(code)} style={{ margin: 0 }}>
-                {getTechElementLabel(code)}
+                {getTechElementFullLabel(code)}
               </Tag>
             ))}
           </Space>

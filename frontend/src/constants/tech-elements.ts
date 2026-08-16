@@ -3,6 +3,7 @@
  * backend/app/domains/shared/constants/tech_taxonomy.py.
  * 10 domains → 34 elements (tech_element valid values) → 75 directions.
  * Update both files together.
+ * Shared module — import from '@/constants/tech-elements'.
  */
 
 export interface TechElementOption {
@@ -103,3 +104,14 @@ export const getTechElementLabel = (code: string): string =>
 
 export const getTechElementColor = (code: string): string =>
   TECH_ELEMENTS.find(t => t.value === code)?.color || '#999'
+
+/** "领域 · 要素" full label, e.g. "AI大模型 · 训练" — for surfaces where the
+ * parent domain should be visible alongside the element. */
+export const getTechElementFullLabel = (code: string): string => {
+  const el = TECH_ELEMENTS.find(t => t.value === code)
+  if (!el) return code
+  return `${DOMAIN_LABELS[el.domain] || el.domain} · ${el.label}`
+}
+
+export const getTechElementDomain = (code: string): string | undefined =>
+  TECH_ELEMENTS.find(t => t.value === code)?.domain

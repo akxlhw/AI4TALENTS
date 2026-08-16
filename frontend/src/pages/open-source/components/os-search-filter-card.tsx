@@ -1,16 +1,8 @@
 import { Button, Card, Checkbox, Col, Form, Input, Row, Segmented, Select, Space } from 'antd'
 import { FilterOutlined, SearchOutlined } from '@ant-design/icons'
 import { domainThemes } from '../../../theme'
+import { TECH_ELEMENT_GROUPS } from '@/constants/tech-elements'
 import type { OSSearchQuery } from '../../../types'
-
-const TECH_ELEMENT_OPTIONS = [
-  { value: 'ai', label: '人工智能' },
-  { value: 'robotics', label: '机器人' },
-  { value: 'data_science', label: '数据科学' },
-  { value: 'networks', label: '网络与通信' },
-  { value: 'systems', label: '系统与软件' },
-  { value: 'security', label: '信息安全' },
-]
 
 const LANGUAGE_OPTIONS = [
   { value: 'Python', label: 'Python' },
@@ -109,10 +101,10 @@ const OsSearchFilterCard: React.FC<OsSearchFilterCardProps> = ({
       {filterExpanded && (
         <Row gutter={16} style={{ marginTop: 16 }}>
           <Col xs={24} sm={12} md={8} lg={6}>
-            <Form.Item label="技术领域" style={{ marginBottom: 8 }}>
+            <Form.Item label="技术领域（要素）" style={{ marginBottom: 8 }}>
               <Select
                 mode="multiple"
-                placeholder="选择技术领域"
+                placeholder="选择技术要素"
                 value={query.tech_elements}
                 onChange={v =>
                   onQueryChangeAndSyncUrl({
@@ -123,7 +115,8 @@ const OsSearchFilterCard: React.FC<OsSearchFilterCardProps> = ({
                   })
                 }
                 style={{ width: '100%' }}
-                options={TECH_ELEMENT_OPTIONS}
+                optionFilterProp="label"
+                options={TECH_ELEMENT_GROUPS}
               />
             </Form.Item>
           </Col>

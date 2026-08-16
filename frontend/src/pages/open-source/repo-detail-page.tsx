@@ -34,18 +34,10 @@ import {
 import { api } from '../../services/api'
 import { getErrorMessage } from '../../utils'
 import { domainThemes, semanticColors } from '../../theme'
+import { getTechElementColor, getTechElementFullLabel } from '@/constants/tech-elements'
 import type { OSRepositoryDetail, OSRepositoryContributor } from '../../types'
 
 const { Title, Text, Paragraph, Link } = Typography
-
-const TECH_ELEMENT_MAP: Record<string, { label: string; color: string }> = {
-  ai: { label: '人工智能', color: semanticColors.blue },
-  robotics: { label: '机器人', color: semanticColors.orange },
-  data_science: { label: '数据科学', color: semanticColors.green },
-  networks: { label: '网络与通信', color: semanticColors.purple },
-  systems: { label: '系统与软件', color: semanticColors.cyan },
-  security: { label: '信息安全', color: semanticColors.magenta },
-}
 
 const RepoDetailPage: React.FC = () => {
   const navigate = useNavigate()
@@ -122,7 +114,16 @@ const RepoDetailPage: React.FC = () => {
     )
   }
 
-  const techInfo = TECH_ELEMENT_MAP[detail.tech_element] || { label: detail.tech_element, color: '#999' }
+  const techCodes: string[] = Array.isArray(detail.tech_element)
+    ? detail.tech_element
+    : detail.tech_element
+      ? [detail.tech_element]
+      : []
+  const techInfos = techCodes.map(code => ({
+    code,
+    label: getTechElementFullLabel(code),
+    color: getTechElementColor(code),
+  }))
   const ownerOrCommitters = contributors.filter((c) => c.is_owner || c.is_committer)
   const displayName = detail.display_name || detail.full_name.split('/')[1] || detail.full_name
 
@@ -312,8 +313,18 @@ const RepoDetailPage: React.FC = () => {
     <Card className="domain-card" style={{ borderLeft: `3px solid ${semanticColors.osGreenLight}` }}>
       <Descriptions column={1} labelStyle={{ fontWeight: 600, width: 120 }}>
         <Descriptions.Item label="仓库全名">{detail.full_name}</Descriptions.Item>
-        <Descriptions.Item label="技术领域">
-          <Tag color={techInfo.color}>{techInfo.label}</Tag>
+        <Descriptions.Item label="技术领域（要素）">
+          <Space size={4} wrap>
+            {techInfos.length ? (
+              techInfos.map(t => (
+                <Tag key={t.code} color={t.color}>
+                  {t.label}
+                </Tag>
+              ))
+            ) : (
+              <span>-</span>
+            )}
+          </Space>
         </Descriptions.Item>
         <Descriptions.Item label="主要语言">
           {detail.language ? <Tag>{detail.language}</Tag> : '-'}
@@ -377,7 +388,11 @@ const RepoDetailPage: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Space align="center">
                   <Title level={3} style={{ margin: 0 }}>{displayName}</Title>
-                  <Tag color={techInfo.color}>{techInfo.label}</Tag>
+                  {techInfos.map(t => (
+                    <Tag key={t.code} color={t.color}>
+                      {t.label}
+                    </Tag>
+                  ))}
                 </Space>
               </div>
               <Text type="secondary" style={{ fontSize: 14 }}>{detail.full_name}</Text>

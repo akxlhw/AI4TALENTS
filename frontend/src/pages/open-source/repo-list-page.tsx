@@ -23,39 +23,18 @@ import {
 } from '@ant-design/icons'
 import { api } from '../../services/api'
 import type { OSRepoConfig } from '../../types'
+import {
+  TECH_ELEMENT_GROUPS,
+  getTechElementColor,
+  getTechElementFullLabel,
+} from '@/constants/tech-elements'
 
 const { Title, Text, Paragraph } = Typography
-
-const TECH_ELEMENT_OPTIONS = [
-  { value: 'ai', label: '人工智能' },
-  { value: 'robotics', label: '机器人' },
-  { value: 'data_science', label: '数据科学' },
-  { value: 'networks', label: '网络与通信' },
-  { value: 'systems', label: '系统与软件' },
-  { value: 'security', label: '信息安全' },
-]
 
 const SORT_OPTIONS = [
   { value: 'stars', label: 'Stars 降序' },
   { value: 'id_desc', label: '最新添加' },
 ]
-
-const getTechElementLabel = (code: string) => {
-  const item = TECH_ELEMENT_OPTIONS.find((t) => t.value === code)
-  return item?.label || code
-}
-
-const getTechElementColor = (code: string) => {
-  const colors: Record<string, string> = {
-    ai: semanticColors.osPurple,
-    robotics: semanticColors.osGreen,
-    data_science: semanticColors.osBlue,
-    networks: semanticColors.osOrangeDark,
-    systems: semanticColors.osPurple,
-    security: semanticColors.osRed,
-  }
-  return colors[code] || semanticColors.textGray
-}
 
 const RepoListPage: React.FC = () => {
   const navigate = useNavigate()
@@ -126,12 +105,14 @@ const RepoListPage: React.FC = () => {
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Select
-              placeholder="技术领域"
+              placeholder="技术领域（要素）"
               allowClear
+              showSearch
+              optionFilterProp="label"
               style={{ width: '100%' }}
               value={techElement}
               onChange={(v) => { setTechElement(v); setPage(1) }}
-              options={TECH_ELEMENT_OPTIONS}
+              options={TECH_ELEMENT_GROUPS}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
@@ -200,7 +181,7 @@ const RepoListPage: React.FC = () => {
                             color={getTechElementColor(code)}
                             style={{ fontSize: 11, lineHeight: '18px', margin: 0 }}
                           >
-                            {getTechElementLabel(code)}
+                            {getTechElementFullLabel(code)}
                           </Tag>
                         )
                       )}
