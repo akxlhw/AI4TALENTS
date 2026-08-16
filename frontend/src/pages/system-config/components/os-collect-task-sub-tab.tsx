@@ -43,6 +43,7 @@ const getTaskStatusConfig = (status: string) => {
     completed: { label: '已完成', status: 'success', color: semanticColors.green, icon: <CheckCircleOutlined /> },
     failed: { label: '失败', status: 'error', color: semanticColors.red, icon: <CloseCircleOutlined /> },
     cancelled: { label: '已取消', status: 'warning', color: semanticColors.gold, icon: <CloseCircleOutlined /> },
+    rate_limited: { label: '速率限制（待自动恢复）', status: 'warning', color: semanticColors.orange, icon: <ClockCircleOutlined /> },
   }
   return map[status] || { label: status, status: 'default', color: semanticColors.textGray, icon: null }
 }
@@ -203,7 +204,7 @@ const OSCollectTaskSubTab: React.FC = () => {
               </Button>
             </Popconfirm>
           )}
-          {['completed', 'failed', 'cancelled'].includes(record.status) && (
+          {['completed', 'failed', 'cancelled', 'rate_limited'].includes(record.status) && (
             <Popconfirm
               title="确定删除此任务记录？"
               description="删除后不可恢复"

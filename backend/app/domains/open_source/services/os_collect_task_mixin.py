@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
-from typing import Any
+from datetime import datetime, timedelta, timezone
+from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -315,9 +315,9 @@ class CollectTaskMixin:
                     await session.commit()
         except RateLimitExhaustedError as e:
             # Fast-fail path: token pool exhausted. Mark the task rate_limited
-            # (terminal, retryable — not pending/running, so the user can
-            # re-trigger collection once the reset window passes) and record
-            # retry_after instead of blocking the pipeline.
+            # with resume_at = now + retry_after; a background loop restarts
+            # it automatically once the reset window passes (manual re-trigger
+            # also works since rate_limited is not pending/running).
             logger.warning(f"Task {task_id} rate-limited: {e}")
             async with AsyncSessionLocal() as session:
                 inner_service = OSCollectionService(session)
@@ -325,9 +325,13 @@ class CollectTaskMixin:
                 if task:
                     task.status = "rate_limited"  # type: ignore[assignment]
                     task.current_step = "rate_limited"  # type: ignore[assignment]
+                    retry_after = e.retry_after or 3600
+                    task.resume_at = datetime.now(timezone.utc).replace(  # type: ignore[assignment]
+                        tzinfo=None
+                    ) + timedelta(seconds=retry_after)
                     task.error_message = (  # type: ignore[assignment]
                         f"GitHub rate limit exhausted for all tokens; "
-                        f"retry after {e.retry_after}s"
+                        f"retry after {retry_after}s"
                     )[: settings.COLLECT_ERROR_MAX_LENGTH]
                     await session.commit()
         except Exception as e:
@@ -341,3 +345,68 @@ class CollectTaskMixin:
                     await session.commit()
         finally:
             cancelled_task_ids.discard(task_id)
+
+    # ============= Rate-limit Auto-resume =============
+
+    async def resume_due_rate_limited_tasks(self) -> int:
+        """Restart rate_limited tasks whose reset window has passed.
+
+        Called periodically by ``rate_limit_resume_loop``. Returns the number
+        of tasks resumed.
+        """
+        from sqlalchemy import select
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        result = await self.session.execute(
+            select(OSCollectTask).where(
+                OSCollectTask.status == "rate_limited",
+                OSCollectTask.resume_at.is_not(None),
+                OSCollectTask.resume_at <= now,
+            )
+        )
+        due = result.scalars().all()
+        if not due:
+            return 0
+
+        launch: list[tuple[int, dict[str, Any]]] = []
+        for task in due:
+            cfg: dict[str, Any] = dict(task.config_json or {})
+            task.status = "pending"  # type: ignore[assignment]
+            task.resume_at = None  # type: ignore[assignment]
+            task.error_message = None  # type: ignore[assignment]
+            launch.append((cast(int, task.task_id), cfg))
+        await self.session.commit()
+
+        for task_id, cfg in launch:
+            logger.info(f"Auto-resuming rate-limited task {task_id}")
+            asyncio.create_task(
+                self.run_repo_collection_background(
+                    task_id=task_id,
+                    repo_config_id=cast(int, cfg.get("repo_config_id")),
+                    repo_full_name=cfg.get("repo_full_name") or "",
+                    tech_element=cfg.get("tech_element") or [],
+                    contributors_per_repo=cfg.get("contributors_per_repo") or 0,
+                )
+            )
+        return len(launch)
+
+
+async def rate_limit_resume_loop(interval_seconds: int = 60) -> None:
+    """Background loop: auto-resume rate_limited tasks past their resume_at.
+
+    Started from the application lifespan; cancelled on shutdown.
+    """
+    from app.domains.open_source.services.os_collection_service import OSCollectionService
+
+    while True:
+        await asyncio.sleep(interval_seconds)
+        try:
+            async with AsyncSessionLocal() as session:
+                service = OSCollectionService(session)
+                resumed = await service.resume_due_rate_limited_tasks()
+                if resumed:
+                    logger.info(f"Rate-limit resume loop restarted {resumed} task(s)")
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("rate_limit_resume_loop iteration failed")

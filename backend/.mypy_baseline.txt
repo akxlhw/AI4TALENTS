@@ -983,8 +983,8 @@ app/domains/open_source/services/os_collect_task_mixin.py:208
 app/domains/open_source/services/os_collect_task_mixin.py:272
 app/domains/open_source/services/os_collect_task_mixin.py:273
 app/domains/open_source/services/os_collect_task_mixin.py:314
-app/domains/open_source/services/os_collect_task_mixin.py:339
-app/domains/open_source/services/os_collect_task_mixin.py:340
+app/domains/open_source/services/os_collect_task_mixin.py:343
+app/domains/open_source/services/os_collect_task_mixin.py:344
 app/domains/open_source/services/os_favourite_service.py:219
 app/domains/open_source/services/os_favourite_service.py:275
 app/domains/open_source/services/os_repo_config_mixin.py:112
@@ -1278,8 +1278,8 @@ app/domains/shared/services/user_activity_service.py:50
 app/domains/shared/services/user_activity_service.py:55
 app/domains/shared/services/user_activity_service.py:79
 app/domains/shared/services/user_activity_service.py:88
-app/main.py:133
-app/main.py:49
+app/main.py:140
+app/main.py:50
 app/middleware/metrics.py:36
 app/middleware/metrics.py:46
 app/middleware/rate_limit.py:138

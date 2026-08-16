@@ -162,3 +162,65 @@ async def test_repo_locks_are_per_repository() -> None:
 
     assert lock_a1 is lock_a2
     assert lock_a1 is not lock_b
+
+
+@pytest.mark.asyncio
+async def test_resume_due_rate_limited_tasks(
+    test_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """rate_limited task past resume_at is reset to pending and relaunched."""
+    from datetime import datetime, timedelta, timezone
+
+    task = OSCollectTask(
+        task_name="collect o/r",
+        status="rate_limited",
+        error_message="rate limited",
+        resume_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=5),
+        config_json={
+            "repo_config_id": 1,
+            "repo_full_name": "o/r",
+            "tech_element": ["models"],
+            "contributors_per_repo": 10,
+        },
+    )
+    test_session.add(task)
+    await test_session.commit()
+    await test_session.refresh(task)
+
+    launched: list[int] = []
+
+    async def _fake_run(self, task_id: int, **kwargs) -> None:
+        launched.append(task_id)
+
+    monkeypatch.setattr(OSCollectionService, "run_repo_collection_background", _fake_run)
+
+    service = OSCollectionService(test_session)
+    resumed = await service.resume_due_rate_limited_tasks()
+
+    assert resumed == 1
+    assert task.status == "pending"
+    assert task.resume_at is None
+    import asyncio
+
+    await asyncio.sleep(0)  # let the create_task coroutine start
+    await asyncio.sleep(0)
+    assert launched == [task.task_id]
+
+
+@pytest.mark.asyncio
+async def test_resume_skips_future_resume_at(test_session: AsyncSession) -> None:
+    """rate_limited task with resume_at in the future is left alone."""
+    from datetime import datetime, timedelta, timezone
+
+    task = OSCollectTask(
+        task_name="collect o/r2",
+        status="rate_limited",
+        resume_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1),
+    )
+    test_session.add(task)
+    await test_session.commit()
+
+    service = OSCollectionService(test_session)
+    resumed = await service.resume_due_rate_limited_tasks()
+    assert resumed == 0
+    assert task.status == "rate_limited"

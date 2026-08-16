@@ -2,6 +2,7 @@
 FastAPI application entry point.
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -63,9 +64,15 @@ async def lifespan(app: FastAPI):
     # Initialize proxy configuration
     await init_proxy_config()
 
+    # Auto-resume loop for rate-limited open-source collect tasks
+    from app.domains.open_source.services.os_collect_task_mixin import rate_limit_resume_loop
+
+    resume_task = asyncio.create_task(rate_limit_resume_loop())
+
     yield
 
     # Shutdown
+    resume_task.cancel()
     logger.info(f"Shutting down {settings.APP_NAME}")
     await close_cache_connection()
     await async_engine.dispose()

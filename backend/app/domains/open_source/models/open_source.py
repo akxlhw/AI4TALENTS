@@ -192,6 +192,9 @@ class OSCollectTask(Base):
     error_message = Column(Text, nullable=True)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
+    # When status='rate_limited': earliest time the task may auto-resume
+    # (limited_at + GitHub retry_after). NULL otherwise.
+    resume_at = Column(DateTime, nullable=True)
     created_by = Column(Integer, ForeignKey("iam_user_account.user_id"), nullable=True)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
