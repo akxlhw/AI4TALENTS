@@ -28,10 +28,30 @@ from app.domains.open_source.schemas.open_source import (
 )
 from app.domains.open_source.services.open_source_service import OpenSourceService
 from app.domains.shared.api.auth import require_admin
+from app.domains.shared.constants.tech_taxonomy import TECH_DOMAINS, TECH_ELEMENTS
 from app.domains.shared.schemas.common import PaginatedResponse
 from app.domains.shared.services.audit_service import AuditService
 
 router = APIRouter(prefix="/open-source", tags=["Open Source Talent"])
+
+_DOMAIN_NAMES = {d["code"]: d["name"] for d in TECH_DOMAINS}
+
+
+def _tech_labels(tech_tags: list[str] | None) -> tuple[str, str]:
+    """Map element codes to (领域中文, 要素中文) — domain labels deduped."""
+    domains: list[str] = []
+    elements: list[str] = []
+    for code in tech_tags or []:
+        el = TECH_ELEMENTS.get(code)
+        if not el:
+            elements.append(code)
+            continue
+        domain_name = _DOMAIN_NAMES.get(el["domain"], el["domain"])
+        if domain_name not in domains:
+            domains.append(domain_name)
+        if el["name"] not in elements:
+            elements.append(el["name"])
+    return "、".join(domains), "、".join(elements)
 
 
 # ============= Developers =============
@@ -286,7 +306,8 @@ async def export_developers(
         "仓库数",
         "Followers数",
         "主要语言",
-        "技术标签",
+        "技术领域",
+        "技术要素/方向",
         "收录来源的开源项目",
         "社交媒体链接（供参考）",
     ]
@@ -299,6 +320,7 @@ async def export_developers(
         company = d.company or ""
         search_query = f"{name} {company} LinkedIn".strip()
         social_link = f"https://www.google.com/search?q={quote(search_query, safe='')}"
+        tech_domains, tech_elements = _tech_labels(d.tech_tags)
 
         rows.append(
             [
@@ -314,7 +336,8 @@ async def export_developers(
                 d.public_repos_count,
                 d.followers_count,
                 ", ".join(d.primary_languages or []),
-                ", ".join(d.tech_tags or []),
+                tech_domains,
+                tech_elements,
                 repo_names,
                 social_link,
             ]
