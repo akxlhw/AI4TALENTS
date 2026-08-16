@@ -16,6 +16,7 @@ interface DiscoveredRepo {
   description: string
   language: string | null
   stars: number
+  contributors?: number
   html_url: string
   direction_codes: string[]
   element_codes?: string[]
@@ -23,7 +24,7 @@ interface DiscoveredRepo {
 }
 
 interface DiscoverStatus {
-  status: 'idle' | 'running' | 'completed' | 'error'
+  status: 'idle' | 'running' | 'completed' | 'cancelled' | 'error'
   processed: number
   total: number
   current: string
@@ -239,7 +240,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
         </Card>
       )}
 
-      {/* ── Error ── */}
+      {/* ── Error / Cancelled ── */}
       {status?.status === 'error' && (
         <Alert
           type="error"
@@ -247,6 +248,15 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
           style={{ marginBottom: 16 }}
           message="探测任务异常终止"
           description="可能是网络或 GitHub API 限速导致，稍后可重新探测（已发现的部分结果保留在下表）。"
+        />
+      )}
+      {status?.status === 'cancelled' && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="探测任务被中断"
+          description="服务重启或代码热更新会终止后台探测任务。已发现的部分结果保留在下表，可直接导入或重新探测。"
         />
       )}
 
@@ -332,6 +342,15 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
                         render: (s: number) => (
                           <Text strong>{s >= 1000 ? `${(s / 1000).toFixed(1)}k` : s}</Text>
                         ),
+                      },
+                      {
+                        title: '贡献者',
+                        dataIndex: 'contributors',
+                        width: 90,
+                        sorter: (a: DiscoveredRepo, b: DiscoveredRepo) =>
+                          (a.contributors ?? -1) - (b.contributors ?? -1),
+                        render: (c: number | undefined) =>
+                          c === undefined ? '—' : c >= 1000 ? `${(c / 1000).toFixed(1)}k` : c,
                       },
                       {
                         title: '语言',

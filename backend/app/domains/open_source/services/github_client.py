@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from typing import Any, cast
 
@@ -208,8 +209,11 @@ class GitHubClient:
         self._last_request_time = time.time()
         return response
 
-    async def _do_get(self, path: str, params: dict[str, Any] | None = None) -> Any:
-        """Core GET logic with rate-limit handling and token rotation."""
+    async def _do_get_full(
+        self, path: str, params: dict[str, Any] | None = None
+    ) -> httpx.Response | None:
+        """Core GET logic (rate-limit handling, token rotation); returns the
+        raw response, or None for 404."""
         # Proactively pick the healthiest token before each request
         self._pick_best_token()
 
@@ -260,7 +264,16 @@ class GitHubClient:
                 )
 
         response.raise_for_status()
-        return response.json()
+        return response
+
+    async def _do_get(self, path: str, params: dict[str, Any] | None = None) -> Any:
+        """Core GET logic with rate-limit handling and token rotation.
+
+        Returns parsed JSON; None means 404. See _do_get_full for the raw
+        response variant (needed when response headers carry data).
+        """
+        response = await self._do_get_full(path, params)
+        return None if response is None else response.json()
 
     @retry(
         retry=retry_if_exception(_is_retryable),
@@ -333,37 +346,39 @@ class GitHubClient:
             page += 1
         return all_contributors[:max_count] if max_count > 0 else all_contributors
 
-    async def count_contributors(self, owner: str, repo: str) -> tuple[int, bool]:
-        """Quickly count total contributors, detecting the 500 API cap.
+    async def count_contributors(self, owner: str, repo: str) -> int:
+        """Approximate the contributor count via Link-header pagination.
 
-        Returns:
-            (count, is_capped): *count* is the number of contributors
-            actually visible through the API; *is_capped* is ``True``
-            when the 500-person hard limit was hit.
+        Requests a single contributor per page; GitHub's Link response header
+        exposes the last page number, which equals the contributor count.
+        This is 1 lightweight API call regardless of repo size (paging the
+        full list instead triggers abuse-detection 403s on huge repos).
 
-        Cost: 1 API call for small repos (<100), up to 5 calls for
-        large repos that hit the 500 cap.
+        Returns -1 when the count cannot be determined (404, or the 403
+        "list too large" GitHub gives for mega repos like the linux kernel)
+        so callers can fail open.
         """
-        count = 0
-        page = 1
-        per_page = settings.GITHUB_PER_PAGE
-        while True:
-            batch = cast(
-                list[dict[str, Any]],
-                await self._get(
-                    f"/repos/{owner}/{repo}/contributors",
-                    params={"per_page": per_page, "page": page},
-                ),
+        try:
+            response = await self._do_get_full(
+                f"/repos/{owner}/{repo}/contributors",
+                {"per_page": 1, "anon": "false"},
             )
-            if not batch:
-                break
-            count += len(batch)
-            if len(batch) < per_page:
-                break
-            if count >= 500:
-                return count, True
-            page += 1
-        return count, False
+        except httpx.HTTPStatusError as e:
+            logger.warning(
+                "Contributor count unavailable for %s/%s: HTTP %s",
+                owner,
+                repo,
+                e.response.status_code,
+            )
+            return -1
+        if response is None:
+            return -1
+        data = response.json()
+        if not data:
+            return 0
+        link = response.headers.get("link", "")
+        match = re.search(r"[?&]page=(\d+)>; rel=\"last\"", link)
+        return int(match.group(1)) if match else 1
 
     async def get_user(self, login: str) -> dict[str, Any]:
         """Fetch user profile."""
@@ -448,7 +463,7 @@ class GitHubClient:
                     # Token pool exhausted: abort the traversal fast instead of
                     # grinding through hundreds of futile pages.
                     raise commits
-                if isinstance(commits, Exception):
+                if isinstance(commits, BaseException):
                     logger.warning(
                         f"Failed to fetch commits page {page_num} for {owner}/{repo}: {commits}"
                     )

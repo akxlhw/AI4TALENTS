@@ -170,6 +170,24 @@ async def run_discovery(
 
             async with GitHubClient(token=token) as client:
                 first_search = True
+                # Contributor counts cached across directions (1 API call per
+                # unique repo max, via the Link-header trick in GitHubClient)
+                contributor_cache: dict[str, int] = {}
+
+                async def _get_contributors(full_name: str) -> int:
+                    if full_name not in contributor_cache:
+                        owner, _, name = full_name.partition("/")
+                        try:
+                            contributor_cache[full_name] = await client.count_contributors(
+                                owner, name
+                            )
+                        except Exception as e:
+                            logger.warning(
+                                "[Discover] contributor count failed for %s: %s", full_name, e
+                            )
+                            contributor_cache[full_name] = -1  # unknown → fail open
+                    return contributor_cache[full_name]
+
                 for direction in direction_codes:
                     queries = DIRECTION_SEARCH_KEYWORDS.get(direction, [])
                     direction_hits: dict[str, dict[str, Any]] = {}
@@ -183,9 +201,10 @@ async def run_discovery(
                             await asyncio.sleep(SEARCH_INTERVAL_SECONDS)
                         first_search = False
 
+                        # NOTE: the search API's `contributors:` qualifier is
+                        # accepted but matches nothing (verified empirically)
+                        # — contributor filtering happens post-search instead.
                         full_query = f"{query} stars:>={threshold}"
-                        if min_contributors > 0:
-                            full_query += f" contributors:>={min_contributors}"
                         try:
                             resp = await client.search_repositories(full_query, per_page=30)
                         except Exception as e:
@@ -212,10 +231,29 @@ async def run_discovery(
                                 "direction_codes": [direction],
                             }
 
-                    # Keep top-N by stars for this direction, merge into global set
+                    # Contributor filter (post-search): check candidates that
+                    # made the top-N cut only, concurrently, fail-open on
+                    # unknown counts (GitHub 403s "list too large" for mega
+                    # repos like the linux kernel — those clearly pass).
                     top = sorted(direction_hits.values(), key=lambda r: -r["stars"])[
                         :MAX_REPOS_PER_DIRECTION
                     ]
+                    if min_contributors > 0:
+                        sem = asyncio.Semaphore(5)
+
+                        async def _check(
+                            rec: dict[str, Any], semaphore: asyncio.Semaphore = sem
+                        ) -> None:
+                            async with semaphore:
+                                rec["contributors"] = await _get_contributors(rec["repo_full_name"])
+
+                        await asyncio.gather(*(_check(rec) for rec in top))
+                        top = [
+                            rec
+                            for rec in top
+                            if rec.get("contributors", -1) == -1
+                            or rec["contributors"] >= min_contributors
+                        ]
                     for rec in top:
                         name = rec["repo_full_name"]
                         if name in merged:
@@ -275,8 +313,10 @@ async def run_discovery(
             logger.info("[Discover] completed: %d repos found", len(results))
 
         except asyncio.CancelledError:
+            # Usually a server hot-reload/restart killing the task loop —
+            # partial results are already persisted per-direction above.
             status.update(
-                {"status": "error", "current": "cancelled", "heartbeat_at": utc_now_iso()}
+                {"status": "cancelled", "current": "interrupted", "heartbeat_at": utc_now_iso()}
             )
             await save_status(config_service, status)
             raise
