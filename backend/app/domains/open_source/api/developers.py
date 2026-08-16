@@ -320,7 +320,7 @@ async def export_developers(
         company = d.company or ""
         search_query = f"{name} {company} LinkedIn".strip()
         social_link = f"https://www.google.com/search?q={quote(search_query, safe='')}"
-        tech_domains, tech_elements = _tech_labels(d.tech_tags)
+        tech_domains, tech_elements = _tech_labels(cast("list[str] | None", d.tech_tags))
 
         rows.append(
             [
