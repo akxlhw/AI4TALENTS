@@ -3,6 +3,7 @@ Talent model.
 """
 
 from sqlalchemy import JSON, Boolean, Column, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -53,7 +54,7 @@ class Talent(Base, TimestampMixin):
     # topic_tags: Cached field computed from TalentTechTag table
     # Format: ["AI", "Machine Learning", "Deep Learning"]
     # This field is updated when tech_tags relationship changes
-    topic_tags = Column(JSON, default=[])
+    topic_tags = Column(JSON().with_variant(JSONB, "postgresql"), default=[])
     # openalex_topics: Research topics from OpenAlex API (topics field)
     # Format: ["Machine Learning", "Computer Vision", "Natural Language Processing"]
     openalex_topics = Column(JSON, default=[])
@@ -75,7 +76,9 @@ class Talent(Base, TimestampMixin):
     unified_person_id = Column(String(100), nullable=True)  # For future unified person profile
     department_name = Column(String(255), nullable=True)
     lab_name = Column(String(255), nullable=True)
-    extra_data = Column(JSON, nullable=True)  # Flexible storage for additional info
+    extra_data = Column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )  # Flexible storage for additional info
 
     # Relationships
     school = relationship("School", back_populates="talents", foreign_keys=[school_id])

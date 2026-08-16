@@ -125,13 +125,11 @@ class EmbeddingRepository:
             vector_str = "[" + ",".join(str(v) for v in embedding) + "]"
             # 使用 CAST 函数避免 :: 类型转换与 SQLAlchemy 参数冲突
             await self.session.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO core_talent_embedding
                     (talent_id, vector_type, embedding, model_name, source_text_hash, created_at, updated_at)
                     VALUES (:talent_id, :vector_type, CAST(:embedding AS vector), :model_name, :source_text_hash, :created_at, :updated_at)
-                """
-                ),
+                """),
                 {
                     "talent_id": talent_id,
                     "vector_type": vector_type,
@@ -260,8 +258,7 @@ class EmbeddingRepository:
             vector_str = "[" + ",".join(str(v) for v in embedding) + "]"
             # 使用 CAST 函数避免 :: 类型转换与 SQLAlchemy 参数冲突
             await self.session.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO core_talent_embedding
                     (talent_id, vector_type, embedding, model_name, source_text_hash, created_at, updated_at)
                     VALUES (:talent_id, :vector_type, CAST(:embedding AS vector), :model_name, :source_text_hash, :created_at, :updated_at)
@@ -270,8 +267,7 @@ class EmbeddingRepository:
                         model_name = EXCLUDED.model_name,
                         source_text_hash = EXCLUDED.source_text_hash,
                         updated_at = EXCLUDED.updated_at
-                """
-                ),
+                """),
                 {
                     "talent_id": talent_id,
                     "vector_type": vector_type,

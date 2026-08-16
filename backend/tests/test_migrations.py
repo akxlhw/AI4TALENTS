@@ -55,16 +55,12 @@ def temp_database():
 
     finally:
         with engine.connect() as conn:
-            conn.execute(
-                text(
-                    f"""
+            conn.execute(text(f"""
                 SELECT pg_terminate_backend(pg_stat_activity.pid)
                 FROM pg_stat_activity
                 WHERE pg_stat_activity.datname = '{db_name}'
                 AND pid <> pg_backend_pid()
-            """
-                )
-            )
+            """))
             conn.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
 
         engine.dispose()
@@ -377,15 +373,11 @@ class TestFreshDeployment:
 
         engine = get_postgres_connection(temp_database)
         with engine.connect() as conn:
-            result = conn.execute(
-                text(
-                    """
+            result = conn.execute(text("""
                 SELECT table_name FROM information_schema.tables
                 WHERE table_schema = 'public'
                 ORDER BY table_name
-            """
-                )
-            )
+            """))
             tables = [row[0] for row in result.fetchall()]
 
         critical_tables = [
@@ -444,15 +436,11 @@ class TestUpgradeDeployment:
 
         engine = get_postgres_connection(temp_database)
         with engine.connect() as conn:
-            conn.execute(
-                text(
-                    """
+            conn.execute(text("""
                 INSERT INTO iam_user_account
                 (username, email, password_hash, role_type, is_active, status, display_name, created_at, updated_at)
                 VALUES ('testuser', 'test@example.com', 'test_hash', 'recruiter', true, 'active', 'Test User', NOW(), NOW())
-            """
-                )
-            )
+            """))
 
         result = subprocess.run(
             ["alembic", "upgrade", "head"],
@@ -521,14 +509,10 @@ class TestMigrationRollback:
 
         engine = get_postgres_connection(temp_database)
         with engine.connect() as conn:
-            result = conn.execute(
-                text(
-                    """
+            result = conn.execute(text("""
                 SELECT table_name FROM information_schema.tables
                 WHERE table_schema = 'public' AND table_name != 'alembic_version'
-            """
-                )
-            )
+            """))
             tables = [row[0] for row in result.fetchall()]
 
         assert len(tables) == 0, f"Tables not cleaned up after downgrade: {tables}"
@@ -542,15 +526,11 @@ class TestMigrationRollback:
         )
 
         with engine.connect() as conn:
-            result = conn.execute(
-                text(
-                    """
+            result = conn.execute(text("""
                 SELECT table_name FROM information_schema.tables
                 WHERE table_schema = 'public'
                 ORDER BY table_name
-            """
-                )
-            )
+            """))
             tables = [row[0] for row in result.fetchall()]
 
         assert "iam_user_account" in tables

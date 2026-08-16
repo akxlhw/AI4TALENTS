@@ -177,9 +177,7 @@ class StatBuilder(BaseBuilder):
         await self.session.execute(ResearchTopicStats.__table__.delete())
 
         # Aggregate openalex_topics from all enabled talent-tech-tag associations
-        result = await self.session.execute(
-            text(
-                """
+        result = await self.session.execute(text("""
             SELECT
                 topic,
                 COUNT(DISTINCT t.talent_id) as talent_count
@@ -192,9 +190,7 @@ class StatBuilder(BaseBuilder):
             GROUP BY topic
             ORDER BY talent_count DESC
             LIMIT 50
-        """
-            )
-        )
+        """))
 
         topics_processed = 0
         for row in result:

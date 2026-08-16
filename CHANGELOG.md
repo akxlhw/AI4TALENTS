@@ -7,37 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [5.0.0] - 2026-08-01
+## [5.0.0] - 2026-08-16
 
-> V5.0.0 主开发内容：**行业人才库**（`domains/industry/`，第四个人才域），已交付。设计文档见 `docs/v5.0.0/`（00 README / 01 需求清单 / 02 技术设计）。
+> 主交付：**行业人才库**（第四个人才域）+ **技术分类体系 v2** + 开源自动探测。设计/需求/对接/升级文档见 `docs/v5.0.0/`（00 README / 01 需求清单 / 02 技术设计 / 03 Agent 对接指南 / 04 升级迁移指南）。升级其他部署请严格按 04 指南执行。
 
 ### Added
 
-- **行业人才库**（`domains/industry/`，V5.0.0 主交付）：
-  - **数据模型**（迁移 058）：`industry_position`（岗位一等实体，仅归档不物理删除）/ `industry_talent`（人才全局唯一，dedup_hash = name+org+title 三要素 NFKC 归一，缺 org 打 warning）/ `industry_position_talent`（关联打分，含 score_school/company/direction 三维子分数 + touched/status/notes 招聘状态）
-  - **增量 upsert 导入**：空字段不覆盖、缺席不删除、同人进新岗位仅新增关联、保留 touched/status/notes；逐行失败跳过不中断；导入报告（新增/更新/跳过/warnings）；管理员上传端点（20MB，super_admin）；API Key 推送通道留位（501，v1 不启用）
-  - **API**：岗位 CRUD（列表带候选人数/平均匹配分）+ 人才列表（六维筛选、默认 match_score_desc、命中岗位+最高分单条 GROUP BY 聚合无 N+1）+ 人才详情（多岗位匹配对比）+ 候选人状态 PATCH
-  - **前端**：人才列表页（紫域主题、环形彩色匹配分视觉锚点、卡片网格、sticky 筛选栏、状态快捷修改、URL 全字段同步）+ 人才详情页（身份卡 + 基本信息/履历时间线/岗位匹配三 Tab、三维子分数条、状态编辑）+ 管理后台「行业人才岗位」「行业人才导入」两个 Tab；导航「行业」解锁，demo-industry 演示页退役
-  - **种子**：core_tech_direction 填充 22 个技术方向（与开源域既有引用兼容，幂等）
-  - 测试：后端 23 个（导入 12 + API 11）、前端 store 9 个
-- **行业人才库设计文档**（`docs/v5.0.0/`：00 README 决策记录 / 01 需求清单验收标准 / 02 技术设计 v1.1）
-- **AI Native 实验室师承树**（lab 域）：
-  - 师从关系从力导向图重写为**树状拓扑**（自上而下、固定像素间距、无限画布缩放平移），节点带头像
-  - 创始人置顶：后端 `LAB_FOUNDERS` 常量表标记（含别名归一），创始人金边树根 + 其学生真师承子树 + 「其他导师」组织聚合；无创始人实验室为实验室根 + 教授平行森林
-  - B+C 分层：创始人学生中已为人师者（教授）默认展开一层，纯学生折叠为「学生（N）」聚合
-  - 实验室页面拆「人才列表 / 师从关系」双 Tab（Tab 状态入 URL，详情页返回不丢失）；单击展开/收起，Shift+单击进人物详情
-- **开源人才检索修复与增强**：
-  - 修复 `POST /search` 关键词静默失效 bug（`query`→`q` 字段名错误，降级路径曾返回无筛选全表）
-  - 混合搜索改 RRF 融合（k=60，与学术域同参数），修正分页总数失真
-  - 迁移 056：`os_developer` name/github_login/company/location/bio 建 pg_trgm GIN 索引，tech_tags/primary_languages 转 JSONB + GIN
-  - 列表接口 N+1 修复（角色标签批量聚合，每页 20 次查询降为 1 次）
-- **开源人才「在校生」标签**：`is_student`（迁移 057）= bio 学生信号 OR（company 命中学校词典 AND 无教职工信号）；学校词典 5889 校名（学术域 core_school 导出）+ 32 条手工缩写别名；sync 流水线增量重算 + 存量回填脚本；列表/搜索/导出全链路筛选，前端筛选框 + 卡片绿色标签（开发库 3615 人标记 373 人）
-- **开源仓库数据清理**：`POST /open-source/repo-configs/{id}/purge`（超管），dry_run 预览计数 → 确认硬删；归属判定「被其他已配置仓库引用才算共享」，收藏/入池人才保护；审计日志；前端清理入口 + 确认弹窗
+- **行业人才库**（`domains/industry/`）：
+  - 三表模型（迁移 058）：`industry_position`（岗位一等实体，仅归档不物理删除）/ `industry_talent`（全局唯一，dedup_hash 三要素 NFKC 归一）/ `industry_position_talent`（关联打分，三维子分数 + 招聘状态）
+  - 增量 upsert 导入：空字段不覆盖、缺席不删除、保留 touched/status/notes；0 有效行硬守卫 + 行级 SAVEPOINT 隔离；导入报告含 aborted 标记
+  - **API Key 推送通道**：`POST /industry/import`（X-API-Key，系统配置面板维护）+ `GET /industry/positions` 双认证（Agent 可拉取岗位清单做定向采集），闭环见 03 对接指南
+  - **批次管理**：批次列表/按批删除/按批导出 JSONL（跨服务器迁移格式与导入契约一致）；无批次（NULL）组可见可删可导（`__none__` 哨兵）
+  - 前端：人才列表页（紫域主题、环形匹配分、sticky 筛选、状态快捷修改）+ 详情页三 Tab（基本信息/履历时间线/岗位匹配）+ 管理后台岗位与导入两个 Tab；导航「行业」解锁，demo-industry 退役
+- **技术分类体系 v2**（迁移 061/062）：10 技术领域 → 34 技术要素 → 75 技术方向三层分类（`shared/constants/tech_taxonomy.py` 单一事实源）；旧领域/方向码自动重映射；前端标签统一为「领域 · 要素」全标签 + 按领域分组筛选
+- **开源项目自动探测**：按技术方向关键词搜 GitHub 高星仓库（每领域 stars 阈值可配）、贡献者数筛选（Link-header 计数 + 搜索后过滤）、去重合并方向、已收录标记、确认后一键入库；任务状态面板（含中断恢复提示）
+- **开源仓库批量操作**：批量新增（GitHub 元数据自动回填）、批量设置技术要素（关联人才标签按并集自动重算）、重复采集预警（collect-check 历史检查）
+- **AI Native 实验室师承树**：树状拓扑（自上而下、固定像素间距、无限画布）、节点头像、创始人置顶（LAB_FOUNDERS 常量表）、B+C 分层（教授子树默认展开、纯学生聚合折叠）、双 Tab（人才列表/师从关系，Tab 状态入 URL）、Shift+单击进详情
+- **开源人才「在校生」标签**：`is_student`（迁移 057），bio 学生信号 OR（company 命中 5889 校名词典 + 手工别名 AND 无教职工信号）；sync 实时重算 + 存量回填脚本；全链路筛选与卡片标签
+- **开源仓库数据清理**：`POST /repo-configs/{id}/purge`（dry_run 预览 + 独占/共享归属判定「被其他已配置仓库引用才算共享」+ 收藏/入池保护 + 审计日志）
+- **上游 API 可观测**：`upstream_requests_total`/延迟直方图/429 计数/熔断器状态 gauge（`/api/v1/metrics`）
 
 ### Changed
 
-- 版本号 4.1.0 → 5.0.0（pyproject.toml、package.json、config.py、uv.lock、README.md、AGENTS.md、CLAUDE.md）
-- mypy 基线：93 个既有错误被消除（在校生字段实施时顺带清理，零行为变化）
+- **依赖安全升级**：FastAPI 0.115→0.141.1、starlette 0.38.6→1.6.0、urllib3→2.7.0、react-router-dom 6→7（pip-audit/npm audit 清零）
+- **GitHub 限流韧性**：token 耗尽改快速失败（RateLimitExhaustedError 带 retry_after）+ 任务 rate_limited 终态；采集并发从全局锁改按仓库粒度
+- **OpenAlex 429 尊重 Retry-After**（封顶 300s）
+- **大文件拆分**：open_source core.py（1043 行）/user_repository（918）/permissions（854）/shared auth（630）/data_fetchers（942）/talent_search_repository（718）/os_collection_service（803）等全部拆分为 Mixin/子模块 + 门面，公共接口不变；三个 JSONL 导入服务抽共享骨架 `shared/services/jsonl_import/`
+- **死代码清理**：43 处符号 + 2 个整文件
+- 开源人才导出：技术标签列拆分为「技术领域」「技术要素/方向」两列（全中文）
+- AGENTS.md 压缩 50%（647→327 行），CLAUDE.md 同步
+
+### Fixed
+
+- `POST /open-source/search` 关键词静默失效（字段名 bug，降级路径曾返回无筛选全表）；混合搜索 RRF 融合 + 分页总数修正
+- 开源列表接口 N+1（角色标签批量聚合）
+- 合作网络同步状态全表加载（12 万行 ORM → SQL 聚合，数秒 → 0.3s）
+- 三处静态路由被参数路由遮蔽（industry positions、os collect-check、collect tasks/active）导致的 422/提示缺失
+- 首页域状态错位（持久化域与首页内容不匹配）
+- 潜伏 bug：`LLMErrorType.CONFIG_ERROR` 未定义（嵌入未配置路径会 AttributeError）
+- mypy 基线净减 100+ 条历史类型错误（零行为变化修法）
+
+## [4.1.0] - 2026-07-19
 
 ## [4.1.0] - 2026-07-19
 

@@ -147,15 +147,11 @@ class PhaseSchoolStatsHandler(PhaseHandler):
         start_time = time.perf_counter()
 
         # Check whether the unique index required by CONCURRENTLY exists.
-        idx_result = await self.session.execute(
-            text(
-                """
+        idx_result = await self.session.execute(text("""
                 SELECT 1 FROM pg_indexes
                 WHERE indexname = 'idx_mv_school_talent_count_school_id'
                 LIMIT 1
-                """
-            )
-        )
+                """))
         has_index = idx_result.scalar() is not None
 
         refresh_sql = (

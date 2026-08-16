@@ -367,16 +367,12 @@ class ConfigService:
                 f"ALTER TABLE core_talent_embedding ALTER COLUMN embedding TYPE vector({new_dimension})"
             )
         )
-        await self.session.execute(
-            text(
-                """
+        await self.session.execute(text("""
             CREATE INDEX ix_talent_embedding_vector
             ON core_talent_embedding
             USING ivfflat (embedding vector_cosine_ops)
             WITH (lists = 100)
-        """
-            )
-        )
+        """))
 
         # Execute DDL for open-source embedding table
         await self.session.execute(text("DROP INDEX IF EXISTS ix_os_embedding_vector"))
@@ -384,16 +380,12 @@ class ConfigService:
         await self.session.execute(
             text(f"ALTER TABLE os_embedding ALTER COLUMN embedding TYPE vector({new_dimension})")
         )
-        await self.session.execute(
-            text(
-                """
+        await self.session.execute(text("""
             CREATE INDEX ix_os_embedding_vector
             ON os_embedding
             USING ivfflat (embedding vector_cosine_ops)
             WITH (lists = 100)
-        """
-            )
-        )
+        """))
         await self.session.commit()
 
         logger.info(

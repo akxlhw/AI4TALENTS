@@ -63,8 +63,7 @@ class TechDomainRepository:
         Uses a single CTE query for efficiency.
         """
         if domain_id:
-            cte_query = text(
-                """
+            cte_query = text("""
                 WITH domain_tags AS (
                     SELECT DISTINCT ttt.talent_id, ttt.tech_direction_id,
                            t.role_type, t.school_id
@@ -86,8 +85,7 @@ class TechDomainRepository:
                     (SELECT COUNT(DISTINCT s.school_id)
                      FROM domain_tags et
                      INNER JOIN core_school s ON et.school_id = s.school_id) AS school_count
-            """
-            )
+            """)
 
             result = await self.session.execute(cte_query, {"domain_id": domain_id})
             row = result.one()
@@ -125,8 +123,7 @@ class TechDomainRepository:
 
         Uses a single CTE query for efficiency.
         """
-        cte_query = text(
-            """
+        cte_query = text("""
             WITH enabled_tags AS (
                 SELECT DISTINCT ttt.talent_id, ttt.tech_domain_id,
                        ttt.tech_direction_id, t.role_type, t.school_id
@@ -149,8 +146,7 @@ class TechDomainRepository:
                 (SELECT COUNT(DISTINCT s.school_id)
                  FROM enabled_tags et
                  INNER JOIN core_school s ON et.school_id = s.school_id) AS school_count
-        """
-        )
+        """)
 
         result = await self.session.execute(cte_query)
         row = result.one()
@@ -333,8 +329,7 @@ class TechDomainRepository:
         # Use DISTINCT ON to avoid JSON equality comparison issues in PostgreSQL
         # Priority: education_school -> company_school -> legacy school
         # Safe: where_clause uses only whitelisted field names with parameterized values
-        main_sql = text(
-            f"""
+        main_sql = text(f"""
             SELECT DISTINCT ON (t.talent_id) t.talent_id, t.name, t.name_en, t.role_type,
                    t.current_title, t.h_index, t.works_count, t.topic_tags,
                    t.openalex_topics,
@@ -348,8 +343,7 @@ class TechDomainRepository:
             WHERE {where_clause}
             ORDER BY t.talent_id DESC
             LIMIT :limit
-        """
-        )
+        """)
         params["limit"] = page_size + 1
 
         result = await self.session.execute(main_sql, params)
@@ -445,15 +439,13 @@ class TechDomainRepository:
         # Count query - fast with DISTINCT
         # JOIN all three school fields for country_code filtering
         # Safe: where_clause uses only whitelisted field names with parameterized values
-        count_sql = text(
-            f"""
+        count_sql = text(f"""
             SELECT COUNT(DISTINCT t.talent_id)
             FROM core_talent_tech_tag ttt
             INNER JOIN core_talent t ON ttt.talent_id = t.talent_id
             LEFT JOIN core_school s ON COALESCE(t.education_school_id, t.company_school_id, t.school_id) = s.school_id
             WHERE {where_clause}
-        """
-        )
+        """)
         total_result = await self.session.execute(count_sql, params)
         total = total_result.scalar() or 0
 
@@ -462,8 +454,7 @@ class TechDomainRepository:
         # Priority: education_school -> company_school -> legacy school
         # Safe: where_clause uses only whitelisted field names with parameterized values
         offset = (page - 1) * page_size
-        main_sql = text(
-            f"""
+        main_sql = text(f"""
             SELECT t.talent_id, t.name, t.name_en, t.role_type,
                    t.current_title, t.h_index, t.works_count, t.topic_tags,
                    t.openalex_topics,
@@ -480,8 +471,7 @@ class TechDomainRepository:
             )
             ORDER BY t.h_index DESC NULLS LAST
             LIMIT :limit OFFSET :offset
-        """
-        )
+        """)
         params["limit"] = page_size
         params["offset"] = offset
 

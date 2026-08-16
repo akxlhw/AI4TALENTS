@@ -3,6 +3,7 @@ Audit log model.
 """
 
 from sqlalchemy import JSON, Column, DateTime, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 
 from app.core.database import Base
 
@@ -35,7 +36,7 @@ class AuditOperationLog(Base):
 
     # Operation
     operation = Column(String(50), nullable=False)  # 'create', 'read', 'update', 'delete', 'export'
-    operation_detail = Column(JSON, nullable=True)
+    operation_detail = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # Result
     status = Column(String(20), nullable=False)  # 'success', 'failure', 'partial'

@@ -3,6 +3,7 @@ Search projection model.
 """
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 
 from app.core.database import Base
 
@@ -24,7 +25,7 @@ class SearchTalentDocument(Base):
 
     # Filter fields (stored as JSON array for compatibility)
     role_type = Column(String(20), nullable=False, index=True)
-    topic_tags = Column(JSON, default=[])
+    topic_tags = Column(JSON().with_variant(JSONB, "postgresql"), default=[])
 
     # Sort fields
     works_count = Column(Integer, default=0)
@@ -42,7 +43,7 @@ class SearchTalentDocument(Base):
     updated_at = Column(DateTime, nullable=False)
 
     # Extended data (JSON for flexibility)
-    extra_data = Column(JSON, nullable=True)
+    extra_data = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     def __repr__(self) -> str:
         return f"<SearchTalentDocument(talent_id={self.talent_id}, name={self.name})>"

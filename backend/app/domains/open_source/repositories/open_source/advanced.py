@@ -177,8 +177,7 @@ class OpenSourceAdvancedRepository:
 
         if _is_postgres(self.session):
             await self.session.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO os_embedding
                     (developer_id, vector_type, embedding, model_name,
                      source_text_hash, created_at, updated_at)
@@ -190,8 +189,7 @@ class OpenSourceAdvancedRepository:
                         model_name = EXCLUDED.model_name,
                         source_text_hash = EXCLUDED.source_text_hash,
                         updated_at = EXCLUDED.updated_at
-                """
-                ),
+                """),
                 {
                     "developer_id": developer_id,
                     "vector_type": vector_type,

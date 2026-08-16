@@ -3,6 +3,7 @@ Sync and data pipeline models.
 """
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -36,11 +37,13 @@ class SyncBatch(Base, TimestampMixin):
 
     # Error info
     error_message = Column(Text, nullable=True)
-    error_details = Column(JSON, nullable=True)
+    error_details = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # Metadata
     created_by = Column(String(50), default="system")
-    config_snapshot = Column(JSON, nullable=True)  # Store sync configuration
+    config_snapshot = Column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )  # Store sync configuration
 
     def __repr__(self) -> str:
         return f"<SyncBatch(batch_id={self.batch_id}, status={self.status})>"
@@ -165,7 +168,7 @@ class CollectTask(Base, TimestampMixin):
 
     # Error info
     error_message = Column(Text, nullable=True)
-    error_details = Column(JSON, nullable=True)
+    error_details = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # Result summary
     result_summary = Column(JSON, nullable=True)

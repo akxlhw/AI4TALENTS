@@ -76,15 +76,11 @@ class HomepageRepository:
 
     async def _mv_exists(self) -> bool:
         """Check whether the materialized view exists in the current database."""
-        result = await self.session.execute(
-            text(
-                """
+        result = await self.session.execute(text("""
                 SELECT 1 FROM pg_matviews
                 WHERE matviewname = 'mv_school_talent_count'
                 LIMIT 1
-                """
-            )
-        )
+                """))
         return result.scalar() is not None
 
     async def get_top_countries(self, limit: int = 5) -> list[dict]:

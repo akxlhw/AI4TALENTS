@@ -147,25 +147,17 @@ async def test_engine():
         # First test run: full schema setup
         # Drop all tables (not the entire schema) to preserve extensions like pgvector
         async with engine.begin() as conn:
-            result = await conn.execute(
-                text(
-                    """
+            result = await conn.execute(text("""
                 SELECT tablename FROM pg_tables
                 WHERE schemaname = 'public'
                 AND tablename NOT LIKE 'pg_%'
                 AND tablename NOT LIKE 'sql_%'
-            """
-                )
-            )
+            """))
             tables = [row[0] for row in result.fetchall()]
             if tables:
-                await conn.execute(
-                    text(
-                        f"""
+                await conn.execute(text(f"""
                     DROP TABLE IF EXISTS {','.join(tables)} CASCADE
-                """
-                    )
-                )
+                """))
 
         # Ensure pgvector extension exists
         _pgvector_create_error = None
@@ -204,15 +196,11 @@ async def test_engine():
         if PGVECTOR_AVAILABLE:
             try:
                 async with engine.begin() as conn:
-                    await conn.execute(
-                        text(
-                            """
+                    await conn.execute(text("""
                         ALTER TABLE core_talent_embedding
                         ALTER COLUMN embedding TYPE vector(1536)
                         USING embedding::vector(1536)
-                    """
-                        )
-                    )
+                    """))
             except Exception:
                 pass  # Column may already be the correct type
 
@@ -220,27 +208,19 @@ async def test_engine():
     else:
         # Fast path: TRUNCATE all tables to maintain isolation
         async with engine.begin() as conn:
-            result = await conn.execute(
-                text(
-                    """
+            result = await conn.execute(text("""
                 SELECT tablename FROM pg_tables
                 WHERE schemaname = 'public'
                 AND tablename NOT LIKE 'pg_%'
                 AND tablename NOT LIKE 'sql_%'
                 ORDER BY tablename
-            """
-                )
-            )
+            """))
             tables = [row[0] for row in result.fetchall()]
 
             if tables:
-                await conn.execute(
-                    text(
-                        f"""
+                await conn.execute(text(f"""
                     TRUNCATE TABLE {','.join(tables)} RESTART IDENTITY CASCADE
-                """
-                    )
-                )
+                """))
 
     # Dispose the application engine's connection pool
     from app.core.database import async_engine as app_engine
