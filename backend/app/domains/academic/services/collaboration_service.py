@@ -557,13 +557,16 @@ class CollaborationService:
         result = await self.session.execute(collab_count_stmt)
         total_collaborations = result.scalar() or 0
 
-        # 统计有合作关系的学者数
-        talents_with_collab = set()
-        stmt = select(Collaboration)
-        result = await self.session.execute(stmt)
-        for collab in result.scalars().all():
-            talents_with_collab.add(collab.talent_id_1)
-            talents_with_collab.add(collab.talent_id_2)
+        # 统计有合作关系的学者数（SQL 端聚合：12 万行全表加载到 Python 要好几秒）
+        distinct_talents = (
+            select(Collaboration.talent_id_1.label("tid"))
+            .union(select(Collaboration.talent_id_2))
+            .subquery()
+        )
+        result = await self.session.execute(
+            select(func.count(func.distinct(distinct_talents.c.tid)))
+        )
+        talents_with_collab_count = result.scalar() or 0
 
         # 统计 RawWork 表中的论文数
         work_count_stmt = select(func.count(RawWork.raw_work_id))
@@ -575,12 +578,12 @@ class CollaborationService:
 
         return {
             "total_collaborations": total_collaborations,
-            "talents_with_collaborations": len(talents_with_collab),
+            "talents_with_collaborations": talents_with_collab_count,
             "total_works": total_works,
             "last_sync": last_sync,
         }
 
-    async def save_sync_time(self):
+    async def save_sync_time(self) -> None:
         """保存最后同步时间"""
         from datetime import datetime, timezone
 
