@@ -147,7 +147,7 @@ make docker-up / docker-down / docker-logs
 系统所有出站 HTTP 请求必须统一通过 `HttpClientFactory` 创建和管理，禁止直接导入或使用 `httpx`、`aiohttp`、`requests` 等底层库。
 
 - 正确做法：`HttpClientFactory.create_client_for_url(target_url, timeout=...)`
-- 例外文件（已基线化）：`domains/shared/services/common/http_client.py`（工厂本身）、`domains/academic/services/data_fetchers.py`（aiohttp）、`domains/academic/services/openalex_client.py`（httpx）、`domains/open_source/services/github_client.py`（httpx）、`domains/shared/services/system_config_test_service.py`（函数内 httpx）
+- 例外文件（已基线化）：`domains/shared/services/common/http_client.py`（工厂本身）、`domains/academic/services/data_fetchers/` 包（aiohttp，原 data_fetchers.py 拆分）、`domains/academic/services/openalex_client.py`（httpx）、`domains/open_source/services/github_client.py`（httpx）、`domains/shared/services/system_config_test_service.py`（函数内 httpx）
 
 ### 错误处理契约
 
