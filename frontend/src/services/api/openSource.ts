@@ -113,8 +113,8 @@ export const openSourceApi = {
       params: { ids: repoConfigIds.join(',') },
     }),
 
-  listCollectTasks: () =>
-    apiClient.get('/open-source/collect/tasks'),
+  listCollectTasks: (params?: { page?: number; page_size?: number }) =>
+    apiClient.get('/open-source/collect/tasks', { params }),
   getCollectTask: (id: number) =>
     apiClient.get(`/open-source/collect/tasks/${id}`),
   createCollectTask: (data: Record<string, unknown>) =>
