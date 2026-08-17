@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     GITHUB_TOKENS: str = ""  # Comma-separated GitHub personal access tokens
     GITHUB_BASE_URL: str = "https://api.github.com"
     GITHUB_RATE_LIMIT: int = 5000  # Requests per hour per token
+    OS_COLLECT_MAX_CONCURRENT: int = 5  # Max simultaneously RUNNING repo collections
 
     # JWT Authentication
     SECRET_KEY: str = ""

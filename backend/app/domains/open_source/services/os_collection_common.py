@@ -61,3 +61,31 @@ async def _get_repo_lock(repo_full_name: str) -> asyncio.Lock:
             lock = asyncio.Lock()
             _REPO_LOCKS[repo_full_name] = lock
         return lock
+
+
+# Global cap on simultaneously RUNNING collections. Batch-collecting N repos
+# spawns N background coroutines at once; without a cap each opens its own
+# GitHubClient (per-instance throttle → N× the intended request rate) and
+# its own DB session, tripping GitHub abuse detection and exhausting the
+# pool. Queued tasks simply stay "pending" until a slot frees.
+_COLLECT_SEMAPHORE: asyncio.Semaphore | None = None
+
+
+async def _get_collect_semaphore() -> asyncio.Semaphore:
+    """Lazily create the global collection-concurrency semaphore.
+
+    Size comes from settings.OS_COLLECT_MAX_CONCURRENT (read once; changing
+    the setting requires a service restart, same as other tunables).
+    """
+    global _COLLECT_SEMAPHORE
+    if _COLLECT_SEMAPHORE is None:
+        from app.core.config import settings
+
+        _COLLECT_SEMAPHORE = asyncio.Semaphore(max(1, settings.OS_COLLECT_MAX_CONCURRENT))
+    return _COLLECT_SEMAPHORE
+
+
+def _reset_collect_semaphore_for_tests() -> None:
+    """Test hook: drop the cached semaphore so a new size takes effect."""
+    global _COLLECT_SEMAPHORE
+    _COLLECT_SEMAPHORE = None

@@ -224,3 +224,61 @@ async def test_resume_skips_future_resume_at(test_session: AsyncSession) -> None
     resumed = await service.resume_due_rate_limited_tasks()
     assert resumed == 0
     assert task.status == "rate_limited"
+
+
+@pytest.mark.asyncio
+async def test_global_collect_semaphore_serializes(
+    test_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With cap=1, a second repo's task stays pending until the first frees the slot."""
+    import asyncio
+
+    from app.core.config import settings
+    from app.domains.open_source.services.os_collection_common import (
+        _reset_collect_semaphore_for_tests,
+    )
+
+    monkeypatch.setattr(settings, "OS_COLLECT_MAX_CONCURRENT", 1)
+    _reset_collect_semaphore_for_tests()
+
+    gate = asyncio.Event()
+    entered: list[int] = []
+
+    async def _blocking_collect(self, ctx) -> None:
+        entered.append(ctx.task_id)
+        await gate.wait()
+
+    monkeypatch.setattr(GitHubCollector, "collect", _blocking_collect)
+
+    t1 = await _make_task(test_session)
+    t2 = await _make_task(test_session)
+    service = OSCollectionService(test_session)
+    run1 = asyncio.create_task(
+        service.run_repo_collection_background(
+            task_id=t1.task_id,
+            repo_config_id=1,
+            repo_full_name="o/a",
+            tech_element=["models"],
+            contributors_per_repo=1,
+        )
+    )
+    await asyncio.sleep(0.2)  # t1 holds the only slot
+    run2 = asyncio.create_task(
+        service.run_repo_collection_background(
+            task_id=t2.task_id,
+            repo_config_id=2,
+            repo_full_name="o/b",
+            tech_element=["models"],
+            contributors_per_repo=1,
+        )
+    )
+    await asyncio.sleep(0.3)
+
+    assert entered == [t1.task_id]
+    assert (await _read_task(t2.task_id)).status == "pending"  # queued, not running
+
+    gate.set()
+    await asyncio.gather(run1, run2)
+    assert t2.task_id in entered
+
+    _reset_collect_semaphore_for_tests()
