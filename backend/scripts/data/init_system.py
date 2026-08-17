@@ -12,7 +12,7 @@ Usage:
     python scripts/init_system.py --domain open_source  # Open source only
     python scripts/init_system.py --full                # Full reset (users + domains)
     python scripts/init_system.py --clear-collection    # Also clear collection configs
-    python scripts/init_system.py --clear-tasks         # Also clear task records (repo configs kept)
+    python scripts/init_system.py --clear-collect-tasks  # Also clear collect task records (configs kept)
     python scripts/init_system.py --clear-config        # Also clear sys_config
 """
 
@@ -127,11 +127,14 @@ OPEN_SOURCE_COLLECTION_TABLES = [
     "os_repo_config",
 ]
 
-# Collection task RECORD tables only (cleared with --clear-tasks; repo configs
-# and venue configs are kept — wipes run history + collected data, keeps config)
-COLLECT_TASK_TABLES = [
+# Collection task RECORD tables only (cleared with --clear-collect-tasks,
+# domain-filtered; repo configs and venue configs are kept — wipes run
+# history + collected data, keeps config)
+ACADEMIC_COLLECT_TASK_TABLES = [
     "sync_venue_sub_task",
     "sync_collect_task",
+]
+OPEN_SOURCE_COLLECT_TASK_TABLES = [
     "os_collect_task",
 ]
 
@@ -860,7 +863,10 @@ async def truncate_tables(
                 print("  [Mode: include open-source collection configs]")
 
         if clear_tasks and not clear_collection:
-            tables.extend(COLLECT_TASK_TABLES)
+            if domain in ("all", "academic"):
+                tables.extend(ACADEMIC_COLLECT_TASK_TABLES)
+            if domain in ("all", "open_source"):
+                tables.extend(OPEN_SOURCE_COLLECT_TASK_TABLES)
             print("  [Mode: include collect task records (repo/venue configs kept)]")
 
         if clear_config:
@@ -1224,7 +1230,9 @@ async def init_system(
             print(
                 "[TIP] Collection configs (tasks, repo configs) retained; use --clear-collection to remove"
             )
-            print("[TIP] To clear task records only (keep repo configs): --clear-tasks")
+            print(
+                "[TIP] To clear collect task records only (keep repo configs): --clear-collect-tasks"
+            )
         if not clear_config:
             print("[TIP] System config (sys_config) retained; use --clear-config to remove")
         print("[TIP] Country data lives in app/constants/countries.py")
@@ -1244,12 +1252,12 @@ Examples:
     python scripts/init_system.py --clear-collection    # Also clear collection configs
     python scripts/init_system.py --clear-config        # Also clear sys_config
     python scripts/init_system.py --full --force        # Full reset, no confirm
-    python scripts/init_system.py --clear-tasks         # Also clear collect task records (repo configs kept)
+    python scripts/data/init_system.py --clear-collect-tasks  # Also clear collect task records (configs kept)
 
 Notes:
   - Default clears business data; use --domain to restrict
   - Default retains collection configs; use --clear-collection to remove
-  - --clear-tasks clears task records only (repo/venue configs kept)
+  - --clear-collect-tasks clears collect task records only (repo/venue configs kept, honors --domain)
   - Default retains sys_config; use --clear-config to remove
   - Country data lives in app/constants/countries.py
         """,
@@ -1264,9 +1272,10 @@ Notes:
         help="Also clear collection config tables (tasks, repo configs)",
     )
     parser.add_argument(
-        "--clear-tasks",
+        "--clear-collect-tasks",
         action="store_true",
-        help="Also clear collect task RECORDS (os_collect_task/sync_collect_task); repo & venue configs are kept",
+        help="Also clear collect task RECORDS (os_collect_task / sync_collect_task), "
+        "filtered by --domain; repo & venue configs are kept",
     )
     parser.add_argument(
         "--clear-config", action="store_true", help="Also clear system config tables (sys_config)"
@@ -1292,7 +1301,7 @@ Notes:
             print("[!] NOTE: Full reset will also clear users and tech domains")
         if args.clear_collection:
             print("[!] NOTE: Collection configs (tasks, repo configs) will also be cleared")
-        if args.clear_tasks:
+        if args.clear_collect_tasks:
             print("[!] NOTE: Collect task records will also be cleared (repo/venue configs kept)")
         if args.clear_config:
             print("[!] NOTE: System config (sys_config) will also be cleared")
@@ -1307,7 +1316,7 @@ Notes:
             clear_config=args.clear_config,
             clear_collection=args.clear_collection,
             domain=args.domain,
-            clear_tasks=args.clear_tasks,
+            clear_tasks=args.clear_collect_tasks,
         )
     )
 
