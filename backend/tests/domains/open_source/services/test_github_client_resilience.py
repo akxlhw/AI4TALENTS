@@ -148,7 +148,9 @@ async def test_rotation_changes_auth_header_on_the_wire() -> None:
     client = GitHubClient(token="tokA,tokB")
     sent_auth: list[str | None] = []
     responses = [
-        _make_response(403, headers={"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "9999999999"}),
+        _make_response(
+            403, headers={"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "9999999999"}
+        ),
         _make_response(200, payload={"ok": True}),
     ]
 

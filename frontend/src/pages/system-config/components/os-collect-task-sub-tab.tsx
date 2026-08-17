@@ -31,7 +31,7 @@ import {
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
 import type { OSCollectTask } from '../../../types'
-import { formatUTCToLocal } from '../../../utils/datetime'
+import { formatDBLocal, formatUTCToLocal } from '../../../utils/datetime'
 import { getErrorMessage } from './utils'
 
 const { Text } = Typography
@@ -181,7 +181,7 @@ const OSCollectTaskSubTab: React.FC = () => {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => formatUTCToLocal(date),
+      render: (date: string) => formatDBLocal(date),
     },
     {
       title: '操作',
@@ -306,7 +306,7 @@ const OSCollectTaskSubTab: React.FC = () => {
             <Card title="时间信息" size="small" style={{ marginTop: 16 }}>
               <Descriptions column={2} size="small">
                 <Descriptions.Item label="创建时间">
-                  {formatUTCToLocal(selectedTask.created_at)}
+                  {formatDBLocal(selectedTask.created_at)}
                 </Descriptions.Item>
                 <Descriptions.Item label="开始时间">
                   {formatUTCToLocal(selectedTask.started_at)}

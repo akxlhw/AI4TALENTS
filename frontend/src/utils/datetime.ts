@@ -55,3 +55,21 @@ export function formatUTCToLocalDate(utcString: string | null | undefined): stri
     day: '2-digit',
   })
 }
+
+/**
+ * 将后端「本地墙钟」时间字符串按原样格式化展示。
+ *
+ * 项目中 TimestampMixin 的 created_at/updated_at 由数据库 func.now() 默认值
+ * 写入，DB 会话时区为 Asia/Shanghai，因此这些列存储的已是北京墙钟时间，
+ * 前端不得再做时区换算（否则会 +8h）。仅用于确认存储为 DB 本地时间的列；
+ * 代码里以 naive UTC 写入的字段（如 started_at/completed_at）仍用
+ * formatUTCToLocal。
+ */
+export function formatDBLocal(
+  localString: string | null | undefined
+): string {
+  if (!localString) return '-'
+  // Naive "2026-08-16T16:19:51.911" — normalize to "YYYY-MM-DD HH:mm:ss"
+  const m = localString.replace('T', ' ').match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/)
+  return m ? m[1] : localString
+}

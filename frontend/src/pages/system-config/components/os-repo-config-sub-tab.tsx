@@ -52,6 +52,7 @@ const OSRepoConfigSubTab: React.FC = () => {
   const [data, setData] = useState<OSRepoConfig[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
   const [editingRecord, setEditingRecord] = useState<OSRepoConfig | null>(null)
@@ -88,7 +89,7 @@ const OSRepoConfigSubTab: React.FC = () => {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const params: Record<string, unknown> = { page, page_size: 10 }
+      const params: Record<string, unknown> = { page, page_size: pageSize }
       if (filterTechElement) params.tech_elements = [filterTechElement]
       if (searchKeyword) params.q = searchKeyword
       const response = await api.openSource.listRepoConfigs(params)
@@ -99,7 +100,7 @@ const OSRepoConfigSubTab: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [page, filterTechElement, searchKeyword])
+  }, [page, pageSize, filterTechElement, searchKeyword])
 
   useEffect(() => {
     loadData()
@@ -604,10 +605,16 @@ const OSRepoConfigSubTab: React.FC = () => {
           }}
           pagination={{
             current: page,
-            pageSize: 10,
+            pageSize,
             total,
             showTotal: (t) => `共 ${t} 个仓库`,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
             onChange: (p) => setPage(p),
+            onShowSizeChange: (_, size) => {
+              setPage(1)
+              setPageSize(size)
+            },
           }}
           locale={{ emptyText: <Empty description="暂无仓库配置" /> }}
         />

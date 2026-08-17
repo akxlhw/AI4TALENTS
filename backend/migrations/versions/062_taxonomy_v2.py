@@ -25,10 +25,10 @@ from app.domains.shared.constants.tech_taxonomy import (
 )
 
 # revision identifiers, used by Alembic.
-revision = "062"
-down_revision = "061"
-branch_labels = None
-depends_on = None
+revision: str = "062"
+down_revision: "str | None" = "061"
+branch_labels: "str | None" = None
+depends_on: "str | None" = None
 
 # Renamed-in-place: old code → new code (row keeps its id)
 _RENAMED_DIRECTIONS = {"cv": "cv_applications", "speech": "speech_models", "multimodal": "vlm"}
