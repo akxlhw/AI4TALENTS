@@ -12,8 +12,10 @@ Usage:
     python scripts/init_system.py --domain open_source  # Open source only
     python scripts/init_system.py --full                # Full reset (users + domains)
     python scripts/init_system.py --clear-collection    # Also clear collection configs
+    python scripts/init_system.py --clear-tasks         # Also clear task records (repo configs kept)
     python scripts/init_system.py --clear-config        # Also clear sys_config
 """
+
 import asyncio
 import sys
 
@@ -26,7 +28,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Force UTF-8 stdout
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
@@ -123,6 +125,14 @@ OPEN_SOURCE_TABLES = [
 OPEN_SOURCE_COLLECTION_TABLES = [
     "os_collect_task",
     "os_repo_config",
+]
+
+# Collection task RECORD tables only (cleared with --clear-tasks; repo configs
+# and venue configs are kept — wipes run history + collected data, keeps config)
+COLLECT_TASK_TABLES = [
+    "sync_venue_sub_task",
+    "sync_collect_task",
+    "os_collect_task",
 ]
 
 # System config tables (retained by default; cleared with --clear-config)
@@ -257,56 +267,326 @@ KNOWN_OPENALEX_SOURCES = {
 # Default open-source repo seed configs
 DEFAULT_REPO_CONFIGS = [
     # AI
-    {"repo_full_name": "pytorch/pytorch", "display_name": "PyTorch", "tech_element": "training", "language": "Python", "description": "Tensors and Dynamic neural networks in Python with strong GPU acceleration"},
-    {"repo_full_name": "tensorflow/tensorflow", "display_name": "TensorFlow", "tech_element": "training", "language": "Python", "description": "An Open Source Machine Learning Framework for Everyone"},
-    {"repo_full_name": "huggingface/transformers", "display_name": "Hugging Face Transformers", "tech_element": "models", "language": "Python", "description": "State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow"},
-    {"repo_full_name": "scikit-learn/scikit-learn", "display_name": "scikit-learn", "tech_element": "models", "language": "Python", "description": "scikit-learn: machine learning in Python"},
-    {"repo_full_name": "microsoft/DeepSpeed", "display_name": "DeepSpeed", "tech_element": "training", "language": "Python", "description": "Deep learning optimization library"},
-    {"repo_full_name": "apache/spark", "display_name": "Apache Spark", "tech_element": "db_storage", "language": "Scala", "description": "Apache Spark - A unified analytics engine for large-scale data processing"},
-    {"repo_full_name": "langchain-ai/langchain", "display_name": "LangChain", "tech_element": "agents", "language": "Python", "description": "Build context-aware reasoning applications"},
-    {"repo_full_name": "langgenius/dify", "display_name": "Dify", "tech_element": "agents", "language": "TypeScript", "description": "Dify is an open-source LLM app development platform"},
-    {"repo_full_name": "huggingface/trl", "display_name": "TRL", "tech_element": "training", "language": "Python", "description": "Train transformer language models with reinforcement learning"},
-    {"repo_full_name": "sgl-project/sglang", "display_name": "SGLang", "tech_element": "inference", "language": "Python", "description": "SGLang is a fast serving framework for large language models"},
-    {"repo_full_name": "huggingface/text-generation-inference", "display_name": "Text Generation Inference", "tech_element": "inference", "language": "Python", "description": "Large Language Model Text Generation Inference"},
-    {"repo_full_name": "ray-project/ray", "display_name": "Ray", "tech_element": "training", "language": "Python", "description": "Ray is a unified framework for scaling AI and Python applications"},
-    {"repo_full_name": "NVIDIA/Megatron-LM", "display_name": "Megatron-LM", "tech_element": "training", "language": "Python", "description": "Ongoing research training transformer models at scale"},
-    {"repo_full_name": "google/jax", "display_name": "JAX", "tech_element": "training", "language": "Python", "description": "Composable transformations of Python+NumPy programs"},
-    {"repo_full_name": "apache/tvm", "display_name": "Apache TVM", "tech_element": "inference", "language": "Python", "description": "Open deep learning compiler stack for cpu, gpu and specialized accelerators"},
-    {"repo_full_name": "NVIDIA/cutlass", "display_name": "CUTLASS", "tech_element": "hpc", "language": "C++", "description": "CUDA Templates for Linear Algebra Subroutines"},
+    {
+        "repo_full_name": "pytorch/pytorch",
+        "display_name": "PyTorch",
+        "tech_element": "training",
+        "language": "Python",
+        "description": "Tensors and Dynamic neural networks in Python with strong GPU acceleration",
+    },
+    {
+        "repo_full_name": "tensorflow/tensorflow",
+        "display_name": "TensorFlow",
+        "tech_element": "training",
+        "language": "Python",
+        "description": "An Open Source Machine Learning Framework for Everyone",
+    },
+    {
+        "repo_full_name": "huggingface/transformers",
+        "display_name": "Hugging Face Transformers",
+        "tech_element": "models",
+        "language": "Python",
+        "description": "State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow",
+    },
+    {
+        "repo_full_name": "scikit-learn/scikit-learn",
+        "display_name": "scikit-learn",
+        "tech_element": "models",
+        "language": "Python",
+        "description": "scikit-learn: machine learning in Python",
+    },
+    {
+        "repo_full_name": "microsoft/DeepSpeed",
+        "display_name": "DeepSpeed",
+        "tech_element": "training",
+        "language": "Python",
+        "description": "Deep learning optimization library",
+    },
+    {
+        "repo_full_name": "apache/spark",
+        "display_name": "Apache Spark",
+        "tech_element": "db_storage",
+        "language": "Scala",
+        "description": "Apache Spark - A unified analytics engine for large-scale data processing",
+    },
+    {
+        "repo_full_name": "langchain-ai/langchain",
+        "display_name": "LangChain",
+        "tech_element": "agents",
+        "language": "Python",
+        "description": "Build context-aware reasoning applications",
+    },
+    {
+        "repo_full_name": "langgenius/dify",
+        "display_name": "Dify",
+        "tech_element": "agents",
+        "language": "TypeScript",
+        "description": "Dify is an open-source LLM app development platform",
+    },
+    {
+        "repo_full_name": "huggingface/trl",
+        "display_name": "TRL",
+        "tech_element": "training",
+        "language": "Python",
+        "description": "Train transformer language models with reinforcement learning",
+    },
+    {
+        "repo_full_name": "sgl-project/sglang",
+        "display_name": "SGLang",
+        "tech_element": "inference",
+        "language": "Python",
+        "description": "SGLang is a fast serving framework for large language models",
+    },
+    {
+        "repo_full_name": "huggingface/text-generation-inference",
+        "display_name": "Text Generation Inference",
+        "tech_element": "inference",
+        "language": "Python",
+        "description": "Large Language Model Text Generation Inference",
+    },
+    {
+        "repo_full_name": "ray-project/ray",
+        "display_name": "Ray",
+        "tech_element": "training",
+        "language": "Python",
+        "description": "Ray is a unified framework for scaling AI and Python applications",
+    },
+    {
+        "repo_full_name": "NVIDIA/Megatron-LM",
+        "display_name": "Megatron-LM",
+        "tech_element": "training",
+        "language": "Python",
+        "description": "Ongoing research training transformer models at scale",
+    },
+    {
+        "repo_full_name": "google/jax",
+        "display_name": "JAX",
+        "tech_element": "training",
+        "language": "Python",
+        "description": "Composable transformations of Python+NumPy programs",
+    },
+    {
+        "repo_full_name": "apache/tvm",
+        "display_name": "Apache TVM",
+        "tech_element": "inference",
+        "language": "Python",
+        "description": "Open deep learning compiler stack for cpu, gpu and specialized accelerators",
+    },
+    {
+        "repo_full_name": "NVIDIA/cutlass",
+        "display_name": "CUTLASS",
+        "tech_element": "hpc",
+        "language": "C++",
+        "description": "CUDA Templates for Linear Algebra Subroutines",
+    },
     # Robotics
-    {"repo_full_name": "ros/ros", "display_name": "ROS", "tech_element": "robot_control", "language": "Python", "description": "Robot Operating System"},
-    {"repo_full_name": "ros2/ros2", "display_name": "ROS2", "tech_element": "robot_control", "language": "Python", "description": "ROS 2 - Robot Operating System 2"},
-    {"repo_full_name": "ArduPilot/ardupilot", "display_name": "ArduPilot", "tech_element": "robot_control", "language": "C++", "description": "ArduPilot is the most advanced, full-featured open source autopilot software"},
-    {"repo_full_name": "NVIDIA-Omniverse/IsaacSim", "display_name": "NVIDIA Isaac Sim", "tech_element": "embodied", "language": "Python", "description": "NVIDIA Isaac Sim - Robotics simulation platform"},
-    {"repo_full_name": "google-research/google-research", "display_name": "Google Research", "tech_element": "models", "language": "Python", "description": "Google Research repository"},
+    {
+        "repo_full_name": "ros/ros",
+        "display_name": "ROS",
+        "tech_element": "robot_control",
+        "language": "Python",
+        "description": "Robot Operating System",
+    },
+    {
+        "repo_full_name": "ros2/ros2",
+        "display_name": "ROS2",
+        "tech_element": "robot_control",
+        "language": "Python",
+        "description": "ROS 2 - Robot Operating System 2",
+    },
+    {
+        "repo_full_name": "ArduPilot/ardupilot",
+        "display_name": "ArduPilot",
+        "tech_element": "robot_control",
+        "language": "C++",
+        "description": "ArduPilot is the most advanced, full-featured open source autopilot software",
+    },
+    {
+        "repo_full_name": "NVIDIA-Omniverse/IsaacSim",
+        "display_name": "NVIDIA Isaac Sim",
+        "tech_element": "embodied",
+        "language": "Python",
+        "description": "NVIDIA Isaac Sim - Robotics simulation platform",
+    },
+    {
+        "repo_full_name": "google-research/google-research",
+        "display_name": "Google Research",
+        "tech_element": "models",
+        "language": "Python",
+        "description": "Google Research repository",
+    },
     # Data Science
-    {"repo_full_name": "pandas-dev/pandas", "display_name": "pandas", "tech_element": "sci_compute", "language": "Python", "description": "Powerful data structures for data analysis"},
-    {"repo_full_name": "numpy/numpy", "display_name": "NumPy", "tech_element": "sci_compute", "language": "Python", "description": "The fundamental package for scientific computing with Python"},
-    {"repo_full_name": "jupyter/jupyter", "display_name": "Jupyter", "tech_element": "ai_engineering", "language": "Python", "description": "Jupyter metapackage for installation and docs"},
-    {"repo_full_name": "matplotlib/matplotlib", "display_name": "Matplotlib", "tech_element": "sci_compute", "language": "Python", "description": "matplotlib: plotting with Python"},
-    {"repo_full_name": "apache/arrow", "display_name": "Apache Arrow", "tech_element": "db_storage", "language": "C++", "description": "Apache Arrow is a multi-language toolbox for accelerated data interchange"},
-    {"repo_full_name": "dask/dask", "display_name": "Dask", "tech_element": "hpc", "language": "Python", "description": "Parallel computing with task scheduling"},
+    {
+        "repo_full_name": "pandas-dev/pandas",
+        "display_name": "pandas",
+        "tech_element": "sci_compute",
+        "language": "Python",
+        "description": "Powerful data structures for data analysis",
+    },
+    {
+        "repo_full_name": "numpy/numpy",
+        "display_name": "NumPy",
+        "tech_element": "sci_compute",
+        "language": "Python",
+        "description": "The fundamental package for scientific computing with Python",
+    },
+    {
+        "repo_full_name": "jupyter/jupyter",
+        "display_name": "Jupyter",
+        "tech_element": "ai_engineering",
+        "language": "Python",
+        "description": "Jupyter metapackage for installation and docs",
+    },
+    {
+        "repo_full_name": "matplotlib/matplotlib",
+        "display_name": "Matplotlib",
+        "tech_element": "sci_compute",
+        "language": "Python",
+        "description": "matplotlib: plotting with Python",
+    },
+    {
+        "repo_full_name": "apache/arrow",
+        "display_name": "Apache Arrow",
+        "tech_element": "db_storage",
+        "language": "C++",
+        "description": "Apache Arrow is a multi-language toolbox for accelerated data interchange",
+    },
+    {
+        "repo_full_name": "dask/dask",
+        "display_name": "Dask",
+        "tech_element": "hpc",
+        "language": "Python",
+        "description": "Parallel computing with task scheduling",
+    },
     # Networks
-    {"repo_full_name": "torvalds/linux", "display_name": "Linux Kernel", "tech_element": "os", "language": "C", "description": "Linux kernel source tree"},
-    {"repo_full_name": "envoyproxy/envoy", "display_name": "Envoy", "tech_element": "protocols", "language": "C++", "description": "Cloud-native high-performance edge/middle/service proxy"},
-    {"repo_full_name": "grpc/grpc", "display_name": "gRPC", "tech_element": "protocols", "language": "C++", "description": "The C based gRPC (C++, Python, Ruby, Objective-C, PHP, C#)"},
-    {"repo_full_name": "openvswitch/ovs", "display_name": "Open vSwitch", "tech_element": "protocols", "language": "C", "description": "Open vSwitch is a production quality, multilayer virtual switch"},
-    {"repo_full_name": "cloudflare/cloudflared", "display_name": "Cloudflared", "tech_element": "protocols", "language": "Go", "description": "Cloudflare Tunnel client"},
-    {"repo_full_name": "FRRouting/frr", "display_name": "FRRouting", "tech_element": "protocols", "language": "C", "description": "FRRouting is free software that manages TCP/IP based routing protocols"},
+    {
+        "repo_full_name": "torvalds/linux",
+        "display_name": "Linux Kernel",
+        "tech_element": "os",
+        "language": "C",
+        "description": "Linux kernel source tree",
+    },
+    {
+        "repo_full_name": "envoyproxy/envoy",
+        "display_name": "Envoy",
+        "tech_element": "protocols",
+        "language": "C++",
+        "description": "Cloud-native high-performance edge/middle/service proxy",
+    },
+    {
+        "repo_full_name": "grpc/grpc",
+        "display_name": "gRPC",
+        "tech_element": "protocols",
+        "language": "C++",
+        "description": "The C based gRPC (C++, Python, Ruby, Objective-C, PHP, C#)",
+    },
+    {
+        "repo_full_name": "openvswitch/ovs",
+        "display_name": "Open vSwitch",
+        "tech_element": "protocols",
+        "language": "C",
+        "description": "Open vSwitch is a production quality, multilayer virtual switch",
+    },
+    {
+        "repo_full_name": "cloudflare/cloudflared",
+        "display_name": "Cloudflared",
+        "tech_element": "protocols",
+        "language": "Go",
+        "description": "Cloudflare Tunnel client",
+    },
+    {
+        "repo_full_name": "FRRouting/frr",
+        "display_name": "FRRouting",
+        "tech_element": "protocols",
+        "language": "C",
+        "description": "FRRouting is free software that manages TCP/IP based routing protocols",
+    },
     # Systems
-    {"repo_full_name": "golang/go", "display_name": "Go", "tech_element": "languages", "language": "Go", "description": "The Go programming language"},
-    {"repo_full_name": "rust-lang/rust", "display_name": "Rust", "tech_element": "languages", "language": "Rust", "description": "Empowering everyone to build reliable and efficient software"},
-    {"repo_full_name": "kubernetes/kubernetes", "display_name": "Kubernetes", "tech_element": "cloud_native", "language": "Go", "description": "Production-Grade Container Scheduling and Management"},
-    {"repo_full_name": "moby/moby", "display_name": "Docker", "tech_element": "cloud_native", "language": "Go", "description": "Moby Project - a collaborative project for the container ecosystem"},
-    {"repo_full_name": "redis/redis", "display_name": "Redis", "tech_element": "db_storage", "language": "C", "description": "Redis is an in-memory database that persists on disk"},
-    {"repo_full_name": "apache/kafka", "display_name": "Apache Kafka", "tech_element": "middleware", "language": "Java", "description": "Mirror of Apache Kafka"},
+    {
+        "repo_full_name": "golang/go",
+        "display_name": "Go",
+        "tech_element": "languages",
+        "language": "Go",
+        "description": "The Go programming language",
+    },
+    {
+        "repo_full_name": "rust-lang/rust",
+        "display_name": "Rust",
+        "tech_element": "languages",
+        "language": "Rust",
+        "description": "Empowering everyone to build reliable and efficient software",
+    },
+    {
+        "repo_full_name": "kubernetes/kubernetes",
+        "display_name": "Kubernetes",
+        "tech_element": "cloud_native",
+        "language": "Go",
+        "description": "Production-Grade Container Scheduling and Management",
+    },
+    {
+        "repo_full_name": "moby/moby",
+        "display_name": "Docker",
+        "tech_element": "cloud_native",
+        "language": "Go",
+        "description": "Moby Project - a collaborative project for the container ecosystem",
+    },
+    {
+        "repo_full_name": "redis/redis",
+        "display_name": "Redis",
+        "tech_element": "db_storage",
+        "language": "C",
+        "description": "Redis is an in-memory database that persists on disk",
+    },
+    {
+        "repo_full_name": "apache/kafka",
+        "display_name": "Apache Kafka",
+        "tech_element": "middleware",
+        "language": "Java",
+        "description": "Mirror of Apache Kafka",
+    },
     # Security
-    {"repo_full_name": "zaproxy/zaproxy", "display_name": "OWASP ZAP", "tech_element": "sys_sec", "language": "Java", "description": "The OWASP ZAP core project"},
-    {"repo_full_name": "rapid7/metasploit-framework", "display_name": "Metasploit", "tech_element": "sec_ops", "language": "Ruby", "description": "Metasploit Framework"},
-    {"repo_full_name": "sqlmapproject/sqlmap", "display_name": "sqlmap", "tech_element": "sec_ops", "language": "Python", "description": "Automatic SQL injection and database takeover tool"},
-    {"repo_full_name": "nmap/nmap", "display_name": "Nmap", "tech_element": "sys_sec", "language": "C", "description": "Nmap - the Network Mapper"},
-    {"repo_full_name": "mitmproxy/mitmproxy", "display_name": "mitmproxy", "tech_element": "sys_sec", "language": "Python", "description": "An interactive TLS-capable intercepting HTTP proxy"},
-    {"repo_full_name": "wireshark/wireshark", "display_name": "Wireshark", "tech_element": "sys_sec", "language": "C", "description": "Wireshark - Network traffic analyzer"},
+    {
+        "repo_full_name": "zaproxy/zaproxy",
+        "display_name": "OWASP ZAP",
+        "tech_element": "sys_sec",
+        "language": "Java",
+        "description": "The OWASP ZAP core project",
+    },
+    {
+        "repo_full_name": "rapid7/metasploit-framework",
+        "display_name": "Metasploit",
+        "tech_element": "sec_ops",
+        "language": "Ruby",
+        "description": "Metasploit Framework",
+    },
+    {
+        "repo_full_name": "sqlmapproject/sqlmap",
+        "display_name": "sqlmap",
+        "tech_element": "sec_ops",
+        "language": "Python",
+        "description": "Automatic SQL injection and database takeover tool",
+    },
+    {
+        "repo_full_name": "nmap/nmap",
+        "display_name": "Nmap",
+        "tech_element": "sys_sec",
+        "language": "C",
+        "description": "Nmap - the Network Mapper",
+    },
+    {
+        "repo_full_name": "mitmproxy/mitmproxy",
+        "display_name": "mitmproxy",
+        "tech_element": "sys_sec",
+        "language": "Python",
+        "description": "An interactive TLS-capable intercepting HTTP proxy",
+    },
+    {
+        "repo_full_name": "wireshark/wireshark",
+        "display_name": "Wireshark",
+        "tech_element": "sys_sec",
+        "language": "C",
+        "description": "Wireshark - Network traffic analyzer",
+    },
 ]
 
 
@@ -315,85 +595,229 @@ VENUE_DATA = [
     {
         "domain_code": "ai",
         "venues": [
-            {"id": "NeurIPS", "name": "Neural Information Processing Systems", "type": "conference"},
-            {"id": "ICML", "name": "International Conference on Machine Learning", "type": "conference"},
-            {"id": "ICLR", "name": "International Conference on Learning Representations", "type": "conference"},
-            {"id": "ACL", "name": "Annual Meeting of the Association for Computational Linguistics", "type": "conference"},
-            {"id": "EMNLP", "name": "Conference on Empirical Methods in Natural Language Processing", "type": "conference"},
+            {
+                "id": "NeurIPS",
+                "name": "Neural Information Processing Systems",
+                "type": "conference",
+            },
+            {
+                "id": "ICML",
+                "name": "International Conference on Machine Learning",
+                "type": "conference",
+            },
+            {
+                "id": "ICLR",
+                "name": "International Conference on Learning Representations",
+                "type": "conference",
+            },
+            {
+                "id": "ACL",
+                "name": "Annual Meeting of the Association for Computational Linguistics",
+                "type": "conference",
+            },
+            {
+                "id": "EMNLP",
+                "name": "Conference on Empirical Methods in Natural Language Processing",
+                "type": "conference",
+            },
             {"id": "NAACL", "name": "North American Chapter of the ACL", "type": "conference"},
-            {"id": "CVPR", "name": "Conference on Computer Vision and Pattern Recognition", "type": "conference"},
-            {"id": "ICCV", "name": "International Conference on Computer Vision", "type": "conference"},
+            {
+                "id": "CVPR",
+                "name": "Conference on Computer Vision and Pattern Recognition",
+                "type": "conference",
+            },
+            {
+                "id": "ICCV",
+                "name": "International Conference on Computer Vision",
+                "type": "conference",
+            },
             {"id": "ECCV", "name": "European Conference on Computer Vision", "type": "conference"},
-            {"id": "AAAI", "name": "AAAI Conference on Artificial Intelligence", "type": "conference"},
-            {"id": "IJCAI", "name": "International Joint Conference on Artificial Intelligence", "type": "conference"},
+            {
+                "id": "AAAI",
+                "name": "AAAI Conference on Artificial Intelligence",
+                "type": "conference",
+            },
+            {
+                "id": "IJCAI",
+                "name": "International Joint Conference on Artificial Intelligence",
+                "type": "conference",
+            },
             {"id": "JMLR", "name": "Journal of Machine Learning Research", "type": "journal"},
-            {"id": "T-PAMI", "name": "IEEE Transactions on Pattern Analysis and Machine Intelligence", "type": "journal"},
-        ]
+            {
+                "id": "T-PAMI",
+                "name": "IEEE Transactions on Pattern Analysis and Machine Intelligence",
+                "type": "journal",
+            },
+        ],
     },
     {
         "domain_code": "robotics",
         "venues": [
-            {"id": "ICRA", "name": "International Conference on Robotics and Automation", "type": "conference"},
-            {"id": "IROS", "name": "International Conference on Intelligent Robots and Systems", "type": "conference"},
+            {
+                "id": "ICRA",
+                "name": "International Conference on Robotics and Automation",
+                "type": "conference",
+            },
+            {
+                "id": "IROS",
+                "name": "International Conference on Intelligent Robots and Systems",
+                "type": "conference",
+            },
             {"id": "RSS", "name": "Robotics: Science and Systems", "type": "conference"},
-            {"id": "HRI", "name": "ACM/IEEE International Conference on Human-Robot Interaction", "type": "conference"},
+            {
+                "id": "HRI",
+                "name": "ACM/IEEE International Conference on Human-Robot Interaction",
+                "type": "conference",
+            },
             {"id": "CoRL", "name": "Conference on Robot Learning", "type": "conference"},
             {"id": "TRO", "name": "IEEE Transactions on Robotics", "type": "journal"},
             {"id": "IJRR", "name": "International Journal of Robotics Research", "type": "journal"},
-        ]
+        ],
     },
     {
         "domain_code": "data_science",
         "venues": [
-            {"id": "KDD", "name": "ACM SIGKDD Conference on Knowledge Discovery and Data Mining", "type": "conference"},
-            {"id": "SIGMOD", "name": "ACM SIGMOD International Conference on Management of Data", "type": "conference"},
+            {
+                "id": "KDD",
+                "name": "ACM SIGKDD Conference on Knowledge Discovery and Data Mining",
+                "type": "conference",
+            },
+            {
+                "id": "SIGMOD",
+                "name": "ACM SIGMOD International Conference on Management of Data",
+                "type": "conference",
+            },
             {"id": "VLDB", "name": "Very Large Data Bases Conference", "type": "conference"},
-            {"id": "ICDE", "name": "International Conference on Data Engineering", "type": "conference"},
-            {"id": "ICDM", "name": "IEEE International Conference on Data Mining", "type": "conference"},
-            {"id": "SDM", "name": "SIAM International Conference on Data Mining", "type": "conference"},
+            {
+                "id": "ICDE",
+                "name": "International Conference on Data Engineering",
+                "type": "conference",
+            },
+            {
+                "id": "ICDM",
+                "name": "IEEE International Conference on Data Mining",
+                "type": "conference",
+            },
+            {
+                "id": "SDM",
+                "name": "SIAM International Conference on Data Mining",
+                "type": "conference",
+            },
             {"id": "VIS", "name": "IEEE Visualization Conference", "type": "conference"},
-            {"id": "TVCG", "name": "IEEE Transactions on Visualization and Computer Graphics", "type": "journal"},
-        ]
+            {
+                "id": "TVCG",
+                "name": "IEEE Transactions on Visualization and Computer Graphics",
+                "type": "journal",
+            },
+        ],
     },
     {
         "domain_code": "networks",
         "venues": [
             {"id": "SIGCOMM", "name": "ACM SIGCOMM Conference", "type": "conference"},
-            {"id": "MobiCom", "name": "ACM International Conference on Mobile Computing and Networking", "type": "conference"},
-            {"id": "MobiSys", "name": "ACM International Conference on Mobile Systems", "type": "conference"},
-            {"id": "SenSys", "name": "ACM Conference on Embedded Networked Sensor Systems", "type": "conference"},
-            {"id": "INFOCOM", "name": "IEEE Conference on Computer Communications", "type": "conference"},
-            {"id": "NSDI", "name": "Symposium on Networked Systems Design and Implementation", "type": "conference"},
+            {
+                "id": "MobiCom",
+                "name": "ACM International Conference on Mobile Computing and Networking",
+                "type": "conference",
+            },
+            {
+                "id": "MobiSys",
+                "name": "ACM International Conference on Mobile Systems",
+                "type": "conference",
+            },
+            {
+                "id": "SenSys",
+                "name": "ACM Conference on Embedded Networked Sensor Systems",
+                "type": "conference",
+            },
+            {
+                "id": "INFOCOM",
+                "name": "IEEE Conference on Computer Communications",
+                "type": "conference",
+            },
+            {
+                "id": "NSDI",
+                "name": "Symposium on Networked Systems Design and Implementation",
+                "type": "conference",
+            },
             {"id": "TON", "name": "IEEE/ACM Transactions on Networking", "type": "journal"},
-        ]
+        ],
     },
     {
         "domain_code": "systems",
         "venues": [
-            {"id": "OSDI", "name": "USENIX Symposium on Operating Systems Design and Implementation", "type": "conference"},
-            {"id": "SOSP", "name": "ACM Symposium on Operating Systems Principles", "type": "conference"},
-            {"id": "ASPLOS", "name": "International Conference on Architectural Support for Programming Languages", "type": "conference"},
-            {"id": "EuroSys", "name": "European Conference on Computer Systems", "type": "conference"},
+            {
+                "id": "OSDI",
+                "name": "USENIX Symposium on Operating Systems Design and Implementation",
+                "type": "conference",
+            },
+            {
+                "id": "SOSP",
+                "name": "ACM Symposium on Operating Systems Principles",
+                "type": "conference",
+            },
+            {
+                "id": "ASPLOS",
+                "name": "International Conference on Architectural Support for Programming Languages",
+                "type": "conference",
+            },
+            {
+                "id": "EuroSys",
+                "name": "European Conference on Computer Systems",
+                "type": "conference",
+            },
             {"id": "SoCC", "name": "ACM Symposium on Cloud Computing", "type": "conference"},
-            {"id": "ICSE", "name": "International Conference on Software Engineering", "type": "conference"},
-            {"id": "FSE", "name": "ACM SIGSOFT International Symposium on Foundations of Software Engineering", "type": "conference"},
-            {"id": "ASE", "name": "IEEE International Conference on Automated Software Engineering", "type": "conference"},
+            {
+                "id": "ICSE",
+                "name": "International Conference on Software Engineering",
+                "type": "conference",
+            },
+            {
+                "id": "FSE",
+                "name": "ACM SIGSOFT International Symposium on Foundations of Software Engineering",
+                "type": "conference",
+            },
+            {
+                "id": "ASE",
+                "name": "IEEE International Conference on Automated Software Engineering",
+                "type": "conference",
+            },
             {"id": "TSE", "name": "IEEE Transactions on Software Engineering", "type": "journal"},
-        ]
+        ],
     },
     {
         "domain_code": "security",
         "venues": [
-            {"id": "CCS", "name": "ACM Conference on Computer and Communications Security", "type": "conference"},
+            {
+                "id": "CCS",
+                "name": "ACM Conference on Computer and Communications Security",
+                "type": "conference",
+            },
             {"id": "USENIX Security", "name": "USENIX Security Symposium", "type": "conference"},
-            {"id": "NDSS", "name": "Network and Distributed System Security Symposium", "type": "conference"},
+            {
+                "id": "NDSS",
+                "name": "Network and Distributed System Security Symposium",
+                "type": "conference",
+            },
             {"id": "S&P", "name": "IEEE Symposium on Security and Privacy", "type": "conference"},
             {"id": "CRYPTO", "name": "International Cryptology Conference", "type": "conference"},
             {"id": "EUROCRYPT", "name": "European Cryptology Conference", "type": "conference"},
-            {"id": "ASIACRYPT", "name": "International Conference on the Theory and Application of Cryptology", "type": "conference"},
-            {"id": "PETS", "name": "Privacy Enhancing Technologies Symposium", "type": "conference"},
-            {"id": "TISSEC", "name": "ACM Transactions on Information and System Security", "type": "journal"},
-        ]
+            {
+                "id": "ASIACRYPT",
+                "name": "International Conference on the Theory and Application of Cryptology",
+                "type": "conference",
+            },
+            {
+                "id": "PETS",
+                "name": "Privacy Enhancing Technologies Symposium",
+                "type": "conference",
+            },
+            {
+                "id": "TISSEC",
+                "name": "ACM Transactions on Information and System Security",
+                "type": "journal",
+            },
+        ],
     },
 ]
 
@@ -403,6 +827,7 @@ async def truncate_tables(
     clear_config: bool = False,
     clear_collection: bool = False,
     domain: str = "all",
+    clear_tasks: bool = False,
 ):
     """Truncate business data tables.
     Args:
@@ -410,10 +835,11 @@ async def truncate_tables(
         clear_config: Also clear system config tables (sys_config)
         clear_collection: Also clear collection config tables (tasks, repo configs)
         domain: Domain to clear (academic / open_source / all, default all)
+        clear_tasks: Also clear collect task RECORDS (keeps repo/venue configs)
     """
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Step 1: Clear data tables")
-    print("="*60)
+    print("=" * 60)
 
     async with AsyncSessionLocal() as session:
         # Select tables to clear by domain
@@ -432,6 +858,10 @@ async def truncate_tables(
             if domain in ("all", "open_source"):
                 tables.extend(OPEN_SOURCE_COLLECTION_TABLES)
                 print("  [Mode: include open-source collection configs]")
+
+        if clear_tasks and not clear_collection:
+            tables.extend(COLLECT_TASK_TABLES)
+            print("  [Mode: include collect task records (repo/venue configs kept)]")
 
         if clear_config:
             tables.extend(CONFIG_SYSTEM_TABLES)
@@ -481,9 +911,9 @@ async def truncate_tables(
 
 async def clear_cache():
     """Clear Redis cache"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Step 2: Clear cache")
-    print("="*60)
+    print("=" * 60)
 
     try:
         from app.core.cache import get_cache_connection
@@ -502,16 +932,15 @@ async def clear_cache():
 
 async def seed_admin_user():
     """Seed admin user"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Step 3: Seed admin user")
-    print("="*60)
+    print("=" * 60)
 
     async with AsyncSessionLocal() as session:
         # Check if already exists
         from sqlalchemy import select
-        result = await session.execute(
-            select(UserAccount).where(UserAccount.username == "admin")
-        )
+
+        result = await session.execute(select(UserAccount).where(UserAccount.username == "admin"))
         if result.scalar_one_or_none():
             print("  Admin user exists, skipping")
             return
@@ -560,9 +989,9 @@ async def seed_admin_user():
 
 async def seed_tech_domains():
     """Seed tech domains"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Step 4: Seed tech domains")
-    print("="*60)
+    print("=" * 60)
 
     async with AsyncSessionLocal() as session:
         from sqlalchemy import select
@@ -583,9 +1012,9 @@ async def seed_tech_domains():
 
 async def seed_venues():
     """Seed venue configs"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Step 5: Seed venue configs")
-    print("="*60)
+    print("=" * 60)
 
     from sqlalchemy import select
 
@@ -613,9 +1042,7 @@ async def seed_venues():
                 openalex_id = KNOWN_OPENALEX_SOURCES.get(venue_code)
 
                 # Check if Venue exists
-                result = await session.execute(
-                    select(Venue).where(Venue.venue_code == venue_code)
-                )
+                result = await session.execute(select(Venue).where(Venue.venue_code == venue_code))
                 venue = result.scalar_one_or_none()
 
                 if not venue:
@@ -634,7 +1061,7 @@ async def seed_venues():
                 result = await session.execute(
                     select(VenueTechBinding).where(
                         VenueTechBinding.venue_id == venue.venue_id,
-                        VenueTechBinding.tech_domain_id == tech_domain.tech_domain_id
+                        VenueTechBinding.tech_domain_id == tech_domain.tech_domain_id,
                     )
                 )
                 binding = result.scalar_one_or_none()
@@ -653,14 +1080,16 @@ async def seed_venues():
             print(f"  [OK] {tech_domain.domain_name}: {len(venues_data)} venues")
 
         await session.commit()
-        print(f"\n  Venues created: {stats['venues_created']}, Bindings created: {stats['bindings_created']}")
+        print(
+            f"\n  Venues created: {stats['venues_created']}, Bindings created: {stats['bindings_created']}"
+        )
 
 
 async def seed_open_source_repo_configs():
     """Seed open-source repo configs"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Step 5.5: Seed open-source repo configs")
-    print("="*60)
+    print("=" * 60)
 
     async with AsyncSessionLocal() as session:
         from sqlalchemy import select
@@ -692,9 +1121,9 @@ async def seed_open_source_repo_configs():
 
 async def seed_statistics_snapshot():
     """Seed statistics snapshot"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Step 6: Seed statistics snapshot")
-    print("="*60)
+    print("=" * 60)
 
     async with AsyncSessionLocal() as session:
         from sqlalchemy import select
@@ -736,6 +1165,7 @@ async def init_system(
     clear_config: bool = False,
     clear_collection: bool = False,
     domain: str = "all",
+    clear_tasks: bool = False,
 ):
     """Run full initialization flow.
     Args:
@@ -743,15 +1173,16 @@ async def init_system(
         clear_config: Also clear system config tables (sys_config)
         clear_collection: Also clear collection config tables (tasks, repo configs)
         domain: Domain to init (academic / open_source / all, default all)
+        clear_tasks: Also clear collect task records (keeps repo/venue configs)
     """
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("AI Talent Platform - System Data Initialization")
-    print("="*60)
+    print("=" * 60)
 
     start_time = datetime.now()
 
     # 1. Clear data tables
-    await truncate_tables(full_reset, clear_config, clear_collection, domain)
+    await truncate_tables(full_reset, clear_config, clear_collection, domain, clear_tasks)
 
     # 2. Clear cache
     await clear_cache()
@@ -777,9 +1208,9 @@ async def init_system(
     # Done
     elapsed = (datetime.now() - start_time).total_seconds()
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Initialization complete")
-    print("="*60)
+    print("=" * 60)
     print(f"Elapsed: {elapsed:.2f}s")
 
     if full_reset:
@@ -790,7 +1221,10 @@ async def init_system(
     else:
         print("[TIP] Business data cleared, user and tech domain configs retained")
         if not clear_collection:
-            print("[TIP] Collection configs (tasks, repo configs) retained; use --clear-collection to remove")
+            print(
+                "[TIP] Collection configs (tasks, repo configs) retained; use --clear-collection to remove"
+            )
+            print("[TIP] To clear task records only (keep repo configs): --clear-tasks")
         if not clear_config:
             print("[TIP] System config (sys_config) retained; use --clear-config to remove")
         print("[TIP] Country data lives in app/constants/countries.py")
@@ -810,51 +1244,56 @@ Examples:
     python scripts/init_system.py --clear-collection    # Also clear collection configs
     python scripts/init_system.py --clear-config        # Also clear sys_config
     python scripts/init_system.py --full --force        # Full reset, no confirm
+    python scripts/init_system.py --clear-tasks         # Also clear collect task records (repo configs kept)
 
 Notes:
   - Default clears business data; use --domain to restrict
   - Default retains collection configs; use --clear-collection to remove
+  - --clear-tasks clears task records only (repo/venue configs kept)
   - Default retains sys_config; use --clear-config to remove
   - Country data lives in app/constants/countries.py
-        """
+        """,
     )
+    parser.add_argument("--force", "-f", action="store_true", help="Skip confirmation prompt")
     parser.add_argument(
-        "--force", "-f",
-        action="store_true",
-        help="Skip confirmation prompt"
-    )
-    parser.add_argument(
-        "--full",
-        action="store_true",
-        help="Full reset (also clears users, tech domains, etc.)"
+        "--full", action="store_true", help="Full reset (also clears users, tech domains, etc.)"
     )
     parser.add_argument(
         "--clear-collection",
         action="store_true",
-        help="Also clear collection config tables (tasks, repo configs)"
+        help="Also clear collection config tables (tasks, repo configs)",
     )
     parser.add_argument(
-        "--clear-config",
+        "--clear-tasks",
         action="store_true",
-        help="Also clear system config tables (sys_config)"
+        help="Also clear collect task RECORDS (os_collect_task/sync_collect_task); repo & venue configs are kept",
+    )
+    parser.add_argument(
+        "--clear-config", action="store_true", help="Also clear system config tables (sys_config)"
     )
     parser.add_argument(
         "--domain",
         choices=["academic", "open_source", "all"],
         default="all",
-        help="Domain to clear (default: all)"
+        help="Domain to clear (default: all)",
     )
 
     args = parser.parse_args()
 
     # Confirmation prompt
     if not args.force:
-        domain_label = {"academic": "Academic", "open_source": "Open Source", "all": "All business data"}
+        domain_label = {
+            "academic": "Academic",
+            "open_source": "Open Source",
+            "all": "All business data",
+        }
         print(f"\n[!] WARNING: This will clear {domain_label[args.domain]}!")
         if args.full:
             print("[!] NOTE: Full reset will also clear users and tech domains")
         if args.clear_collection:
             print("[!] NOTE: Collection configs (tasks, repo configs) will also be cleared")
+        if args.clear_tasks:
+            print("[!] NOTE: Collect task records will also be cleared (repo/venue configs kept)")
         if args.clear_config:
             print("[!] NOTE: System config (sys_config) will also be cleared")
         confirm = input("\nConfirm? (y/N): ").strip().lower()
@@ -862,7 +1301,15 @@ Notes:
             print("Cancelled")
             return
 
-    asyncio.run(init_system(full_reset=args.full, clear_config=args.clear_config, clear_collection=args.clear_collection, domain=args.domain))
+    asyncio.run(
+        init_system(
+            full_reset=args.full,
+            clear_config=args.clear_config,
+            clear_collection=args.clear_collection,
+            domain=args.domain,
+            clear_tasks=args.clear_tasks,
+        )
+    )
 
 
 if __name__ == "__main__":
