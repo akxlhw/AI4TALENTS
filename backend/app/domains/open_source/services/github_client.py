@@ -205,7 +205,14 @@ class GitHubClient:
         if not self._client:
             raise RuntimeError("Client not initialized. Use async with.")
         url = f"{self.base_url}{path}"
-        response = await self._client.get(url, params=params)
+        # Auth goes on the request, not the client: httpx snapshots client
+        # headers at creation, so rotating current_token_idx would otherwise
+        # never change the token actually sent (the pool stayed unused).
+        request_headers: dict[str, str] = {}
+        token = self._current_token()
+        if token:
+            request_headers["Authorization"] = f"Bearer {token}"
+        response = await self._client.get(url, params=params, headers=request_headers)
         self._last_request_time = time.time()
         return response
 
@@ -245,7 +252,7 @@ class GitHubClient:
                     f"Switched to token #{self.current_token_idx + 1} "
                     f"(remaining={self._token_remaining.get(self.current_token_idx, '?')})"
                 )
-                await self._rebuild_client()
+                # No client rebuild needed: auth is applied per request
                 response = await self._do_get_request(path, params)
             elif reset_at and response.status_code != 401:
                 # Rate-limited (403/429) with no tokens left. Fail fast and let

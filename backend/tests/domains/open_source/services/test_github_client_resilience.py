@@ -138,3 +138,30 @@ async def test_commits_traversal_aborts_on_rate_limit(monkeypatch: pytest.Monkey
 
     with pytest.raises(RateLimitExhaustedError):
         await client.list_contributors_via_commits("o", "r")
+
+
+@pytest.mark.asyncio
+async def test_rotation_changes_auth_header_on_the_wire() -> None:
+    """Regression: token rotation must change the Authorization header actually
+    sent (httpx snapshots client headers at creation, so per-request headers
+    are required)."""
+    client = GitHubClient(token="tokA,tokB")
+    sent_auth: list[str | None] = []
+    responses = [
+        _make_response(403, headers={"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "9999999999"}),
+        _make_response(200, payload={"ok": True}),
+    ]
+
+    class _StubClient:
+        async def get(self, url: str, params: dict | None = None, headers: dict | None = None):
+            sent_auth.append((headers or {}).get("Authorization"))
+            return responses.pop(0)
+
+    client._client = _StubClient()
+    client._min_interval = 0  # no throttle delay in test
+
+    result = await client._do_get("/x")
+
+    assert result == {"ok": True}
+    assert sent_auth == ["Bearer tokA", "Bearer tokB"]
+    assert client.current_token_idx == 1
