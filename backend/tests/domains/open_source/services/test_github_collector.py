@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
 from app.domains.open_source.models.open_source import OSCollectTask
+from app.domains.open_source.services import background_state
 from app.domains.open_source.services.collectors.github_collector import (
     CollectContext,
     GitHubCollector,
@@ -20,6 +21,16 @@ from app.domains.open_source.services.os_collection_service import (
     OSCollectionService,
     _get_repo_lock,
 )
+
+
+@pytest.fixture(autouse=True)
+def _reset_token_pool_breaker():
+    """Rate-limit tests here open the global breaker; close it around each
+    test so later tests (e.g. the semaphore serialization test) aren't
+    deferred by a stale open circuit."""
+    background_state.clear_token_pool_breaker()
+    yield
+    background_state.clear_token_pool_breaker()
 
 
 class _FailingClient:

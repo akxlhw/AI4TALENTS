@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, cast
 
@@ -19,6 +20,7 @@ from app.core.database import AsyncSessionLocal
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.domains.open_source.models.open_source import OSCollectTask
 from app.domains.open_source.repositories.open_source import OpenSourceRepository
+from app.domains.open_source.services import background_state
 from app.domains.open_source.services.os_collection_common import (
     _get_collect_semaphore,
     _get_repo_lock,
@@ -270,6 +272,33 @@ class CollectTaskMixin:
             # GitHub abuse detection).
             collect_sem = await _get_collect_semaphore()
             async with collect_sem:
+                # Token-pool circuit breaker: if another task already
+                # discovered that ALL tokens are exhausted, skip straight to
+                # rate_limited instead of waking a fresh GitHubClient to
+                # re-discover the exhaustion by failing (tokens are
+                # account-scoped, but each task's client tracks them
+                # privately — this check is what makes that knowledge global).
+                if background_state.is_token_pool_exhausted():
+                    resume_at = datetime.fromtimestamp(
+                        background_state.token_pool_resume_at or 0, tz=timezone.utc
+                    ).replace(tzinfo=None)
+                    async with AsyncSessionLocal() as session:
+                        inner_service = OSCollectionService(session)
+                        task = await inner_service.get_collect_task(task_id)
+                        if task and task.status == "pending":
+                            task.status = "rate_limited"  # type: ignore[assignment]
+                            task.current_step = "rate_limited"  # type: ignore[assignment]
+                            task.resume_at = resume_at  # type: ignore[assignment]
+                            task.error_message = (  # type: ignore[assignment]
+                                "Token pool exhausted (circuit breaker); auto-resume scheduled"
+                            )[: settings.COLLECT_ERROR_MAX_LENGTH]
+                            await session.commit()
+                            logger.info(
+                                f"Task {task_id} deferred by token-pool breaker "
+                                f"(resume_at={resume_at})"
+                            )
+                    return
+
                 # Serialize per repository: same repo runs one collection at a
                 # time, different repos run in parallel.
                 repo_lock = await _get_repo_lock(repo_full_name)
@@ -329,13 +358,16 @@ class CollectTaskMixin:
             # it automatically once the reset window passes (manual re-trigger
             # also works since rate_limited is not pending/running).
             logger.warning(f"Task {task_id} rate-limited: {e}")
+            retry_after = e.retry_after or 3600
+            # Open the global breaker so QUEUED tasks (still waiting on the
+            # semaphore) defer instead of re-discovering the exhaustion.
+            background_state.mark_token_pool_exhausted(retry_after)
             async with AsyncSessionLocal() as session:
                 inner_service = OSCollectionService(session)
                 task = await inner_service.get_collect_task(task_id)
                 if task:
                     task.status = "rate_limited"  # type: ignore[assignment]
                     task.current_step = "rate_limited"  # type: ignore[assignment]
-                    retry_after = e.retry_after or 3600
                     task.resume_at = datetime.now(timezone.utc).replace(  # type: ignore[assignment]
                         tzinfo=None
                     ) + timedelta(seconds=retry_after)
@@ -376,6 +408,13 @@ class CollectTaskMixin:
         )
         due = result.scalars().all()
         if not due:
+            # Nothing to resume — close the breaker if its window has passed
+            # so new triggers don't get deferred by a stale timestamp.
+            if (
+                background_state.token_pool_resume_at is not None
+                and time.time() >= background_state.token_pool_resume_at
+            ):
+                background_state.clear_token_pool_breaker()
             return 0
 
         launch: list[tuple[int, dict[str, Any]]] = []
