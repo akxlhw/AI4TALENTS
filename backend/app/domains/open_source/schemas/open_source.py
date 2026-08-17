@@ -151,6 +151,7 @@ class OSDeveloperDetail(OSDeveloperSummary):
 
     github_id: int | None
     blog_url: str | None
+    social_links: dict[str, str] | None
     email: str | None
     followers_count: int
     following_count: int

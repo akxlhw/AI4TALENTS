@@ -352,6 +352,13 @@ const DeveloperDetailPage: React.FC = () => {
                       <a href={detail.blog_url} target="_blank" rel="noopener noreferrer">Blog</a>
                     </Tag>
                   )}
+                  {Object.entries(detail.social_links || {}).map(([platform, url]) => (
+                    <Tag key={platform} icon={<GlobalOutlined />}>
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        {platform === 'twitter' ? 'X/Twitter' : platform === 'linkedin' ? 'LinkedIn' : platform === 'website' ? '个人主页' : platform}
+                      </a>
+                    </Tag>
+                  ))}
                   {detail.email && <Tag icon={<MailOutlined />}>{detail.email}</Tag>}
                 </Space>
               </div>

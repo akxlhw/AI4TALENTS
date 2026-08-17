@@ -425,6 +425,7 @@ export interface OSDeveloper {
 export interface OSDeveloperDetail extends OSDeveloper {
   github_id?: number
   blog_url?: string
+  social_links?: Record<string, string>
   email?: string
   followers_count: number
   following_count: number

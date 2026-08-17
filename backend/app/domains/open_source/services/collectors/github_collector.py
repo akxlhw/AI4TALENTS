@@ -402,6 +402,7 @@ class GitHubCollector:
 
         raw_twitter = user.get("twitter_username") or ""
         twitter = raw_twitter.strip().lstrip("@")[:50] if raw_twitter else ""
+        social_links = GitHubCollector._build_social_links(twitter, blog_url)
 
         return {
             "github_login": user.get("login", ""),
@@ -413,7 +414,7 @@ class GitHubCollector:
             "blog_url": blog_url,
             "email": email,
             "avatar_url": user.get("avatar_url", ""),
-            "twitter_username": twitter,
+            "social_links": social_links,
             "followers_count": user.get("followers") or 0,
             "following_count": user.get("following") or 0,
             "public_repos_count": user.get("public_repos") or 0,
@@ -468,3 +469,25 @@ class GitHubCollector:
         if url and not url.lower().startswith(("http://", "https://")):
             url = "https://" + url
         return url.rstrip("/")[:255]
+
+    @staticmethod
+    def _build_social_links(twitter_handle: str, blog_url: str) -> dict[str, str]:
+        """Build a normalized platform → URL map from GitHub profile fields.
+
+        Sources: the dedicated twitter_username field, plus platform
+        recognition on the free-form blog/homepage field (people often put
+        LinkedIn or X there). First hit per platform wins; unknown homepage
+        URLs are kept under "website".
+        """
+        links: dict[str, str] = {}
+        if twitter_handle:
+            links["twitter"] = f"https://x.com/{twitter_handle}"
+        if blog_url:
+            lowered = blog_url.lower()
+            if "linkedin.com" in lowered:
+                links.setdefault("linkedin", blog_url)
+            elif "twitter.com" in lowered or "x.com" in lowered:
+                links.setdefault("twitter", blog_url)
+            elif "github.com" not in lowered:
+                links.setdefault("website", blog_url)
+        return links

@@ -56,6 +56,8 @@ class OSDeveloper(Base, TimestampMixin):
     location = Column(String(255), nullable=True)
     company = Column(String(255), nullable=True)
     blog_url = Column(String(255), nullable=True)
+    # Social links map: {"twitter": url, "linkedin": url, "website": url, ...}
+    social_links = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     email = Column(String(255), nullable=True)
     avatar_url = Column(String(255), nullable=True)
     followers_count = Column(Integer, default=0, nullable=False)

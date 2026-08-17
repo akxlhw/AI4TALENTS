@@ -319,7 +319,12 @@ async def export_developers(
         name = d.name or d.github_login or ""
         company = d.company or ""
         search_query = f"{name} {company} LinkedIn".strip()
-        social_link = f"https://www.google.com/search?q={quote(search_query, safe='')}"
+        socials = cast("dict[str, str] | None", d.social_links) or {}
+        if socials:
+            # Real profile links first (twitter/linkedin/website…), one per platform
+            social_link = ", ".join(socials.values())
+        else:
+            social_link = f"https://www.google.com/search?q={quote(search_query, safe='')}"
         tech_domains, tech_elements = _tech_labels(cast("list[str] | None", d.tech_tags))
 
         rows.append(

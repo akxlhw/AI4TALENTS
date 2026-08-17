@@ -58,6 +58,7 @@ class SyncService:
             "location",
             "company",
             "blog_url",
+            "social_links",
             "email",
             "avatar_url",
             "followers_count",

@@ -182,6 +182,7 @@ class OSDeveloperService:
             **OSDeveloperSummary.model_validate(dev).model_dump(),
             github_id=cast("int | None", dev.github_id),
             blog_url=cast("str | None", dev.blog_url),
+            social_links=cast("dict[str, str] | None", dev.social_links),
             email=cast("str | None", dev.email),
             followers_count=cast(int, dev.followers_count),
             following_count=cast(int, dev.following_count),
