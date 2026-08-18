@@ -52,6 +52,7 @@ const OSCollectTaskSubTab: React.FC = () => {
   const [tasks, setTasks] = useState<OSCollectTask[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(false)
   const [detailModalVisible, setDetailModalVisible] = useState(false)
   const [selectedTask, setSelectedTask] = useState<OSCollectTask | null>(null)
@@ -62,7 +63,7 @@ const OSCollectTaskSubTab: React.FC = () => {
       const target = p ?? page
       setLoading(true)
       try {
-        const response = await api.openSource.listCollectTasks({ page: target, page_size: 20 })
+        const response = await api.openSource.listCollectTasks({ page: target, page_size: pageSize })
         const newTasks = response.data.items || []
         setTasks(newTasks)
         setTotal(response.data.total || 0)
@@ -77,7 +78,7 @@ const OSCollectTaskSubTab: React.FC = () => {
         setLoading(false)
       }
     },
-    [page]
+    [page, pageSize]
   )
 
   useEffect(() => {
@@ -232,10 +233,16 @@ const OSCollectTaskSubTab: React.FC = () => {
           rowKey="task_id"
           pagination={{
             current: page,
-            pageSize: 20,
+            pageSize,
             total,
             showTotal: t => `共 ${t} 条记录`,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
             onChange: p => loadTasks(p),
+            onShowSizeChange: (_, size) => {
+              setPage(1)
+              setPageSize(size)
+            },
           }}
           locale={{ emptyText: <Empty description="暂无采集任务" /> }}
         />
