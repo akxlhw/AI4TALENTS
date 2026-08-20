@@ -94,6 +94,17 @@ async def list_pools(
 
 
 @router.get(
+    "/followup-statuses",
+    response_model=list[dict[str, str]],
+    summary="获取跟进状态选项",
+    description="获取所有可用的跟进状态选项",
+)
+async def get_followup_statuses():
+    """Get all followup status options."""
+    return FOLLOWUP_STATUS_OPTIONS
+
+
+@router.get(
     "/{pool_id}",
     response_model=TalentPoolResponse,
     summary="获取人才池详情",
@@ -327,14 +338,3 @@ async def update_followup_status(
         raise HTTPException(status_code=404, detail="Favorite not found")
 
     return SuccessResponse(message="Followup status updated")
-
-
-@router.get(
-    "/followup-statuses",
-    response_model=list[dict[str, str]],
-    summary="获取跟进状态选项",
-    description="获取所有可用的跟进状态选项",
-)
-async def get_followup_statuses():
-    """Get all followup status options."""
-    return FOLLOWUP_STATUS_OPTIONS
