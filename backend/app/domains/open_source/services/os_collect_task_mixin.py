@@ -343,6 +343,21 @@ class CollectTaskMixin:
                             t.cancel()
                         if collect_task in done:
                             await collect_task
+                            # The collector writes single-repo tech_tags during
+                            # contributor upserts; recompute the union across ALL
+                            # configured repos so multi-repo tags survive a
+                            # re-collection. Best-effort: the task result above
+                            # stands even if this normalization fails.
+                            try:
+                                async with AsyncSessionLocal() as session:
+                                    inner_service = OSCollectionService(session)
+                                    await inner_service.sync_developer_tech_tags(repo_full_name)
+                                    await session.commit()
+                            except Exception:
+                                logger.exception(
+                                    f"Post-collection tech tag union sync failed "
+                                    f"for {repo_full_name}"
+                                )
 
         except asyncio.CancelledError:
             logger.info(f"Task {task_id} cancelled")
