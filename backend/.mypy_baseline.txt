@@ -982,9 +982,9 @@ app/domains/open_source/services/os_collect_task_mixin.py:170
 app/domains/open_source/services/os_collect_task_mixin.py:213
 app/domains/open_source/services/os_collect_task_mixin.py:311
 app/domains/open_source/services/os_collect_task_mixin.py:312
-app/domains/open_source/services/os_collect_task_mixin.py:353
-app/domains/open_source/services/os_collect_task_mixin.py:385
-app/domains/open_source/services/os_collect_task_mixin.py:386
+app/domains/open_source/services/os_collect_task_mixin.py:368
+app/domains/open_source/services/os_collect_task_mixin.py:400
+app/domains/open_source/services/os_collect_task_mixin.py:401
 app/domains/open_source/services/os_favourite_service.py:219
 app/domains/open_source/services/os_favourite_service.py:275
 app/domains/open_source/services/os_repo_config_mixin.py:112
