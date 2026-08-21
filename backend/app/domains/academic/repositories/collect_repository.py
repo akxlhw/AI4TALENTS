@@ -180,6 +180,7 @@ class CollectTaskRepository(BaseRepository[CollectTask]):
         """Get all currently active (pending or running) tasks."""
         result = await self.session.execute(
             select(CollectTask)
+            .options(selectinload(CollectTask.tech_domain))
             .where(CollectTask.status.in_(["pending", "running"]))
             .order_by(CollectTask.task_id)
         )

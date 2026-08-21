@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.academic.models.sync import CollectTask
 from app.domains.academic.models.venue import VenueSubTask
+from app.domains.academic.repositories.raw_data_repository import RawAuthorRepository
 from app.domains.academic.repositories.venue_repository import (
     VenueRepository,
     VenueSubTaskRepository,
@@ -27,6 +28,7 @@ class VenueSubTaskExecutor:
         self.venue_repo = VenueRepository(session)
         self.sub_task_repo = VenueSubTaskRepository(session)
         self.binding_repo = VenueTechBindingRepository(session)
+        self.raw_author_repo = RawAuthorRepository(session)
         self.work_fetcher = work_fetcher
 
     async def execute(
@@ -57,9 +59,21 @@ class VenueSubTaskExecutor:
             sub_task_id=sub_task.sub_task_id,
         )
 
-        # Update sub-task with counts
+        # Update sub-task with counts: authors parsed from this venue's works,
+        # split into newly-introduced (not yet in raw_author) vs already-known
+        parsed_author_ids = work_progress.author_ids
+        new_authors = (
+            len(await self.raw_author_repo.get_missing_author_ids(list(parsed_author_ids)))
+            if parsed_author_ids
+            else 0
+        )
+
         await self.sub_task_repo.update_status(
-            sub_task.sub_task_id, "completed", works_fetched=work_progress.fetched
+            sub_task.sub_task_id,
+            "completed",
+            works_fetched=work_progress.fetched,
+            authors_fetched=len(parsed_author_ids),
+            new_authors=new_authors,
         )
 
         # Update binding status

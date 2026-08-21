@@ -20,6 +20,9 @@ class FetchProgress(BaseProgress):
     """Progress tracking for fetch operations"""
 
     fetched: int = 0
+    # Distinct entity IDs parsed from the fetched records (e.g. author IDs
+    # extracted from works), for per-sub-task attribution.
+    author_ids: set[str] = field(default_factory=set)
 
 
 @dataclass

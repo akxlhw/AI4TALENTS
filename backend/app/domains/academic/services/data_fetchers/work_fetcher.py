@@ -248,6 +248,7 @@ class WorkFetcher:
                             author_id = extract_short_id(authorship.get("author", {}).get("id", ""))
                             if author_id:
                                 author_ids.append(author_id)
+                        progress.author_ids.update(author_ids)
 
                         raw_work = RawWork(
                             openalex_work_id=extract_short_id(work_data.get("id", "")),
