@@ -318,8 +318,9 @@ class OpenSourceAdvancedRepository:
 
         if filters:
             if "tech_elements" in filters:
-                filter_clauses.append("d.tech_tags @> :tech_elements::jsonb")
-                filter_params["tech_elements"] = json.dumps(filters["tech_elements"])
+                # Any-of (OR) semantics, same as the languages filter below
+                filter_clauses.append("d.tech_tags ?| :tech_elements")
+                filter_params["tech_elements"] = filters["tech_elements"]
             if "languages" in filters:
                 filter_clauses.append("d.primary_languages ?| :languages")
                 filter_params["languages"] = filters["languages"]

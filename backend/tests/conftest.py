@@ -201,6 +201,16 @@ async def test_engine():
                         ALTER COLUMN embedding TYPE vector(1536)
                         USING embedding::vector(1536)
                     """))
+                    await conn.execute(text("""
+                        ALTER TABLE os_embedding
+                        ALTER COLUMN embedding TYPE vector(1536)
+                        USING embedding::vector(1536)
+                    """))
+                    # Unique index required by os_embedding upsert ON CONFLICT (migration 046)
+                    await conn.execute(text("""
+                        CREATE UNIQUE INDEX IF NOT EXISTS ix_os_embedding_dev_type
+                        ON os_embedding (developer_id, vector_type)
+                    """))
             except Exception:
                 pass  # Column may already be the correct type
 

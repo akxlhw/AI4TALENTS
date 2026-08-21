@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 from typing import cast as tcast
 
-from sqlalchemy import and_, cast, exists, func, or_, select
+from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import array as pg_array
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,9 +57,9 @@ class DevelopersMixin:
                 )
             )
         if tech_elements:
-            conditions.append(
-                OSDeveloper.tech_tags.cast(JSONB).op("@>")(cast(tech_elements, JSONB))
-            )
+            # Any-of (OR) semantics: match developers tagged with ANY selected
+            # element, consistent with the languages filter below.
+            conditions.append(OSDeveloper.tech_tags.cast(JSONB).op("?|")(pg_array(tech_elements)))
         if languages:
             conditions.append(
                 OSDeveloper.primary_languages.cast(JSONB).op("?|")(pg_array(languages))

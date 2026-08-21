@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import create_access_token, hash_password
@@ -107,14 +107,27 @@ async def _seed_shared_scenario(test_session: AsyncSession) -> dict:
     return {"config": config, "dev_a": dev_a, "dev_b": dev_b, "r1": r1, "r2": r2}
 
 
+# os_embedding.embedding is vector(1536) in PostgreSQL (migration 047); ORM
+# Text inserts cannot bind vector, so cascade seeding uses an explicit cast.
+_EMBEDDING_1536 = "[" + ",".join(["0.1"] * 1536) + "]"
+
+
 async def _add_cascades(test_session: AsyncSession, dev: OSDeveloper) -> None:
     """Add language skill / embedding / raw data for a developer."""
     test_session.add_all(
         [
             OSLanguageSkill(developer_id=dev.developer_id, language="Python"),
-            OSEmbedding(developer_id=dev.developer_id, embedding="0.1,0.2,0.3"),
             OSRawDeveloper(github_login=dev.github_login, raw_data={"login": dev.github_login}),
         ]
+    )
+    await test_session.flush()
+    await test_session.execute(
+        text(
+            "INSERT INTO os_embedding"
+            " (developer_id, vector_type, embedding, created_at, updated_at) "
+            "VALUES (:developer_id, 'profile', CAST(:embedding AS vector), now(), now())"
+        ),
+        {"developer_id": dev.developer_id, "embedding": _EMBEDDING_1536},
     )
     await test_session.commit()
 
