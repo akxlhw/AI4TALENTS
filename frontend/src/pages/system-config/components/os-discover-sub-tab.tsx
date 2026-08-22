@@ -6,6 +6,7 @@ import {
 import { RadarChartOutlined, ImportOutlined, ReloadOutlined } from '@ant-design/icons'
 import { api } from '../../../services/api'
 import { useTechDirectionOptions } from '../../../hooks/useIndustryQueries'
+import { mergeGroupSelection } from './os-discover-selection'
 import { getErrorMessage } from './utils'
 
 const { Text, Title } = Typography
@@ -134,6 +135,33 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
     } finally {
       setImporting(false)
     }
+  }
+
+  // Results render as one Table per direction group; each Table's
+  // rowSelection.onChange reports only that group's keys, so selections must
+  // MERGE into the global state — otherwise picking in one group wipes the
+  // selections made in another.
+  const handleGroupSelectionChange = (
+    groupRepos: DiscoveredRepo[],
+    keys: React.Key[]
+  ) => {
+    setSelectedRepos(prev =>
+      mergeGroupSelection(
+        prev,
+        groupRepos.map(r => r.repo_full_name),
+        keys
+      )
+    )
+  }
+
+  const importableRepos = (status?.results || []).filter(r => !r.exists_in_config)
+  const allImportableSelected =
+    importableRepos.length > 0 &&
+    importableRepos.every(r => selectedRepos.includes(r.repo_full_name))
+  const handleSelectAll = () => {
+    setSelectedRepos(
+      allImportableSelected ? [] : importableRepos.map(r => r.repo_full_name)
+    )
   }
 
   // Group results by primary direction for display
@@ -266,11 +294,27 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <Text>
               共发现 <strong>{status.results.length}</strong> 个项目
+              {importableRepos.length < status.results.length &&
+                `，其中 ${importableRepos.length} 个可导入（其余已在库）`}
               {status.status === 'completed' && '（探测完成）'}
             </Text>
             <Space>
               <Button size="small" icon={<ReloadOutlined />} onClick={fetchStatus}>
                 刷新状态
+              </Button>
+              <Button
+                size="small"
+                onClick={handleSelectAll}
+                disabled={importableRepos.length === 0 || importing}
+              >
+                {allImportableSelected ? '取消全选' : '全选可导入'}
+              </Button>
+              <Button
+                size="small"
+                onClick={() => setSelectedRepos([])}
+                disabled={selectedRepos.length === 0 || importing}
+              >
+                清空选择
               </Button>
               <Button
                 type="primary"
@@ -307,7 +351,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
                     pagination={false}
                     rowSelection={{
                       selectedRowKeys: selectedRepos,
-                      onChange: setSelectedRepos,
+                      onChange: keys => handleGroupSelectionChange(repos, keys),
                       getCheckboxProps: r => ({ disabled: r.exists_in_config }),
                     }}
                     columns={[
