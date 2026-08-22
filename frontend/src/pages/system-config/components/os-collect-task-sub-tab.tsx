@@ -59,9 +59,11 @@ const OSCollectTaskSubTab: React.FC = () => {
   const runningTaskIdsRef = useRef<Set<number>>(new Set())
 
   const loadTasks = useCallback(
-    async (p?: number) => {
+    async (p?: number, silent = false) => {
       const target = p ?? page
-      setLoading(true)
+      // Silent mode (auto-refresh) skips the Spin overlay so polling doesn't
+      // flash the whole table every few seconds while tasks are running.
+      if (!silent) setLoading(true)
       try {
         const response = await api.openSource.listCollectTasks({ page: target, page_size: pageSize })
         const newTasks = response.data.items || []
@@ -75,7 +77,7 @@ const OSCollectTaskSubTab: React.FC = () => {
       } catch {
         message.error('加载采集任务失败')
       } finally {
-        setLoading(false)
+        if (!silent) setLoading(false)
       }
     },
     [page, pageSize]
@@ -86,15 +88,16 @@ const OSCollectTaskSubTab: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadTasks])
 
-  // Auto-refresh for running tasks
+  // Auto-refresh while any visible task is running. Deps on the boolean (not
+  // the tasks array) keep the interval from being torn down on every poll.
+  const hasRunning = tasks.some(t => t.status === 'running')
   useEffect(() => {
-    if (tasks.some((t) => t.status === 'running')) {
-      const interval = setInterval(() => {
-        loadTasks()
-      }, 3000)
-      return () => clearInterval(interval)
-    }
-  }, [tasks, loadTasks])
+    if (!hasRunning) return
+    const interval = setInterval(() => {
+      loadTasks(undefined, true)
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [hasRunning, loadTasks])
 
   const handleCancelTask = async (taskId: number) => {
     try {
@@ -238,10 +241,17 @@ const OSCollectTaskSubTab: React.FC = () => {
             showTotal: t => `共 ${t} 条记录`,
             showSizeChanger: true,
             pageSizeOptions: [10, 20, 50, 100],
-            onChange: p => loadTasks(p),
-            onShowSizeChange: (_, size) => {
-              setPage(1)
-              setPageSize(size)
+            // Single entry point: antd fires BOTH onShowSizeChange and
+            // onChange on a size change, and two handlers racing setState
+            // caused page/pageSize to fight. Routing everything through one
+            // handler keeps exactly one request per interaction.
+            onChange: (p, size) => {
+              if (size !== pageSize) {
+                setPage(1)
+                setPageSize(size)
+              } else {
+                loadTasks(p)
+              }
             },
           }}
           locale={{ emptyText: <Empty description="暂无采集任务" /> }}
