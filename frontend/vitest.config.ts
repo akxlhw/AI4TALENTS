@@ -3,6 +3,12 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  // 允许读取仓库根的 CHANGELOG.md（构建期 ?raw 打包进更新日志）
+  server: {
+    fs: {
+      allow: ['..'],
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

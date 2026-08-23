@@ -14,6 +14,10 @@ export default defineConfig({
     port: 2012,
     strictPort: true,  // 固化端口，如果被占用则报错而不是切换端口
     host: true,
+    // 允许读取仓库根的 CHANGELOG.md（构建期 ?raw 打包进更新日志）
+    fs: {
+      allow: ['..'],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8003',
