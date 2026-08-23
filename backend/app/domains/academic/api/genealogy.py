@@ -20,7 +20,7 @@ from app.domains.academic.services.genealogy_background_service import (
     run_genealogy_sync,
     save_sync_status,
 )
-from app.domains.academic.services.genealogy_service import GenealogyService
+from app.domains.academic.services.genealogy_query_service import GenealogyQueryService
 from app.domains.academic.services.influence_service import InfluenceService
 from app.domains.shared.api.auth import require_admin
 from app.domains.shared.schemas.common import (
@@ -50,7 +50,7 @@ async def get_genealogy_network(
     session: AsyncSession = Depends(get_async_session),
 ) -> GenealogyNetworkResponse:
     """Get genealogy network centered on a given talent."""
-    service = GenealogyService(session)
+    service = GenealogyQueryService(session)
     network = await service.get_network(
         talent_id=talent_id,
         depth=depth,
