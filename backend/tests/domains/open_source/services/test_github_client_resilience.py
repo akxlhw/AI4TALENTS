@@ -1,4 +1,11 @@
-"""Resilience tests for GitHubClient: 401 token blacklisting and rate pacing."""
+"""Resilience tests for the GitHub client stack: token-pool blacklisting,
+rate pacing, fail-fast exhaustion, and wire-level auth rotation.
+
+Layer mapping after the cohesion refactor (github_client is a composition
+facade): pool state machine = ``client.pool`` (github_token_pool),
+request execution = ``client.transport`` (github_transport), endpoints =
+``client.api`` (github_api).
+"""
 
 from __future__ import annotations
 
@@ -9,10 +16,9 @@ import httpx
 import pytest
 
 from app.core.config import settings
-from app.domains.open_source.services.github_client import (
-    GitHubClient,
-    RateLimitExhaustedError,
-)
+from app.domains.open_source.services.github_client import GitHubClient
+from app.domains.open_source.services.github_token_pool import GitHubTokenPool
+from app.domains.open_source.services.github_transport import RateLimitExhaustedError
 
 
 def _make_response(
@@ -25,10 +31,36 @@ def _make_response(
 def test_min_interval_derived_from_config() -> None:
     """Throttle interval must come from GITHUB_RATE_LIMIT and token pool size."""
     client = GitHubClient(token="t1")
-    assert client._min_interval == pytest.approx(3600.0 / settings.GITHUB_RATE_LIMIT)
+    assert client.transport._min_interval == pytest.approx(3600.0 / settings.GITHUB_RATE_LIMIT)
 
     pooled = GitHubClient(token="t1,t2,t3,t4,t5")
-    assert pooled._min_interval == pytest.approx(3600.0 / (settings.GITHUB_RATE_LIMIT * 5))
+    assert pooled.transport._min_interval == pytest.approx(
+        3600.0 / (settings.GITHUB_RATE_LIMIT * 5)
+    )
+
+
+def test_token_pool_blacklists_and_picks_healthiest_alternative() -> None:
+    """Pure state machine: 401 blacklisting zeroes quota; rotation skips it."""
+    pool = GitHubTokenPool("a,b,c")
+    assert pool.current_token() == "a"
+    pool._token_remaining.update({0: 10, 1: 4000, 2: 50})
+
+    pool.blacklist_current()  # simulate 401 on token #a
+    assert pool._token_remaining[0] == 0
+
+    assert pool.switch_to_best_alternative() is True
+    assert pool.current_token_idx == 1  # healthiest alternative selected
+
+    pool.pick_best()
+    assert pool.current_token_idx == 1  # blacklisted token never re-selected
+
+    # Nothing healthy left -> no switch possible
+    pool._token_remaining.update({1: 0, 2: 0})
+    assert pool.switch_to_best_alternative() is False
+
+    # Single-token pools can neither rotate nor blacklist-switch
+    solo = GitHubTokenPool("only")
+    assert solo.switch_to_best_alternative() is False
 
 
 @pytest.mark.asyncio
@@ -42,22 +74,21 @@ async def test_401_blacklists_token_and_rotates(monkeypatch: pytest.MonkeyPatch)
     request_token_idxs: list[int] = []
 
     async def fake_request(path: str, params: dict | None = None) -> httpx.Response:
-        request_token_idxs.append(client.current_token_idx)
+        request_token_idxs.append(client.pool.current_token_idx)
         return responses.pop(0)
 
-    monkeypatch.setattr(client, "_do_get_request", fake_request)
-    monkeypatch.setattr(client, "_rebuild_client", AsyncMock())
+    monkeypatch.setattr(client.transport, "do_get_request", fake_request)
 
-    result = await client._do_get("/x")
+    result = await client.transport.get_json("/x")
 
     assert result == {"ok": True}
-    assert client._token_remaining[0] == 0  # bad token blacklisted
-    assert client.current_token_idx == 1  # rotated to the fresh token
+    assert client.pool._token_remaining[0] == 0  # bad token blacklisted
+    assert client.pool.current_token_idx == 1  # rotated to the fresh token
     assert request_token_idxs == [0, 1]
 
     # The blacklisted token is never selected again
-    client._pick_best_token()
-    assert client.current_token_idx == 1
+    client.pool.pick_best()
+    assert client.pool.current_token_idx == 1
 
 
 @pytest.mark.asyncio
@@ -66,18 +97,20 @@ async def test_401_single_token_raises_without_sleep(monkeypatch: pytest.MonkeyP
     client = GitHubClient(token="only")
     reset_at = str(int(time.time()) + 1800)
     monkeypatch.setattr(
-        client,
-        "_do_get_request",
+        client.transport,
+        "do_get_request",
         AsyncMock(return_value=_make_response(401, headers={"X-RateLimit-Reset": reset_at})),
     )
     sleep_mock = AsyncMock()
-    monkeypatch.setattr("app.domains.open_source.services.github_client.asyncio.sleep", sleep_mock)
+    monkeypatch.setattr(
+        "app.domains.open_source.services.github_transport.asyncio.sleep", sleep_mock
+    )
 
     with pytest.raises(httpx.HTTPStatusError):
-        await client._do_get("/x")
+        await client.transport.get_json("/x")
 
     sleep_mock.assert_not_called()
-    assert client._token_remaining[0] == 0
+    assert client.pool._token_remaining[0] == 0
 
 
 @pytest.mark.asyncio
@@ -86,8 +119,8 @@ async def test_rate_limit_exhausted_fails_fast(monkeypatch: pytest.MonkeyPatch) 
     client = GitHubClient(token="only")
     reset_at = str(int(time.time()) + 1800)
     monkeypatch.setattr(
-        client,
-        "_do_get_request",
+        client.transport,
+        "do_get_request",
         AsyncMock(
             return_value=_make_response(
                 403,
@@ -96,10 +129,12 @@ async def test_rate_limit_exhausted_fails_fast(monkeypatch: pytest.MonkeyPatch) 
         ),
     )
     sleep_mock = AsyncMock()
-    monkeypatch.setattr("app.domains.open_source.services.github_client.asyncio.sleep", sleep_mock)
+    monkeypatch.setattr(
+        "app.domains.open_source.services.github_transport.asyncio.sleep", sleep_mock
+    )
 
     with pytest.raises(RateLimitExhaustedError) as exc_info:
-        await client._do_get("/x")
+        await client.transport.get_json("/x")
 
     sleep_mock.assert_not_called()
     assert exc_info.value.retry_after is not None
@@ -112,15 +147,15 @@ async def test_rate_limit_exhausted_is_not_retried(monkeypatch: pytest.MonkeyPat
     client = GitHubClient(token="only")
     calls = 0
 
-    async def fake_do_get(path: str, params: dict | None = None) -> None:
+    async def fake_get_json(path: str, params: dict | None = None) -> None:
         nonlocal calls
         calls += 1
         raise RateLimitExhaustedError("exhausted", retry_after=100)
 
-    monkeypatch.setattr(client, "_do_get", fake_do_get)
+    monkeypatch.setattr(client.transport, "get_json", fake_get_json)
 
     with pytest.raises(RateLimitExhaustedError):
-        await client._get_with_retry("/x")
+        await client.transport.get_with_retry("/x")
 
     assert calls == 1
 
@@ -134,7 +169,7 @@ async def test_commits_traversal_aborts_on_rate_limit(monkeypatch: pytest.Monkey
     async def fake_list_commits(*args: object, **kwargs: object) -> None:
         raise RateLimitExhaustedError("exhausted", retry_after=100)
 
-    monkeypatch.setattr(client, "list_commits", fake_list_commits)
+    monkeypatch.setattr(client.api, "list_commits", fake_list_commits)
 
     with pytest.raises(RateLimitExhaustedError):
         await client.list_contributors_via_commits("o", "r")
@@ -159,11 +194,11 @@ async def test_rotation_changes_auth_header_on_the_wire() -> None:
             sent_auth.append((headers or {}).get("Authorization"))
             return responses.pop(0)
 
-    client._client = _StubClient()
-    client._min_interval = 0  # no throttle delay in test
+    client.transport._client = _StubClient()  # type: ignore[assignment]
+    client.transport._min_interval = 0  # no throttle delay in test
 
-    result = await client._do_get("/x")
+    result = await client.transport.get_json("/x")
 
     assert result == {"ok": True}
     assert sent_auth == ["Bearer tokA", "Bearer tokB"]
-    assert client.current_token_idx == 1
+    assert client.pool.current_token_idx == 1
