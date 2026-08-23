@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Dropdown, Avatar, Space, Typography, Tag, Tooltip, Button, Grid } from 'antd'
+import { Badge, Dropdown, Avatar, Space, Typography, Tag, Tooltip, Button, Grid } from 'antd'
 import {
   UserOutlined,
   LogoutOutlined,
@@ -13,6 +13,7 @@ import {
   BuildOutlined,
   LockOutlined,
   MessageOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useDomainStore } from '../stores/domainStore'
@@ -20,6 +21,8 @@ import { useCollectTaskNotifier } from '../hooks/useCollectTaskNotifier'
 import { domainThemes, semanticColors, type Domain } from '../theme'
 import LabIcon from '../components/lab-icon'
 import Footer from '../components/Footer'
+import ChangelogDrawer from '../components/ChangelogDrawer'
+import { CHANGELOG_RELEASES } from '../utils/changelog'
 
 const { Text } = Typography
 
@@ -64,6 +67,21 @@ const MainLayout: React.FC = () => {
   const { currentDomain, setDomain, isDomainAvailable } = useDomainStore()
   // Global collect-task completion notifications (running → terminal)
   useCollectTaskNotifier()
+  // 更新日志：入口红点 + 抽屉开合（打开即标记已读最新版本）
+  const [changelogOpen, setChangelogOpen] = useState(false)
+  const [changelogSeen, setChangelogSeen] = useState<string | null>(null)
+  useEffect(() => {
+    setChangelogSeen(localStorage.getItem('changelog_last_seen_version'))
+  }, [])
+  const latestVersion = CHANGELOG_RELEASES[0]?.version
+  const hasUnseenRelease = latestVersion !== undefined && changelogSeen !== latestVersion
+  const openChangelog = () => {
+    setChangelogOpen(true)
+    if (latestVersion) {
+      localStorage.setItem('changelog_last_seen_version', latestVersion)
+      setChangelogSeen(latestVersion)
+    }
+  }
   const [scrolled, setScrolled] = useState(false)
   const screens = Grid.useBreakpoint()
   // <md（<768px）时折叠导航：域切换器只留图标，收藏/反馈收进用户菜单
@@ -97,6 +115,7 @@ const MainLayout: React.FC = () => {
     ...(isNarrow ? [
       { key: 'favorites', icon: <StarOutlined />, label: '我的收藏' },
       { key: 'feedback', icon: <MessageOutlined />, label: '意见反馈' },
+      { key: 'changelog', icon: <HistoryOutlined />, label: '更新日志' },
       { type: 'divider' as const },
     ] : []),
     { key: 'profile', icon: <UserOutlined />, label: '个人信息' },
@@ -117,6 +136,7 @@ const MainLayout: React.FC = () => {
     else if (key === 'profile') navigate('/profile')
     else if (key === 'favorites') navigate('/favorites')
     else if (key === 'feedback') navigate('/feedback')
+    else if (key === 'changelog') openChangelog()
     else if (key === 'admin') navigate('/admin')
     else if (key === 'system-config') navigate('/system-config')
     else if (key === 'data-version') navigate('/data-version')
@@ -299,6 +319,17 @@ const MainLayout: React.FC = () => {
                 >
                   意见反馈
                 </Button>
+                <Badge dot={hasUnseenRelease} offset={[-2, 2]}>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<HistoryOutlined />}
+                    onClick={openChangelog}
+                    style={{ fontSize: 13 }}
+                  >
+                    更新日志
+                  </Button>
+                </Badge>
               </>
             )}
             <Dropdown
@@ -332,6 +363,7 @@ const MainLayout: React.FC = () => {
       </main>
 
       <Footer />
+      <ChangelogDrawer open={changelogOpen} onClose={() => setChangelogOpen(false)} />
     </div>
   )
 }

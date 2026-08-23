@@ -28,6 +28,9 @@ const RELEASE_RE = /^## \[([^\]]+)\](?:\s+-\s+(.+))?$/
 const SECTION_RE = /^### (.+)$/
 const ITEM_RE = /^(\s*)- (.+)$/
 
+/** 条目按纯文本展示：剥离 CHANGELOG 里的加粗/行内代码记号 */
+const stripMarkdown = (s: string): string => s.replace(/\*\*/g, '').replace(/`/g, '').trim()
+
 export function parseChangelog(raw: string): ChangelogRelease[] {
   const releases: ChangelogRelease[] = []
   let current: ChangelogRelease | null = null
@@ -68,14 +71,14 @@ export function parseChangelog(raw: string): ChangelogRelease[] {
       if (!currentSection) continue
       currentSection.items.push({
         level: itemMatch[1].length >= 2 ? 2 : 1,
-        text: itemMatch[2].trim(),
+        text: stripMarkdown(itemMatch[2]),
       })
       continue
     }
 
     const introMatch = line.match(/^> ?(.*)$/)
     if (introMatch && current.sections.length === 0) {
-      const text = introMatch[1].trim()
+      const text = stripMarkdown(introMatch[1])
       if (text) introLines.push(text)
     }
   }

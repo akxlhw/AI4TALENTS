@@ -69,6 +69,19 @@ describe('parseChangelog', () => {
     expect(parseChangelog('')).toEqual([])
     expect(parseChangelog('not a changelog at all')).toEqual([])
   })
+
+  it('strips markdown emphasis markers from item and intro text', () => {
+    const releases = parseChangelog(`## [1.0.0] - 2026-01-01
+
+> 主交付：**核心功能** + \`代码\`。
+
+### Added
+
+- **新功能**（\`module/\`）：说明
+`)
+    expect(releases[0].intro).toBe('主交付：核心功能 + 代码。')
+    expect(releases[0].sections[0].items[0].text).toBe('新功能（module/）：说明')
+  })
 })
 
 describe('bundled CHANGELOG.md', () => {
