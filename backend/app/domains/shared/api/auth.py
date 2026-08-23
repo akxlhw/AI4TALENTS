@@ -4,23 +4,17 @@ Authentication API endpoints.
 Schemas live in `app.domains.shared.schemas.auth`; current-user dependencies
 live in `app.domains.shared.api.auth_deps`. Both are re-exported here so
 existing `from app.domains.shared.api.auth import ...` callers keep working.
+
+Business logic (account status machine, uniqueness checks, audit calls,
+token issuance) lives in `services/auth_service.py` (2026-08 cohesion
+refactor); endpoints below only parse requests and delegate.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import (
-    create_access_token,
-    create_refresh_token,
-    hash_password,
-    validate_password_strength,
-    verify_password,
-    verify_refresh_token,
-)
 from app.core.database import get_async_session
 from app.domains.shared.api.auth_deps import (
     get_current_user,
@@ -29,7 +23,6 @@ from app.domains.shared.api.auth_deps import (
     require_user,
     security,
 )
-from app.domains.shared.models.enums import UserRoleType
 from app.domains.shared.schemas.auth import (
     ChangePasswordRequest,
     CurrentUser,
@@ -41,6 +34,7 @@ from app.domains.shared.schemas.auth import (
 )
 from app.domains.shared.schemas.common import SuccessResponse
 from app.domains.shared.services.audit_service import AuditService
+from app.domains.shared.services.auth_service import AuthService
 from app.domains.shared.services.user_service import UserService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -77,101 +71,8 @@ async def register(
     Register a new user account.
     The account will be in 'pending_approval' status until an admin approves it.
     """
-    service = UserService(session)
-    client_ip = request.client.host if request.client else None
-    request_id = getattr(request.state, "request_id", None)
-
-    # Check username uniqueness
-    if await service.get_by_username(data.username):
-        await AuditService.log_auth_event(
-            user_id=None,
-            operation="register",
-            status="failure",
-            user_ip=client_ip,
-            request_id=request_id,
-            error_message="用户名已存在",
-        )
-        raise HTTPException(status_code=400, detail="用户名已存在")
-
-    # Check email uniqueness
-    if await service.get_by_email(data.email):
-        await AuditService.log_auth_event(
-            user_id=None,
-            operation="register",
-            status="failure",
-            user_ip=client_ip,
-            request_id=request_id,
-            error_message="邮箱已存在",
-        )
-        raise HTTPException(status_code=400, detail="邮箱已存在")
-
-    # Check employee_id uniqueness
-    if await service.get_by_employee_id(data.employee_id):
-        await AuditService.log_auth_event(
-            user_id=None,
-            operation="register",
-            status="failure",
-            user_ip=client_ip,
-            request_id=request_id,
-            error_message="该工号已注册",
-        )
-        raise HTTPException(status_code=400, detail="该工号已注册")
-
-    # Validate password strength
-    is_valid, error_msg = validate_password_strength(data.password)
-    if not is_valid:
-        await AuditService.log_auth_event(
-            user_id=None,
-            operation="register",
-            status="failure",
-            user_ip=client_ip,
-            request_id=request_id,
-            error_message=f"密码强度不足: {error_msg}",
-        )
-        raise HTTPException(status_code=400, detail=f"密码强度不足: {error_msg}")
-
-    # Validate privacy policy and terms of use acceptance
-    if not data.privacy_policy_accepted:
-        raise HTTPException(status_code=400, detail="必须同意隐私政策才能注册")
-    if not data.terms_of_use_accepted:
-        raise HTTPException(status_code=400, detail="必须同意用户协议才能注册")
-
-    # Create user with pending approval status
-    password_hash = hash_password(data.password)
-
-    from app.core.config import settings
-
-    now = datetime.now()
-    user = await service.create_user_and_commit(
-        username=data.username,
-        email=data.email,
-        password_hash=password_hash,
-        role=UserRoleType.USER.value,
-        display_name=data.display_name,
-        employee_id=data.employee_id,
-        is_active=False,
-        status="pending_approval",
-    )
-    # Update consent fields after creation
-    await service.update_privacy_consent_and_commit(
-        user_id=user.user_id,
-        privacy_policy_accepted_at=now,
-        privacy_policy_version=settings.APP_VERSION,
-        terms_of_use_accepted_at=now,
-        terms_of_use_version=settings.APP_VERSION,
-        storage_consent_level=data.storage_consent_level,
-    )
-
-    await AuditService.log_auth_event(
-        user_id=user.user_id,
-        operation="register",
-        status="success",
-        user_ip=client_ip,
-        request_id=request_id,
-        detail={"employee_id": data.employee_id},
-    )
-
-    return SuccessResponse(message="注册成功，等待管理员审核")
+    message = await AuthService(session).register(data, request)
+    return SuccessResponse(message=message)
 
 
 @router.post(
@@ -190,118 +91,7 @@ async def login(
 
     Returns access token and refresh token.
     """
-    service = UserService(session)
-    client_ip = request.client.host if request.client else None
-    request_id = getattr(request.state, "request_id", None)
-
-    # Find user by username or email
-    user = await service.get_by_username(data.username)
-    if not user:
-        user = await service.get_by_email(data.username)
-
-    if not user:
-        await AuditService.log_auth_event(
-            user_id=None,
-            operation="login",
-            status="failure",
-            user_ip=client_ip,
-            request_id=request_id,
-            error_message="用户名或密码错误",
-        )
-        raise HTTPException(
-            status_code=401,
-            detail="用户名或密码错误",
-        )
-
-    # Check account status and give precise messages
-    if user.status == "pending_approval":
-        await AuditService.log_auth_event(
-            user_id=user.user_id,
-            operation="login",
-            status="failure",
-            user_ip=client_ip,
-            request_id=request_id,
-            error_message="账户待审核",
-        )
-        raise HTTPException(
-            status_code=401,
-            detail="账户待审核，请联系管理员",
-        )
-
-    if user.status == "rejected":
-        await AuditService.log_auth_event(
-            user_id=user.user_id,
-            operation="login",
-            status="failure",
-            user_ip=client_ip,
-            request_id=request_id,
-            error_message="注册申请已被拒绝",
-        )
-        raise HTTPException(
-            status_code=401,
-            detail="注册申请已被拒绝",
-        )
-
-    if not user.is_active:
-        await AuditService.log_auth_event(
-            user_id=user.user_id,
-            operation="login",
-            status="failure",
-            user_ip=client_ip,
-            request_id=request_id,
-            error_message="账户已被禁用",
-        )
-        raise HTTPException(
-            status_code=401,
-            detail="账户已被禁用",
-        )
-
-    # Verify password
-    if not verify_password(data.password, user.password_hash):
-        await AuditService.log_auth_event(
-            user_id=user.user_id,
-            operation="login",
-            status="failure",
-            user_ip=client_ip,
-            request_id=request_id,
-            error_message="用户名或密码错误",
-        )
-        raise HTTPException(
-            status_code=401,
-            detail="用户名或密码错误",
-        )
-
-    # Update last login
-    await service.update_last_login_and_commit(user.user_id, client_ip)
-
-    await AuditService.log_auth_event(
-        user_id=user.user_id,
-        operation="login",
-        status="success",
-        user_ip=client_ip,
-        request_id=request_id,
-    )
-
-    # Create tokens
-    access_token = create_access_token(
-        user_id=user.user_id,
-        username=user.username,
-        role=user.role_type,
-    )
-    refresh_token = create_refresh_token(user_id=user.user_id)
-
-    return LoginResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user=UserInfo(
-            user_id=user.user_id,
-            username=user.username,
-            email=user.email,
-            role=user.role_type,
-            display_name=user.display_name,
-            department=user.department,
-        ),
-    )
+    return await AuthService(session).login(data, request)
 
 
 @router.post(
@@ -347,45 +137,7 @@ async def refresh_token(
 
     Returns new access token and refresh token.
     """
-    payload = verify_refresh_token(data.refresh_token)
-    if not payload:
-        raise HTTPException(
-            status_code=401,
-            detail="无效或过期的刷新令牌",
-        )
-
-    user_id = int(payload.get("sub", 0))
-
-    # Verify user exists and is active
-    service = UserService(session)
-    user = await service.get_by_id(user_id)
-
-    if not user or not user.is_active:
-        raise HTTPException(
-            status_code=401,
-            detail="用户不存在或已被禁用",
-        )
-
-    # Create new tokens
-    access_token = create_access_token(
-        user_id=user.user_id,
-        username=user.username,
-        role=user.role_type,
-    )
-    new_refresh_token = create_refresh_token(user_id=user.user_id)
-
-    return LoginResponse(
-        access_token=access_token,
-        refresh_token=new_refresh_token,
-        user=UserInfo(
-            user_id=user.user_id,
-            username=user.username,
-            email=user.email,
-            role=user.role_type,
-            display_name=user.display_name,
-            department=user.department,
-        ),
-    )
+    return await AuthService(session).refresh(data.refresh_token)
 
 
 @router.get(
@@ -439,63 +191,13 @@ async def change_password(
     """
     Change current user's password.
     """
-    service = UserService(session)
-    user = await service.get_by_id(current_user["user_id"])
-    client_ip = request.client.host if request.client else None
-    request_id = getattr(request.state, "request_id", None)
-
-    if not user:
-        await AuditService.log_auth_event(
-            user_id=current_user["user_id"],
-            operation="change_password",
-            status="failure",
-            user_ip=client_ip,
-            request_id=request_id,
-            error_message="用户不存在",
-        )
-        raise HTTPException(status_code=404, detail="用户不存在")
-
-    # Verify current password
-    if not verify_password(data.current_password, user.password_hash):
-        await AuditService.log_auth_event(
-            user_id=current_user["user_id"],
-            operation="change_password",
-            status="failure",
-            user_ip=client_ip,
-            request_id=request_id,
-            error_message="当前密码错误",
-        )
-        raise HTTPException(
-            status_code=400,
-            detail="当前密码错误",
-        )
-
-    # Validate new password strength
-    is_valid, error_msg = validate_password_strength(data.new_password)
-    if not is_valid:
-        await AuditService.log_auth_event(
-            user_id=current_user["user_id"],
-            operation="change_password",
-            status="failure",
-            user_ip=client_ip,
-            request_id=request_id,
-            error_message=f"新密码强度不足: {error_msg}",
-        )
-        raise HTTPException(status_code=400, detail=f"新密码强度不足: {error_msg}")
-
-    # Update password
-    new_hash = hash_password(data.new_password)
-    await service.update_password_and_commit(user.user_id, new_hash)
-
-    await AuditService.log_auth_event(
+    message = await AuthService(session).change_password(
         user_id=current_user["user_id"],
-        operation="change_password",
-        status="success",
-        user_ip=client_ip,
-        request_id=request_id,
+        current_password=data.current_password,
+        new_password=data.new_password,
+        request=request,
     )
-
-    return SuccessResponse(message="密码修改成功")
+    return SuccessResponse(message=message)
 
 
 # Export dependencies for use in other routes
