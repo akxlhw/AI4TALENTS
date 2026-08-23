@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
     await init_proxy_config()
 
     # Auto-resume loop for rate-limited open-source collect tasks
-    from app.domains.open_source.services.os_collect_task_mixin import rate_limit_resume_loop
+    from app.domains.open_source.services.os_collection_service import rate_limit_resume_loop
 
     resume_task = asyncio.create_task(rate_limit_resume_loop())
 
