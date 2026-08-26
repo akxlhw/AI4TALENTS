@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.open_source.services import open_api_provider  # noqa: F401  (search-registry side effect)
 from app.core.exceptions import NotFoundError
 from app.domains.open_source.services.os_developer_service import OSDeveloperService
 from app.domains.shared.api.open_api_auth import require_api_key

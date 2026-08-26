@@ -18,6 +18,7 @@ export function useOsSearchQuery() {
     repo_full_names: searchParams.get('repo_full_names')?.split(',').filter(Boolean) || [],
     is_committer: searchParams.get('is_committer') === 'true',
     is_student: searchParams.get('is_student') === 'true',
+    has_contact: searchParams.get('has_contact') === 'true',
     sort_by: searchParams.get('sort_by') || 'stars_desc',
     mode: (searchParams.get('mode') as OSSearchQuery['mode']) || 'keyword',
     page: parseInt(searchParams.get('page') || '1'),
@@ -37,6 +38,7 @@ export function useOsSearchQuery() {
 
     if (newQuery.is_committer) params.set('is_committer', 'true')
     if (newQuery.is_student) params.set('is_student', 'true')
+    if (newQuery.has_contact) params.set('has_contact', 'true')
     if (newQuery.sort_by && newQuery.sort_by !== 'stars_desc')
       params.set('sort_by', newQuery.sort_by)
     if (newQuery.mode && newQuery.mode !== 'keyword') params.set('mode', newQuery.mode)
@@ -60,6 +62,7 @@ export function useOsSearchQuery() {
       repo_full_names: [],
       is_committer: false,
       is_student: false,
+      has_contact: false,
       page: 1,
     })
   }

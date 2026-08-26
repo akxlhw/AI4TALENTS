@@ -28,7 +28,7 @@ class CompetitionSearchProvider:
                 name=s.real_name or s.handle or "",
                 identifier=s.handle,
                 url=s.profile_url,
-                tags=[t for t in (s.specialties or [])][:5],
+                tags=list(s.specialties or [])[:5],
             )
             for s in summaries
         ]

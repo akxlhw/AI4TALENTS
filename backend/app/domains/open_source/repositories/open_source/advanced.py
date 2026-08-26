@@ -17,10 +17,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import is_postgres as _is_postgres
 from app.domains.open_source.models.open_source import (
+    OSCollectTask,
     OSDeveloper,
     OSEmbedding,
     OSLanguageSkill,
-    OSRepository,
+    OSRepoConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,19 @@ class OpenSourceAdvancedRepository:
         total_devs = await self.session.scalar(
             select(func.count()).select_from(OSDeveloper).where(OSDeveloper.is_visible.is_(True))
         )
-        total_repos = await self.session.scalar(select(func.count()).select_from(OSRepository))
+        # 覆盖仓库 = 已配置且完成过采集的仓库（os_repo_config 中有 completed 采集任务的）
+        total_repos = await self.session.scalar(
+            select(func.count())
+            .select_from(OSRepoConfig)
+            .where(
+                select(OSCollectTask)
+                .where(
+                    OSCollectTask.task_name == OSRepoConfig.repo_full_name,
+                    OSCollectTask.status == "completed",
+                )
+                .exists()
+            )
+        )
         total_orgs = await self.session.scalar(
             select(func.count(func.distinct(OSDeveloper.company))).where(
                 OSDeveloper.company.isnot(None)
@@ -121,6 +134,7 @@ class OpenSourceAdvancedRepository:
                 "min_stars",
                 "repo_full_names",
                 "is_student",
+                "has_contact",
             ):
                 value = getattr(req_filters, key, None)
                 if value is not None:
@@ -336,6 +350,18 @@ class OpenSourceAdvancedRepository:
             if "is_student" in filters:
                 filter_clauses.append("d.is_student = :is_student")
                 filter_params["is_student"] = filters["is_student"]
+            if "has_contact" in filters:
+                # 有效联系方式：个人主页 / 个人邮箱 / 社交媒体链接 三者至少其一。
+                # social_links 的 SQL NULL / JSON 'null' / 空对象 '{}' 都视为无效。
+                contact_sql = (
+                    "((d.blog_url IS NOT NULL AND d.blog_url != '') "
+                    "OR (d.email IS NOT NULL AND d.email != '') "
+                    "OR (d.social_links IS NOT NULL "
+                    "AND d.social_links::text NOT IN ('{}', 'null')))"
+                )
+                filter_clauses.append(
+                    contact_sql if filters["has_contact"] else f"NOT {contact_sql}"
+                )
             if "repo_full_names" in filters:
                 filter_clauses.append(
                     "EXISTS (SELECT 1 FROM os_contribution oc JOIN os_repository ore ON oc.repo_id = ore.repo_id "

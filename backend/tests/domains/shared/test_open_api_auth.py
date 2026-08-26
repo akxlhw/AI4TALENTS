@@ -28,18 +28,14 @@ def probe_app(test_session: AsyncSession) -> FastAPI:
 
 
 @pytest.mark.asyncio
-async def test_missing_header_401(
-    test_session: AsyncSession, probe_app: FastAPI
-) -> None:
+async def test_missing_header_401(test_session: AsyncSession, probe_app: FastAPI) -> None:
     async with AsyncClient(transport=ASGITransport(app=probe_app), base_url="http://t") as c:
         r = await c.get("/probe")
     assert r.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_wrong_or_unknown_key_401(
-    test_session: AsyncSession, probe_app: FastAPI
-) -> None:
+async def test_wrong_or_unknown_key_401(test_session: AsyncSession, probe_app: FastAPI) -> None:
     async with AsyncClient(transport=ASGITransport(app=probe_app), base_url="http://t") as c:
         r = await c.get("/probe", headers={"X-API-Key": "ak_wrong"})
     assert r.status_code == 401
@@ -57,9 +53,7 @@ async def test_scope_missing_403(test_session: AsyncSession, probe_app: FastAPI)
 
 
 @pytest.mark.asyncio
-async def test_valid_key_returns_principal(
-    test_session: AsyncSession, probe_app: FastAPI
-) -> None:
+async def test_valid_key_returns_principal(test_session: AsyncSession, probe_app: FastAPI) -> None:
     svc = ApiKeyService(test_session)
     created = await svc.create_key(
         key_name="洞察", scopes=["academic:read", "industry:write"], created_by=1

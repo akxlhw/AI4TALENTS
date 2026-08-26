@@ -9,9 +9,10 @@ from __future__ import annotations
 from typing import Any
 from typing import cast as tcast
 
-from sqlalchemy import and_, exists, func, or_, select
+from sqlalchemy import Text, and_, cast, exists, func, not_, or_, select, update
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import array as pg_array
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.open_source.models.open_source import (
@@ -83,6 +84,21 @@ class DevelopersMixin:
         is_student = filters.get("is_student")
         if is_student is not None:
             conditions.append(OSDeveloper.is_student.is_(bool(is_student)))
+
+        has_contact = filters.get("has_contact")
+        if has_contact is not None:
+            # 有效联系方式：个人主页 / 个人邮箱 / 社交媒体链接 三者至少其一。
+            # social_links 是 JSONB dict，SQL NULL / JSON 'null' / 空对象 '{}' 都视为无效；
+            # 按 ::text 比较以避开 JSONB 绑定参数被 json.dumps 二次序列化的问题。
+            contact_cond = or_(
+                and_(OSDeveloper.blog_url.isnot(None), OSDeveloper.blog_url != ""),
+                and_(OSDeveloper.email.isnot(None), OSDeveloper.email != ""),
+                and_(
+                    OSDeveloper.social_links.isnot(None),
+                    cast(OSDeveloper.social_links, Text).notin_(("{}", "null")),
+                ),
+            )
+            conditions.append(contact_cond if has_contact else not_(contact_cond))
 
         repo_full_names = filters.get("repo_full_names")
         if repo_full_names:
@@ -292,12 +308,12 @@ class DevelopersMixin:
         if not developer_ids:
             return 0
         result = await self.session.execute(
-            OSDeveloper.__table__.update()
+            update(OSDeveloper)
             .where(OSDeveloper.developer_id.in_(developer_ids))
             .values(tech_tags=tech_tags)
         )
         await self.session.flush()
-        return result.rowcount or 0
+        return tcast("CursorResult[Any]", result).rowcount or 0
 
     async def count_repository_contributors(self, repo_id: int) -> int:
         """Count distinct contributors for a repository."""

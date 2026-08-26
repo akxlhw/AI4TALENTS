@@ -52,6 +52,7 @@ from app.domains.open_source.services.os_collection_common import (
     _get_repo_lock,
     parse_repo_input,
 )
+from app.domains.shared.services.common.circuit_breaker import CircuitBreakerOpenError
 from app.domains.shared.services.config_service import ConfigService
 
 logger = logging.getLogger(__name__)
@@ -220,6 +221,29 @@ class OSCollectionService(CollectTaskMixin, BatchOpsMixin):
                     task.error_message = (  # type: ignore[assignment]
                         f"GitHub rate limit exhausted for all tokens; "
                         f"retry after {retry_after}s"
+                    )[: settings.COLLECT_ERROR_MAX_LENGTH]
+                    await session.commit()
+        except CircuitBreakerOpenError as e:
+            # Transport circuit breaker OPEN (upstream connectivity failure).
+            # Same deferral contract as rate-limit: mark rate_limited with
+            # resume_at just past the breaker's recovery window; the resume
+            # loop restarts it automatically. Queued tasks re-discover the
+            # OPEN state instantly (fail-fast, no HTTP traffic) and defer the
+            # same way, so a transient outage no longer kills a whole batch.
+            logger.warning(f"Task {task_id} deferred by circuit breaker: {e}")
+            retry_after = int(settings.CIRCUIT_BREAKER_RECOVERY_TIMEOUT) + 5
+            async with AsyncSessionLocal() as session:
+                inner_service = OSCollectionService(session)
+                task = await inner_service.get_collect_task(task_id)
+                if task:
+                    task.status = "rate_limited"  # type: ignore[assignment]
+                    task.current_step = "rate_limited"  # type: ignore[assignment]
+                    task.resume_at = datetime.now(timezone.utc).replace(  # type: ignore[assignment]
+                        tzinfo=None
+                    ) + timedelta(seconds=retry_after)
+                    task.error_message = (  # type: ignore[assignment]
+                        "GitHub circuit breaker OPEN (upstream connectivity); "
+                        f"auto-resume in {retry_after}s"
                     )[: settings.COLLECT_ERROR_MAX_LENGTH]
                     await session.commit()
         except Exception as e:

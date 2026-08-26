@@ -61,6 +61,7 @@ from app.domains.open_source.models.open_source import (
     OSRepository,
     OSTalentPool,
 )
+from app.domains.shared.models.api_key import ApiKey
 from app.domains.shared.models.audit import AuditOperationLog
 from app.domains.shared.models.enums import (
     RoleType,
@@ -78,7 +79,6 @@ from app.domains.shared.models.iam import (
     UserSchoolScope,
 )
 from app.domains.shared.models.suggestion import Suggestion
-from app.domains.shared.models.api_key import ApiKey
 from app.domains.shared.models.system_config import SystemConfig
 
 __all__ = [

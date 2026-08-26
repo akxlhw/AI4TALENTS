@@ -10,6 +10,7 @@ export interface OSSearchFilters {
   repo_full_names?: string[]
   is_committer?: boolean
   is_student?: boolean
+  has_contact?: boolean
 }
 
 export interface OSSearchParams {

@@ -8,8 +8,8 @@ from app.domains.open_source.api.collection import router as collection_router
 from app.domains.open_source.api.developers import router as developers_router
 from app.domains.open_source.api.discover import router as discover_router
 from app.domains.open_source.api.favourites import router as favourites_router
-from app.domains.open_source.api.repo_config import router as repo_config_router
 from app.domains.open_source.api.open_api import router as open_api_router
+from app.domains.open_source.api.repo_config import router as repo_config_router
 from app.domains.open_source.api.stats import router as stats_router
 
 router = APIRouter()

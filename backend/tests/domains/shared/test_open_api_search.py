@@ -45,7 +45,9 @@ def _fake_registry():
 
 
 async def _make_key(session: AsyncSession, scopes: list[str]) -> str:
-    created = await ApiKeyService(session).create_key(key_name="search", scopes=scopes, created_by=1)
+    created = await ApiKeyService(session).create_key(
+        key_name="search", scopes=scopes, created_by=1
+    )
     await session.commit()
     return created["key"]
 
@@ -62,7 +64,9 @@ async def test_search_missing_scope_403_lists_domains(
 ) -> None:
     key = await _make_key(test_session, ["fake_a:read"])
     r = await client.get(
-        _SEARCH_URL, params={"keyword": "abc", "domains": "fake_a,fake_b"}, headers={"X-API-Key": key}
+        _SEARCH_URL,
+        params={"keyword": "abc", "domains": "fake_a,fake_b"},
+        headers={"X-API-Key": key},
     )
     assert r.status_code == 403
     assert "fake_b:read" in r.json()["detail"]

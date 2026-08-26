@@ -19,6 +19,7 @@ from app.domains.open_source.services.github_client import (
     GitHubClient,
     RateLimitExhaustedError,
 )
+from app.domains.shared.services.common.circuit_breaker import CircuitBreakerOpenError
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,10 @@ class CollectContext:
     # Set when any API call hits a fully-exhausted token pool; the run aborts
     # fast and the task layer marks the task rate_limited (retryable).
     rate_limited: RateLimitExhaustedError | None = None
+    # Set when the GitHub transport circuit breaker is OPEN (upstream
+    # connectivity failure); same abort-fast + deferral contract as
+    # rate_limited — must NOT be counted as per-contributor failures.
+    breaker_open: CircuitBreakerOpenError | None = None
 
 
 class GitHubCollector:
@@ -145,6 +150,8 @@ class GitHubCollector:
             nonlocal processed
             if ctx.rate_limited is not None:
                 return  # token pool already exhausted; abort remaining work fast
+            if ctx.breaker_open is not None:
+                return  # circuit breaker already open; abort remaining work fast
             if await self._is_cancelled(ctx):
                 return
 
@@ -162,6 +169,12 @@ class GitHubCollector:
                     # Not a per-contributor failure: the whole token pool is
                     # exhausted. Record it and let the run abort after gather.
                     ctx.rate_limited = e
+                    return
+                except CircuitBreakerOpenError as e:
+                    # Not a per-contributor failure: the GitHub transport is
+                    # down globally. Record it and let the run abort after
+                    # gather; the task layer defers instead of failing.
+                    ctx.breaker_open = e
                     return
                 except Exception as e:
                     logger.exception(f"Failed to process contributor {login}: {e}")
@@ -182,6 +195,9 @@ class GitHubCollector:
         # Rate limit hit mid-run: abort fast, task layer marks it retryable.
         if ctx.rate_limited is not None:
             raise ctx.rate_limited
+        # Circuit breaker tripped mid-run: abort fast, task layer defers.
+        if ctx.breaker_open is not None:
+            raise ctx.breaker_open
 
         # Step 6: Done — report honestly when some/all contributors failed
         failed = ctx.failed_contributors

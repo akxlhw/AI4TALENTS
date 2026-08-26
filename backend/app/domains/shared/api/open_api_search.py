@@ -61,7 +61,7 @@ async def unified_search(
 
     items: list[dict] = []
     errors: dict[str, str] = {}
-    for domain, result in zip(factories, results):
+    for domain, result in zip(factories, results, strict=False):
         if isinstance(result, Exception):
             errors[domain] = str(result)[:200]
         else:

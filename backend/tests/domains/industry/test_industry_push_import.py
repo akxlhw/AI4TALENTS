@@ -15,7 +15,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.industry.models.industry import IndustryPosition, IndustryTalent
-from app.domains.shared.services.api_key_service import ApiKeyService
 
 _API_KEY = "test-secret-key-do-not-use-in-prod"
 _VALID_JSONL = json.dumps(
@@ -34,9 +33,7 @@ async def _set_api_key(session: AsyncSession, value: str = _API_KEY) -> None:
     """Create a shared_api_key row granting industry:write for ``value``."""
     from app.domains.shared.services.api_key_service import ApiKeyService as _Svc
 
-    created = await _Svc(session).create_key(
-        key_name="push-test", scopes=["industry:write"]
-    )
+    created = await _Svc(session).create_key(key_name="push-test", scopes=["industry:write"])
     # Overwrite the generated key with the fixed test value so header mathces
     import hashlib
 

@@ -161,6 +161,33 @@ async def test_rate_limit_exhausted_is_not_retried(monkeypatch: pytest.MonkeyPat
 
 
 @pytest.mark.asyncio
+async def test_remote_protocol_error_is_retried(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Server-disconnect (RemoteProtocolError) is transient: retried, and the
+    request succeeds once the transport recovers — instead of feeding the
+    circuit breaker on every blip."""
+    client = GitHubClient(token="only")
+    calls = 0
+
+    async def flaky_get_json(path: str, params: dict | None = None) -> dict:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise httpx.RemoteProtocolError("Server disconnected without sending a response.")
+        return {"ok": True}
+
+    monkeypatch.setattr(client.transport, "get_json", flaky_get_json)
+    sleep_mock = AsyncMock()
+    monkeypatch.setattr(
+        "app.domains.open_source.services.github_transport.asyncio.sleep", sleep_mock
+    )
+
+    result = await client.transport.get_with_retry("/x")
+
+    assert result == {"ok": True}
+    assert calls == 2
+
+
+@pytest.mark.asyncio
 async def test_commits_traversal_aborts_on_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     """list_contributors_via_commits re-raises RateLimitExhaustedError instead of
     grinding through hundreds of futile pages."""

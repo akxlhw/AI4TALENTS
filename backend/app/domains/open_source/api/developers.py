@@ -47,6 +47,9 @@ async def list_developers(
     min_stars: int | None = Query(None, ge=0),
     is_committer: bool | None = Query(None, description="Filter developers who are committers"),
     is_student: bool | None = Query(None, description="Filter developers who are students"),
+    has_contact: bool | None = Query(
+        None, description="Filter developers with valid contact info (homepage/email/social)"
+    ),
     repo_full_names: list[str] | None = Query(None, description="Filter by repository full names"),
     sort_by: str = Query("stars_desc"),
     page: int = Query(1, ge=1),
@@ -64,6 +67,7 @@ async def list_developers(
         min_stars=min_stars,
         is_committer=is_committer,
         is_student=is_student,
+        has_contact=has_contact,
         repo_full_names=repo_full_names,
         sort_by=sort_by,
         page=page,
@@ -97,6 +101,9 @@ async def list_all_developer_ids(
     min_stars: int | None = Query(None, ge=0),
     is_committer: bool | None = Query(None, description="Filter developers who are committers"),
     is_student: bool | None = Query(None, description="Filter developers who are students"),
+    has_contact: bool | None = Query(
+        None, description="Filter developers with valid contact info (homepage/email/social)"
+    ),
     repo_full_names: list[str] | None = Query(None, description="Filter by repository full names"),
     sort_by: str = Query("stars_desc"),
     session: AsyncSession = Depends(get_async_session),
@@ -115,6 +122,7 @@ async def list_all_developer_ids(
         min_stars=min_stars,
         is_committer=is_committer,
         is_student=is_student,
+        has_contact=has_contact,
         repo_full_names=repo_full_names,
         sort_by=sort_by,
         page=1,

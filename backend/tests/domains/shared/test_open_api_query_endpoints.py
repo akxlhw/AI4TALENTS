@@ -35,15 +35,11 @@ async def test_read_endpoints_require_scope(
 
 
 @pytest.mark.asyncio
-async def test_academic_talents_envelope(
-    client: AsyncClient, test_session: AsyncSession
-) -> None:
+async def test_academic_talents_envelope(client: AsyncClient, test_session: AsyncSession) -> None:
     svc = ApiKeyService(test_session)
     created = await svc.create_key(key_name="学术读", scopes=["academic:read"], created_by=1)
     await test_session.commit()
-    r = await client.get(
-        "/api/v1/open-api/academic/talents", headers={"X-API-Key": created["key"]}
-    )
+    r = await client.get("/api/v1/open-api/academic/talents", headers={"X-API-Key": created["key"]})
     assert r.status_code == 200
     body = r.json()
     assert set(body) >= {"items", "total", "page", "page_size"}

@@ -28,7 +28,7 @@ class LabSearchProvider:
                 name=s.name or "",
                 identifier=None,
                 url=getattr(s, "homepage", None),
-                tags=[t for t in (getattr(s, "research_areas", None) or [])][:5],
+                tags=list(getattr(s, "research_areas", None) or [])[:5],
             )
             for s in summaries
         ]

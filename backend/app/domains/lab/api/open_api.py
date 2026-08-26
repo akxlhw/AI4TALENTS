@@ -6,14 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.lab.services import open_api_provider  # noqa: F401  (search-registry side effect)
 from app.core.exceptions import NotFoundError
+from app.domains.lab.services import open_api_provider  # noqa: F401  (search-registry side effect)
 from app.domains.lab.services.lab_stats_service import LabStatsService
 from app.domains.lab.services.lab_talent_service import LabTalentService
 from app.domains.shared.api.open_api_auth import require_api_key
 from app.domains.shared.api.open_api_helpers import read_jsonl_body
-from app.domains.shared.services.audit_service import AuditService
 from app.domains.shared.schemas.open_api import OpenApiPage
+from app.domains.shared.services.audit_service import AuditService
 
 router = APIRouter(prefix="/open-api/lab", tags=["Open API — Lab"])
 

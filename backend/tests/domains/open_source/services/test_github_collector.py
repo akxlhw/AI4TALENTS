@@ -21,6 +21,7 @@ from app.domains.open_source.services.os_collection_service import (
     OSCollectionService,
     _get_repo_lock,
 )
+from app.domains.shared.services.common.circuit_breaker import CircuitBreakerOpenError
 
 
 @pytest.fixture(autouse=True)
@@ -122,6 +123,13 @@ class _RateLimitedClient(_FailingClient):
         raise RateLimitExhaustedError("all tokens exhausted", retry_after=42)
 
 
+class _BreakerOpenClient(_FailingClient):
+    """GitHub client stub whose per-user calls hit an OPEN transport breaker."""
+
+    async def get_user(self, login: str) -> dict:
+        raise CircuitBreakerOpenError("Circuit breaker 'github' is OPEN")
+
+
 @pytest.mark.asyncio
 async def test_rate_limit_aborts_run_fast(test_session: AsyncSession) -> None:
     """RateLimitExhaustedError is not a per-contributor failure: the run aborts."""
@@ -134,6 +142,21 @@ async def test_rate_limit_aborts_run_fast(test_session: AsyncSession) -> None:
 
     assert ctx.rate_limited is not None
     assert ctx.rate_limited.retry_after == 42
+    assert ctx.failed_contributors == 0  # not counted as contributor failures
+
+
+@pytest.mark.asyncio
+async def test_breaker_open_aborts_run_fast(test_session: AsyncSession) -> None:
+    """CircuitBreakerOpenError is not a per-contributor failure: the run aborts
+    fast instead of failing every remaining contributor one by one."""
+    task = await _make_task(test_session)
+    collector = GitHubCollector(_BreakerOpenClient())  # type: ignore[arg-type]
+    ctx = _make_context(task.task_id)
+
+    with pytest.raises(CircuitBreakerOpenError):
+        await collector.collect(ctx)
+
+    assert ctx.breaker_open is not None
     assert ctx.failed_contributors == 0  # not counted as contributor failures
 
 
@@ -162,6 +185,37 @@ async def test_background_marks_task_rate_limited(
     assert updated.status == "rate_limited"
     assert updated.error_message is not None
     assert "42" in updated.error_message
+
+
+@pytest.mark.asyncio
+async def test_background_defers_task_on_breaker_open(
+    test_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Task layer: a run aborted by the OPEN transport breaker is deferred to
+    rate_limited (auto-resume past the recovery window), not marked failed —
+    a transient outage must not kill queued batch tasks."""
+    task = await _make_task(test_session)
+
+    async def _boom(self: GitHubCollector, ctx: CollectContext) -> None:
+        raise CircuitBreakerOpenError("Circuit breaker 'github' is OPEN")
+
+    monkeypatch.setattr(GitHubCollector, "collect", _boom)
+
+    service = OSCollectionService(test_session)
+    await service.run_repo_collection_background(
+        task_id=task.task_id,
+        repo_config_id=1,
+        repo_full_name="o/r",
+        tech_element=["models"],
+        contributors_per_repo=10,
+    )
+
+    updated = await _read_task(task.task_id)
+    assert updated.status == "rate_limited"
+    assert updated.current_step == "rate_limited"
+    assert updated.resume_at is not None
+    assert updated.error_message is not None
+    assert "circuit breaker" in updated.error_message.lower()
 
 
 @pytest.mark.asyncio

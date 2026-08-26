@@ -22,7 +22,12 @@ _LAB_JSONL = "\n".join(
 )
 
 _COMP_RECORDS = [
-    {"type": "meta", "source_code": "codeforces", "contest_external_id": "9999", "schema_version": "1.0"},
+    {
+        "type": "meta",
+        "source_code": "codeforces",
+        "contest_external_id": "9999",
+        "schema_version": "1.0",
+    },
     {"type": "series", "code": "codeforces", "name": "Codeforces"},
     {
         "type": "contest",
@@ -53,7 +58,9 @@ _INDUSTRY_JSONL = json.dumps(
 
 
 async def _make_key(session: AsyncSession, scopes: list[str]) -> str:
-    created = await ApiKeyService(session).create_key(key_name="import", scopes=scopes, created_by=1)
+    created = await ApiKeyService(session).create_key(
+        key_name="import", scopes=scopes, created_by=1
+    )
     await session.commit()
     return created["key"]
 
@@ -111,9 +118,7 @@ async def test_competition_import_happy_path(
 
 
 @pytest.mark.asyncio
-async def test_industry_import_happy_path(
-    client: AsyncClient, test_session: AsyncSession
-) -> None:
+async def test_industry_import_happy_path(client: AsyncClient, test_session: AsyncSession) -> None:
     pos = IndustryPosition(title="开放导入岗位", status="open")
     test_session.add(pos)
     await test_session.commit()

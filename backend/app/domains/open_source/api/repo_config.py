@@ -34,6 +34,7 @@ async def list_repo_configs(
     tech_elements: list[str] | None = Query(None),
     is_active: bool | None = Query(None),
     collect_enabled: bool | None = Query(None),
+    q: str | None = Query(None, description="Keyword search on repo name/display name/description"),
     sort_by: str = Query("id_desc", description="id_desc | stars"),
     collected_only: bool = Query(False, description="Only repos with completed collect tasks"),
     session: AsyncSession = Depends(get_async_session),
@@ -46,6 +47,7 @@ async def list_repo_configs(
         tech_elements=tech_elements,
         is_active=is_active,
         collect_enabled=collect_enabled,
+        q=q,
         sort_by=sort_by,
         collected_only=collected_only,
     )

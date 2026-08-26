@@ -51,6 +51,7 @@ const OpenSourceSearchPage: React.FC = () => {
           repo_full_names: query.repo_full_names,
           is_committer: query.is_committer,
           is_student: query.is_student,
+          has_contact: query.has_contact || undefined,
           sort_by: query.sort_by,
           page: query.page,
           page_size: query.page_size,
@@ -66,6 +67,7 @@ const OpenSourceSearchPage: React.FC = () => {
             company: query.company,
             repo_full_names: query.repo_full_names,
             is_student: query.is_student,
+            has_contact: query.has_contact || undefined,
           },
           sort_by: query.sort_by,
           page: query.page,
@@ -194,6 +196,7 @@ const OpenSourceSearchPage: React.FC = () => {
         repo_full_names: query.repo_full_names,
         is_committer: query.is_committer,
         is_student: query.is_student,
+        has_contact: query.has_contact || undefined,
         sort_by: query.sort_by,
       }
       const res = await api.openSource.getAllDeveloperIds(params)

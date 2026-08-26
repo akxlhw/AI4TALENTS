@@ -70,9 +70,40 @@ curl -H "X-API-Key: $KEY" \
   "http://localhost:8003/api/v1/open-api/competition/talents?min_rating=2400&country_code=CN"
 ```
 
-## 导入通道（P2 预告）
+## 跨域统一搜索（P2）
 
-行业域现有推送通道（`POST /industry/import`，scope `industry:write`）已并入本 Key 体系；竞赛/实验室导入端点与跨域统一搜索将在 P2 开放。
+`GET /open-api/search/talents`：一次调用并行搜索多个域，返回统一摘要（姓名/标识/域/主页链接/核心标签）。所选每个域都需要对应 `<域>:read` scope。
+
+| 参数 | 说明 |
+|------|------|
+| keyword | 必填，1~200 字符 |
+| domains | 逗号分隔域名；缺省 = 全部已注册域 |
+| per_domain | 每域返回条数，默认 5，上限 20 |
+
+```bash
+curl -H "X-API-Key: $KEY"   "http://localhost:8003/api/v1/open-api/search/talents?keyword=chen&domains=academic,open_source&per_domain=10"
+```
+
+响应含 `items`（聚合结果）、`errors`（单域失败降级，不影响其他域）、`unknown_domains`（拼错的域名透出）。
+
+## 导入通道（P2）
+
+三个 JSONL 域均已开放 API 导入（scope：`<域>:write`），请求体为 raw JSONL 文本（≤20MB，UTF-8）：
+
+| 端点 | 语义 | 额外参数 |
+|------|------|---------|
+| `POST /open-api/industry/import` | 增量 upsert（空字段不覆盖） | `position_id` 必填、`batch` 可选 |
+| `POST /open-api/competition/import` | 单场赛事全量替换（schema v1.0） | 无 |
+| `POST /open-api/lab/import` | 按实验室全量替换 | `parent_lab` 必填 |
+
+```bash
+# 实验室导入示例
+curl -X POST -H "X-API-Key: $KEY"   "http://localhost:8003/api/v1/open-api/lab/import?parent_lab=Stanford%20AI%20Lab"   -H "Content-Type: application/x-ndjson"   --data-binary @lab-talents.jsonl
+```
+
+JSONL schema 与管理员手工上传通道完全一致（行业=smart-talent-sourcing 产出、竞赛=comp-talent-crawler 产出、实验室=ai-lab-talent-crawler 产出）；导入报告结构与上传通道一致。
+
+> 旧通道 `POST /industry/import` 继续可用（同一 Key、同一 scope），行为与新端点完全等价。
 
 ## 错误码速查
 

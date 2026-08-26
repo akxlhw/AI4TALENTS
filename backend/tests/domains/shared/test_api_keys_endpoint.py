@@ -25,15 +25,11 @@ async def _seed_user(session: AsyncSession, username: str, role: str) -> UserAcc
 
 
 def _token(user: UserAccount) -> str:
-    return create_access_token(
-        user_id=user.user_id, username=user.username, role=user.role_type
-    )
+    return create_access_token(user_id=user.user_id, username=user.username, role=user.role_type)
 
 
 @pytest.mark.asyncio
-async def test_create_list_revoke_flow(
-    client: AsyncClient, test_session: AsyncSession
-) -> None:
+async def test_create_list_revoke_flow(client: AsyncClient, test_session: AsyncSession) -> None:
     admin = await _seed_user(test_session, "ak_admin", UserRoleType.SUPER_ADMIN.value)
     await test_session.commit()
     headers = {"Authorization": f"Bearer {_token(admin)}"}
@@ -71,7 +67,5 @@ async def test_key_management_forbidden_for_user(
 ) -> None:
     user = await _seed_user(test_session, "ak_plain", UserRoleType.USER.value)
     await test_session.commit()
-    r = await client.get(
-        "/api/v1/api-keys", headers={"Authorization": f"Bearer {_token(user)}"}
-    )
+    r = await client.get("/api/v1/api-keys", headers={"Authorization": f"Bearer {_token(user)}"})
     assert r.status_code == 403

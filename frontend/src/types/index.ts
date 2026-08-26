@@ -532,6 +532,7 @@ export interface OSSearchQuery {
   company?: string
   is_committer?: boolean
   is_student?: boolean
+  has_contact?: boolean
   repo_full_names?: string[]
   sort_by?: string
   mode?: 'keyword' | 'semantic' | 'hybrid'

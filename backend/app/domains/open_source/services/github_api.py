@@ -19,6 +19,7 @@ from app.domains.open_source.services.github_transport import (
     HTTPStatusError,
     RateLimitExhaustedError,
 )
+from app.domains.shared.services.common.circuit_breaker import CircuitBreakerOpenError
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +199,10 @@ class GitHubApi:
                 if isinstance(commits, RateLimitExhaustedError):
                     # Token pool exhausted: abort the traversal fast instead of
                     # grinding through hundreds of futile pages.
+                    raise commits
+                if isinstance(commits, CircuitBreakerOpenError):
+                    # Transport breaker OPEN: same fast-abort contract — every
+                    # further page would be rejected instantly anyway.
                     raise commits
                 if isinstance(commits, BaseException):
                     logger.warning(

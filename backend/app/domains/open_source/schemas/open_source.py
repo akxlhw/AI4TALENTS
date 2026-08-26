@@ -189,6 +189,9 @@ class OSSearchFilters(BaseModel):
     min_stars: int | None = Field(default=None, ge=0)
     repo_full_names: list[str] | None = Field(default=None)
     is_student: bool | None = Field(default=None)
+    has_contact: bool | None = Field(
+        default=None, description="是否有有效联系方式（个人主页/邮箱/社交媒体任一）"
+    )
 
 
 class OSSearchRequest(BaseModel):

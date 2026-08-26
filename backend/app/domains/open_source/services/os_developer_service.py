@@ -70,6 +70,7 @@ class OSDeveloperService:
         min_stars: int | None = None,
         is_committer: bool | None = None,
         is_student: bool | None = None,
+        has_contact: bool | None = None,
         repo_full_names: list[str] | None = None,
         sort_by: str = "stars_desc",
         page: int = 1,
@@ -87,6 +88,7 @@ class OSDeveloperService:
             min_stars: 最小 Stars 数
             is_committer: 是否 Committer
             is_student: 是否在校生
+            has_contact: 是否有有效联系方式（个人主页/邮箱/社交媒体任一）
             sort_by: 排序方式
             page: 页码
             page_size: 每页数量
@@ -111,6 +113,8 @@ class OSDeveloperService:
             filters["is_committer"] = is_committer
         if is_student is not None:
             filters["is_student"] = is_student
+        if has_contact is not None:
+            filters["has_contact"] = has_contact
         if repo_full_names is not None:
             filters["repo_full_names"] = repo_full_names
         return await self.repo.list_developers(
@@ -346,6 +350,8 @@ class OSDeveloperService:
                 filters["repo_full_names"] = req.filters.repo_full_names
             if req.filters.is_student is not None:
                 filters["is_student"] = req.filters.is_student
+            if req.filters.has_contact is not None:
+                filters["has_contact"] = req.filters.has_contact
 
         if req.mode == "semantic":
             semantic_items, total = await self.repo.search_by_vector_similarity(
@@ -371,6 +377,7 @@ class OSDeveloperService:
             company=req.filters.company if req.filters else None,
             min_stars=req.filters.min_stars if req.filters else None,
             is_student=req.filters.is_student if req.filters else None,
+            has_contact=req.filters.has_contact if req.filters else None,
             repo_full_names=req.filters.repo_full_names if req.filters else None,
             page=1,
             page_size=candidate_size,

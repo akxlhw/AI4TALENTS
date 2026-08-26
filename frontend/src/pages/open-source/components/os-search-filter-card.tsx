@@ -184,6 +184,16 @@ const OsSearchFilterCard: React.FC<OsSearchFilterCardProps> = ({
               </Space>
             </Form.Item>
           </Col>
+          <Col xs={24} sm={12} md={8} lg={6}>
+            <Form.Item label="联系方式" style={{ marginBottom: 8 }}>
+              <Checkbox
+                checked={query.has_contact}
+                onChange={e => onQueryChange({ ...query, has_contact: e.target.checked })}
+              >
+                有有效联系方式（主页/邮箱/社媒任一）
+              </Checkbox>
+            </Form.Item>
+          </Col>
         </Row>
       )}
     </Card>

@@ -58,11 +58,14 @@ def _is_retryable(exc: BaseException) -> bool:
     """Determine if an exception is worth retrying.
 
     - Network/timeout errors: always retry
+    - RemoteProtocolError (server closed the connection without responding):
+      retry — all requests here are idempotent GETs and the failure is
+      almost always a transient transport blip
     - 429 (rate limit): retry (token may refresh or reset window passes)
     - 5xx (server error): retry (transient)
     - 4xx client errors (401, 403, 404, etc.): do NOT retry
     """
-    if isinstance(exc, (httpx.NetworkError, httpx.TimeoutException)):
+    if isinstance(exc, (httpx.NetworkError, httpx.TimeoutException, httpx.RemoteProtocolError)):
         return True
     if isinstance(exc, httpx.HTTPStatusError):
         return exc.response.status_code == 429 or exc.response.status_code >= 500
