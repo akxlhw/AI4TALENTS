@@ -1,17 +1,18 @@
 import React, { useMemo, useState } from 'react'
 import { Tabs, Typography } from 'antd'
-import { ApiOutlined, ThunderboltOutlined, GlobalOutlined, GithubOutlined } from '@ant-design/icons'
+import { ApiOutlined, KeyOutlined, ThunderboltOutlined, GlobalOutlined, GithubOutlined } from '@ant-design/icons'
 import { useSearchParams } from 'react-router-dom'
 import CollectConfigTab from './components/collect-config-tab'
 import LLMConfigTab from './components/llm-config-tab'
 import ProxyConfigTab from './components/proxy-config-tab'
 import GitHubConfigTab from './components/github-config-tab'
+import ApiKeysTab from './api-keys-tab'
 
 const { Title } = Typography
 
-type TabKey = 'collect' | 'llm' | 'proxy' | 'github'
+type TabKey = 'collect' | 'llm' | 'proxy' | 'github' | 'api-keys'
 
-const MAIN_TAB_KEYS: TabKey[] = ['collect', 'llm', 'proxy', 'github']
+const MAIN_TAB_KEYS: TabKey[] = ['collect', 'llm', 'proxy', 'github', 'api-keys']
 
 const COLLECT_SUB_TAB_KEYS = [
   'tech-domains',
@@ -89,6 +90,16 @@ const SystemConfigPage: React.FC = () => {
         </span>
       ),
       children: <GitHubConfigTab />,
+    },
+    {
+      key: 'api-keys' as TabKey,
+      label: (
+        <span>
+          <KeyOutlined style={{ marginRight: 6 }} />
+          API Key 管理
+        </span>
+      ),
+      children: <ApiKeysTab />,
     },
   ]
 
