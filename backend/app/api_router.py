@@ -34,6 +34,7 @@ from app.domains.shared.api import (
     auth,
     health,
     metrics,
+    open_api_search,
     permissions,
     privacy,
     suggestion,
@@ -101,6 +102,9 @@ api_router.include_router(system_config.router)
 
 # Open API key management
 api_router.include_router(api_keys.router)
+
+# Cross-domain unified search (provider registry)
+api_router.include_router(open_api_search.router)
 
 # Open-API read endpoints (academic mounts directly; other domains aggregate internally)
 api_router.include_router(open_api.router)
