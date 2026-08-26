@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
+from app.domains.academic.services import open_api_provider  # noqa: F401  (search-registry side effect)
 from app.domains.academic.services.talent_service import TalentService
 from app.domains.shared.api.open_api_auth import require_api_key
 from app.domains.shared.schemas.open_api import OpenApiPage
@@ -32,9 +33,7 @@ _LIST_FIELDS = (
 def _strip(talents: list) -> list[dict]:
     items = []
     for t in talents:
-        items.append(
-            {f: getattr(t, f) for f in _LIST_FIELDS if getattr(t, f, None) is not None}
-        )
+        items.append({f: getattr(t, f) for f in _LIST_FIELDS if getattr(t, f, None) is not None})
     return items
 
 

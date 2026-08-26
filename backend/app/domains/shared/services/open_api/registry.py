@@ -52,3 +52,28 @@ def get_search_provider_factories(
 
 def registered_domains() -> list[str]:
     return sorted(_REGISTRY)
+
+
+async def run_provider_isolated(
+    factory: ProviderFactory,
+    keyword: str,
+    limit: int,
+    timeout_seconds: float = 5.0,
+) -> list[UnifiedTalentSummary]:
+    """Run one provider on a dedicated session.
+
+    AsyncSession forbids concurrent operations, so parallel domains must not
+    share a session; the API layer cannot open sessions itself (layering
+    rule), hence this service-side helper.
+    """
+    import asyncio
+
+    from app.core.database import AsyncSessionLocal
+
+    session = AsyncSessionLocal()
+    try:
+        provider = factory(session)
+        result = await asyncio.wait_for(provider.search(keyword, limit), timeout=timeout_seconds)
+        return list(result)
+    finally:
+        await session.close()

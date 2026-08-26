@@ -18,6 +18,7 @@ from app.domains.shared.api.open_api_auth import require_valid_api_key
 from app.domains.shared.services.open_api.registry import (
     get_search_provider_factories,
     registered_domains,
+    run_provider_isolated,
 )
 
 router = APIRouter(prefix="/open-api/search", tags=["Open API — Search"])
@@ -49,16 +50,18 @@ async def unified_search(
             detail=f"API key lacks read scope for: {', '.join(f'{d}:read' for d in sorted(missing))}.",
         )
 
-    providers = [(d, factory(session)) for d, factory in factories.items()]
-
-    async def _run(provider) -> list:
-        return await asyncio.wait_for(provider.search(keyword, per_domain), timeout=_TIMEOUT_SECONDS)
-
-    results = await asyncio.gather(*[_run(p) for _, p in providers], return_exceptions=True)
+    # Key verification used the request session; providers run isolated below.
+    results = await asyncio.gather(
+        *[
+            run_provider_isolated(factory, keyword, per_domain, _TIMEOUT_SECONDS)
+            for factory in factories.values()
+        ],
+        return_exceptions=True,
+    )
 
     items: list[dict] = []
     errors: dict[str, str] = {}
-    for (domain, _provider), result in zip(providers, results):
+    for domain, result in zip(factories, results):
         if isinstance(result, Exception):
             errors[domain] = str(result)[:200]
         else:
@@ -66,7 +69,7 @@ async def unified_search(
 
     return {
         "keyword": keyword,
-        "domains": [d for d, _ in providers],
+        "domains": list(factories),
         "unknown_domains": unknown,
         "items": items,
         "errors": errors,

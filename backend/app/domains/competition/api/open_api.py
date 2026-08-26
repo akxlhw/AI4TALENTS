@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
+from app.domains.competition.services import open_api_provider  # noqa: F401  (search-registry side effect)
 from app.domains.competition.services.comp_stats_service import CompStatsService
 from app.domains.competition.services.comp_talent_service import CompTalentService
 from app.domains.shared.api.open_api_auth import require_api_key
@@ -23,7 +24,9 @@ async def list_competition_talents(
     school: str | None = Query(None),
     min_rating: int | None = Query(None, ge=0),
     rank_title: str | None = Query(None, description="如 candidate/master/etc."),
-    sort_by: str = Query("rating_desc", description="rating_desc/contests_desc/medals_desc/recent_desc"),
+    sort_by: str = Query(
+        "rating_desc", description="rating_desc/contests_desc/medals_desc/recent_desc"
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
