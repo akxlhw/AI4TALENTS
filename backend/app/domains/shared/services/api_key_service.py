@@ -10,6 +10,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.shared.models.api_key import ApiKey
+from app.domains.shared.services.config_service import ConfigService
 
 _KEY_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 _KEY_RANDOM_LEN = 43
@@ -87,3 +88,38 @@ class ApiKeyService:
             select(ApiKey).where(ApiKey.api_key_id == api_key_id)
         )
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def migrate_legacy_industry_key(session: AsyncSession) -> int:
+        """One-shot: move the legacy INDUSTRY_IMPORT_API_KEY (sys_config) into
+        shared_api_key with scopes=["industry:write"], then clear the sys_config
+        entry. Idempotent; returns 1 when a row was created, else 0."""
+        from sqlalchemy import delete
+
+        from app.domains.shared.models.system_config import SystemConfig
+
+        legacy = await ConfigService(session).get_value(
+            "INDUSTRY_IMPORT_API_KEY", use_cache=False
+        )
+        if not legacy:
+            return 0
+
+        key_hash = _hash_key(legacy)
+        existing = await session.execute(select(ApiKey).where(ApiKey.key_hash == key_hash))
+        created = 0
+        if existing.scalar_one_or_none() is None:
+            session.add(
+                ApiKey(
+                    key_name="行业导入(迁移)",
+                    key_hash=key_hash,
+                    key_prefix=legacy[:8],
+                    scopes=["industry:write"],
+                )
+            )
+            created = 1
+        await session.execute(
+            delete(SystemConfig).where(SystemConfig.config_key == "INDUSTRY_IMPORT_API_KEY")
+        )
+        ConfigService._cache.pop("INDUSTRY_IMPORT_API_KEY", None)
+        await session.commit()
+        return created

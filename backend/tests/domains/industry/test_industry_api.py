@@ -396,17 +396,15 @@ async def test_import_upload_requires_super_admin(
 
 @pytest.mark.asyncio
 async def test_import_push_channel_requires_api_key_config(client: AsyncClient) -> None:
-    """The API Key push channel returns 503 when no key is configured.
+    """The API Key push channel authenticates via shared_api_key.
 
-    Previously this channel returned 501 (reserved, not enabled). It is now
-    enabled — without a configured INDUSTRY_IMPORT_API_KEY it returns 503 so
-    the caller knows an admin must configure the key first. Full push-channel
-    coverage (auth success/failure, body parsing, audit) lives in
-    test_industry_push_import.py.
+    An unknown key (no matching shared_api_key row) gets 401. Full
+    push-channel coverage (auth success/failure, body parsing, audit) lives
+    in test_industry_push_import.py.
     """
     response = await client.post(
         "/api/v1/industry/import?position_id=1",
         content='{"name":"x"}',
         headers={"X-API-Key": "anything"},
     )
-    assert response.status_code == 503
+    assert response.status_code == 401

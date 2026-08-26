@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.industry.models.industry import IndustryPosition, IndustryTalent
-from app.domains.shared.models.system_config import SystemConfig
+from app.domains.shared.services.api_key_service import ApiKeyService
 
 _API_KEY = "test-secret-key-do-not-use-in-prod"
 _VALID_JSONL = json.dumps(
@@ -31,27 +31,18 @@ _VALID_JSONL = json.dumps(
 
 
 async def _set_api_key(session: AsyncSession, value: str = _API_KEY) -> None:
-    """Insert (or update) the INDUSTRY_IMPORT_API_KEY config row."""
-    existing = await session.execute(
-        select(SystemConfig).where(SystemConfig.config_key == "INDUSTRY_IMPORT_API_KEY")
-    )
-    row = existing.scalar_one_or_none()
-    if row is None:
-        session.add(
-            SystemConfig(
-                config_key="INDUSTRY_IMPORT_API_KEY",
-                config_value=value,
-                config_type="string",
-                is_sensitive=True,
-            )
-        )
-    else:
-        row.config_value = value
-    await session.commit()
-    # Bust ConfigService cache so the new value is visible to the endpoint
-    from app.domains.shared.services.config_service import ConfigService
+    """Create a shared_api_key row granting industry:write for ``value``."""
+    from app.domains.shared.services.api_key_service import ApiKeyService as _Svc
 
-    ConfigService.clear_cache()
+    created = await _Svc(session).create_key(
+        key_name="push-test", scopes=["industry:write"]
+    )
+    # Overwrite the generated key with the fixed test value so header mathces
+    import hashlib
+
+    created["record"].key_hash = hashlib.sha256(value.encode("utf-8")).hexdigest()
+    created["record"].key_prefix = value[:8]
+    await session.commit()
 
 
 async def _make_position(session: AsyncSession) -> IndustryPosition:
@@ -118,11 +109,7 @@ async def test_push_import_wrong_api_key(client: AsyncClient, test_session: Asyn
 async def test_push_import_api_key_not_configured(
     client: AsyncClient, test_session: AsyncSession
 ) -> None:
-    """No key in DB → 503 (admin must configure first)."""
-    # Ensure no key configured (default state, but clear cache to be safe)
-    from app.domains.shared.services.config_service import ConfigService
-
-    ConfigService.clear_cache()
+    """No matching key in shared_api_key → 401."""
     pos = await _make_position(test_session)
 
     resp = await client.post(
@@ -130,7 +117,7 @@ async def test_push_import_api_key_not_configured(
         headers={"X-API-Key": _API_KEY},
         content=_VALID_JSONL,
     )
-    assert resp.status_code == 503
+    assert resp.status_code == 401
 
 
 @pytest.mark.asyncio

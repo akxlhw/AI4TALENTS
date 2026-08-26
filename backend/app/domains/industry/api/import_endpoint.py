@@ -4,16 +4,15 @@ Two channels:
 - POST /industry/import/upload — admin JSONL upload (super_admin, multipart Form+File)
 - POST /industry/import       — API Key push channel for Agent/skill (X-API-Key header)
 
-The push channel lets the ``smart-talent-sourcing`` skill push scored JSONL
-programmatically after collection, without admin manual upload. It is guarded
-by a static API Key stored in ``sys_config`` (key ``INDUSTRY_IMPORT_API_KEY``),
-configurable via the system-config admin UI with hot reload (5 min TTL cache).
+The push channel authenticates through the shared open-API key system
+(``require_api_key("industry:write")``). The legacy static key configured in
+``sys_config`` (``INDUSTRY_IMPORT_API_KEY``) is migrated automatically at app
+startup into the ``shared_api_key`` table with ``industry:write`` scope.
 """
 
 from __future__ import annotations
 
 import logging
-import secrets
 
 from fastapi import (
     APIRouter,
@@ -33,8 +32,8 @@ from app.domains.industry.schemas.industry import IndustryImportReport
 from app.domains.industry.services.industry_import_service import IndustryImportService
 from app.domains.industry.services.industry_position_service import IndustryPositionService
 from app.domains.shared.api.auth import require_super_admin
+from app.domains.shared.api.open_api_auth import require_api_key
 from app.domains.shared.services.audit_service import AuditService
-from app.domains.shared.services.config_service import ConfigService
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +42,8 @@ router = APIRouter(prefix="/industry", tags=["Industry Talent"])
 # Max JSONL upload size: 20 MB (applies to both upload and push channels)
 _MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
-# sys_config key for the push-channel API Key
-_API_KEY_CONFIG = "INDUSTRY_IMPORT_API_KEY"
+# Shared open-API dependency; kept module-level so legacy call sites keep working
+_verify = require_api_key("industry:write")
 
 
 async def _read_upload(file: UploadFile) -> tuple[str, str]:
@@ -62,22 +61,14 @@ async def verify_industry_api_key(
     api_key: str | None = Header(None, alias="X-API-Key"),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    """Verify the X-API-Key header against the configured INDUSTRY_IMPORT_API_KEY.
+    """Verify the X-API-Key header via the shared open-API key system.
 
-    Returns a synthetic principal dict ``{"role": "import_agent", "source": "api_key"}``
-    on success. Raises:
-    - 503 if the API Key is not configured in sys_config (admin must set it first)
-    - 401 if the header is missing or does not match
+    Legacy behavior (single static key in sys_config) is preserved through an
+    idempotent startup migration that moves INDUSTRY_IMPORT_API_KEY into the
+    shared_api_key table with scopes=["industry:write"]. Raises 401 on a
+    missing/invalid key, 403 when the key lacks the industry:write scope.
     """
-    configured = await ConfigService(session).get_value(_API_KEY_CONFIG, "")
-    if not configured:
-        raise HTTPException(
-            status_code=503,
-            detail="Import API Key not configured; an admin must set INDUSTRY_IMPORT_API_KEY in system config first.",
-        )
-    if not api_key or not secrets.compare_digest(api_key, configured):
-        raise HTTPException(status_code=401, detail="Invalid or missing API key.")
-    return {"role": "import_agent", "source": "api_key"}
+    return await _verify(api_key=api_key, session=session)
 
 
 @router.post(

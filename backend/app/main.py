@@ -64,6 +64,15 @@ async def lifespan(app: FastAPI):
     # Initialize proxy configuration
     await init_proxy_config()
 
+    # One-shot: migrate the legacy industry import key into shared_api_key
+    try:
+        from app.domains.shared.services.api_key_service import ApiKeyService
+
+        async with async_session_factory() as session:
+            await ApiKeyService.migrate_legacy_industry_key(session)
+    except Exception as e:
+        logger.warning(f"Legacy industry API key migration skipped: {e}")
+
     # Auto-resume loop for rate-limited open-source collect tasks
     from app.domains.open_source.services.os_collection_service import rate_limit_resume_loop
 
