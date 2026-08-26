@@ -5,10 +5,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.industry.services.industry_talent_service import IndustryTalentService
-from app.domains.shared.services.open_api.registry import (
-    UnifiedTalentSummary,
-    register_search_provider,
-)
+from app.domains.shared.services.open_api.registry import UnifiedTalentSummary
 
 
 class IndustrySearchProvider:
@@ -43,6 +40,3 @@ class IndustrySearchProvider:
                 )
             )
         return items
-
-
-register_search_provider("industry", IndustrySearchProvider)

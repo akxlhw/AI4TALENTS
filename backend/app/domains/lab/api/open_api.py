@@ -7,18 +7,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.exceptions import NotFoundError
-from app.domains.lab.services import open_api_provider  # noqa: F401  (search-registry side effect)
 from app.domains.lab.services.lab_stats_service import LabStatsService
 from app.domains.lab.services.lab_talent_service import LabTalentService
+from app.domains.lab.services.open_api_provider import LabSearchProvider
 from app.domains.shared.api.open_api_auth import require_api_key
 from app.domains.shared.api.open_api_helpers import read_jsonl_body
 from app.domains.shared.schemas.open_api import OpenApiPage
 from app.domains.shared.services.audit_service import AuditService
+from app.domains.shared.services.open_api.registry import register_search_provider
 
 router = APIRouter(prefix="/open-api/lab", tags=["Open API — Lab"])
 
 _require = require_api_key("lab:read")
 _require_write = require_api_key("lab:write")
+
+# Explicit registration (a real call survives lint; bare side-effect imports do not)
+register_search_provider("lab", LabSearchProvider)
 
 # PII redaction for external consumers
 _PII_FIELDS = ("email", "social_links")

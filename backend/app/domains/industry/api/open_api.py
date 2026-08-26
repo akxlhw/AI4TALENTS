@@ -10,15 +10,20 @@ from app.core.exceptions import NotFoundError
 from app.domains.industry.services.industry_import_service import IndustryImportService
 from app.domains.industry.services.industry_position_service import IndustryPositionService
 from app.domains.industry.services.industry_talent_service import IndustryTalentService
+from app.domains.industry.services.open_api_provider import IndustrySearchProvider
 from app.domains.shared.api.open_api_auth import require_api_key
 from app.domains.shared.api.open_api_helpers import read_jsonl_body
 from app.domains.shared.schemas.open_api import OpenApiPage
 from app.domains.shared.services.audit_service import AuditService
+from app.domains.shared.services.open_api.registry import register_search_provider
 
 router = APIRouter(prefix="/open-api/industry", tags=["Open API — Industry"])
 
 _require = require_api_key("industry:read")
 _require_write = require_api_key("industry:write")
+
+# Explicit registration (a real call survives lint; bare side-effect imports do not)
+register_search_provider("industry", IndustrySearchProvider)
 
 # PII redaction for external consumers (contact links)
 _PII_FIELDS = ("profile_url",)

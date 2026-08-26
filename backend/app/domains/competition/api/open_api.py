@@ -8,15 +8,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.domains.competition.services.comp_stats_service import CompStatsService
 from app.domains.competition.services.comp_talent_service import CompTalentService
+from app.domains.competition.services.open_api_provider import CompetitionSearchProvider
 from app.domains.shared.api.open_api_auth import require_api_key
 from app.domains.shared.api.open_api_helpers import read_jsonl_body
 from app.domains.shared.schemas.open_api import OpenApiPage
 from app.domains.shared.services.audit_service import AuditService
+from app.domains.shared.services.open_api.registry import register_search_provider
 
 router = APIRouter(prefix="/open-api/competition", tags=["Open API — Competition"])
 
 _require = require_api_key("competition:read")
 _require_write = require_api_key("competition:write")
+
+# Explicit registration (a real call survives lint; bare side-effect imports do not)
+register_search_provider("competition", CompetitionSearchProvider)
 
 
 @router.get("/talents", summary="竞赛人才列表（关键词/国家/学校/评分筛选）")

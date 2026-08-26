@@ -5,10 +5,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.lab.services.lab_talent_service import LabTalentService
-from app.domains.shared.services.open_api.registry import (
-    UnifiedTalentSummary,
-    register_search_provider,
-)
+from app.domains.shared.services.open_api.registry import UnifiedTalentSummary
 
 
 class LabSearchProvider:
@@ -32,6 +29,3 @@ class LabSearchProvider:
             )
             for s in summaries
         ]
-
-
-register_search_provider("lab", LabSearchProvider)

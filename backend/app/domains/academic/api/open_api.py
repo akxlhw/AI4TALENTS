@@ -6,13 +6,18 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
+from app.domains.academic.services.open_api_provider import AcademicSearchProvider
 from app.domains.academic.services.talent_service import TalentService
 from app.domains.shared.api.open_api_auth import require_api_key
 from app.domains.shared.schemas.open_api import OpenApiPage
+from app.domains.shared.services.open_api.registry import register_search_provider
 
 router = APIRouter(prefix="/open-api/academic", tags=["Open API — Academic"])
 
 _require = require_api_key("academic:read")
+
+# Explicit registration (a real call survives lint; bare side-effect imports do not)
+register_search_provider("academic", AcademicSearchProvider)
 
 # External-facing field whitelist (PII redaction: orcid / extra_data excluded)
 _LIST_FIELDS = (
