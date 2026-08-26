@@ -28,6 +28,7 @@ from app.domains.industry import api as industry_api
 from app.domains.lab import api as lab_api
 from app.domains.open_source.api import open_source
 from app.domains.shared.api import (
+    api_keys,
     audit,
     auth,
     health,
@@ -96,6 +97,9 @@ api_router.include_router(venue.router)
 
 # System configuration endpoints
 api_router.include_router(system_config.router)
+
+# Open API key management
+api_router.include_router(api_keys.router)
 
 # Embeddings endpoints
 api_router.include_router(embeddings.router)
