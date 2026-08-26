@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
+from app.core.metrics import metrics
 from app.domains.shared.services.api_key_service import ApiKeyService
 
 
@@ -17,6 +18,7 @@ def require_api_key(scope: str):
     """
 
     async def _dependency(
+        request: Request,
         api_key: str | None = Header(None, alias="X-API-Key"),
         session: AsyncSession = Depends(get_async_session),
     ) -> dict:
@@ -32,6 +34,10 @@ def require_api_key(scope: str):
                 detail=f"API key lacks required scope: {scope}.",
             )
         await session.commit()  # persist the last_used_at touch
+        metrics.counter(
+            "open_api_requests_total",
+            labels={"key_prefix": record.key_prefix, "path": request.url.path},
+        ).inc()
         return {
             "role": "api_agent",
             "api_key_id": record.api_key_id,

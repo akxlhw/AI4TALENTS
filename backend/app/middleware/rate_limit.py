@@ -5,6 +5,7 @@ Simple in-memory rate limiting middleware.
 For production, consider using Redis-backed rate limiting.
 """
 
+import hashlib
 import time
 from collections import defaultdict
 from collections.abc import Callable
@@ -81,8 +82,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Middleware that enforces rate limiting on API endpoints.
 
-    Uses IP address for unauthenticated requests.
-    For authenticated requests, user ID should be set in request.state.user_id.
+    Unauthenticated requests are keyed by client IP; requests carrying an
+    X-API-Key header are keyed by the key's hash prefix (per-key isolation
+    without a DB lookup in the hot path).
     """
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
@@ -94,10 +96,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not settings.RATE_LIMIT_ENABLED:
             return await call_next(request)
 
-        # Get rate limit key
-        user_id = getattr(request.state, "user_id", None)
-        if user_id:
-            key = f"user:{user_id}"
+        # Get rate limit key.
+        # Open-API requests are keyed by the X-API-Key hash prefix (no DB
+        # lookup here — dependency layer rejects unknown keys afterwards, so
+        # an unauthenticated hash merely wastes one bucket slot).
+        api_key = request.headers.get("X-API-Key")
+        if api_key:
+            digest = hashlib.sha256(api_key.encode("utf-8")).hexdigest()[:16]
+            key = f"apikey:{digest}"
         else:
             # Use X-Forwarded-For header if behind a proxy, otherwise use client IP
             forwarded = request.headers.get("X-Forwarded-For")
