@@ -2,20 +2,24 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.domains.industry.services import open_api_provider  # noqa: F401  (search-registry side effect)
 from app.core.exceptions import NotFoundError
 from app.domains.industry.services.industry_position_service import IndustryPositionService
+from app.domains.industry.services.industry_import_service import IndustryImportService
 from app.domains.industry.services.industry_talent_service import IndustryTalentService
 from app.domains.shared.api.open_api_auth import require_api_key
+from app.domains.shared.api.open_api_helpers import read_jsonl_body
+from app.domains.shared.services.audit_service import AuditService
 from app.domains.shared.schemas.open_api import OpenApiPage
 
 router = APIRouter(prefix="/open-api/industry", tags=["Open API — Industry"])
 
 _require = require_api_key("industry:read")
+_require_write = require_api_key("industry:write")
 
 # PII redaction for external consumers (contact links)
 _PII_FIELDS = ("profile_url",)
@@ -80,3 +84,31 @@ async def industry_stats(
             for p in positions
         ],
     }
+
+
+@router.post("/import", summary="行业人才 JSONL 导入（scope: industry:write）")
+async def open_api_industry_import(
+    request: Request,
+    position_id: int = Query(..., description="目标岗位 ID"),
+    batch: str | None = Query(None, description="导入批次标识"),
+    session: AsyncSession = Depends(get_async_session),
+    principal: dict = Depends(_require_write),
+) -> dict:
+    """Push channel parity with POST /industry/import (incremental upsert)."""
+    content, err = await read_jsonl_body(request)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
+    report = await IndustryImportService(session).import_jsonl(
+        content, position_id=position_id, batch=batch
+    )
+    await session.commit()
+    await AuditService.log_data_operation(
+        user_id=None,
+        operation="import",
+        resource_type="industry_talent",
+        resource_id=str(position_id),
+        status="success" if not report.aborted else "failure",
+        detail={"principal": principal["key_name"], "batch": batch},
+        event_subtype="import",
+    )
+    return report.model_dump(mode="json")

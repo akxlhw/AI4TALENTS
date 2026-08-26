@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
@@ -10,11 +10,14 @@ from app.domains.competition.services import open_api_provider  # noqa: F401  (s
 from app.domains.competition.services.comp_stats_service import CompStatsService
 from app.domains.competition.services.comp_talent_service import CompTalentService
 from app.domains.shared.api.open_api_auth import require_api_key
+from app.domains.shared.api.open_api_helpers import read_jsonl_body
+from app.domains.shared.services.audit_service import AuditService
 from app.domains.shared.schemas.open_api import OpenApiPage
 
 router = APIRouter(prefix="/open-api/competition", tags=["Open API — Competition"])
 
 _require = require_api_key("competition:read")
+_require_write = require_api_key("competition:write")
 
 
 @router.get("/talents", summary="竞赛人才列表（关键词/国家/学校/评分筛选）")
@@ -65,3 +68,36 @@ async def competition_stats(
 ) -> dict:
     overview = await CompStatsService(session).get_overview()
     return overview.model_dump(mode="json")
+
+
+@router.post("/import", summary="竞赛人才 JSONL 导入（scope: competition:write）")
+async def open_api_competition_import(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    principal: dict = Depends(_require_write),
+) -> dict:
+    """Single-contest full-replace import (schema v1.0 JSONL)."""
+    from app.domains.competition.services.comp_import_service import (
+        CompImportError,
+        CompImportService,
+    )
+
+    content, err = await read_jsonl_body(request)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
+    try:
+        report = await CompImportService(session).import_jsonl(content)
+    except CompImportError as e:
+        await session.rollback()
+        raise HTTPException(status_code=400, detail=str(e)) from None
+    await session.commit()
+    await AuditService.log_data_operation(
+        user_id=None,
+        operation="import",
+        resource_type="competition_talent",
+        resource_id=report.contest_external_id,
+        status="success",
+        detail={"principal": principal["key_name"]},
+        event_subtype="import",
+    )
+    return report.model_dump(mode="json")
