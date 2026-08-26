@@ -62,7 +62,7 @@ async def unified_search(
     items: list[dict] = []
     errors: dict[str, str] = {}
     for domain, result in zip(factories, results, strict=False):
-        if isinstance(result, Exception):
+        if isinstance(result, BaseException):
             errors[domain] = str(result)[:200]
         else:
             items.extend(s.model_dump(mode="json") for s in result)

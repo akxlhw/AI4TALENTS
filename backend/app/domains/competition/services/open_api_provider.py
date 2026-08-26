@@ -5,10 +5,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.competition.services.comp_talent_service import CompTalentService
-from app.domains.shared.services.open_api.registry import (
-    UnifiedTalentSummary,
-    register_search_provider,
-)
+from app.domains.shared.services.open_api.registry import UnifiedTalentSummary
 
 
 class CompetitionSearchProvider:
@@ -19,7 +16,14 @@ class CompetitionSearchProvider:
 
     async def search(self, keyword: str, limit: int) -> list[UnifiedTalentSummary]:
         summaries, _total = await CompTalentService(self.session).list_talents(
-            keyword=keyword, sort_by="rating_desc", page=1, page_size=limit
+            keyword=keyword,
+            country_code=None,
+            school=None,
+            min_rating=None,
+            rank_title=None,
+            sort_by="rating_desc",
+            page=1,
+            page_size=limit,
         )
         return [
             UnifiedTalentSummary(
@@ -27,11 +31,8 @@ class CompetitionSearchProvider:
                 talent_id=s.talent_id,
                 name=s.real_name or s.handle or "",
                 identifier=s.handle,
-                url=s.profile_url,
-                tags=list(s.specialties or [])[:5],
+                url=s.avatar_url,
+                tags=[],
             )
             for s in summaries
         ]
-
-
-register_search_provider("competition", CompetitionSearchProvider)
