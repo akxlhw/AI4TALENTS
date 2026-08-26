@@ -49,3 +49,37 @@ def require_api_key(scope: str) -> Any:
         }
 
     return _dependency
+
+
+def require_valid_api_key() -> Any:
+    """Key validity only; scope enforcement is the endpoint's job.
+
+    For endpoints whose required scopes depend on request parameters (e.g. the
+    cross-domain search endpoint validates `<domain>:read` per requested
+    domain).
+    """
+
+    async def _dependency(
+        request: Request,
+        api_key: str | None = Header(None, alias="X-API-Key"),
+        session: AsyncSession = Depends(get_async_session),
+    ) -> dict:
+        if not api_key:
+            raise HTTPException(status_code=401, detail="Missing X-API-Key header.")
+        record = await ApiKeyService(session).verify_key(api_key)
+        if record is None:
+            raise HTTPException(status_code=401, detail="Invalid or revoked API key.")
+        await session.commit()  # persist the last_used_at touch
+        metrics.counter(
+            "open_api_requests_total",
+            labels={"key_prefix": cast(str, record.key_prefix), "path": request.url.path},
+        ).inc()
+        return {
+            "role": "api_agent",
+            "api_key_id": record.api_key_id,
+            "key_name": cast(str, record.key_name),
+            "scopes": record.scopes or [],
+            "rate_limit_per_minute": record.rate_limit_per_minute,
+        }
+
+    return _dependency
