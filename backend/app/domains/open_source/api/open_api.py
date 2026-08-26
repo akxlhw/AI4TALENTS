@@ -87,4 +87,6 @@ async def open_source_stats(
     _principal: dict = Depends(_require),
 ) -> dict:
     stats = await OSDeveloperService(session).get_stats()
-    return stats.model_dump(mode="json")
+    if hasattr(stats, "model_dump"):
+        return stats.model_dump(mode="json")
+    return dict(stats)
