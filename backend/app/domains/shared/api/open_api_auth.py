@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from fastapi import Depends, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,7 +12,7 @@ from app.core.metrics import metrics
 from app.domains.shared.services.api_key_service import ApiKeyService
 
 
-def require_api_key(scope: str):
+def require_api_key(scope: str) -> Any:
     """Build a dependency verifying the X-API-Key header and requiring ``scope``.
 
     Returns a dependency yielding the principal dict:
@@ -36,12 +38,12 @@ def require_api_key(scope: str):
         await session.commit()  # persist the last_used_at touch
         metrics.counter(
             "open_api_requests_total",
-            labels={"key_prefix": record.key_prefix, "path": request.url.path},
+            labels={"key_prefix": cast(str, record.key_prefix), "path": request.url.path},
         ).inc()
         return {
             "role": "api_agent",
             "api_key_id": record.api_key_id,
-            "key_name": record.key_name,
+            "key_name": cast(str, record.key_name),
             "scopes": record.scopes or [],
             "rate_limit_per_minute": record.rate_limit_per_minute,
         }

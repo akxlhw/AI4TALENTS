@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,7 +25,7 @@ def _redact(record: dict) -> dict:
     return {k: v for k, v in record.items() if k not in _PII_FIELDS}
 
 
-def _orm_to_dict(d) -> dict:
+def _orm_to_dict(d: Any) -> dict:
     return {
         "developer_id": d.developer_id,
         "github_login": d.github_login,

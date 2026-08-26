@@ -90,11 +90,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Skip rate limiting for health checks and docs
         if request.url.path in ["/", "/health", "/docs", "/redoc", "/openapi.json"]:
-            return await call_next(request)
+            skip_response: Response = await call_next(request)
+            return skip_response
 
         # Skip if rate limiting is disabled
         if not settings.RATE_LIMIT_ENABLED:
-            return await call_next(request)
+            disabled_response: Response = await call_next(request)
+            return disabled_response
 
         # Get rate limit key.
         # Open-API requests are keyed by the X-API-Key hash prefix (no DB
@@ -135,7 +137,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             )
 
         # Process request
-        response = await call_next(request)
+        response: Response = await call_next(request)
 
         # Add rate limit headers
         response.headers["X-RateLimit-Limit"] = str(settings.RATE_LIMIT_PER_MINUTE)

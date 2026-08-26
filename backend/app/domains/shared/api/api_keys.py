@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.domains.shared.api.auth_deps import require_super_admin
 from app.domains.shared.schemas.api_key import (
-    ApiKeyCreateRequest,
     ApiKeyCreatedResponse,
+    ApiKeyCreateRequest,
     ApiKeyListItem,
     ApiKeySetActiveRequest,
 )
@@ -19,7 +21,7 @@ from app.domains.shared.services.audit_service import AuditService
 router = APIRouter(prefix="/api-keys", tags=["API Keys"])
 
 
-def _to_item(r) -> ApiKeyListItem:
+def _to_item(r: Any) -> ApiKeyListItem:
     return ApiKeyListItem(
         api_key_id=r.api_key_id,
         key_name=r.key_name,

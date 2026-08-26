@@ -13,6 +13,7 @@ startup into the ``shared_api_key`` table with ``industry:write`` scope.
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 from fastapi import (
     APIRouter,
@@ -58,6 +59,7 @@ async def _read_upload(file: UploadFile) -> tuple[str, str]:
 
 
 async def verify_industry_api_key(
+    request: Request,
     api_key: str | None = Header(None, alias="X-API-Key"),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict:
@@ -68,7 +70,7 @@ async def verify_industry_api_key(
     shared_api_key table with scopes=["industry:write"]. Raises 401 on a
     missing/invalid key, 403 when the key lacks the industry:write scope.
     """
-    return await _verify(api_key=api_key, session=session)
+    return cast(dict, await _verify(request=request, api_key=api_key, session=session))
 
 
 @router.post(

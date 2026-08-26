@@ -64,9 +64,7 @@ class ApiKeyService:
         if record.expires_at is not None and record.expires_at <= _now():
             return None
         await self.session.execute(
-            update(ApiKey)
-            .where(ApiKey.api_key_id == record.api_key_id)
-            .values(last_used_at=_now())
+            update(ApiKey).where(ApiKey.api_key_id == record.api_key_id).values(last_used_at=_now())
         )
         return record
 
@@ -84,9 +82,7 @@ class ApiKeyService:
         return list(result.scalars().all())
 
     async def get_by_id(self, api_key_id: int) -> ApiKey | None:
-        result = await self.session.execute(
-            select(ApiKey).where(ApiKey.api_key_id == api_key_id)
-        )
+        result = await self.session.execute(select(ApiKey).where(ApiKey.api_key_id == api_key_id))
         return result.scalar_one_or_none()
 
     @staticmethod
@@ -98,9 +94,7 @@ class ApiKeyService:
 
         from app.domains.shared.models.system_config import SystemConfig
 
-        legacy = await ConfigService(session).get_value(
-            "INDUSTRY_IMPORT_API_KEY", use_cache=False
-        )
+        legacy = await ConfigService(session).get_value("INDUSTRY_IMPORT_API_KEY", use_cache=False)
         if not legacy:
             return 0
 

@@ -47,7 +47,7 @@ async def init_proxy_config() -> None:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan events handler."""
     # Startup
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
@@ -146,7 +146,7 @@ app = create_application()
 
 
 @app.get("/", tags=["Root"])
-async def root(request: Request):
+async def root(request: Request) -> dict:
     """Root endpoint."""
     return {
         "name": settings.APP_NAME,

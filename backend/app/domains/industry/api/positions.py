@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +26,7 @@ router = APIRouter(prefix="/industry", tags=["Industry Talent"])
 
 
 async def _user_or_api_key(
+    request: Request,
     api_key: str | None = Header(None, alias="X-API-Key"),
     user: dict | None = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
@@ -43,7 +46,7 @@ async def _user_or_api_key(
         from app.domains.shared.api.open_api_auth import require_api_key
 
         verify = require_api_key("industry:write")
-        return await verify(api_key=api_key, session=session)
+        return cast(dict, await verify(request=request, api_key=api_key, session=session))
     raise HTTPException(status_code=401, detail="Authentication required (JWT or X-API-Key).")
 
 
