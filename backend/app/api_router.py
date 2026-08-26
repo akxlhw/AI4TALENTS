@@ -14,6 +14,7 @@ from app.domains.academic.api import (
     genealogy,
     homepage,
     jd_match,
+    open_api,
     overview,
     recommend,
     schools,
@@ -100,6 +101,9 @@ api_router.include_router(system_config.router)
 
 # Open API key management
 api_router.include_router(api_keys.router)
+
+# Open-API read endpoints (academic mounts directly; other domains aggregate internally)
+api_router.include_router(open_api.router)
 
 # Embeddings endpoints
 api_router.include_router(embeddings.router)
