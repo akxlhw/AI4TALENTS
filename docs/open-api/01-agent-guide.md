@@ -51,9 +51,9 @@ curl -H "X-API-Key: ak_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
 - **实验室**：`keyword`、`parent_lab`、`lab_name`、`role_type`、`research_area`
 - **行业**：`keyword`、`position_id`、`min_score`（0-100）、`status`（new/connected/terminated）
 
-### PII 脱敏
+### 字段说明
 
-外部查询默认剔除联系方式类字段（email、social_links、blog_url、profile_url、orcid、extra_data）。列表字段为各域面向洞察的核心子集（身份、机构、技术标签、学术指标/贡献指标/评分）。
+Open API 经 API Key 鉴权，联系方式类字段（email、social_links、blog_url、profile_url、orcid 等）正常透出，便于触达候选人。仅内部原始负载（如学术域 `extra_data`）不对外。列表字段为各域面向洞察的核心子集（身份、机构、技术标签、学术指标/贡献指标/评分）。
 
 ## 示例：洞察 Skill 的典型调用流
 

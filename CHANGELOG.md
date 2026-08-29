@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.1.0] - 2026-08-29
+
+> 主交付：**全平台项目文档集**（`docs/v5.1.0/`，按 academic-v1.0 八类目录分工的 23 篇 Word 分册 + 总览）+ Open API 联系方式透出 + 开源域两处修复。
+
+### Added
+
+- 开源域开发者搜索新增 `has_contact`（有联系方式）筛选（前后端 + 测试）
+- 开放 API：五域只读端点与跨域统一搜索（`/open-api/search/talents`）、三域 JSONL 导入端点（`<域>:write` scope）、API Key 管理（hash 存储 + scope + 审计）
+- API Key 独立限流生效：`rate_limit_per_minute` 非空时按 Key 滑动窗口限流（429 + Retry-After）
+- `docs/v5.1.0/` 全平台项目文档集（Word，覆盖五大人才域 + 共享系统能力）
+
+### Changed
+
+- Open API 经 API Key 鉴权后透出联系方式字段（email / social_links / blog_url / profile_url / orcid），仅内部原始负载（`extra_data`）不对外
+- 学术 Open API 详情端点返回完整画像字段（含精选代表作、技术标签、教育/任职机构等）
+- `scripts/bump_version.py` 支持命令行参数与 uv.lock 精确替换（不再误伤同版本号依赖）
+- mypy 基线收敛 1267 → 1262
+
+### Fixed
+
+- 开源仓库配置列表补齐 `q` 搜索参数透传，修复按名称搜索失效
+- 开源首页「覆盖仓库」统计口径修正为「已完成采集的配置仓库数」
+- 跨域搜索 Provider 类型/调用错误（竞赛 Provider 少传必填参数、`profile_url`/`specialties` 字段不存在）
+
 ## [5.0.0] - 2026-08-16
 
 > 主交付：**行业人才库**（第四个人才域）+ **技术分类体系 v2** + 开源自动探测。设计/需求/对接/升级文档见 `docs/v5.0.0/`（00 README / 01 需求清单 / 02 技术设计 / 03 Agent 对接指南 / 04 升级迁移指南）。升级其他部署请严格按 04 指南执行。

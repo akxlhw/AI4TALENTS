@@ -19,11 +19,13 @@ _require = require_api_key("academic:read")
 # Explicit registration (a real call survives lint; bare side-effect imports do not)
 register_search_provider("academic", AcademicSearchProvider)
 
-# External-facing field whitelist (PII redaction: orcid / extra_data excluded)
+# External-facing field whitelist (extra_data excluded as internal raw payload;
+# PII such as orcid is exposed — Open API is behind API-Key auth)
 _LIST_FIELDS = (
     "talent_id",
     "name",
     "name_en",
+    "orcid",
     "current_title",
     "role_type",
     "school_id",
@@ -69,10 +71,59 @@ async def get_academic_talent(
     session: AsyncSession = Depends(get_async_session),
     _principal: dict = Depends(_require),
 ) -> dict:
-    talent = await TalentService(session).get_talent_by_id(talent_id)
+    service = TalentService(session)
+    talent = await service.get_talent_by_id(talent_id)
     if not talent:
         raise HTTPException(status_code=404, detail="Talent not found")
-    return _strip([talent])[0]
+
+    works = await service.get_selected_works(talent_id, limit=10)
+    tech_tag_rows = await service.get_talent_tech_tags(talent_id)
+    return {
+        "talent_id": talent.talent_id,
+        "name": talent.name,
+        "name_en": talent.name_en,
+        "orcid": talent.orcid,
+        "current_title": talent.current_title,
+        "role_type": talent.role_type,
+        "role_confidence": talent.role_confidence,
+        "school_id": talent.primary_school_id,
+        "school_name": talent.primary_school_name,
+        "education_school_name": (
+            talent.education_school.school_name if talent.education_school else None
+        ),
+        "company_school_name": (
+            talent.company_school.school_name if talent.company_school else None
+        ),
+        "works_count": talent.works_count,
+        "cited_by_count": talent.cited_by_count,
+        "h_index": talent.h_index,
+        "latest_active_year": talent.latest_active_year,
+        "topic_tags": talent.topic_tags or [],
+        "openalex_topics": talent.openalex_topics or [],
+        "summary": talent.summary,
+        "department_name": talent.department_name,
+        "lab_name": talent.lab_name,
+        "selected_works": [
+            {
+                "work_id": w.work_id,
+                "title": w.title,
+                "publication_year": w.publication_year,
+                "venue_name": w.venue_name,
+                "citation_count": w.citation_count,
+                "doi": w.doi,
+            }
+            for w in works
+        ],
+        "tech_tags": [
+            {
+                "tech_domain_id": domain.tech_domain_id,
+                "tech_domain_name": domain.domain_name,
+                "tech_direction_id": direction.tech_direction_id if direction else None,
+                "tech_direction_name": direction.direction_name if direction else None,
+            }
+            for _tag, domain, direction in tech_tag_rows
+        ],
+    }
 
 
 @router.get("/stats", summary="学术域统计")

@@ -24,13 +24,6 @@ _require_write = require_api_key("lab:write")
 # Explicit registration (a real call survives lint; bare side-effect imports do not)
 register_search_provider("lab", LabSearchProvider)
 
-# PII redaction for external consumers
-_PII_FIELDS = ("email", "social_links")
-
-
-def _redact(data: dict) -> dict:
-    return {k: v for k, v in data.items() if k not in _PII_FIELDS}
-
 
 @router.get("/talents", summary="实验室人才列表（实验室/研究方向/角色筛选）")
 async def list_lab_talents(
@@ -53,7 +46,7 @@ async def list_lab_talents(
         page=page,
         page_size=page_size,
     )
-    items = [_redact(s.model_dump(mode="json")) for s in summaries]
+    items = [s.model_dump(mode="json") for s in summaries]
     return OpenApiPage(items=items, total=total, page=page, page_size=page_size)
 
 
@@ -67,7 +60,7 @@ async def get_lab_talent(
         detail = await LabTalentService(session).get_talent_detail(talent_id)
     except NotFoundError:
         raise HTTPException(status_code=404, detail="Talent not found") from None
-    return _redact(detail.model_dump(mode="json"))
+    return detail.model_dump(mode="json")
 
 
 @router.get("/stats", summary="实验室域统计")

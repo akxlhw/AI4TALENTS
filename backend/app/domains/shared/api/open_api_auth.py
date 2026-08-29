@@ -10,6 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.core.metrics import metrics
 from app.domains.shared.services.api_key_service import ApiKeyService
+from app.domains.shared.services.open_api.rate_limiter import api_key_rate_limiter
+
+
+def _check_per_key_rate_limit(api_key_id: int, rate_limit_per_minute: int | None) -> int:
+    """Enforce the per-key rate limit when configured. Returns retry-after seconds."""
+    if not rate_limit_per_minute:
+        return 0
+    return api_key_rate_limiter.check(api_key_id, rate_limit_per_minute)
 
 
 def require_api_key(scope: str) -> Any:
@@ -34,6 +42,16 @@ def require_api_key(scope: str) -> Any:
             raise HTTPException(
                 status_code=403,
                 detail=f"API key lacks required scope: {scope}.",
+            )
+        retry_after = _check_per_key_rate_limit(
+            cast(int, record.api_key_id),
+            cast("int | None", record.rate_limit_per_minute),
+        )
+        if retry_after:
+            raise HTTPException(
+                status_code=429,
+                detail="Rate limit exceeded for this API key.",
+                headers={"Retry-After": str(retry_after)},
             )
         await session.commit()  # persist the last_used_at touch
         metrics.counter(
@@ -69,6 +87,16 @@ def require_valid_api_key() -> Any:
         record = await ApiKeyService(session).verify_key(api_key)
         if record is None:
             raise HTTPException(status_code=401, detail="Invalid or revoked API key.")
+        retry_after = _check_per_key_rate_limit(
+            cast(int, record.api_key_id),
+            cast("int | None", record.rate_limit_per_minute),
+        )
+        if retry_after:
+            raise HTTPException(
+                status_code=429,
+                detail="Rate limit exceeded for this API key.",
+                headers={"Retry-After": str(retry_after)},
+            )
         await session.commit()  # persist the last_used_at touch
         metrics.counter(
             "open_api_requests_total",

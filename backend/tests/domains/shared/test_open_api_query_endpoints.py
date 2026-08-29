@@ -44,4 +44,5 @@ async def test_academic_talents_envelope(client: AsyncClient, test_session: Asyn
     body = r.json()
     assert set(body) >= {"items", "total", "page", "page_size"}
     for item in body["items"]:
-        assert "orcid" not in item and "extra_data" not in item
+        # PII（orcid 等）经 API Key 鉴权后允许透出；internal extra_data 仍不对外
+        assert "extra_data" not in item

@@ -25,13 +25,6 @@ _require_write = require_api_key("industry:write")
 # Explicit registration (a real call survives lint; bare side-effect imports do not)
 register_search_provider("industry", IndustrySearchProvider)
 
-# PII redaction for external consumers (contact links)
-_PII_FIELDS = ("profile_url",)
-
-
-def _redact(data: dict) -> dict:
-    return {k: v for k, v in data.items() if k not in _PII_FIELDS}
-
 
 @router.get("/talents", summary="行业人才列表（岗位/状态/匹配分筛选）")
 async def list_industry_talents(
@@ -52,7 +45,7 @@ async def list_industry_talents(
         page=page,
         page_size=page_size,
     )
-    items = [_redact(s.model_dump(mode="json")) for s in summaries]
+    items = [s.model_dump(mode="json") for s in summaries]
     return OpenApiPage(items=items, total=total, page=page, page_size=page_size)
 
 
@@ -66,7 +59,7 @@ async def get_industry_talent(
         detail = await IndustryTalentService(session).get_talent_detail(talent_id)
     except NotFoundError:
         raise HTTPException(status_code=404, detail="Talent not found") from None
-    return _redact(detail.model_dump(mode="json"))
+    return detail.model_dump(mode="json")
 
 
 @router.get("/stats", summary="行业域统计（岗位粒度）")

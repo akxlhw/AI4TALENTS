@@ -22,13 +22,6 @@ _require = require_api_key("open_source:read")
 # Explicit registration (a real call survives lint; bare side-effect imports do not)
 register_search_provider("open_source", OpenSourceSearchProvider)
 
-# PII redaction for external consumers
-_PII_FIELDS = ("email", "social_links", "blog_url")
-
-
-def _redact(record: dict) -> dict:
-    return {k: v for k, v in record.items() if k not in _PII_FIELDS}
-
 
 def _orm_to_dict(d: Any) -> dict:
     return {
@@ -39,6 +32,9 @@ def _orm_to_dict(d: Any) -> dict:
         "location": d.location,
         "company": d.company,
         "avatar_url": d.avatar_url,
+        "email": d.email,
+        "social_links": d.social_links,
+        "blog_url": d.blog_url,
         "followers_count": d.followers_count,
         "public_repos_count": d.public_repos_count,
         "total_stars_received": d.total_stars_received,
@@ -83,7 +79,7 @@ async def get_open_source_talent(
         detail = await OSDeveloperService(session).get_developer_detail(developer_id)
     except NotFoundError:
         raise HTTPException(status_code=404, detail="Developer not found") from None
-    return _redact(detail.model_dump(mode="json"))
+    return detail.model_dump(mode="json")
 
 
 @router.get("/stats", summary="开源域统计")

@@ -9,7 +9,7 @@
 
 **智能人才库（AI4TALENTS）** 是一套面向招聘团队的多维度人才发现平台。
 
-- **当前版本**：**V5.0.0**（以 `backend/pyproject.toml`、`frontend/package.json`、`backend/app/core/config.py` 为准；变更记录见 `CHANGELOG.md`）。
+- **当前版本**：**V5.1.0**（以 `backend/pyproject.toml`、`frontend/package.json`、`backend/app/core/config.py` 为准；变更记录见 `CHANGELOG.md`）。
 - **项目定位**：整合公开学术数据与开源社区数据，帮助招聘团队发现、筛选、对比和管理高端技术人才。
 - **人才数据源**（每个域独立表族，跨域隔离铁律，均不复用其他域表）：
   - **学术人才**（`domains/academic/`）：OpenAlex 学术数据库，功能完整。
