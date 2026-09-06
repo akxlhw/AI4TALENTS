@@ -19,6 +19,8 @@ export function useOsSearchQuery() {
     is_committer: searchParams.get('is_committer') === 'true',
     is_student: searchParams.get('is_student') === 'true',
     has_contact: searchParams.get('has_contact') === 'true',
+    china_related: searchParams.get('china_related') === 'true',
+    top_org: searchParams.get('top_org') === 'true',
     sort_by: searchParams.get('sort_by') || 'stars_desc',
     mode: (searchParams.get('mode') as OSSearchQuery['mode']) || 'keyword',
     page: parseInt(searchParams.get('page') || '1'),
@@ -39,6 +41,8 @@ export function useOsSearchQuery() {
     if (newQuery.is_committer) params.set('is_committer', 'true')
     if (newQuery.is_student) params.set('is_student', 'true')
     if (newQuery.has_contact) params.set('has_contact', 'true')
+    if (newQuery.china_related) params.set('china_related', 'true')
+    if (newQuery.top_org) params.set('top_org', 'true')
     if (newQuery.sort_by && newQuery.sort_by !== 'stars_desc')
       params.set('sort_by', newQuery.sort_by)
     if (newQuery.mode && newQuery.mode !== 'keyword') params.set('mode', newQuery.mode)
@@ -63,6 +67,8 @@ export function useOsSearchQuery() {
       is_committer: false,
       is_student: false,
       has_contact: false,
+      china_related: false,
+      top_org: false,
       page: 1,
     })
   }

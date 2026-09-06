@@ -192,6 +192,12 @@ class OSSearchFilters(BaseModel):
     has_contact: bool | None = Field(
         default=None, description="是否有有效联系方式（个人主页/邮箱/社交媒体任一）"
     )
+    china_related: bool | None = Field(
+        default=None, description="中国背景（姓名含中文/命中百家姓拼音，或地区位于中国）"
+    )
+    top_org: bool | None = Field(
+        default=None, description="来源知名企业/院校（全球大厂/国内头部互联网/AI 初创/知名院校）"
+    )
 
 
 class OSSearchRequest(BaseModel):
@@ -442,7 +448,7 @@ class OSRepositoryDetailResponse(BaseModel):
     stars_count: int
     forks_count: int
     topics: list[str] = Field(default_factory=list)
-    tech_element: str
+    tech_element: list[str] = Field(default_factory=list)
     contributor_count: int
 
     model_config = ConfigDict(from_attributes=True)

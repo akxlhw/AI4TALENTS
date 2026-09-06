@@ -15,6 +15,13 @@ from sqlalchemy.dialects.postgresql import array as pg_array
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domains.open_source.constants.china_markers import (
+    CHINA_LOCATION_TOKENS,
+    NAME_CJK_RE,
+    NAME_FIRST_SURNAME_RE,
+    NAME_LAST_SURNAME_RE,
+)
+from app.domains.open_source.constants.top_orgs import TOP_ORG_RE
 from app.domains.open_source.models.open_source import (
     OSContribution,
     OSDeveloper,
@@ -99,6 +106,25 @@ class DevelopersMixin:
                 ),
             )
             conditions.append(contact_cond if has_contact else not_(contact_cond))
+
+        china_related = filters.get("china_related")
+        if china_related:
+            # 中国背景判定（满足其一）：姓名含中文 / 姓名首末词元命中百家姓拼音 /
+            # 地区命中中国相关词。召回导向，详见 constants/china_markers.py。
+            conditions.append(
+                or_(
+                    OSDeveloper.name.op("~*")(NAME_CJK_RE),
+                    OSDeveloper.name.op("~*")(NAME_FIRST_SURNAME_RE),
+                    OSDeveloper.name.op("~*")(NAME_LAST_SURNAME_RE),
+                    *(OSDeveloper.location.ilike(f"%{token}%") for token in CHINA_LOCATION_TOKENS),
+                )
+            )
+
+        top_org = filters.get("top_org")
+        if top_org:
+            # 知名企业/院校：company 字段命中词表（词元边界正则），
+            # 词表见 constants/top_orgs.py。
+            conditions.append(OSDeveloper.company.op("~*")(TOP_ORG_RE))
 
         repo_full_names = filters.get("repo_full_names")
         if repo_full_names:

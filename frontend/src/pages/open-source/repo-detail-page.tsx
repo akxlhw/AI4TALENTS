@@ -114,11 +114,7 @@ const RepoDetailPage: React.FC = () => {
     )
   }
 
-  const techCodes: string[] = Array.isArray(detail.tech_element)
-    ? detail.tech_element
-    : detail.tech_element
-      ? [detail.tech_element]
-      : []
+  const techCodes: string[] = detail.tech_element ?? []
   const techInfos = techCodes.map(code => ({
     code,
     label: getTechElementFullLabel(code),

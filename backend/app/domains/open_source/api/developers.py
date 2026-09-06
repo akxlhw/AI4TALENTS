@@ -50,6 +50,12 @@ async def list_developers(
     has_contact: bool | None = Query(
         None, description="Filter developers with valid contact info (homepage/email/social)"
     ),
+    china_related: bool | None = Query(
+        None, description="Filter China-related developers (Chinese name/surname or China location)"
+    ),
+    top_org: bool | None = Query(
+        None, description="Filter developers from top companies/universities"
+    ),
     repo_full_names: list[str] | None = Query(None, description="Filter by repository full names"),
     sort_by: str = Query("stars_desc"),
     page: int = Query(1, ge=1),
@@ -68,6 +74,8 @@ async def list_developers(
         is_committer=is_committer,
         is_student=is_student,
         has_contact=has_contact,
+        china_related=china_related,
+        top_org=top_org,
         repo_full_names=repo_full_names,
         sort_by=sort_by,
         page=page,
@@ -104,6 +112,12 @@ async def list_all_developer_ids(
     has_contact: bool | None = Query(
         None, description="Filter developers with valid contact info (homepage/email/social)"
     ),
+    china_related: bool | None = Query(
+        None, description="Filter China-related developers (Chinese name/surname or China location)"
+    ),
+    top_org: bool | None = Query(
+        None, description="Filter developers from top companies/universities"
+    ),
     repo_full_names: list[str] | None = Query(None, description="Filter by repository full names"),
     sort_by: str = Query("stars_desc"),
     session: AsyncSession = Depends(get_async_session),
@@ -123,6 +137,8 @@ async def list_all_developer_ids(
         is_committer=is_committer,
         is_student=is_student,
         has_contact=has_contact,
+        china_related=china_related,
+        top_org=top_org,
         repo_full_names=repo_full_names,
         sort_by=sort_by,
         page=1,

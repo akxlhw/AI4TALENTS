@@ -135,6 +135,8 @@ class OpenSourceAdvancedRepository:
                 "repo_full_names",
                 "is_student",
                 "has_contact",
+                "china_related",
+                "top_org",
             ):
                 value = getattr(req_filters, key, None)
                 if value is not None:

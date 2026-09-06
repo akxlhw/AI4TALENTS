@@ -533,6 +533,8 @@ export interface OSSearchQuery {
   is_committer?: boolean
   is_student?: boolean
   has_contact?: boolean
+  china_related?: boolean
+  top_org?: boolean
   repo_full_names?: string[]
   sort_by?: string
   mode?: 'keyword' | 'semantic' | 'hybrid'
@@ -549,7 +551,7 @@ export interface OSRepositoryDetail {
   stars_count: number
   forks_count: number
   topics: string[]
-  tech_element: string
+  tech_element: string[]
   contributor_count: number
 }
 

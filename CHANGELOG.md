@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - 开源域开发者搜索新增 `has_contact`（有联系方式）筛选（前后端 + 测试）
+- 开源域开发者搜索新增 `china_related`（中国背景：中文名/百家姓拼音/中国地区）与 `top_org`（名企/名校：全球大厂/国内头部互联网/AI 初创/知名院校）筛选
 - 开放 API：五域只读端点与跨域统一搜索（`/open-api/search/talents`）、三域 JSONL 导入端点（`<域>:write` scope）、API Key 管理（hash 存储 + scope + 审计）
 - API Key 独立限流生效：`rate_limit_per_minute` 非空时按 Key 滑动窗口限流（429 + Retry-After）
 - `docs/v5.1.0/` 全平台项目文档集（Word，覆盖五大人才域 + 共享系统能力）

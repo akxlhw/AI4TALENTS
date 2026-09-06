@@ -1,4 +1,16 @@
-import { Button, Card, Checkbox, Col, Form, Input, Row, Segmented, Select, Space } from 'antd'
+import {
+  Button,
+  Card,
+  Checkbox,
+  Col,
+  Form,
+  Input,
+  Row,
+  Segmented,
+  Select,
+  Space,
+  Tooltip,
+} from 'antd'
 import { FilterOutlined, SearchOutlined } from '@ant-design/icons'
 import { domainThemes } from '../../../theme'
 import { TECH_ELEMENT_GROUPS } from '@/constants/tech-elements'
@@ -166,9 +178,9 @@ const OsSearchFilterCard: React.FC<OsSearchFilterCardProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Form.Item label="角色筛选" style={{ marginBottom: 8 }}>
-              <Space>
+          <Col xs={24} sm={24} md={16} lg={12}>
+            <Form.Item label="筛选" style={{ marginBottom: 8 }}>
+              <Space size={16} style={{ whiteSpace: 'nowrap' }}>
                 <Checkbox
                   checked={query.is_committer}
                   onChange={e => onQueryChange({ ...query, is_committer: e.target.checked })}
@@ -181,17 +193,27 @@ const OsSearchFilterCard: React.FC<OsSearchFilterCardProps> = ({
                 >
                   在校生
                 </Checkbox>
+                <Checkbox
+                  checked={query.china_related}
+                  onChange={e => onQueryChange({ ...query, china_related: e.target.checked })}
+                >
+                  <Tooltip title="姓名含中文或命中百家姓拼音，或地区位于中国">中国背景</Tooltip>
+                </Checkbox>
+                <Checkbox
+                  checked={query.top_org}
+                  onChange={e => onQueryChange({ ...query, top_org: e.target.checked })}
+                >
+                  <Tooltip title="全球头部大厂 / 国内头部互联网 / 知名 AI 初创 / 知名院校（按公司字段匹配）">
+                    名企/名校
+                  </Tooltip>
+                </Checkbox>
+                <Checkbox
+                  checked={query.has_contact}
+                  onChange={e => onQueryChange({ ...query, has_contact: e.target.checked })}
+                >
+                  <Tooltip title="主页 / 邮箱 / 社媒，任一即算有联系方式">有联系方式</Tooltip>
+                </Checkbox>
               </Space>
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Form.Item label="联系方式" style={{ marginBottom: 8 }}>
-              <Checkbox
-                checked={query.has_contact}
-                onChange={e => onQueryChange({ ...query, has_contact: e.target.checked })}
-              >
-                有有效联系方式（主页/邮箱/社媒任一）
-              </Checkbox>
             </Form.Item>
           </Col>
         </Row>

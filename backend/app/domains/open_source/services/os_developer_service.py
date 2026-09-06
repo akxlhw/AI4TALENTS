@@ -71,6 +71,8 @@ class OSDeveloperService:
         is_committer: bool | None = None,
         is_student: bool | None = None,
         has_contact: bool | None = None,
+        china_related: bool | None = None,
+        top_org: bool | None = None,
         repo_full_names: list[str] | None = None,
         sort_by: str = "stars_desc",
         page: int = 1,
@@ -89,6 +91,8 @@ class OSDeveloperService:
             is_committer: 是否 Committer
             is_student: 是否在校生
             has_contact: 是否有有效联系方式（个人主页/邮箱/社交媒体任一）
+            china_related: 是否中国背景（姓名含中文/命中百家姓拼音，或地区位于中国）
+            top_org: 是否来源知名企业/院校
             sort_by: 排序方式
             page: 页码
             page_size: 每页数量
@@ -115,6 +119,10 @@ class OSDeveloperService:
             filters["is_student"] = is_student
         if has_contact is not None:
             filters["has_contact"] = has_contact
+        if china_related is not None:
+            filters["china_related"] = china_related
+        if top_org is not None:
+            filters["top_org"] = top_org
         if repo_full_names is not None:
             filters["repo_full_names"] = repo_full_names
         return await self.repo.list_developers(
@@ -222,6 +230,10 @@ class OSDeveloperService:
         )
         config = config_result.scalar_one_or_none()
 
+        tech_element = config.tech_element if config and config.tech_element else []
+        if isinstance(tech_element, str):  # legacy scalar rows
+            tech_element = [tech_element]
+
         return {
             "repo_id": repo.repo_id,
             "full_name": repo.full_name,
@@ -231,7 +243,7 @@ class OSDeveloperService:
             "stars_count": repo.stars_count,
             "forks_count": repo.forks_count,
             "topics": repo.topics or [],
-            "tech_element": config.tech_element if config else "",
+            "tech_element": tech_element,
             "contributor_count": contributor_count,
         }
 
@@ -352,6 +364,10 @@ class OSDeveloperService:
                 filters["is_student"] = req.filters.is_student
             if req.filters.has_contact is not None:
                 filters["has_contact"] = req.filters.has_contact
+            if req.filters.china_related is not None:
+                filters["china_related"] = req.filters.china_related
+            if req.filters.top_org is not None:
+                filters["top_org"] = req.filters.top_org
 
         if req.mode == "semantic":
             semantic_items, total = await self.repo.search_by_vector_similarity(
