@@ -164,8 +164,10 @@ class DevelopersMixin:
     async def get_developer_insights(self, filters: dict[str, Any]) -> dict[str, Any]:
         """对筛选命中全集做聚合统计（技术要素/来源仓库/可触达率/公司）。
 
-        WHERE 条件组与 list_developers 完全一致。
+        WHERE 条件组与 list_developers 完全一致；来源仓库仅统计有贡献记录
+        （OSContribution）的开发者，且仅计入已配置采集的仓库。
         """
+        filters = filters or {}
         conditions = self._build_list_conditions(filters)
         base_where = and_(*conditions)
 
@@ -198,7 +200,10 @@ class DevelopersMixin:
             .join(OSRepoConfig, OSRepository.full_name == OSRepoConfig.repo_full_name)
             .where(OSContribution.developer_id.in_(id_subq))
             .group_by(OSRepository.full_name)
-            .order_by(func.count(func.distinct(OSContribution.developer_id)).desc())
+            .order_by(
+                func.count(func.distinct(OSContribution.developer_id)).desc(),
+                OSRepository.full_name.asc(),
+            )
             .limit(10)
         )
         repo_dist = [
@@ -223,7 +228,7 @@ class DevelopersMixin:
                 OSDeveloper.company != "",
             )
             .group_by(OSDeveloper.company)
-            .order_by(func.count().desc())
+            .order_by(func.count().desc(), OSDeveloper.company.asc())
             .limit(10)
         )
         company_dist = {row[0]: row[1] for row in (await self.session.execute(company_stmt)).all()}
@@ -392,8 +397,6 @@ class DevelopersMixin:
     async def get_union_tech_elements_for_developer(self, developer_id: int) -> list[str]:
         """Union of tech_element arrays across all configured repos the developer
         contributes to or owns. Unconfigured repos don't count."""
-        from app.domains.open_source.models.open_source import OSRepoConfig
-
         contrib_rows = await self.session.execute(
             select(OSRepoConfig.tech_element)
             .join(OSRepository, OSRepository.full_name == OSRepoConfig.repo_full_name)

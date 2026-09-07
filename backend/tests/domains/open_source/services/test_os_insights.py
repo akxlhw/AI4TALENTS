@@ -58,6 +58,15 @@ async def _seed(test_session: AsyncSession) -> None:
             OSContribution(developer_id=dev_ids["d2"], repo_id=repo.repo_id, commits_count=5),
         ]
     )
+    # 未配置采集的仓库：d3 有贡献记录，但不应计入来源仓库分布
+    random_repo = OSRepository(
+        developer_id=dev_ids["d1"], full_name="some/random-repo", name="random-repo"
+    )
+    test_session.add(random_repo)
+    await test_session.flush()
+    test_session.add(
+        OSContribution(developer_id=dev_ids["d3"], repo_id=random_repo.repo_id, commits_count=7)
+    )
     await test_session.commit()
 
 
@@ -88,3 +97,20 @@ async def test_insights_follow_filters(test_session: AsyncSession) -> None:
     assert result["contactable"] == 1
     assert result["company_distribution"] == {"Google": 2}
     assert result["repo_distribution"][0]["developer_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_insights_excludes_unconfigured_repos(test_session: AsyncSession) -> None:
+    """来源仓库分布仅计入已配置采集（OSRepoConfig）的仓库。
+
+    d3 对未配置的 some/random-repo 有贡献记录，但该仓库不得出现在分布里。
+    """
+    await _seed(test_session)
+    repo = OpenSourceRepository(test_session)
+
+    result = await repo.get_developer_insights({})
+
+    assert result["total"] == 3
+    assert result["repo_distribution"] == [
+        {"repo_full_name": "pytorch/pytorch", "developer_count": 2}
+    ]
