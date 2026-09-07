@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Card, Col, Collapse, Empty, Row, Spin, Statistic, Typography } from 'antd'
 import { BarChartOutlined } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
@@ -30,10 +30,18 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
   const [data, setData] = useState<OSInsightsResponse | null>(null)
   const [error, setError] = useState(false)
 
-  const fetchInsights = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await api.openSource.getDeveloperInsights({
+  // 最新 query 的 ref：fetchInsights 保持引用稳定（不随 query 身份变化重建），
+  // 但发起请求时读取的是最新筛选值
+  const queryRef = useRef(query)
+  queryRef.current = query
+  // 请求序号：旧请求晚返回时丢弃其响应，避免覆盖新筛选的结果
+  const requestIdRef = useRef(0)
+
+  // 仅聚合端点实际消费的 11 个筛选字段参与签名；page/sort_by/mode 等
+  // 不改变签名，翻页/排序/模式切换不会触发重取
+  const filtersKey = useMemo(
+    () =>
+      JSON.stringify({
         q: query.q,
         tech_elements: query.tech_elements,
         languages: query.languages,
@@ -42,24 +50,47 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
         repo_full_names: query.repo_full_names,
         is_committer: query.is_committer,
         is_student: query.is_student,
-        has_contact: query.has_contact || undefined,
-        china_related: query.china_related || undefined,
-        top_org: query.top_org || undefined,
+        has_contact: !!query.has_contact,
+        china_related: !!query.china_related,
+        top_org: !!query.top_org,
+      }),
+    [query]
+  )
+
+  const fetchInsights = useCallback(async () => {
+    const requestId = ++requestIdRef.current
+    const q = queryRef.current
+    setLoading(true)
+    try {
+      const res = await api.openSource.getDeveloperInsights({
+        q: q.q,
+        tech_elements: q.tech_elements,
+        languages: q.languages,
+        location: q.location,
+        company: q.company,
+        repo_full_names: q.repo_full_names,
+        is_committer: q.is_committer,
+        is_student: q.is_student,
+        has_contact: q.has_contact || undefined,
+        china_related: q.china_related || undefined,
+        top_org: q.top_org || undefined,
       })
+      if (requestId !== requestIdRef.current) return
       setData(res.data)
       setError(false)
     } catch {
+      if (requestId !== requestIdRef.current) return
       setData(null)
       setError(true)
     } finally {
-      setLoading(false)
+      if (requestId === requestIdRef.current) setLoading(false)
     }
-  }, [query])
+  }, [])
 
-  // 展开时请求；筛选变化且面板处于展开态时自动刷新
+  // 展开时请求；筛选变化（filtersKey 变化）且面板处于展开态时自动刷新
   useEffect(() => {
     if (open) fetchInsights()
-  }, [open, fetchInsights])
+  }, [open, filtersKey, fetchInsights])
 
   const techEntries = useMemo(
     () =>
@@ -95,7 +126,7 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
             </span>
           ),
           children: (
-            <Spin spinning={loading}>
+            <Spin spinning={loading} style={{ minHeight: 120 }}>
               {error && !loading && (
                 <Alert
                   type="error"

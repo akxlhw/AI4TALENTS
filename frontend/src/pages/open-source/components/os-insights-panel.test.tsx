@@ -55,4 +55,23 @@ describe('OsInsightsPanel', () => {
     await waitFor(() => expect(insightsMock).toHaveBeenCalledTimes(2), { timeout: 15000 })
     expect(await screen.findByText('2 / 3', undefined, { timeout: 15000 })).toBeTruthy()
   }, 30000)
+
+  it('refetches on filter change while expanded, but not on page change', async () => {
+    const { rerender } = render(<OsInsightsPanel query={baseQuery} />)
+    fireEvent.click(screen.getByText(/命中人才洞察/))
+    await waitFor(() => expect(insightsMock).toHaveBeenCalledTimes(1), { timeout: 15000 })
+    // 翻页不影响聚合也不发给端点，不得触发重取
+    rerender(<OsInsightsPanel query={{ ...baseQuery, page: 2 }} />)
+    expect(insightsMock).toHaveBeenCalledTimes(1)
+    // 筛选变化触发重取，且参数带新筛选值
+    rerender(<OsInsightsPanel query={{ ...baseQuery, company: 'Google' }} />)
+    await waitFor(() => expect(insightsMock).toHaveBeenCalledTimes(2), { timeout: 15000 })
+    expect(insightsMock.mock.calls[1][0]).toMatchObject({ company: 'Google' })
+  }, 30000)
+
+  it('does not fetch on filter change while collapsed', async () => {
+    const { rerender } = render(<OsInsightsPanel query={baseQuery} />)
+    rerender(<OsInsightsPanel query={{ ...baseQuery, company: 'Google' }} />)
+    expect(insightsMock).not.toHaveBeenCalled()
+  }, 30000)
 })
