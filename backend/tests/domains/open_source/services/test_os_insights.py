@@ -14,6 +14,7 @@ from app.domains.open_source.models.open_source import (
 )
 from app.domains.open_source.repositories.open_source import OpenSourceRepository
 from app.domains.shared.api.auth import require_admin
+from app.domains.shared.api.auth_deps import require_user
 from app.main import app
 
 
@@ -120,10 +121,25 @@ async def test_insights_excludes_unconfigured_repos(test_session: AsyncSession) 
 
 
 @pytest.mark.asyncio
-async def test_insights_endpoint_forbidden_for_normal_user(client: AsyncClient, test_user) -> None:
-    # 未携带有效凭证（require_admin 链：401；即便已认证非 admin 也应 403）
+async def test_insights_endpoint_unauthenticated(client: AsyncClient) -> None:
+    # 未携带任何凭证：require_admin 链（require_user）直接拒绝
     r = await client.get("/api/v1/open-source/developers/insights")
-    assert r.status_code in (401, 403)
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_insights_endpoint_forbidden_for_normal_user(client: AsyncClient) -> None:
+    # 已认证但非 admin：只 stub require_user，让真实 require_admin 角色检查跑出 403
+    app.dependency_overrides[require_user] = lambda: {
+        "user_id": 2,
+        "username": "normal_user",
+        "role": "user",
+    }
+    try:
+        r = await client.get("/api/v1/open-source/developers/insights")
+    finally:
+        app.dependency_overrides.pop(require_user, None)
+    assert r.status_code == 403
 
 
 @pytest.mark.asyncio
@@ -141,3 +157,21 @@ async def test_insights_endpoint_admin_ok(
     assert body["total"] == 3
     assert body["contactable"] == 2
     assert body["tech_element_distribution"]["ai"] == 2
+
+
+@pytest.mark.asyncio
+async def test_insights_endpoint_admin_with_filters(
+    client: AsyncClient, test_session: AsyncSession, mock_admin_user
+) -> None:
+    await _seed(test_session)
+    app.dependency_overrides[require_admin] = lambda: mock_admin_user
+    try:
+        r = await client.get(
+            "/api/v1/open-source/developers/insights?company=Google&tech_elements=ai"
+        )
+    finally:
+        app.dependency_overrides.pop(require_admin, None)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total"] == 2
+    assert body["tech_element_distribution"] == {"ai": 2, "systems": 1}

@@ -156,12 +156,18 @@ async def get_developer_insights(
     location: str | None = Query(None),
     company: str | None = Query(None),
     min_stars: int | None = Query(None, ge=0),
-    is_committer: bool | None = Query(None),
-    is_student: bool | None = Query(None),
-    has_contact: bool | None = Query(None),
-    china_related: bool | None = Query(None),
-    top_org: bool | None = Query(None),
-    repo_full_names: list[str] | None = Query(None),
+    is_committer: bool | None = Query(None, description="Filter developers who are committers"),
+    is_student: bool | None = Query(None, description="Filter developers who are students"),
+    has_contact: bool | None = Query(
+        None, description="Filter developers with valid contact info (homepage/email/social)"
+    ),
+    china_related: bool | None = Query(
+        None, description="Filter China-related developers (Chinese name/surname or China location)"
+    ),
+    top_org: bool | None = Query(
+        None, description="Filter developers from top companies/universities"
+    ),
+    repo_full_names: list[str] | None = Query(None, description="Filter by repository full names"),
     session: AsyncSession = Depends(get_async_session),
     _admin: dict = Depends(require_admin),
 ) -> OSInsightsResponse:
