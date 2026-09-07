@@ -21,6 +21,7 @@ from app.domains.open_source.constants.china_markers import (
     NAME_FIRST_SURNAME_RE,
     NAME_LAST_SURNAME_RE,
 )
+from app.domains.open_source.constants.company_canonical import canonicalize_company
 from app.domains.open_source.constants.top_orgs import TOP_ORG_RE
 from app.domains.open_source.models.open_source import (
     OSContribution,
@@ -187,6 +188,11 @@ class DevelopersMixin:
             .group_by(te.c.te)
         )
         tech_dist = {row[0]: row[1] for row in (await self.session.execute(te_stmt)).all()}
+        # 按人数降序（同数按 code 升序）；若筛选了技术要素，仅统计所选要素
+        tech_dist = dict(sorted(tech_dist.items(), key=lambda kv: (-kv[1], kv[0])))
+        selected_elements = filters.get("tech_elements")
+        if selected_elements:
+            tech_dist = {k: v for k, v in tech_dist.items() if k in selected_elements}
 
         # 来源仓库分布（仅已配置采集的仓库，distinct 开发者，Top 10）
         id_subq = select(OSDeveloper.developer_id).where(base_where).scalar_subquery()
@@ -219,7 +225,8 @@ class DevelopersMixin:
             select(func.count()).select_from(OSDeveloper).where(base_where, _contact_condition())
         )
 
-        # 公司 Top 10
+        # 公司 Top 10（先按原文分组取回，再做归一化聚合：大小写折叠 +
+        # 去 '@'/法律后缀 + 别名映射，避免 NVIDIA/Nvidia/NVIDIA Corporation 拆桶）
         company_stmt = (
             select(OSDeveloper.company, func.count())
             .where(
@@ -228,10 +235,27 @@ class DevelopersMixin:
                 OSDeveloper.company != "",
             )
             .group_by(OSDeveloper.company)
-            .order_by(func.count().desc(), OSDeveloper.company.asc())
-            .limit(10)
         )
-        company_dist = {row[0]: row[1] for row in (await self.session.execute(company_stmt)).all()}
+        buckets: dict[str, int] = {}  # casefold 键 → 合计人数
+        display: dict[str, str] = {}  # casefold 键 → 展示名
+        company_rows = (await self.session.execute(company_stmt)).all()
+        # 计数降序 + 原名升序（ASCII 大写在前），保证未命中映射时
+        # 展示名取「计数最高、优先大写开头」的变体，结果确定
+        for company_raw, cnt in sorted(company_rows, key=lambda r: (-r[1], r[0])):
+            canonical = canonicalize_company(company_raw)
+            if not canonical:
+                continue
+            key = canonical.casefold()
+            buckets[key] = buckets.get(key, 0) + cnt
+            if key not in display:
+                # 命中别名映射时用规范名，否则用处理后（去后缀）的写法
+                display[key] = canonical
+        company_dist = dict(
+            sorted(
+                ((display[key], cnt) for key, cnt in buckets.items()),
+                key=lambda kv: (-kv[1], kv[0].casefold()),
+            )[:10]
+        )
 
         return {
             "total": total or 0,

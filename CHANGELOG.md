@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- 开源仓库配置支持选中导出 CSV（含 BOM，Excel 兼容）；技术领域筛选支持多选
+- 开源搜索洞察：柱状图显示具体人数（柱外右侧、加粗）；公司分布按规范名归一聚合（大小写/@前缀/法律后缀/中英文别名，如 NVIDIA=Nvidia=NVIDIA Corporation）
+
+### Changed
+
+- 洞察技术要素分布按人数降序；筛选技术要素后仅统计所选要素
+
 ## [5.1.0] - 2026-08-29
 
 > 主交付：**全平台项目文档集**（`docs/v5.1.0/`，按 academic-v1.0 八类目录分工的 23 篇 Word 分册 + 总览）+ Open API 联系方式透出 + 开源域两处修复。

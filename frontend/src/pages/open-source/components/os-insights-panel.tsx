@@ -16,10 +16,17 @@ interface Props {
 
 function barOption(entries: [string, number][], color: string): EChartsOption {
   return {
-    grid: { left: 8, right: 24, top: 8, bottom: 8, containLabel: true },
+    grid: { left: 8, right: 32, top: 8, bottom: 8, containLabel: true },
     xAxis: { type: 'value' },
     yAxis: { type: 'category', data: entries.map(([k]) => k).reverse() },
-    series: [{ type: 'bar', data: entries.map(([, v]) => v).reverse(), itemStyle: { color } }],
+    series: [
+      {
+        type: 'bar',
+        data: entries.map(([, v]) => v).reverse(),
+        itemStyle: { color },
+        label: { show: true, position: 'right', fontWeight: 'bold', color: '#000' },
+      },
+    ],
     tooltip: { trigger: 'axis' },
   }
 }

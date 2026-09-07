@@ -121,6 +121,77 @@ async def test_insights_excludes_unconfigured_repos(test_session: AsyncSession) 
 
 
 @pytest.mark.asyncio
+async def test_insights_tech_element_filter_restricts_distribution(
+    test_session: AsyncSession,
+) -> None:
+    """筛选技术要素后，要素分布仅统计所选要素，且按人数降序。"""
+    await _seed(test_session)
+    repo = OpenSourceRepository(test_session)
+
+    result = await repo.get_developer_insights({"tech_elements": ["ai"]})
+
+    assert result["total"] == 2  # d1、d2 命中 ai
+    assert result["tech_element_distribution"] == {"ai": 2}
+
+
+@pytest.mark.asyncio
+async def test_insights_tech_element_distribution_sorted_desc(
+    test_session: AsyncSession,
+) -> None:
+    """无要素筛选时，分布按人数降序返回（dict 保序）。"""
+    await _seed(test_session)
+    repo = OpenSourceRepository(test_session)
+
+    result = await repo.get_developer_insights({})
+
+    assert list(result["tech_element_distribution"].items()) == [
+        ("ai", 2),
+        ("robotics", 1),
+        ("systems", 1),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_insights_company_distribution_normalized(test_session: AsyncSession) -> None:
+    """公司名归一：大小写/@/法律后缀/中英文别名合并为一个条目。"""
+    variants = [
+        ("NVIDIA", 601),
+        ("Nvidia", 602),
+        ("NVIDIA Corporation", 603),
+        ("@Google", 604),
+        ("Google LLC", 605),
+        ("字节跳动", 606),
+        ("ByteDance", 607),
+        ("Acme Inc", 608),
+        ("acme", 609),
+    ]
+    test_session.add_all(
+        OSDeveloper(
+            github_login=f"norm_{i}",
+            github_id=gid,
+            name=f"norm_{i}",
+            company=company,
+            tech_tags=["ai"],
+            primary_languages=["Python"],
+            total_stars_received=0,
+            is_visible=True,
+        )
+        for i, (company, gid) in enumerate(variants)
+    )
+    await test_session.commit()
+    repo = OpenSourceRepository(test_session)
+
+    result = await repo.get_developer_insights({})
+
+    assert result["company_distribution"] == {
+        "NVIDIA": 3,
+        "Google": 2,
+        "字节跳动": 2,
+        "Acme": 2,
+    }
+
+
+@pytest.mark.asyncio
 async def test_insights_endpoint_unauthenticated(client: AsyncClient) -> None:
     # 未携带任何凭证：require_admin 链（require_user）直接拒绝
     r = await client.get("/api/v1/open-source/developers/insights")
@@ -174,4 +245,5 @@ async def test_insights_endpoint_admin_with_filters(
     assert r.status_code == 200
     body = r.json()
     assert body["total"] == 2
-    assert body["tech_element_distribution"] == {"ai": 2, "systems": 1}
+    # 筛选了技术要素时，要素分布仅统计所选要素
+    assert body["tech_element_distribution"] == {"ai": 2}
