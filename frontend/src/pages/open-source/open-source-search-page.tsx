@@ -11,6 +11,7 @@ import { useOsSearchQuery } from './components/use-os-search-query'
 import OsSearchFilterCard from './components/os-search-filter-card'
 import OsResultsToolbar from './components/os-results-toolbar'
 import OsSearchResults from './components/os-search-results'
+import OsInsightsPanel from './components/os-insights-panel'
 
 const { Title } = Typography
 
@@ -270,6 +271,8 @@ const OpenSourceSearchPage: React.FC = () => {
         onToggleFavorite={handleToggleFavorite}
         onToggleSelect={toggleSelection}
       />
+
+      {isAdmin && <OsInsightsPanel query={query} />}
 
       <ExportConfirmModal
         open={exportConfirmVisible}
