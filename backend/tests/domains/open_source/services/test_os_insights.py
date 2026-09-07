@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.open_source.models.open_source import (
@@ -12,6 +13,8 @@ from app.domains.open_source.models.open_source import (
     OSRepository,
 )
 from app.domains.open_source.repositories.open_source import OpenSourceRepository
+from app.domains.shared.api.auth import require_admin
+from app.main import app
 
 
 def _dev(
@@ -114,3 +117,27 @@ async def test_insights_excludes_unconfigured_repos(test_session: AsyncSession) 
     assert result["repo_distribution"] == [
         {"repo_full_name": "pytorch/pytorch", "developer_count": 2}
     ]
+
+
+@pytest.mark.asyncio
+async def test_insights_endpoint_forbidden_for_normal_user(client: AsyncClient, test_user) -> None:
+    # 未携带有效凭证（require_admin 链：401；即便已认证非 admin 也应 403）
+    r = await client.get("/api/v1/open-source/developers/insights")
+    assert r.status_code in (401, 403)
+
+
+@pytest.mark.asyncio
+async def test_insights_endpoint_admin_ok(
+    client: AsyncClient, test_session: AsyncSession, mock_admin_user
+) -> None:
+    await _seed(test_session)
+    app.dependency_overrides[require_admin] = lambda: mock_admin_user
+    try:
+        r = await client.get("/api/v1/open-source/developers/insights")
+    finally:
+        app.dependency_overrides.pop(require_admin, None)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total"] == 3
+    assert body["contactable"] == 2
+    assert body["tech_element_distribution"]["ai"] == 2

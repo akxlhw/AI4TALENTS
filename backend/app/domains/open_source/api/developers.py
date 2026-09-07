@@ -19,6 +19,7 @@ from app.domains.open_source.schemas.open_source import (
     OSDeveloperCompareResponse,
     OSDeveloperDetail,
     OSDeveloperSummary,
+    OSInsightsResponse,
     OSLanguageSkillItem,
     OSRepoConfigResponse,
     OSRepositoryContributor,
@@ -145,6 +146,45 @@ async def list_all_developer_ids(
         page_size=100000,
     )
     return [cast(int, dev.developer_id) for dev in items]
+
+
+@router.get("/developers/insights", response_model=OSInsightsResponse)
+async def get_developer_insights(
+    q: str = Query("", description="Keyword search"),
+    tech_elements: list[str] | None = Query(None),
+    languages: list[str] | None = Query(None),
+    location: str | None = Query(None),
+    company: str | None = Query(None),
+    min_stars: int | None = Query(None, ge=0),
+    is_committer: bool | None = Query(None),
+    is_student: bool | None = Query(None),
+    has_contact: bool | None = Query(None),
+    china_related: bool | None = Query(None),
+    top_org: bool | None = Query(None),
+    repo_full_names: list[str] | None = Query(None),
+    session: AsyncSession = Depends(get_async_session),
+    _admin: dict = Depends(require_admin),
+) -> OSInsightsResponse:
+    """命中集聚合洞察（仅 admin 及以上）。
+
+    semantic/hybrid 模式下按关键词等价条件统计（不走向量召回）。
+    """
+    service = OpenSourceService(session)
+    result = await service.get_developer_insights(
+        q=q,
+        tech_elements=tech_elements,
+        languages=languages,
+        location=location,
+        company=company,
+        min_stars=min_stars,
+        is_committer=is_committer,
+        is_student=is_student,
+        has_contact=has_contact,
+        china_related=china_related,
+        top_org=top_org,
+        repo_full_names=repo_full_names,
+    )
+    return OSInsightsResponse(**result)
 
 
 @router.get("/developers/{developer_id}", response_model=OSDeveloperDetail)

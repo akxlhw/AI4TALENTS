@@ -165,8 +165,8 @@ class OSDeveloperService:
         return filters
 
     async def get_developer_insights(self, **kwargs: Any) -> dict[str, Any]:
-        """命中集聚合洞察。kwargs 与 list_developers 的筛选参数一致
-        （sort_by/page/page_size 不适用，忽略）。"""
+        """命中集聚合洞察。仅接受 list_developers 的筛选参数
+        （sort_by/page/page_size 等分页排序参数不适用，传入会 TypeError）。"""
         filters = self._build_filters(**kwargs)
         return await self.repo.get_developer_insights(filters)
 
