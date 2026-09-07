@@ -100,6 +100,43 @@ class OSDeveloperService:
         Returns:
             Tuple[List[OSDeveloper], int]: 开发者列表和总数
         """
+        filters = self._build_filters(
+            q=q,
+            tech_elements=tech_elements,
+            languages=languages,
+            location=location,
+            company=company,
+            min_stars=min_stars,
+            is_committer=is_committer,
+            is_student=is_student,
+            has_contact=has_contact,
+            china_related=china_related,
+            top_org=top_org,
+            repo_full_names=repo_full_names,
+        )
+        return await self.repo.list_developers(
+            filters=filters,
+            sort_by=sort_by,
+            page=page,
+            page_size=page_size,
+        )
+
+    @staticmethod
+    def _build_filters(
+        q: str = "",
+        tech_elements: list[str] | None = None,
+        languages: list[str] | None = None,
+        location: str | None = None,
+        company: str | None = None,
+        min_stars: int | None = None,
+        is_committer: bool | None = None,
+        is_student: bool | None = None,
+        has_contact: bool | None = None,
+        china_related: bool | None = None,
+        top_org: bool | None = None,
+        repo_full_names: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """列表/洞察共用的筛选 dict 组装。"""
         filters: dict[str, Any] = {}
         if q:
             filters["q"] = q
@@ -125,12 +162,13 @@ class OSDeveloperService:
             filters["top_org"] = top_org
         if repo_full_names is not None:
             filters["repo_full_names"] = repo_full_names
-        return await self.repo.list_developers(
-            filters=filters,
-            sort_by=sort_by,
-            page=page,
-            page_size=page_size,
-        )
+        return filters
+
+    async def get_developer_insights(self, **kwargs: Any) -> dict[str, Any]:
+        """命中集聚合洞察。kwargs 与 list_developers 的筛选参数一致
+        （sort_by/page/page_size 不适用，忽略）。"""
+        filters = self._build_filters(**kwargs)
+        return await self.repo.get_developer_insights(filters)
 
     async def get_developer(self, developer_id: int) -> OSDeveloper | None:
         """

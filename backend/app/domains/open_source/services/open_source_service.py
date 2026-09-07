@@ -235,6 +235,9 @@ class OpenSourceService:
     async def list_developers(self, **kwargs: Any) -> tuple[list[OSDeveloper], int]:
         return await self._developer.list_developers(**kwargs)
 
+    async def get_developer_insights(self, **kwargs: Any) -> dict[str, Any]:
+        return await self._developer.get_developer_insights(**kwargs)
+
     async def get_developer(self, developer_id: int) -> OSDeveloper | None:
         return await self._developer.get_developer(developer_id)
 
