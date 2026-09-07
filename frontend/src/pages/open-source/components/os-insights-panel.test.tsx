@@ -44,4 +44,15 @@ describe('OsInsightsPanel', () => {
     expect(await screen.findByText('2 / 3', undefined, { timeout: 15000 })).toBeTruthy()
     expect(screen.getByText('66.7%')).toBeTruthy()
   }, 30000)
+
+  it('shows error state with retry button, recovers on retry', async () => {
+    insightsMock.mockRejectedValueOnce(new Error('boom'))
+    render(<OsInsightsPanel query={baseQuery} />)
+    fireEvent.click(screen.getByText(/命中人才洞察/))
+    expect(await screen.findByText('洞察加载失败', undefined, { timeout: 15000 })).toBeTruthy()
+    // antd 对两字符中文按钮自动插空格，可访问名为「重 试」
+    fireEvent.click(screen.getByRole('button', { name: /重\s*试/ }))
+    await waitFor(() => expect(insightsMock).toHaveBeenCalledTimes(2), { timeout: 15000 })
+    expect(await screen.findByText('2 / 3', undefined, { timeout: 15000 })).toBeTruthy()
+  }, 30000)
 })

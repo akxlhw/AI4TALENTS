@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Card, Col, Collapse, Empty, Row, Spin, Statistic, Typography } from 'antd'
+import { Alert, Button, Card, Col, Collapse, Empty, Row, Spin, Statistic, Typography } from 'antd'
 import { BarChartOutlined } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
@@ -28,6 +28,7 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<OSInsightsResponse | null>(null)
+  const [error, setError] = useState(false)
 
   const fetchInsights = useCallback(async () => {
     setLoading(true)
@@ -46,8 +47,10 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
         top_org: query.top_org || undefined,
       })
       setData(res.data)
+      setError(false)
     } catch {
       setData(null)
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -93,7 +96,19 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
           ),
           children: (
             <Spin spinning={loading}>
-              {!data && !loading && <Empty description="展开后加载洞察数据" />}
+              {error && !loading && (
+                <Alert
+                  type="error"
+                  message="洞察加载失败"
+                  showIcon
+                  action={
+                    <Button size="small" onClick={fetchInsights}>
+                      重试
+                    </Button>
+                  }
+                />
+              )}
+              {!error && !data && !loading && <Empty description="展开后加载洞察数据" />}
               {data && data.total === 0 && <Empty description="当前筛选无命中人才" />}
               {data && data.total > 0 && (
                 <>
