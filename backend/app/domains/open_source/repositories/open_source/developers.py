@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 from typing import cast as tcast
 
-from sqlalchemy import Text, and_, cast, exists, func, not_, or_, select, update
+from sqlalchemy import Text, and_, case, cast, exists, func, not_, or_, select, text, true, update
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import array as pg_array
 from sqlalchemy.engine import CursorResult
@@ -26,8 +26,21 @@ from app.domains.open_source.models.open_source import (
     OSContribution,
     OSDeveloper,
     OSLanguageSkill,
+    OSRepoConfig,
     OSRepository,
 )
+
+
+def _contact_condition() -> Any:
+    """有效联系方式：个人主页 / 邮箱 / 社媒任一；空串与空 JSON 视为无效。"""
+    return or_(
+        and_(OSDeveloper.blog_url.isnot(None), OSDeveloper.blog_url != ""),
+        and_(OSDeveloper.email.isnot(None), OSDeveloper.email != ""),
+        and_(
+            OSDeveloper.social_links.isnot(None),
+            cast(OSDeveloper.social_links, Text).notin_(("{}", "null")),
+        ),
+    )
 
 
 class DevelopersMixin:
@@ -44,6 +57,23 @@ class DevelopersMixin:
     ) -> tuple[list[OSDeveloper], int]:
         """List developers with filters and pagination."""
         filters = filters or {}
+        conditions = self._build_list_conditions(filters)
+
+        stmt = select(OSDeveloper).where(and_(*conditions))
+        order_map: dict[str, Any] = {
+            "stars_desc": OSDeveloper.total_stars_received.desc(),
+            "stars_asc": OSDeveloper.total_stars_received.asc(),
+            "name_asc": OSDeveloper.name.asc(),
+        }
+        stmt = stmt.order_by(order_map.get(sort_by, OSDeveloper.total_stars_received.desc()))
+
+        total = await self.session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+        stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all()), total
+
+    def _build_list_conditions(self, filters: dict[str, Any]) -> list[Any]:
+        """Assemble the WHERE condition group shared by list and insights queries."""
         conditions: list[Any] = [OSDeveloper.is_visible.is_(True)]
 
         q = filters.get("q")
@@ -97,14 +127,7 @@ class DevelopersMixin:
             # 有效联系方式：个人主页 / 个人邮箱 / 社交媒体链接 三者至少其一。
             # social_links 是 JSONB dict，SQL NULL / JSON 'null' / 空对象 '{}' 都视为无效；
             # 按 ::text 比较以避开 JSONB 绑定参数被 json.dumps 二次序列化的问题。
-            contact_cond = or_(
-                and_(OSDeveloper.blog_url.isnot(None), OSDeveloper.blog_url != ""),
-                and_(OSDeveloper.email.isnot(None), OSDeveloper.email != ""),
-                and_(
-                    OSDeveloper.social_links.isnot(None),
-                    cast(OSDeveloper.social_links, Text).notin_(("{}", "null")),
-                ),
-            )
+            contact_cond = _contact_condition()
             conditions.append(contact_cond if has_contact else not_(contact_cond))
 
         china_related = filters.get("china_related")
@@ -136,18 +159,82 @@ class DevelopersMixin:
                 )
             )
 
-        stmt = select(OSDeveloper).where(and_(*conditions))
-        order_map: dict[str, Any] = {
-            "stars_desc": OSDeveloper.total_stars_received.desc(),
-            "stars_asc": OSDeveloper.total_stars_received.asc(),
-            "name_asc": OSDeveloper.name.asc(),
-        }
-        stmt = stmt.order_by(order_map.get(sort_by, OSDeveloper.total_stars_received.desc()))
+        return conditions
 
-        total = await self.session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-        stmt = stmt.offset((page - 1) * page_size).limit(page_size)
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all()), total
+    async def get_developer_insights(self, filters: dict[str, Any]) -> dict[str, Any]:
+        """对筛选命中全集做聚合统计（技术要素/来源仓库/可触达率/公司）。
+
+        WHERE 条件组与 list_developers 完全一致。
+        """
+        conditions = self._build_list_conditions(filters)
+        base_where = and_(*conditions)
+
+        # 技术要素分布（JSONB unnest + 非标量数组守卫；render_derived 显式命名
+        # 列别名，否则 PG 会以函数名命名 unnest 输出列导致引用失败）
+        tags_jsonb = cast(OSDeveloper.tech_tags, JSONB)
+        safe_tags = case(
+            (func.jsonb_typeof(tags_jsonb) == "array", tags_jsonb),
+            else_=cast(text("'[]'"), JSONB),
+        )
+        te = func.jsonb_array_elements_text(safe_tags).table_valued("te").render_derived()
+        te_stmt = (
+            select(te.c.te, func.count())
+            .select_from(OSDeveloper)
+            .join(te, true())
+            .where(base_where)
+            .group_by(te.c.te)
+        )
+        tech_dist = {row[0]: row[1] for row in (await self.session.execute(te_stmt)).all()}
+
+        # 来源仓库分布（仅已配置采集的仓库，distinct 开发者，Top 10）
+        id_subq = select(OSDeveloper.developer_id).where(base_where).scalar_subquery()
+        repo_dist_stmt = (
+            select(
+                OSRepository.full_name,
+                func.count(func.distinct(OSContribution.developer_id)),
+            )
+            .select_from(OSContribution)
+            .join(OSRepository, OSContribution.repo_id == OSRepository.repo_id)
+            .join(OSRepoConfig, OSRepository.full_name == OSRepoConfig.repo_full_name)
+            .where(OSContribution.developer_id.in_(id_subq))
+            .group_by(OSRepository.full_name)
+            .order_by(func.count(func.distinct(OSContribution.developer_id)).desc())
+            .limit(10)
+        )
+        repo_dist = [
+            {"repo_full_name": row[0], "developer_count": row[1]}
+            for row in (await self.session.execute(repo_dist_stmt)).all()
+        ]
+
+        # 总数 / 可触达数
+        total = await self.session.scalar(
+            select(func.count()).select_from(OSDeveloper).where(base_where)
+        )
+        contactable = await self.session.scalar(
+            select(func.count()).select_from(OSDeveloper).where(base_where, _contact_condition())
+        )
+
+        # 公司 Top 10
+        company_stmt = (
+            select(OSDeveloper.company, func.count())
+            .where(
+                base_where,
+                OSDeveloper.company.isnot(None),
+                OSDeveloper.company != "",
+            )
+            .group_by(OSDeveloper.company)
+            .order_by(func.count().desc())
+            .limit(10)
+        )
+        company_dist = {row[0]: row[1] for row in (await self.session.execute(company_stmt)).all()}
+
+        return {
+            "total": total or 0,
+            "contactable": contactable or 0,
+            "tech_element_distribution": tech_dist,
+            "repo_distribution": repo_dist,
+            "company_distribution": company_dist,
+        }
 
     async def get_developer(
         self,
