@@ -15,6 +15,19 @@ export interface OSSearchFilters {
   top_org?: boolean
 }
 
+export interface OSRepoInsightItem {
+  repo_full_name: string
+  developer_count: number
+}
+
+export interface OSInsightsResponse {
+  total: number
+  contactable: number
+  tech_element_distribution: Record<string, number>
+  repo_distribution: OSRepoInsightItem[]
+  company_distribution: Record<string, number>
+}
+
 export interface OSSearchParams {
   q?: string
   mode?: 'keyword' | 'semantic' | 'hybrid'
@@ -42,6 +55,8 @@ export const openSourceApi = {
     ),
   getAllDeveloperIds: (params?: Record<string, unknown>) =>
     apiClient.get('/open-source/developers/ids', { params }),
+  getDeveloperInsights: (params?: Record<string, unknown>) =>
+    apiClient.get<OSInsightsResponse>('/open-source/developers/insights', { params }),
   getRepository: (owner: string, name: string) =>
     apiClient.get(`/open-source/repositories/${owner}/${name}`),
   getRepositoryContributors: (
