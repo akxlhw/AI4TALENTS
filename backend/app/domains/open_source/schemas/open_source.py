@@ -528,3 +528,23 @@ class OSBatchTechElementUpdateResponse(BaseModel):
     updated: int = 0
     failed: list[OSBatchRepoSkipItem] = Field(default_factory=list)
     developers_synced: int = 0
+
+
+# ============= Search Insights =============
+
+
+class OSRepoInsightItem(BaseModel):
+    """单仓库的命中开发者数。"""
+
+    repo_full_name: str
+    developer_count: int
+
+
+class OSInsightsResponse(BaseModel):
+    """命中人才洞察（随筛选条件联动的聚合统计，仅管理员可见）。"""
+
+    total: int
+    contactable: int  # 有有效联系方式人数（主页/邮箱/社媒任一）
+    tech_element_distribution: dict[str, int]
+    repo_distribution: list[OSRepoInsightItem]
+    company_distribution: dict[str, int]
