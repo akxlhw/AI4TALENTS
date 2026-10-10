@@ -2,9 +2,11 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 
 import authEn from './locales/en/auth.json'
+import taxonomyEn from './locales/en/taxonomy.json'
 import commonEn from './locales/en/common.json'
 import navEn from './locales/en/nav.json'
 import authZh from './locales/zh/auth.json'
+import taxonomyZh from './locales/zh/taxonomy.json'
 import commonZh from './locales/zh/common.json'
 import navZh from './locales/zh/nav.json'
 
@@ -19,13 +21,13 @@ const initialLang: Lang = (() => {
 
 void i18n.use(initReactI18next).init({
   resources: {
-    zh: { common: commonZh, nav: navZh, auth: authZh },
-    en: { common: commonEn, nav: navEn, auth: authEn },
+    zh: { common: commonZh, nav: navZh, auth: authZh, taxonomy: taxonomyZh },
+    en: { common: commonEn, nav: navEn, auth: authEn, taxonomy: taxonomyEn },
   },
   lng: initialLang,
   fallbackLng: 'zh',
   defaultNS: 'common',
-  ns: ['common', 'nav', 'auth'],
+  ns: ['common', 'nav', 'auth', 'taxonomy'],
   interpolation: { escapeValue: false },
 })
 

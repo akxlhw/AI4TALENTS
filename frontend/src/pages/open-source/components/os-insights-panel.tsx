@@ -6,7 +6,7 @@ import type { EChartsOption } from 'echarts'
 import { api } from '../../../services/api'
 import type { OSInsightsResponse } from '../../../services/api/openSource'
 import type { OSSearchQuery } from '../../../types'
-import { getTechElementFullLabel } from '@/constants/tech-elements'
+import { useTechElements } from '@/constants/tech-elements'
 
 const { Text } = Typography
 
@@ -32,6 +32,7 @@ function barOption(entries: [string, number][], color: string): EChartsOption {
 }
 
 const OsInsightsPanel: React.FC<Props> = ({ query }) => {
+  const { fullLabel } = useTechElements()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<OSInsightsResponse | null>(null)
@@ -102,10 +103,10 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
   const techEntries = useMemo(
     () =>
       Object.entries(data?.tech_element_distribution ?? {}).map(([code, n]) => [
-        getTechElementFullLabel(code),
+        fullLabel(code),
         n,
       ]) as [string, number][],
-    [data]
+    [data, fullLabel]
   )
   const repoEntries = useMemo(
     () =>

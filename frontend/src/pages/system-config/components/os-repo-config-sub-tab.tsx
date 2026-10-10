@@ -45,11 +45,12 @@ const { Text } = Typography
 import {
   TECH_ELEMENT_GROUPS,
   getTechElementColor,
-  getTechElementFullLabel,
+  useTechElements,
 } from '@/constants/tech-elements'
 import OsDiscoverSubTab from './os-discover-sub-tab'
 
 const OSRepoConfigSubTab: React.FC = () => {
+  const { fullLabel } = useTechElements()
   const [data, setData] = useState<OSRepoConfig[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -189,7 +190,7 @@ const OSRepoConfigSubTab: React.FC = () => {
         r.repo_full_name,
         r.display_name || '',
         (Array.isArray(r.tech_element) ? r.tech_element : [r.tech_element])
-          .map(c => getTechElementFullLabel(c))
+          .map(c => fullLabel(c))
           .join(' | '),
         r.language || '',
         r.stars_count ?? 0,
@@ -515,7 +516,7 @@ const OSRepoConfigSubTab: React.FC = () => {
           <Space size={2} wrap>
             {list.map(code => (
               <Tag key={code} color={getTechElementColor(code)} style={{ margin: 0 }}>
-                {getTechElementFullLabel(code)}
+                {fullLabel(code)}
               </Tag>
             ))}
           </Space>

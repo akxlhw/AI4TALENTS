@@ -26,7 +26,7 @@ import type { OSRepoConfig } from '../../types'
 import {
   TECH_ELEMENT_GROUPS,
   getTechElementColor,
-  getTechElementFullLabel,
+  useTechElements,
 } from '@/constants/tech-elements'
 
 const { Title, Text, Paragraph } = Typography
@@ -37,6 +37,7 @@ const SORT_OPTIONS = [
 ]
 
 const RepoListPage: React.FC = () => {
+  const { fullLabel } = useTechElements()
   const navigate = useNavigate()
   const [repos, setRepos] = useState<OSRepoConfig[]>([])
   const [total, setTotal] = useState(0)
@@ -181,7 +182,7 @@ const RepoListPage: React.FC = () => {
                             color={getTechElementColor(code)}
                             style={{ fontSize: 11, lineHeight: '18px', margin: 0 }}
                           >
-                            {getTechElementFullLabel(code)}
+                            {fullLabel(code)}
                           </Tag>
                         )
                       )}

@@ -34,12 +34,13 @@ import {
 import { api } from '../../services/api'
 import { getErrorMessage } from '../../utils'
 import { domainThemes, semanticColors } from '../../theme'
-import { getTechElementColor, getTechElementFullLabel } from '@/constants/tech-elements'
+import { getTechElementColor, useTechElements } from '@/constants/tech-elements'
 import type { OSRepositoryDetail, OSRepositoryContributor } from '../../types'
 
 const { Title, Text, Paragraph, Link } = Typography
 
 const RepoDetailPage: React.FC = () => {
+  const { fullLabel } = useTechElements()
   const navigate = useNavigate()
   const { owner, name } = useParams<{ owner: string; name: string }>()
 
@@ -117,7 +118,7 @@ const RepoDetailPage: React.FC = () => {
   const techCodes: string[] = detail.tech_element ?? []
   const techInfos = techCodes.map(code => ({
     code,
-    label: getTechElementFullLabel(code),
+    label: fullLabel(code),
     color: getTechElementColor(code),
   }))
   const ownerOrCommitters = contributors.filter((c) => c.is_owner || c.is_committer)
