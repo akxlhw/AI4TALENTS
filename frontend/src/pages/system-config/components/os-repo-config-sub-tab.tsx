@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { semanticColors } from '../../../theme'
 import {
   Card,
@@ -35,6 +35,7 @@ import {
   RadarChartOutlined,
   DownloadOutlined,
 } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../../services/api'
 import type { OSPurgePreview, OSRepoConfig } from '../../../types'
 import { getErrorMessage } from './utils'
@@ -52,6 +53,17 @@ import OsDiscoverSubTab from './os-discover-sub-tab'
 const OSRepoConfigSubTab: React.FC = () => {
   const { fullLabel } = useTechElements()
   const [data, setData] = useState<OSRepoConfig[]>([])
+
+  // TECH_ELEMENT_GROUPS labels are i18n keys — translate for Select options
+  const { t: tTax } = useTranslation('taxonomy')
+  const translatedTechGroups = useMemo(
+    () =>
+      TECH_ELEMENT_GROUPS.map(g => ({
+        label: tTax(g.label),
+        options: g.options.map(o => ({ ...o, label: tTax(o.label) })),
+      })),
+    [tTax]
+  )
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -615,7 +627,7 @@ const OSRepoConfigSubTab: React.FC = () => {
                     setFilterTechElement(v)
                     setPage(1)
                   }}
-                  options={TECH_ELEMENT_GROUPS}
+                  options={translatedTechGroups}
                 />
                 <Input.Search
                   placeholder="搜索仓库名称..."
@@ -748,7 +760,7 @@ const OSRepoConfigSubTab: React.FC = () => {
                   <Select
                     mode="multiple"
                     placeholder="选择技术领域"
-                    options={TECH_ELEMENT_GROUPS}
+                    options={translatedTechGroups}
                   />
                 </Form.Item>
               </Col>
@@ -853,7 +865,7 @@ const OSRepoConfigSubTab: React.FC = () => {
             value={batchTechValue}
             onChange={setBatchTechValue}
             style={{ width: '100%' }}
-            options={TECH_ELEMENT_GROUPS}
+            options={translatedTechGroups}
           />
           <div style={{ marginTop: 8 }}>
             <Text type="secondary" style={{ fontSize: 12 }}>
@@ -954,7 +966,7 @@ const OSRepoConfigSubTab: React.FC = () => {
               style={{ width: '100%', marginTop: 4 }}
               value={batchAddTech}
               onChange={setBatchAddTech}
-              options={TECH_ELEMENT_GROUPS}
+              options={translatedTechGroups}
               placeholder="选择技术领域"
             />
           </div>
@@ -1000,7 +1012,7 @@ const OSRepoConfigSubTab: React.FC = () => {
             style={{ width: '100%' }}
             value={batchTechValue}
             onChange={setBatchTechValue}
-            options={TECH_ELEMENT_GROUPS}
+            options={translatedTechGroups}
             placeholder="选择技术领域（可多选）"
           />
           <div
