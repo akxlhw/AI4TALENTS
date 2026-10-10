@@ -1,6 +1,8 @@
 import React from 'react'
 import { ConfigProvider } from 'antd'
+import enUS from 'antd/locale/en_US'
 import zhCN from 'antd/locale/zh_CN'
+import { useTranslation } from 'react-i18next'
 import { buildAntTheme, domainThemes } from './index'
 
 /**
@@ -27,7 +29,7 @@ const AcademicThemeScope: React.FC<{ children: React.ReactNode }> = ({ children 
   } as React.CSSProperties
 
   return (
-    <ConfigProvider locale={zhCN} theme={buildAntTheme('academic')}>
+    <ConfigProvider locale={useTranslation().i18n.language === 'en' ? enUS : zhCN} theme={buildAntTheme('academic')}>
       <div style={scopedVars}>{children}</div>
     </ConfigProvider>
   )

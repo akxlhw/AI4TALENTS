@@ -1,0 +1,17 @@
+{
+  "domains": { "academic": "学术", "opensource": "开源", "lab": "AI Native", "competition": "竞赛", "industry": "行业" },
+  "favorites": "我的收藏",
+  "feedback": "意见反馈",
+  "changelog": "更新日志",
+  "user": {
+    "profile": "个人信息",
+    "logout": "退出登录",
+    "admin": "用户管理",
+    "systemConfig": "系统配置",
+    "dataVersion": "数据管理",
+    "auditLogs": "审计日志",
+    "suggestionAdmin": "建议管理"
+  },
+  "langSwitch": { "zh": "中", "en": "EN" },
+  "roles": { "super_admin": "超级管理员", "admin": "管理员", "user": "普通用户" }
+}

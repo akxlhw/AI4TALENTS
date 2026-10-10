@@ -1,0 +1,17 @@
+{
+  "domains": { "academic": "Academic", "opensource": "Open Source", "lab": "AI Native", "competition": "Competition", "industry": "Industry" },
+  "favorites": "Favorites",
+  "feedback": "Feedback",
+  "changelog": "Changelog",
+  "user": {
+    "profile": "Profile",
+    "logout": "Sign Out",
+    "admin": "Users",
+    "systemConfig": "System Config",
+    "dataVersion": "Data",
+    "auditLogs": "Audit Logs",
+    "suggestionAdmin": "Suggestions"
+  },
+  "langSwitch": { "zh": "中", "en": "EN" },
+  "roles": { "super_admin": "Super Admin", "admin": "Admin", "user": "User" }
+}

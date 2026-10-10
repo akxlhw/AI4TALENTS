@@ -1,0 +1,6 @@
+{
+  "actions": { "search": "搜索", "export": "导出", "cancel": "取消", "confirm": "确定", "close": "关闭", "retry": "重试", "viewAll": "查看全部", "detail": "详情", "delete": "删除" },
+  "status": { "loading": "加载中…", "empty": "暂无数据", "error": "加载失败" },
+  "pagination": { "total": "共 {{n}} 条" },
+  "footer": { "privacy": "隐私政策", "terms": "用户协议", "cookie": "Cookie 设置", "copyright": "© {{year}} AI4TALENT 智能人才库" }
+}

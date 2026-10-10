@@ -1,0 +1,6 @@
+{
+  "actions": { "search": "Search", "export": "Export", "cancel": "Cancel", "confirm": "OK", "close": "Close", "retry": "Retry", "viewAll": "View All", "detail": "Detail", "delete": "Delete" },
+  "status": { "loading": "Loading…", "empty": "No data", "error": "Failed to load" },
+  "pagination": { "total": "{{n}} items" },
+  "footer": { "privacy": "Privacy Policy", "terms": "Terms of Use", "cookie": "Cookie Settings", "copyright": "© {{year}} AI4TALENT Talent Platform" }
+}
