@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Form, Input, Button, Card, Typography, Space, message } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../contexts/AuthContext'
 import { domainThemes } from '../../theme'
 
@@ -18,6 +19,7 @@ interface LocationState {
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation('auth')
   const location = useLocation()
   const { login } = useAuth()
   const [loading, setLoading] = useState(false)
@@ -138,7 +140,7 @@ const LoginPage: React.FC = () => {
                 display: 'block',
               }}
             >
-              数聚良才，智选慧才
+              {t('login.slogan')}
             </Text>
           </div>
 
@@ -151,11 +153,11 @@ const LoginPage: React.FC = () => {
           >
             <Form.Item
               name="username"
-              rules={[{ required: true, message: '请输入用户名' }]}
+              rules={[{ required: true, message: t('login.usernameRequired') }]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: 'var(--text-tertiary)' }} />}
-                placeholder="用户名或邮箱"
+                placeholder={t('login.username')}
                 style={{ borderRadius: 10, height: 44 }}
                 autoComplete="username"
               />
@@ -163,11 +165,11 @@ const LoginPage: React.FC = () => {
 
             <Form.Item
               name="password"
-              rules={[{ required: true, message: '请输入密码' }]}
+              rules={[{ required: true, message: t('login.passwordRequired') }]}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: 'var(--text-tertiary)' }} />}
-                placeholder="密码"
+                placeholder={t('login.password')}
                 style={{ borderRadius: 10, height: 44 }}
                 autoComplete="new-password"
               />
@@ -196,13 +198,12 @@ const LoginPage: React.FC = () => {
 
           <div style={{ textAlign: 'center', marginTop: 8 }}>
             <Text style={{ fontSize: 12, color: '#999' }}>
-              登录即表示您同意{' '}
+              {t('login.agreePrefix')}{' '}
               <a onClick={() => navigate('/privacy-policy')} style={{ color: '#888', textDecoration: 'underline' }}>
-                隐私政策
-              </a>
-              {' 和 '}
+                {t('login.privacy')}
+              </a>{' '}{t('login.and')}{' '}
               <a onClick={() => navigate('/terms-of-use')} style={{ color: '#888', textDecoration: 'underline' }}>
-                用户协议
+                {t('login.terms')}
               </a>
             </Text>
           </div>

@@ -1,5 +1,6 @@
 import { Space, Typography } from 'antd'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 const { Text } = Typography
 
@@ -9,6 +10,7 @@ interface FooterProps {
 
 const Footer: React.FC<FooterProps> = ({ onOpenConsent }) => {
   const navigate = useNavigate()
+  const { t } = useTranslation('common')
 
   return (
     <footer
@@ -24,7 +26,7 @@ const Footer: React.FC<FooterProps> = ({ onOpenConsent }) => {
       }}
     >
       <Text type="secondary" style={{ fontSize: 12 }}>
-        © 2026 AI4TALENT 智能人才库
+        {t('footer.copyright', { year: 2026 })}
       </Text>
       <Space size={16} style={{ fontSize: 12 }}>
         <Text
@@ -32,14 +34,14 @@ const Footer: React.FC<FooterProps> = ({ onOpenConsent }) => {
           style={{ cursor: 'pointer' }}
           onClick={() => navigate('/privacy-policy')}
         >
-          隐私政策
+          {t('footer.privacy')}
         </Text>
         <Text
           type="secondary"
           style={{ cursor: 'pointer' }}
           onClick={() => navigate('/terms-of-use')}
         >
-          用户协议
+          {t('footer.terms')}
         </Text>
         <Text
           type="secondary"
@@ -52,7 +54,7 @@ const Footer: React.FC<FooterProps> = ({ onOpenConsent }) => {
             }
           }}
         >
-          Cookie 设置
+          {t('footer.cookie')}
         </Text>
       </Space>
     </footer>

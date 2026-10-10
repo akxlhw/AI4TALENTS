@@ -15,6 +15,7 @@ import {
   MessageOutlined,
   HistoryOutlined,
 } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
 import { useDomainStore } from '../stores/domainStore'
 import { useCollectTaskNotifier } from '../hooks/useCollectTaskNotifier'
@@ -22,6 +23,7 @@ import { domainThemes, semanticColors, type Domain } from '../theme'
 import LabIcon from '../components/lab-icon'
 import Footer from '../components/Footer'
 import ChangelogDrawer from '../components/ChangelogDrawer'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import { CHANGELOG_RELEASES } from '../utils/changelog'
 
 const { Text } = Typography
@@ -64,6 +66,8 @@ const MainLayout: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+  const { t } = useTranslation(['nav', 'common'])
+  const domainLabel = (key: string) => t(`nav:domains.${key}`)
   const { currentDomain, setDomain, isDomainAvailable } = useDomainStore()
   // Global collect-task completion notifications (running → terminal)
   useCollectTaskNotifier()
@@ -113,22 +117,23 @@ const MainLayout: React.FC = () => {
   const userMenuItems = [
     // 窄屏时顶部收藏/反馈按钮收进用户菜单，保证导航单行不溢出
     ...(isNarrow ? [
-      { key: 'favorites', icon: <StarOutlined />, label: '我的收藏' },
-      { key: 'feedback', icon: <MessageOutlined />, label: '意见反馈' },
-      { key: 'changelog', icon: <HistoryOutlined />, label: '更新日志' },
+      { key: 'lang', label: <LanguageSwitcher /> },
+      { key: 'favorites', icon: <StarOutlined />, label: t('nav:favorites') },
+      { key: 'feedback', icon: <MessageOutlined />, label: t('nav:feedback') },
+      { key: 'changelog', icon: <HistoryOutlined />, label: t('nav:changelog') },
       { type: 'divider' as const },
     ] : []),
-    { key: 'profile', icon: <UserOutlined />, label: '个人信息' },
+    { key: 'profile', icon: <UserOutlined />, label: t('nav:user.profile') },
     ...(user?.role === 'super_admin' ? [
       { type: 'divider' as const },
-      { key: 'admin', icon: <SettingOutlined />, label: '用户管理' },
-      { key: 'system-config', icon: <SettingOutlined />, label: '系统配置' },
-      { key: 'data-version', icon: <DatabaseOutlined />, label: '数据管理' },
-      { key: 'audit-logs', icon: <DatabaseOutlined />, label: '审计日志' },
-      { key: 'suggestion-admin', icon: <MessageOutlined />, label: '建议管理' },
+      { key: 'admin', icon: <SettingOutlined />, label: t('nav:user.admin') },
+      { key: 'system-config', icon: <SettingOutlined />, label: t('nav:user.systemConfig') },
+      { key: 'data-version', icon: <DatabaseOutlined />, label: t('nav:user.dataVersion') },
+      { key: 'audit-logs', icon: <DatabaseOutlined />, label: t('nav:user.auditLogs') },
+      { key: 'suggestion-admin', icon: <MessageOutlined />, label: t('nav:user.suggestionAdmin') },
     ] : []),
     { type: 'divider' as const },
-    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', danger: true },
+    { key: 'logout', icon: <LogoutOutlined />, label: t('nav:user.logout'), danger: true },
   ]
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
@@ -149,11 +154,7 @@ const MainLayout: React.FC = () => {
     admin: 'orange',
     user: 'blue',
   }
-  const roleTextMap: Record<string, string> = {
-    super_admin: '超级管理员',
-    admin: '管理员',
-    user: '普通用户',
-  }
+  const roleText = (role: string) => t(`nav:roles.${role}`, { defaultValue: role })
 
   const handleDomainSwitch = (domain: Domain) => {
     if (isDomainAvailable(domain)) {
@@ -246,7 +247,7 @@ const MainLayout: React.FC = () => {
               return (
                 <Tooltip
                   key={d.key}
-                  title={d.soon ? `${theme.label}（即将上线）` : theme.label}
+                  title={d.soon ? `${domainLabel(d.key)}…` : domainLabel(d.key)}
                   placement="bottom"
                 >
                   <button
@@ -283,7 +284,7 @@ const MainLayout: React.FC = () => {
                     <span style={{ fontSize: 14, display: 'flex', alignItems: 'center' }}>
                       {d.icon}
                     </span>
-                    <span>{theme.shortLabel}</span>
+                    <span>{domainLabel(d.key)}</span>
                     {d.soon && (
                       <LockOutlined style={{ fontSize: 10, opacity: isActive ? 0.7 : 0.35 }} />
                     )}
@@ -301,6 +302,7 @@ const MainLayout: React.FC = () => {
           <Space size={8} style={{ flexShrink: 0 }}>
             {!isNarrow && (
               <>
+                <LanguageSwitcher />
                 <Button
                   type="text"
                   size="small"
@@ -308,7 +310,7 @@ const MainLayout: React.FC = () => {
                   onClick={() => navigate('/favorites')}
                   style={{ fontSize: 13 }}
                 >
-                  我的收藏
+                  {t('nav:favorites')}
                 </Button>
                 <Button
                   type="text"
@@ -317,7 +319,7 @@ const MainLayout: React.FC = () => {
                   onClick={() => navigate('/feedback')}
                   style={{ fontSize: 13 }}
                 >
-                  意见反馈
+                  {t('nav:feedback')}
                 </Button>
                 <Badge dot={hasUnseenRelease} offset={[-2, 2]}>
                   <Button
@@ -327,7 +329,7 @@ const MainLayout: React.FC = () => {
                     onClick={openChangelog}
                     style={{ fontSize: 13 }}
                   >
-                    更新日志
+                    {t('nav:changelog')}
                   </Button>
                 </Badge>
               </>
@@ -349,7 +351,7 @@ const MainLayout: React.FC = () => {
                   color={roleColorMap[user.role] || 'default'}
                   style={{ margin: 0, fontSize: 10, padding: '0 5px', lineHeight: '16px' }}
                 >
-                  {roleTextMap[user.role] || user.role}
+                  {roleText(user.role)}
                 </Tag>
               </Space>
             </Dropdown>
