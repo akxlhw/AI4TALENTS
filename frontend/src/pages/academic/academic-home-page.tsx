@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Input, Typography, Tag, Space, Spin, Button, Row, Col, Card, Divider } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useCountryName } from '../../constants/countries'
 import {
   SearchOutlined,
   GlobalOutlined,
@@ -44,7 +45,8 @@ interface HotResearchTopic {
 /* ── Academic Home Page ── */
 const AcademicHomePage: React.FC = () => {
   const navigate = useNavigate()
-  const { t } = useTranslation(['academic', 'common'])
+  const { t } = useTranslation(['academic', 'common', 'taxonomy'])
+  const countryName = useCountryName()
   const dt = domainThemes['academic']
 
   const { data: overview, isLoading: overviewLoading } = useOverviewStats()
@@ -275,7 +277,7 @@ const AcademicHomePage: React.FC = () => {
                       style={{ marginBottom: 6, cursor: 'pointer', fontSize: 13, background: dt.lightBg, color: dt.primary, border: `1px solid ${dt.primary}33` }}
                       onClick={() => handleTechDomainClick(item.tech_domain_id)}
                     >
-                      {item.domain_name} ({item.talent_count})
+                      {t(`taxonomy:domains.${item.domain_code}`, { defaultValue: item.domain_name })} ({item.talent_count})
                     </Tag>
                   ))}
                   {hotTechDomains.length === 0 && (
@@ -359,7 +361,7 @@ const AcademicHomePage: React.FC = () => {
                       style={{ marginBottom: 6, cursor: 'pointer', fontSize: 13, background: semanticColors.blueBg, color: dt.secondary, border: `1px solid ${dt.secondary}44` }}
                       onClick={() => handleCountryClick(item.country_code)}
                     >
-                      {item.country_name || item.country_code} ({item.talent_count})
+                      {countryName(item.country_code, item.country_name)} ({item.talent_count})
                     </Tag>
                   ))}
                   {topCountries.length === 0 && (

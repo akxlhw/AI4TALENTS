@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useCountryName } from '../../constants/countries'
 import { logger } from '../../utils/logger'
 import { navigateBack } from '../../utils/navigation'
 import {
@@ -77,7 +78,8 @@ interface TalentListResponse {
 const SchoolDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { t } = useTranslation(['academic', 'common'])
+  const { t } = useTranslation(['academic', 'common', 'taxonomy'])
+  const countryName = useCountryName()
   const [loading, setLoading] = useState(true)
   const [school, setSchool] = useState<SchoolDetail | null>(null)
   const [talents, setTalents] = useState<Talent[]>([])
@@ -244,7 +246,7 @@ const SchoolDetailPage: React.FC = () => {
               <Space size={8}>
                 {school.country_name && (
                   <Tag icon={<GlobalOutlined />} color="blue">
-                    {school.country_name} ({school.country_code})
+                    {countryName(school.country_code, school.country_name)}
                   </Tag>
                 )}
                 {school.homepage_url && (

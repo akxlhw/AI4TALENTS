@@ -8,6 +8,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useCountryName } from '../../constants/countries'
 import {
   Typography,
   Space,
@@ -36,7 +37,8 @@ interface Country { country_code: string; country_name_cn: string }
 
 const SearchRecommendPage: React.FC = () => {
   const navigate = useNavigate()
-  const { t } = useTranslation('academic')
+  const { t } = useTranslation(['academic', 'taxonomy'])
+  const countryName = useCountryName()
   const [urlSearchParams] = useSearchParams()
   const initialTab = urlSearchParams.get('tab') || 'search'
   const [activeTab, setActiveTab] = useState(initialTab)
@@ -119,9 +121,15 @@ const SearchRecommendPage: React.FC = () => {
   }
 
   // ========== Options ==========
-  const countryOptions = countries.map(c => ({ value: c.country_code, label: c.country_name_cn }))
+  const countryOptions = countries.map(c => ({
+    value: c.country_code,
+    label: countryName(c.country_code, c.country_name_cn),
+  }))
   const schoolOptions = schools.map(s => ({ value: s.school_id, label: s.school_name }))
-  const techDomainOptions = techDomains.map(d => ({ value: d.tech_domain_id, label: d.domain_name }))
+  const techDomainOptions = techDomains.map(d => ({
+    value: d.tech_domain_id,
+    label: t(`taxonomy:domains.${d.domain_code}`, { defaultValue: d.domain_name }),
+  }))
 
   return (
     <div style={{ padding: '88px 32px 80px' }}>

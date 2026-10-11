@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useCountryName } from '../../constants/countries'
 import { logger } from '../../utils/logger'
 import {
   Card,
@@ -80,7 +81,8 @@ interface School {
 
 const CountrySchoolPage: React.FC = () => {
   const navigate = useNavigate()
-  const { t } = useTranslation('academic')
+  const { t } = useTranslation(['academic', 'taxonomy'])
+  const countryName = useCountryName()
   const [searchParams] = useSearchParams()
 
   // 筛选状态
@@ -257,7 +259,7 @@ const CountrySchoolPage: React.FC = () => {
   // 国家选项
   const countryOptions = currentRegionCountries.map(c => ({
     value: c.country_code,
-    label: c.country_name_cn,
+    label: countryName(c.country_code, c.country_name_cn),
   }))
 
   // 学校表格列
@@ -274,6 +276,7 @@ const CountrySchoolPage: React.FC = () => {
       title: t('columns.country'),
       dataIndex: 'country_name',
       key: 'country_name',
+      render: (name: string, record) => countryName(record.country_code, name),
     },
     {
       title: t('columns.professorCount'),
