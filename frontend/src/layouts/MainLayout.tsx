@@ -223,7 +223,7 @@ const MainLayout: React.FC = () => {
                   letterSpacing: '0.5px',
                 }}
               >
-                {t('brand.tagline')}
+                {t('common:brand.tagline')}
               </Text>
             )}
           </Space>
