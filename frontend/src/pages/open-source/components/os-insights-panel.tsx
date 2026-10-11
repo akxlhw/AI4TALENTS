@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Card, Col, Collapse, Empty, Row, Spin, Statistic, Typography } from 'antd'
 import { BarChartOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
+import '@/i18n/namespaces/open-source'
 import { api } from '../../../services/api'
 import type { OSInsightsResponse } from '../../../services/api/openSource'
 import type { OSSearchQuery } from '../../../types'
@@ -32,6 +34,7 @@ function barOption(entries: [string, number][], color: string): EChartsOption {
 }
 
 const OsInsightsPanel: React.FC<Props> = ({ query }) => {
+  const { t } = useTranslation(['openSource', 'common'])
   const { fullLabel } = useTechElements()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -130,7 +133,7 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
           label: (
             <span>
               <BarChartOutlined style={{ marginRight: 6 }} />
-              命中人才洞察（管理员）
+              {t('openSource:insights.title')}
             </span>
           ),
           children: (
@@ -138,29 +141,31 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
               {error && !loading && (
                 <Alert
                   type="error"
-                  message="洞察加载失败"
+                  message={t('openSource:errors.insightsLoadFailed')}
                   showIcon
                   action={
                     <Button size="small" onClick={fetchInsights}>
-                      重试
+                      {t('common:actions.retry')}
                     </Button>
                   }
                 />
               )}
-              {!error && !data && !loading && <Empty description="展开后加载洞察数据" />}
-              {data && data.total === 0 && <Empty description="当前筛选无命中人才" />}
+              {!error && !data && !loading && (
+                <Empty description={t('openSource:insights.loadHint')} />
+              )}
+              {data && data.total === 0 && <Empty description={t('openSource:insights.noMatch')} />}
               {data && data.total > 0 && (
                 <>
                   <Row gutter={16} style={{ marginBottom: 8 }}>
                     <Col span={6}>
                       <Card size="small">
-                        <Statistic title="命中人数" value={data.total} />
+                        <Statistic title={t('openSource:insights.total')} value={data.total} />
                       </Card>
                     </Col>
                     <Col span={6}>
                       <Card size="small">
                         <Statistic
-                          title="可触达（有联系方式）"
+                          title={t('openSource:insights.contactable')}
                           value={`${data.contactable} / ${data.total}`}
                           suffix={
                             <Text type="secondary" style={{ fontSize: 14 }}>
@@ -173,7 +178,7 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
                   </Row>
                   <Row gutter={16}>
                     <Col xs={24} lg={8}>
-                      <Card size="small" title="技术要素分布">
+                      <Card size="small" title={t('openSource:insights.techDist')}>
                         <ReactECharts
                           option={barOption(techEntries, '#6B46C1')}
                           style={{ height: 260 }}
@@ -181,7 +186,7 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
                       </Card>
                     </Col>
                     <Col xs={24} lg={8}>
-                      <Card size="small" title="来源仓库 Top 10">
+                      <Card size="small" title={t('openSource:insights.repoTop')}>
                         <ReactECharts
                           option={barOption(repoEntries, '#0891B2')}
                           style={{ height: 260 }}
@@ -189,7 +194,7 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
                       </Card>
                     </Col>
                     <Col xs={24} lg={8}>
-                      <Card size="small" title="当前公司 Top 10">
+                      <Card size="small" title={t('openSource:insights.companyTop')}>
                         <ReactECharts
                           option={barOption(companyEntries, '#16A34A')}
                           style={{ height: 260 }}
@@ -198,7 +203,7 @@ const OsInsightsPanel: React.FC<Props> = ({ query }) => {
                     </Col>
                   </Row>
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    统计范围为当前筛选条件的全部命中人才；语义/混合搜索模式下按关键词等价条件统计。
+                    {t('openSource:insights.scopeNote')}
                   </Text>
                 </>
               )}

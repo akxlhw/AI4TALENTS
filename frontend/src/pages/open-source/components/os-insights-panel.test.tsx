@@ -74,4 +74,19 @@ describe('OsInsightsPanel', () => {
     rerender(<OsInsightsPanel query={{ ...baseQuery, company: 'Google' }} />)
     expect(insightsMock).not.toHaveBeenCalled()
   }, 30000)
+
+  it('renders insights copy in English after switching language', async () => {
+    const { i18n } = await import('../../../i18n')
+    render(<OsInsightsPanel query={baseQuery} />)
+    await i18n.changeLanguage('en')
+    // 折叠态标题与展开后的统计标题均为英文（t 走 openSource 命名空间）
+    fireEvent.click(screen.getByText(/Matched Talent Insights/))
+    await waitFor(() => expect(insightsMock).toHaveBeenCalledTimes(1), { timeout: 15000 })
+    expect(await screen.findByText('2 / 3', undefined, { timeout: 15000 })).toBeTruthy()
+    expect(screen.getByText('Matched Talent')).toBeTruthy()
+    expect(screen.getByText('Contactable (with contact info)')).toBeTruthy()
+    expect(screen.getByText('Tech Element Distribution')).toBeTruthy()
+    // 恢复中文，避免影响后续用例与其它测试文件共享的默认语言约定
+    await i18n.changeLanguage('zh')
+  }, 30000)
 })

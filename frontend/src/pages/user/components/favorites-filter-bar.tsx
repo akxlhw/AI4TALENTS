@@ -1,5 +1,6 @@
 import { Button, Card, Col, Input, Row, Select, Space, Typography } from 'antd'
 import { SearchOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import type { FollowupStatus } from '../../../types'
 
 const { Text } = Typography
@@ -27,28 +28,29 @@ const FavoritesFilterBar: React.FC<FavoritesFilterBarProps> = ({
   onSearch,
   onReset,
 }) => {
+  const { t } = useTranslation('user')
   return (
     <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 24px' } }}>
       <Row gutter={16} align="middle">
         <Col>
           <Space size={8} wrap>
-            <Text type="secondary">筛选:</Text>
+            <Text type="secondary">{t('filter.label')}</Text>
 
             <Select
-              placeholder="角色"
+              placeholder={t('filter.role')}
               value={roleFilter}
               onChange={onRoleFilterChange}
               allowClear
               style={{ width: 140 }}
               options={[
-                { value: 'professor', label: '教授/研究员' },
-                { value: 'student', label: '学生' },
-                { value: 'graduated', label: '毕业生' },
+                { value: 'professor', label: t('filter.roleOptions.professor') },
+                { value: 'student', label: t('filter.roleOptions.student') },
+                { value: 'graduated', label: t('filter.roleOptions.graduated') },
               ]}
             />
 
             <Select
-              placeholder="跟进状态"
+              placeholder={t('filter.followup')}
               value={followupFilter}
               onChange={onFollowupFilterChange}
               allowClear
@@ -57,7 +59,7 @@ const FavoritesFilterBar: React.FC<FavoritesFilterBarProps> = ({
             />
 
             <Input.Search
-              placeholder="搜索姓名..."
+              placeholder={t('filter.searchPlaceholder')}
               value={keyword}
               onChange={e => onKeywordChange(e.target.value)}
               onSearch={onSearch}
@@ -68,7 +70,7 @@ const FavoritesFilterBar: React.FC<FavoritesFilterBarProps> = ({
 
             {(roleFilter || keyword || followupFilter) && (
               <Button type="link" onClick={onReset}>
-                重置筛选
+                {t('filter.reset')}
               </Button>
             )}
           </Space>

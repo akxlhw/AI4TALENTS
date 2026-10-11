@@ -1,4 +1,6 @@
 import { Button, Col, Empty, Pagination, Row, Spin } from 'antd'
+import { useTranslation } from 'react-i18next'
+import '@/i18n/namespaces/open-source'
 import type { OSDeveloper } from '../../../types'
 import OsDeveloperCard from './os-developer-card'
 
@@ -33,6 +35,8 @@ const OsSearchResults: React.FC<OsSearchResultsProps> = ({
   onToggleFavorite,
   onToggleSelect,
 }) => {
+  const { t } = useTranslation(['openSource', 'common'])
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: 60 }}>
@@ -45,7 +49,7 @@ const OsSearchResults: React.FC<OsSearchResultsProps> = ({
     return (
       <Empty description={searchError} image={Empty.PRESENTED_IMAGE_SIMPLE}>
         <Button type="primary" onClick={onRetry}>
-          重试
+          {t('common:actions.retry')}
         </Button>
       </Empty>
     )
@@ -53,9 +57,9 @@ const OsSearchResults: React.FC<OsSearchResultsProps> = ({
 
   if (developers.length === 0) {
     return (
-      <Empty description="未找到符合条件的开发者">
+      <Empty description={t('openSource:search.noResults')}>
         <Button type="primary" onClick={onClearFilters}>
-          清除筛选
+          {t('openSource:search.clearFilters')}
         </Button>
       </Empty>
     )

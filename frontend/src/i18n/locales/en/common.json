@@ -2,5 +2,24 @@
   "actions": { "search": "Search", "export": "Export", "cancel": "Cancel", "confirm": "OK", "close": "Close", "retry": "Retry", "viewAll": "View All", "detail": "Detail", "delete": "Delete" },
   "status": { "loading": "Loading…", "empty": "No data", "error": "Failed to load" },
   "pagination": { "total": "{{n}} items" },
-  "footer": { "privacy": "Privacy Policy", "terms": "Terms of Use", "cookie": "Cookie Settings", "copyright": "© {{year}} AI4TALENT Talent Platform" }
+  "footer": { "privacy": "Privacy Policy", "terms": "Terms of Use", "cookie": "Cookie Settings", "copyright": "© {{year}} AI4TALENT Talent Platform" },
+  "compare": {
+    "title": "Compare Candidates",
+    "field": "Field",
+    "loadFailed": "Failed to load comparison data",
+    "selectHint": "Select 2-4 candidates to compare"
+  },
+  "export": {
+    "title": "Data Export Notice",
+    "confirm": "Confirm Export",
+    "intro": "You are about to export talent data. Under the Terms of Use, exported data is limited to internal research and evaluation. Strictly prohibited:",
+    "prohibitedContact": "Contacting talent for recruiting purposes via email, phone, or other channels",
+    "prohibitedThirdParty": "Providing the data to third-party recruiting agencies",
+    "prohibitedCommercial": "Using the data for commercial marketing or data resale",
+    "warning": "Misuse may result in account suspension and legal liability.",
+    "acknowledge": "I have read and agree to abide by the above restrictions"
+  },
+  "messages": {
+    "operationFailed": "Operation failed"
+  }
 }

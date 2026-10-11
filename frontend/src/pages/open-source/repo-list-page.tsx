@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { semanticColors } from '../../theme'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import '@/i18n/namespaces/open-source'
 import {
   Card,
   Row,
@@ -31,12 +33,10 @@ import {
 
 const { Title, Text, Paragraph } = Typography
 
-const SORT_OPTIONS = [
-  { value: 'stars', label: 'Stars 降序' },
-  { value: 'id_desc', label: '最新添加' },
-]
-
 const RepoListPage: React.FC = () => {
+  const { t } = useTranslation('openSource')
+  // taxonomy 命名空间翻译 TECH_ELEMENT_GROUPS 的 i18n key（域分组 + 要素标签）
+  const { t: tTax } = useTranslation('taxonomy')
   const { fullLabel } = useTechElements()
   const navigate = useNavigate()
   const [repos, setRepos] = useState<OSRepoConfig[]>([])
@@ -47,6 +47,16 @@ const RepoListPage: React.FC = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [techElement, setTechElement] = useState<string | undefined>(undefined)
   const [sortBy, setSortBy] = useState('stars')
+
+  const techElementOptions = TECH_ELEMENT_GROUPS.map(g => ({
+    label: tTax(g.label),
+    options: g.options.map(o => ({ ...o, label: tTax(o.label) })),
+  }))
+
+  const sortOptions = [
+    { value: 'stars', label: t('sort.starsDesc') },
+    { value: 'id_desc', label: t('sort.newest') },
+  ]
 
   const fetchRepos = useCallback(async () => {
     setLoading(true)
@@ -85,19 +95,19 @@ const RepoListPage: React.FC = () => {
         onClick={() => navigate('/opensource')}
         style={{ marginBottom: 16, padding: 0 }}
       >
-        返回开源生态
+        {t('repo.backToEco')}
       </Button>
 
       <Title level={3} style={{ marginBottom: 24 }}>
         <FireOutlined style={{ marginRight: 8, color: semanticColors.osOrange }} />
-        代码仓库列表
+        {t('repo.listTitle')}
       </Title>
 
       <Card style={{ marginBottom: 24 }}>
         <Row gutter={[16, 16]} align="middle">
           <Col xs={24} sm={12} md={8}>
             <Input.Search
-              placeholder="搜索仓库名称..."
+              placeholder={t('repo.searchPlaceholder')}
               allowClear
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
@@ -106,28 +116,28 @@ const RepoListPage: React.FC = () => {
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Select
-              placeholder="技术领域（要素）"
+              placeholder={t('repo.techPlaceholder')}
               allowClear
               showSearch
               optionFilterProp="label"
               style={{ width: '100%' }}
               value={techElement}
               onChange={(v) => { setTechElement(v); setPage(1) }}
-              options={TECH_ELEMENT_GROUPS}
+              options={techElementOptions}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Select
-              placeholder="排序方式"
+              placeholder={t('repo.sortPlaceholder')}
               style={{ width: '100%' }}
               value={sortBy}
               onChange={(v) => { setSortBy(v); setPage(1) }}
-              options={SORT_OPTIONS}
+              options={sortOptions}
             />
           </Col>
           <Col xs={24} sm={12} md={4}>
             <Button type="primary" onClick={handleSearch} block>
-              查询
+              {t('repo.query')}
             </Button>
           </Col>
         </Row>
@@ -135,7 +145,7 @@ const RepoListPage: React.FC = () => {
 
       <Spin spinning={loading}>
         {repos.length === 0 ? (
-          <Empty description="暂无仓库数据" />
+          <Empty description={t('repo.empty')} />
         ) : (
           <>
             <Row gutter={[16, 16]}>
@@ -168,7 +178,7 @@ const RepoListPage: React.FC = () => {
                       ellipsis={{ rows: 2 }}
                       style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, minHeight: 40 }}
                     >
-                      {repo.description || repo.display_name || '暂无描述'}
+                      {repo.description || repo.display_name || t('repo.noDescription')}
                     </Paragraph>
                     <Space size={12} wrap>
                       <Text style={{ fontSize: 12 }}>
@@ -201,7 +211,7 @@ const RepoListPage: React.FC = () => {
                 current={page}
                 pageSize={pageSize}
                 total={total}
-                showTotal={(t) => `共 ${t} 个仓库`}
+                showTotal={count => t('repo.totalRepos', { n: count })}
                 onChange={(p) => setPage(p)}
               />
             </div>

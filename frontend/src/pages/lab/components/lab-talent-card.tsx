@@ -1,7 +1,8 @@
 import { Tag, Typography, Space, Avatar } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import type { LabTalent } from '../../../types'
-import { ROLE_LABELS, ROLE_COLORS, LEVEL_LABELS } from '../constants/lab-role'
+import { useLabRoles, ROLE_COLORS } from '../constants/lab-role'
+import '../../../i18n/namespaces/lab'
 
 const { Text } = Typography
 
@@ -11,9 +12,9 @@ interface LabTalentCardProps {
 
 const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
   const navigate = useNavigate()
+  const { roleLabel, levelLabel } = useLabRoles()
   const initials = talent.name.slice(0, 1)
   const roleColor = ROLE_COLORS[talent.role_type] || ROLE_COLORS.unknown
-  const roleLabel = ROLE_LABELS[talent.role_type] || ROLE_LABELS.unknown
 
   return (
     <div
@@ -78,11 +79,7 @@ const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
           />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Text
-            strong
-            ellipsis
-            style={{ fontSize: 15, display: 'block', lineHeight: 1.3 }}
-          >
+          <Text strong ellipsis style={{ fontSize: 15, display: 'block', lineHeight: 1.3 }}>
             {talent.name}
           </Text>
           <Space size={4} wrap style={{ marginTop: 2 }}>
@@ -99,7 +96,7 @@ const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
                 fontWeight: 500,
               }}
             >
-              {roleLabel}
+              {roleLabel(talent.role_type)}
             </Tag>
             {talent.academic_level && (
               <Tag
@@ -114,7 +111,7 @@ const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
                   color: 'var(--domain-secondary, #0EA5E9)',
                 }}
               >
-                {LEVEL_LABELS[talent.academic_level] || talent.academic_level}
+                {levelLabel(talent.academic_level)}
               </Tag>
             )}
           </Space>
@@ -146,7 +143,9 @@ const LabTalentCard: React.FC<LabTalentCardProps> = ({ talent }) => {
 
       {/* Research areas */}
       {talent.research_areas && talent.research_areas.length > 0 && (
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 'auto', paddingTop: 4 }}>
+        <div
+          style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 'auto', paddingTop: 4 }}
+        >
           {talent.research_areas.slice(0, 3).map(area => (
             <span
               key={area}

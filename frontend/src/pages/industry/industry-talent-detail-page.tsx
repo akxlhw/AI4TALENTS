@@ -21,10 +21,12 @@ import {
   message,
 } from 'antd'
 import { ArrowLeftOutlined, DeleteOutlined, EditOutlined, ExportOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { useIndustryTalent, useRemoveFromPosition, useUpdateCandidateStatus } from '../../hooks/useIndustryQueries'
 import { applyDomainCssVars } from '../../theme'
 import { getErrorMessage } from '../../utils'
 import { navigateBack } from '../../utils/navigation'
+import '../../i18n/namespaces/industry'
 import PageSkeleton from '../../components/PageSkeleton'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import BreadcrumbNav from '../../components/BreadcrumbNav'
@@ -35,9 +37,9 @@ import type {
 } from '../../services/api/industry'
 import {
   CANDIDATE_STATUS_COLORS,
-  CANDIDATE_STATUS_LABELS,
-  CANDIDATE_STATUS_OPTIONS,
-  SOURCE_PLATFORM_LABELS,
+  candidateStatusLabel,
+  candidateStatusOptions,
+  sourcePlatformLabel,
   badgeStyle,
   badgeWrap,
   formatScore,
@@ -47,6 +49,7 @@ import {
 const { Title, Text, Link } = Typography
 
 const IndustryTalentDetailPage: React.FC = () => {
+  const { t } = useTranslation(['industry', 'common'])
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const talentId = id ? Number(id) : undefined
@@ -62,9 +65,9 @@ const IndustryTalentDetailPage: React.FC = () => {
     return (
       <div style={{ paddingTop: 64 }}>
         <EmptyPlaceholder
-          title="加载失败"
-          description={getErrorMessage(error, '加载人才详情失败，请稍后重试')}
-          action={{ label: '重试', onClick: () => refetch() }}
+          title={t('industry:detail.loadFailed')}
+          description={getErrorMessage(error, t('industry:detail.loadFailedDescription'))}
+          action={{ label: t('common:actions.retry'), onClick: () => refetch() }}
         />
       </div>
     )
@@ -74,20 +77,20 @@ const IndustryTalentDetailPage: React.FC = () => {
     return (
       <div style={{ paddingTop: 64 }}>
         <EmptyPlaceholder
-          title="人才不存在或已删除"
-          description="该人才可能已被移除或链接有误"
-          action={{ label: '返回行业人才库', onClick: () => navigate('/industry') }}
+          title={t('industry:detail.notFoundTitle')}
+          description={t('industry:detail.notFoundDescription')}
+          action={{ label: t('industry:detail.backToLibrary'), onClick: () => navigate('/industry') }}
         />
       </div>
     )
   }
 
   const tabItems: TabsProps['items'] = [
-    { key: 'info', label: '基本信息', children: <InfoTab talent={talent} /> },
-    { key: 'timeline', label: '履历时间线', children: <TimelineTab talent={talent} /> },
+    { key: 'info', label: t('industry:detail.tabs.info'), children: <InfoTab talent={talent} /> },
+    { key: 'timeline', label: t('industry:detail.tabs.timeline'), children: <TimelineTab talent={talent} /> },
     {
       key: 'positions',
-      label: `岗位匹配${talent.positions.length > 0 ? ` (${talent.positions.length})` : ''}`,
+      label: `${t('industry:detail.tabs.positions')}${talent.positions.length > 0 ? ` (${talent.positions.length})` : ''}`,
       children: <PositionsTab talent={talent} />,
     },
   ]
@@ -101,9 +104,9 @@ const IndustryTalentDetailPage: React.FC = () => {
           onClick={() => navigateBack(navigate, '/industry')}
           style={{ color: 'var(--domain-primary, #1A365D)', fontWeight: 500, marginBottom: 4 }}
         >
-          返回
+          {t('industry:detail.back')}
         </Button>
-        <BreadcrumbNav items={[{ label: '行业人才库', path: '/industry' }, { label: talent.name }]} />
+        <BreadcrumbNav items={[{ label: t('industry:detail.breadcrumbRoot'), path: '/industry' }, { label: talent.name }]} />
 
         <TalentHeaderCard talent={talent} />
 
@@ -118,6 +121,7 @@ const IndustryTalentDetailPage: React.FC = () => {
 // ---------- Header identity card ----------
 
 const TalentHeaderCard: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }) => {
+  const { t } = useTranslation('industry')
   return (
     <Card style={{ borderRadius: 14, border: 'none', boxShadow: '0 2px 12px rgba(26,54,93,0.06)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap' }}>
@@ -150,7 +154,7 @@ const TalentHeaderCard: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }
                   color: '#475569',
                 }}
               >
-                {SOURCE_PLATFORM_LABELS[talent.source] || talent.source}
+                {sourcePlatformLabel(talent.source)}
               </Tag>
             )}
           </div>
@@ -165,7 +169,7 @@ const TalentHeaderCard: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }
               style={{ fontSize: 13, color: '#64748b', display: 'block', marginTop: 8 }}
               ellipsis={{ tooltip: talent.expect }}
             >
-              求职意向:{talent.expect}
+              {t('detail.expect', { value: talent.expect })}
             </Text>
           )}
           {talent.profile_url && (
@@ -176,7 +180,9 @@ const TalentHeaderCard: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }
               style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8 }}
             >
               <ExportOutlined />
-              {talent.source === 'linkedin' ? 'LinkedIn 主页' : '脉脉主页'}
+              {talent.source === 'linkedin'
+                ? t('detail.profileLink.linkedin')
+                : t('detail.profileLink.maimai')}
             </Link>
           )}
         </div>
@@ -188,10 +194,12 @@ const TalentHeaderCard: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }
               {formatScore(talent.best_match_score)}
             </span>
             <span style={{ fontSize: 10, opacity: 0.85, marginTop: 2 }}>
-              {talent.best_match_score != null ? `${Math.round(talent.best_match_score)}分` : ''}
+              {talent.best_match_score != null
+                ? t('detail.scoreValue', { score: Math.round(talent.best_match_score) })
+                : ''}
             </span>
           </div>
-          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>最高匹配</div>
+          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{t('detail.bestMatch')}</div>
         </div>
       </div>
     </Card>
@@ -200,39 +208,48 @@ const TalentHeaderCard: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }
 
 // ---------- Tab 1: basic info ----------
 
-const InfoTab: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }) => (
-  <Descriptions column={1} bordered size="small" labelStyle={{ width: 120 }}>
-    <Descriptions.Item label="姓名">{talent.name}</Descriptions.Item>
-    <Descriptions.Item label="现任公司">{talent.current_org || '—'}</Descriptions.Item>
-    <Descriptions.Item label="现任头衔">{talent.current_title || '—'}</Descriptions.Item>
-    <Descriptions.Item label="学历">{talent.degree || '—'}</Descriptions.Item>
-    <Descriptions.Item label="工作年限">{talent.years_of_exp || '—'}</Descriptions.Item>
-    <Descriptions.Item label="所在地">{talent.location || '—'}</Descriptions.Item>
-    <Descriptions.Item label="求职意向">{talent.expect || '—'}</Descriptions.Item>
-    <Descriptions.Item label="来源平台">
-      {talent.source ? SOURCE_PLATFORM_LABELS[talent.source] || talent.source : '—'}
-    </Descriptions.Item>
-    <Descriptions.Item label="来源链接">
-      {talent.profile_url ? (
-        <Link href={talent.profile_url} target="_blank" rel="noopener noreferrer">
-          {talent.profile_url}
-        </Link>
-      ) : (
-        '—'
-      )}
-    </Descriptions.Item>
-    <Descriptions.Item label="最近更新">
-      {talent.updated_at ? talent.updated_at.slice(0, 10) : '—'}
-    </Descriptions.Item>
-  </Descriptions>
-)
+const InfoTab: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }) => {
+  const { t } = useTranslation('industry')
+  return (
+    <Descriptions column={1} bordered size="small" labelStyle={{ width: 120 }}>
+      <Descriptions.Item label={t('detail.fields.name')}>{talent.name}</Descriptions.Item>
+      <Descriptions.Item label={t('detail.fields.currentOrg')}>{talent.current_org || '—'}</Descriptions.Item>
+      <Descriptions.Item label={t('detail.fields.currentTitle')}>{talent.current_title || '—'}</Descriptions.Item>
+      <Descriptions.Item label={t('detail.fields.degree')}>{talent.degree || '—'}</Descriptions.Item>
+      <Descriptions.Item label={t('detail.fields.yearsOfExp')}>{talent.years_of_exp || '—'}</Descriptions.Item>
+      <Descriptions.Item label={t('detail.fields.location')}>{talent.location || '—'}</Descriptions.Item>
+      <Descriptions.Item label={t('detail.fields.expect')}>{talent.expect || '—'}</Descriptions.Item>
+      <Descriptions.Item label={t('detail.fields.sourcePlatform')}>
+        {talent.source ? sourcePlatformLabel(talent.source) : '—'}
+      </Descriptions.Item>
+      <Descriptions.Item label={t('detail.fields.profileUrl')}>
+        {talent.profile_url ? (
+          <Link href={talent.profile_url} target="_blank" rel="noopener noreferrer">
+            {talent.profile_url}
+          </Link>
+        ) : (
+          '—'
+        )}
+      </Descriptions.Item>
+      <Descriptions.Item label={t('detail.fields.updatedAt')}>
+        {talent.updated_at ? talent.updated_at.slice(0, 10) : '—'}
+      </Descriptions.Item>
+    </Descriptions>
+  )
+}
 
 // ---------- Tab 2: experience timeline ----------
 
 const TimelineTab: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }) => {
+  const { t } = useTranslation('industry')
   const experiences = talent.experiences || []
   if (experiences.length === 0) {
-    return <EmptyPlaceholder title="暂无履历数据" description="导入数据中没有该人才的履历信息" />
+    return (
+      <EmptyPlaceholder
+        title={t('detail.timelineEmpty.title')}
+        description={t('detail.timelineEmpty.description')}
+      />
+    )
   }
 
   // Collect match tags across positions to pin onto matching experience segments
@@ -267,7 +284,7 @@ const TimelineTab: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }) => 
                         color: 'var(--domain-badge-bg, #6B46C1)',
                       }}
                     >
-                      现任
+                      {t('detail.currentTag')}
                     </Tag>
                   )}
                 </div>
@@ -309,11 +326,12 @@ const TimelineTab: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }) => 
 // ---------- Tab 3: position matches + recruiting state management ----------
 
 const PositionsTab: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }) => {
+  const { t } = useTranslation('industry')
   if (talent.positions.length === 0) {
     return (
       <EmptyPlaceholder
-        title="暂未命中任何岗位"
-        description="该人才还没有与岗位关联的匹配记录"
+        title={t('detail.noPositionsTitle')}
+        description={t('detail.noPositionsDescription')}
       />
     )
   }
@@ -326,16 +344,17 @@ const PositionsTab: React.FC<{ talent: IndustryTalentDetail }> = ({ talent }) =>
   )
 }
 
-const SUB_SCORES: { key: 'score_school' | 'score_company' | 'score_direction'; label: string }[] = [
-  { key: 'score_school', label: '院校' },
-  { key: 'score_company', label: '企业' },
-  { key: 'score_direction', label: '方向' },
+const SUB_SCORES: { key: 'score_school' | 'score_company' | 'score_direction'; labelKey: string }[] = [
+  { key: 'score_school', labelKey: 'detail.subScores.school' },
+  { key: 'score_company', labelKey: 'detail.subScores.company' },
+  { key: 'score_direction', labelKey: 'detail.subScores.direction' },
 ]
 
 const PositionMatchCard: React.FC<{
   talentId: number
   match: IndustryPositionMatchDetail
 }> = ({ talentId, match }) => {
+  const { t } = useTranslation(['industry', 'common'])
   const updateStatus = useUpdateCandidateStatus()
   const removeMutation = useRemoveFromPosition()
   const navigate = useNavigate()
@@ -370,9 +389,9 @@ const PositionMatchCard: React.FC<{
         positionId: match.position_id,
         patch: patch as CandidateStatusPatch,
       })
-      message.success('已保存')
+      message.success(t('industry:detail.saved'))
     } catch (e) {
-      message.error(getErrorMessage(e, '保存失败'))
+      message.error(getErrorMessage(e, t('industry:detail.saveFailed')))
     } finally {
       setSaving(false)
     }
@@ -390,7 +409,7 @@ const PositionMatchCard: React.FC<{
       })
       // No success toast — inline edit should be quiet
     } catch (e) {
-      message.error(getErrorMessage(e, '分数更新失败'))
+      message.error(getErrorMessage(e, t('industry:detail.scoreUpdateFailed')))
       // Revert local state on failure
       if (field === 'match_score') setMatchScore(match.match_score)
       else if (field === 'score_school') setScoreSchool(match.score_school)
@@ -406,13 +425,13 @@ const PositionMatchCard: React.FC<{
         positionId: match.position_id,
       })
       if (result.orphan_talent_deleted) {
-        message.success('候选人已移出岗位，且因无其他关联已自动清理')
+        message.success(t('industry:detail.removeOrphanCleaned'))
         navigate('/industry')
       } else {
-        message.success('已移出本岗位')
+        message.success(t('industry:detail.removed'))
       }
     } catch (e) {
-      message.error(getErrorMessage(e, '移出失败'))
+      message.error(getErrorMessage(e, t('industry:detail.removeFailed')))
     }
   }
 
@@ -429,16 +448,16 @@ const PositionMatchCard: React.FC<{
               color={CANDIDATE_STATUS_COLORS[match.status] || 'default'}
               style={{ margin: 0, borderRadius: 10 }}
             >
-              {CANDIDATE_STATUS_LABELS[match.status] || match.status}
+              {candidateStatusLabel(match.status)}
             </Tag>
             <Text type="secondary" style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 2 }}>
               <EditOutlined style={{ fontSize: 10 }} />
-              分数可编辑
+              {t('industry:detail.scoresEditable')}
             </Text>
           </div>
 
           {/* Total score — grade medal + inline edit */}
-          <Tooltip title="点击修改分数">
+          <Tooltip title={t('industry:detail.clickToEditScore')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
               <div style={badgeWrap(44)}>
                 <div style={badgeStyle(matchScore, 44)}>
@@ -493,7 +512,7 @@ const PositionMatchCard: React.FC<{
                       marginBottom: 4,
                     }}
                   >
-                    <span>{s.label}</span>
+                    <span>{t(`industry:${s.labelKey}`)}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span
                         style={{
@@ -560,10 +579,9 @@ const PositionMatchCard: React.FC<{
 
           <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 10 }}>
             {[
-              match.source_platform &&
-                (SOURCE_PLATFORM_LABELS[match.source_platform] || match.source_platform),
-              match.batch && `批次 ${match.batch}`,
-              match.updated_at && `更新于 ${match.updated_at.slice(0, 10)}`,
+              match.source_platform && sourcePlatformLabel(match.source_platform),
+              match.batch && t('industry:detail.batch', { value: match.batch }),
+              match.updated_at && t('industry:detail.updatedAt', { date: match.updated_at.slice(0, 10) }),
             ]
               .filter(Boolean)
               .join(' · ')}
@@ -575,12 +593,12 @@ const PositionMatchCard: React.FC<{
         {/* Right: recruiting state editor */}
         <div style={{ width: 240, flexShrink: 0 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            招聘状态
+            {t('industry:detail.recruitingStatus')}
           </Text>
           <Select
             style={{ width: '100%', marginTop: 6 }}
             value={status}
-            options={CANDIDATE_STATUS_OPTIONS}
+            options={candidateStatusOptions()}
             onChange={setStatus}
           />
           <Checkbox
@@ -588,12 +606,12 @@ const PositionMatchCard: React.FC<{
             onChange={e => setTouched(e.target.checked)}
             style={{ marginTop: 12 }}
           >
-            已触达
+            {t('industry:detail.touched')}
           </Checkbox>
           <Input.TextArea
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="招聘备注..."
+            placeholder={t('industry:detail.notesPlaceholder')}
             rows={3}
             style={{ marginTop: 12, fontSize: 12 }}
             maxLength={500}
@@ -607,13 +625,13 @@ const PositionMatchCard: React.FC<{
             loading={saving}
             onClick={handleSave}
           >
-            保存
+            {t('industry:detail.save')}
           </Button>
           <Popconfirm
-            title="确认移出本岗位？"
-            description="候选人与该岗位的关联将被删除。如果该候选人没有其他岗位关联，人才记录也会被清理。"
-            okText="移出"
-            cancelText="取消"
+            title={t('industry:detail.removeConfirmTitle')}
+            description={t('industry:detail.removeConfirmDescription')}
+            okText={t('industry:detail.remove')}
+            cancelText={t('common:actions.cancel')}
             okButtonProps={{ danger: true }}
             onConfirm={handleRemove}
           >
@@ -625,7 +643,7 @@ const PositionMatchCard: React.FC<{
               loading={removeMutation.isPending}
               style={{ marginTop: 8 }}
             >
-              移出本岗位
+              {t('industry:detail.removeButton')}
             </Button>
           </Popconfirm>
         </div>

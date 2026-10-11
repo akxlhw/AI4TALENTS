@@ -1,5 +1,6 @@
 import { Button, Card, Col, Empty, Row, Space, Spin, Tag, Typography, message } from 'antd'
 import { FolderOutlined, PlusOutlined, TeamOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import type { TalentPool } from '../../../types'
 
 const { Text } = Typography
@@ -11,11 +12,12 @@ interface TalentPoolTabProps {
 }
 
 const TalentPoolTab: React.FC<TalentPoolTabProps> = ({ pools, poolsLoading, onCreatePool }) => {
+  const { t } = useTranslation('user')
   return (
     <Card>
       <div style={{ marginBottom: 16 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={onCreatePool}>
-          创建人才池
+          {t('pools.create')}
         </Button>
       </div>
 
@@ -24,7 +26,7 @@ const TalentPoolTab: React.FC<TalentPoolTabProps> = ({ pools, poolsLoading, onCr
           <Row gutter={[16, 16]}>
             {pools.map(pool => (
               <Col xs={24} sm={12} lg={8} key={pool.pool_id}>
-                <Card hoverable onClick={() => message.info('人才池详情页建设中，敬请期待')}>
+                <Card hoverable onClick={() => message.info(t('pools.detailComingSoon'))}>
                   <Space direction="vertical" style={{ width: '100%' }}>
                     <Text strong style={{ fontSize: 16 }}>
                       <FolderOutlined style={{ marginRight: 8 }} />
@@ -38,9 +40,9 @@ const TalentPoolTab: React.FC<TalentPoolTabProps> = ({ pools, poolsLoading, onCr
                     <div>
                       <Tag color="blue">
                         <TeamOutlined style={{ marginRight: 4 }} />
-                        {pool.member_count} 人
+                        {t('pools.memberCount', { count: pool.member_count })}
                       </Tag>
-                      <Tag>{pool.pool_type === 'custom' ? '自定义' : pool.pool_type}</Tag>
+                      <Tag>{pool.pool_type === 'custom' ? t('pools.typeCustom') : pool.pool_type}</Tag>
                     </div>
                   </Space>
                 </Card>
@@ -48,9 +50,9 @@ const TalentPoolTab: React.FC<TalentPoolTabProps> = ({ pools, poolsLoading, onCr
             ))}
           </Row>
         ) : (
-          <Empty description="暂无人才池">
+          <Empty description={t('pools.empty')}>
             <Button type="primary" onClick={onCreatePool}>
-              创建人才池
+              {t('pools.create')}
             </Button>
           </Empty>
         )}

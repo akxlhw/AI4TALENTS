@@ -1,9 +1,11 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Avatar, Typography } from 'antd'
+import { useTranslation } from 'react-i18next'
 import LabIcon from '../../../components/lab-icon'
 import type { LabWithTalents } from '../../../types'
 import { ROLE_CONFIG, ROLE_COLORS } from '../constants/lab-role'
+import '../../../i18n/namespaces/lab'
 
 const { Title, Text } = Typography
 
@@ -13,6 +15,7 @@ interface LabCardProps {
 
 const LabCard: React.FC<React.PropsWithChildren<LabCardProps>> = ({ lab }) => {
   const navigate = useNavigate()
+  const { t } = useTranslation('lab')
   const previewTalents = lab.talents.slice(0, 5)
   const overflow = Math.max(0, lab.count - previewTalents.length)
 
@@ -20,7 +23,9 @@ const LabCard: React.FC<React.PropsWithChildren<LabCardProps>> = ({ lab }) => {
   const dist = lab.role_distribution || {}
   const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1
   const segments = ROLE_CONFIG.filter(r => dist[r.key] > 0).map(r => ({
-    ...r,
+    key: r.key,
+    color: r.color,
+    label: t(r.labelKey),
     count: dist[r.key],
     pct: (dist[r.key] / total) * 100,
   }))
@@ -84,7 +89,11 @@ const LabCard: React.FC<React.PropsWithChildren<LabCardProps>> = ({ lab }) => {
             }}
           >
             {lab.logo_url ? (
-              <img src={lab.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img
+                src={lab.logo_url}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             ) : (
               <LabIcon style={{ fontSize: 20, color: '#fff' }} />
             )}
@@ -104,13 +113,19 @@ const LabCard: React.FC<React.PropsWithChildren<LabCardProps>> = ({ lab }) => {
           </Title>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0, whiteSpace: 'nowrap' }}>
-          <span style={{ color: '#fff', fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{lab.count}</span>
-          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginLeft: 2 }}>人</span>
+          <span style={{ color: '#fff', fontSize: 22, fontWeight: 700, lineHeight: 1 }}>
+            {lab.count}
+          </span>
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginLeft: 2 }}>
+            {t('common.personUnit')}
+          </span>
         </div>
       </div>
 
       {/* === Body === */}
-      <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
+      <div
+        style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}
+      >
         {/* Lab description */}
         {lab.description && (
           <Text

@@ -1,0 +1,121 @@
+{
+  "common": {
+    "back": "返回",
+    "retry": "重试",
+    "reset": "重置",
+    "loadFailed": "加载失败",
+    "retryLater": "请稍后重试",
+    "personCount": "共 {{n}} 人",
+    "personUnit": "人",
+    "officialSite": "官网",
+    "homepage": "个人主页",
+    "labs": "实验室",
+    "search": "搜索"
+  },
+  "role": {
+    "professor": "教授",
+    "student": "在读学生",
+    "graduate": "博后/研究员",
+    "alumni": "已毕业",
+    "unknown": "其他"
+  },
+  "level": {
+    "phd": "博士",
+    "master": "硕士",
+    "bachelor": "学士"
+  },
+  "hero": {
+    "title": "AI Native人才库",
+    "subtitle": "基于全球 AI 实验室公开信息的人才发现平台 · 汇聚连接顶尖 AI 原生人才",
+    "placeholder": "输入姓名、实验室、研究方向等关键词搜索人才...",
+    "search": "搜索"
+  },
+  "overview": {
+    "emptyTitle": "暂无 AI 实验室人才数据",
+    "emptyDescription": "请通过管理员上传导入实验室人才数据",
+    "goImport": "去导入",
+    "featuredLabs": "收录实验室",
+    "labDistribution": "实验室分布",
+    "roleDistribution": "角色分布",
+    "levelDistribution": "学位层次",
+    "topLabs": "热门研究组",
+    "total": "总计"
+  },
+  "search": {
+    "all": "全部",
+    "allTalents": "全部人才",
+    "allRoles": "全部角色",
+    "allLevels": "全部学位",
+    "talentList": "人才列表",
+    "mentorship": "师从关系",
+    "keywordPlaceholder": "输入姓名关键词...",
+    "rolePlaceholder": "角色",
+    "levelPlaceholder": "学位层次",
+    "sortPlaceholder": "排序",
+    "advanced": "高级筛选",
+    "parentLabPlaceholder": "顶级实验室",
+    "labGroupPlaceholder": "研究组",
+    "researchAreaPlaceholder": "研究方向",
+    "sort": {
+      "default": "默认排序",
+      "nameAsc": "姓名升序",
+      "cohortDesc": "届别降序",
+      "createdDesc": "最近创建"
+    },
+    "noResultTitle": "未找到匹配的人才",
+    "noResultDescription": "尝试调整筛选条件",
+    "clearFilters": "清除筛选",
+    "loadingNetwork": "加载导师网络...",
+    "noAdvisorData": "该实验室暂无导师关系数据",
+    "researchFocus": "研究领域：{{focus}}"
+  },
+  "detail": {
+    "loadFailed": "加载人才详情失败，请稍后重试",
+    "notFoundTitle": "人才不存在或已删除",
+    "notFoundDescription": "该人才可能已被移除或链接有误",
+    "backToSearch": "返回搜索页",
+    "tabs": {
+      "info": "基本信息",
+      "mentorship": "师承关系",
+      "homepage": "个人主页"
+    },
+    "fields": {
+      "parentLab": "顶级实验室",
+      "labGroup": "研究组",
+      "department": "院系",
+      "cohortYear": "入学/加入年份",
+      "cohortSource": "届别来源"
+    },
+    "researchAreas": "研究方向",
+    "dataSource": "数据来源：{{lab}} 官网",
+    "collectedAt": "采集于 {{date}}",
+    "viewSource": "查看来源页面",
+    "advisor": "导师",
+    "coAdvisor": "共同导师",
+    "noAdvisor": "未收录导师信息",
+    "students": "指导的学生",
+    "peopleCount": "{{n}} 人",
+    "cohortGrade": "{{year}} 级",
+    "noStudents": "暂无收录指导的学生",
+    "noMentorship": "暂无师承关系数据",
+    "loadingMentorship": "加载师承关系...",
+    "loadingHomepage": "正在加载个人主页...",
+    "homepageFetchError": "无法加载该主页，可能是网络问题或目标网站限制访问。",
+    "homepageHttpError": "目标网站返回了 {{status}}，暂时无法预览。",
+    "homepageMissing": "该人才未提供个人主页。",
+    "homepagePreviewFailed": "预览加载失败，请稍后重试。",
+    "openFullHomepage": "在新标签页打开完整主页 →",
+    "socialSearchTooltip": "{{label}}（搜索）"
+  },
+  "tree": {
+    "defaultLab": "实验室",
+    "legend": "金边 👑 = 创始人 · 深色 = 导师 · 浅色 = 学生 · 灰色分组 = 组织归类（非师承） · 单击节点展开/收起，Shift+单击查看人物详情 · 滚轮缩放，拖拽平移",
+    "founder": "创始人",
+    "coAdvised": "共同指导：{{names}}",
+    "nameJoiner": "、",
+    "studentsAggregate": "学生（{{n}}）",
+    "founderStudentsGroup": "创始人的学生（组织分组）",
+    "otherAdvisors": "其他导师",
+    "orgGroup": "组织分组（非师承关系）"
+  }
+}

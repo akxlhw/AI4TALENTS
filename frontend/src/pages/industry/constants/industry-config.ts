@@ -1,15 +1,26 @@
 /**
  * Industry domain display constants — status labels/colors, score tiers.
- * Labels mirror backend app/domains/industry/constants/status_config.py.
+ * Label values mirror backend app/domains/industry/constants/status_config.py
+ * and live in i18n/locales/{zh,en}/industry.json (namespace `industry`).
  */
 
 import type { CSSProperties } from 'react'
 
+import { i18n } from '../../../i18n'
+import '../../../i18n/namespaces/industry'
+
+// Translate within the industry namespace at call time — components using
+// useTranslation('industry') re-render on language switch, so labels returned
+// here during render stay in sync.
+function t(key: string, options?: Record<string, unknown>): string {
+  return i18n.t(key, { ns: 'industry', ...options })
+}
+
 // Candidate recruiting status (position-talent link)
-export const CANDIDATE_STATUS_LABELS: Record<string, string> = {
-  new: '新候选人',
-  connected: '已连接',
-  terminated: '已终止',
+export const CANDIDATE_STATUS_VALUES = ['new', 'connected', 'terminated'] as const
+
+export function candidateStatusLabel(status: string): string {
+  return t(`status.${status}`, { defaultValue: status })
 }
 
 // Ant Design Tag preset colors
@@ -19,11 +30,12 @@ export const CANDIDATE_STATUS_COLORS: Record<string, string> = {
   terminated: 'default',
 }
 
-export const CANDIDATE_STATUS_OPTIONS = Object.entries(CANDIDATE_STATUS_LABELS).map(
-  ([value, label]) => ({ value, label })
-)
+export function candidateStatusOptions() {
+  return CANDIDATE_STATUS_VALUES.map(value => ({ value, label: candidateStatusLabel(value) }))
+}
 
-// Position lifecycle
+// Position lifecycle (consumed by the admin positions tab — labels not
+// translated here; that page is outside this i18n migration scope)
 export const POSITION_STATUS_LABELS: Record<string, string> = {
   open: '在招',
   closed: '已关闭',
@@ -36,30 +48,35 @@ export const POSITION_STATUS_COLORS: Record<string, string> = {
   archived: 'default',
 }
 
-export const SOURCE_PLATFORM_LABELS: Record<string, string> = {
-  maimai: '脉脉',
-  linkedin: 'LinkedIn',
+export function sourcePlatformLabel(platform: string): string {
+  return t(`platform.${platform}`, { defaultValue: platform })
 }
 
-export const SOURCE_PLATFORM_OPTIONS = [
-  { value: 'maimai', label: '脉脉' },
-  { value: 'linkedin', label: 'LinkedIn' },
-]
+export function sourcePlatformOptions() {
+  return [
+    { value: 'maimai', label: t('platform.maimai') },
+    { value: 'linkedin', label: t('platform.linkedin') },
+  ]
+}
 
-export const INDUSTRY_SORT_OPTIONS = [
-  { value: 'match_score_desc', label: '匹配分降序' },
-  { value: 'match_score_asc', label: '匹配分升序' },
-  { value: 'created_desc', label: '最近导入' },
-  { value: 'name_asc', label: '姓名升序' },
-]
+export function industrySortOptions() {
+  return [
+    { value: 'match_score_desc', label: t('sort.matchScoreDesc') },
+    { value: 'match_score_asc', label: t('sort.matchScoreAsc') },
+    { value: 'created_desc', label: t('sort.createdDesc') },
+    { value: 'name_asc', label: t('sort.nameAsc') },
+  ]
+}
 
-export const MIN_SCORE_OPTIONS = [
-  { value: 0, label: '不限分数' },
-  { value: 60, label: '60 分以上' },
-  { value: 70, label: '70 分以上' },
-  { value: 80, label: '80 分以上' },
-  { value: 90, label: '90 分以上' },
-]
+export function minScoreOptions() {
+  return [
+    { value: 0, label: t('minScore.any') },
+    { value: 60, label: t('minScore.above', { score: 60 }) },
+    { value: 70, label: t('minScore.above', { score: 70 }) },
+    { value: 80, label: t('minScore.above', { score: 80 }) },
+    { value: 90, label: t('minScore.above', { score: 90 }) },
+  ]
+}
 
 /** Match-score visual tiers: S 橙 / A+ 紫 / A 蓝 / B+ 绿 / C 灰 */
 export function scoreColor(score: number | null | undefined): string {
@@ -82,12 +99,12 @@ export function scoreBg(score: number | null | undefined): string {
 }
 
 export function formatScore(score: number | null | undefined): string {
-  if (score === null || score === undefined) return '—'
-  if (score >= 100) return 'S'
-  if (score >= 95) return 'A+'
-  if (score >= 90) return 'A'
-  if (score >= 80) return 'B+'
-  return 'C'
+  if (score === null || score === undefined) return t('grade.none')
+  if (score >= 100) return t('grade.s')
+  if (score >= 95) return t('grade.aplus')
+  if (score >= 90) return t('grade.a')
+  if (score >= 80) return t('grade.bplus')
+  return t('grade.c')
 }
 
 /**

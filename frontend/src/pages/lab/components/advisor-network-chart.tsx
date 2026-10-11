@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
+import { useTranslation } from 'react-i18next'
 import { buildTree } from './advisor-tree-builder'
-import type { NetworkNode, NetworkEdge, TreeNode } from './advisor-tree-builder'
+import type { NetworkNode, NetworkEdge, TreeNode, TreeLabels } from './advisor-tree-builder'
+import '../../../i18n/namespaces/lab'
 
 interface AdvisorNetworkChartProps {
   data: { nodes: NetworkNode[]; edges: NetworkEdge[] }
@@ -12,19 +14,35 @@ interface AdvisorNetworkChartProps {
 
 const AdvisorNetworkChart: React.FC<AdvisorNetworkChartProps> = ({
   data,
-  labName = '实验室',
+  labName,
   onNodeClick,
 }) => {
-  const { root } = useMemo(() => buildTree(data.nodes, data.edges, labName), [data, labName])
+  const { t } = useTranslation('lab')
+  const resolvedLabName = labName ?? t('tree.defaultLab')
+
+  const labels = useMemo<TreeLabels>(
+    () => ({
+      founderTitle: name => `👑 ${t('tree.founder')} · ${name}`,
+      coAdvisedBy: names => t('tree.coAdvised', { names: names.join(t('tree.nameJoiner')) }),
+      studentsAggregate: n => t('tree.studentsAggregate', { n }),
+      founderStudentsGroup: t('tree.founderStudentsGroup'),
+      otherAdvisors: t('tree.otherAdvisors'),
+      orgGroup: t('tree.orgGroup'),
+    }),
+    [t]
+  )
+
+  const { root } = useMemo(
+    () => buildTree(data.nodes, data.edges, resolvedLabName, labels),
+    [data, resolvedLabName, labels]
+  )
 
   // Canvas size follows the INITIALLY VISIBLE tree shape (a collapsed node
   // counts as one leaf and one level), so sibling spacing stays compact and
   // constant in px no matter how big the full tree is — roam handles overflow.
   const { visibleLeafCount, visibleLevels } = useMemo(() => {
     const leaves = (n: TreeNode): number =>
-      n.collapsed || !n.children?.length
-        ? 1
-        : n.children.reduce((sum, c) => sum + leaves(c), 0)
+      n.collapsed || !n.children?.length ? 1 : n.children.reduce((sum, c) => sum + leaves(c), 0)
     const levels = (n: TreeNode): number =>
       n.collapsed || !n.children?.length ? 1 : 1 + Math.max(...n.children.map(levels))
     return { visibleLeafCount: leaves(root), visibleLevels: levels(root) }
@@ -62,19 +80,13 @@ const AdvisorNetworkChart: React.FC<AdvisorNetworkChartProps> = ({
 
   return (
     <div>
-      <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
-        金边 👑 = 创始人 · 深色 = 导师 · 浅色 = 学生 · 灰色分组 = 组织归类（非师承） ·
-        单击节点展开/收起，Shift+单击查看人物详情 · 滚轮缩放，拖拽平移
-      </div>
+      <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>{t('tree.legend')}</div>
       <ReactECharts
         option={option}
         notMerge
         style={{ height: 560 }}
         onEvents={{
-          click: (params: {
-            data?: TreeNode
-            event?: { event?: { shiftKey?: boolean } }
-          }) => {
+          click: (params: { data?: TreeNode; event?: { event?: { shiftKey?: boolean } } }) => {
             const d = params.data
             if (!d || !onNodeClick) return
             // Shift+click opens the detail page for ANY node with a talent

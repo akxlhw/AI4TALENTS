@@ -17,27 +17,39 @@ import {
   Image,
 } from 'antd'
 import { SendOutlined, MessageOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../services/api'
 import { getErrorMessage } from '../../utils'
+import '../../i18n/namespaces/user'
 import ImagePasteUpload from '../../components/ImagePasteUpload'
 import type { UploadFile } from 'antd/es/upload/interface'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
 
-const CATEGORY_OPTIONS = [
-  { value: 'feature', label: '功能建议' },
-  { value: 'bug', label: 'Bug 反馈' },
-  { value: 'data_issue', label: '数据纠错' },
-  { value: 'experience', label: '体验反馈' },
-  { value: 'other', label: '其他' },
-]
+const CATEGORY_VALUES = ['feature', 'bug', 'data_issue', 'experience', 'other'] as const
 
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  open: { label: '待处理', color: 'orange' },
-  in_progress: { label: '处理中', color: 'blue' },
-  resolved: { label: '已解决', color: 'green' },
-  closed: { label: '已关闭', color: 'default' },
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+  feature: 'user:feedback.category.feature',
+  bug: 'user:feedback.category.bug',
+  data_issue: 'user:feedback.category.dataIssue',
+  experience: 'user:feedback.category.experience',
+  other: 'user:feedback.category.other',
+}
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  open: 'user:feedback.status.open',
+  in_progress: 'user:feedback.status.inProgress',
+  resolved: 'user:feedback.status.resolved',
+  closed: 'user:feedback.status.closed',
+}
+
+// Ant Design Tag preset colors (language-independent)
+const STATUS_COLORS: Record<string, string> = {
+  open: 'orange',
+  in_progress: 'blue',
+  resolved: 'green',
+  closed: 'default',
 }
 
 interface SuggestionItem {
@@ -53,6 +65,7 @@ interface SuggestionItem {
 }
 
 const FeedbackPage: React.FC = () => {
+  const { t, i18n } = useTranslation('user')
   const [form] = Form.useForm()
   const [fileList, setFileList] = useState<UploadFile[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -60,6 +73,11 @@ const FeedbackPage: React.FC = () => {
   const [myTotal, setMyTotal] = useState(0)
   const [myPage, setMyPage] = useState(1)
   const [loadingList, setLoadingList] = useState(false)
+
+  const categoryOptions = CATEGORY_VALUES.map(value => ({
+    value,
+    label: t(CATEGORY_LABEL_KEYS[value]),
+  }))
 
   const fetchMySuggestions = async (page = 1) => {
     setLoadingList(true)
@@ -69,7 +87,7 @@ const FeedbackPage: React.FC = () => {
       setMyTotal(res.data.total || 0)
     } catch (e) {
       logger.error('Failed to load suggestions', e)
-      message.error('加载反馈列表失败')
+      message.error(t('feedback.loadFailed'))
     } finally {
       setLoadingList(false)
     }
@@ -93,13 +111,13 @@ const FeedbackPage: React.FC = () => {
       })
 
       await api.suggestions.create(formData)
-      message.success('建议提交成功')
+      message.success(t('feedback.submitted'))
       form.resetFields()
       setFileList([])
       setMyPage(1)
       fetchMySuggestions(1)
     } catch (e) {
-      message.error(getErrorMessage(e, '提交失败'))
+      message.error(getErrorMessage(e, t('feedback.submitFailed')))
     } finally {
       setSubmitting(false)
     }
@@ -107,42 +125,40 @@ const FeedbackPage: React.FC = () => {
 
   const columns = [
     {
-      title: '分类',
+      title: t('feedback.columns.category'),
       dataIndex: 'category',
       width: 100,
-      render: (v: string) => (
-        <Tag>{CATEGORY_OPTIONS.find((c) => c.value === v)?.label || v}</Tag>
-      ),
+      render: (v: string) => <Tag>{t(CATEGORY_LABEL_KEYS[v] || '', { defaultValue: v })}</Tag>,
     },
     {
-      title: '主题',
+      title: t('feedback.columns.subject'),
       dataIndex: 'subject',
       width: 200,
       ellipsis: true,
     },
     {
-      title: '内容',
+      title: t('feedback.columns.content'),
       dataIndex: 'content',
       ellipsis: true,
     },
     {
-      title: '状态',
+      title: t('feedback.columns.status'),
       dataIndex: 'status',
       width: 100,
       render: (v: string) => {
-        const s = STATUS_MAP[v] || { label: v, color: 'default' }
-        return <Tag color={s.color}>{s.label}</Tag>
+        const label = t(STATUS_LABEL_KEYS[v] || '', { defaultValue: v })
+        return <Tag color={STATUS_COLORS[v] || 'default'}>{label}</Tag>
       },
     },
     {
-      title: '管理员回复',
+      title: t('feedback.columns.adminReply'),
       dataIndex: 'admin_reply',
       width: 200,
       ellipsis: true,
       render: (v: string | null) => v || '-',
     },
     {
-      title: '附件',
+      title: t('feedback.columns.attachments'),
       dataIndex: 'attachments',
       width: 120,
       render: (v: string[]) =>
@@ -165,10 +181,10 @@ const FeedbackPage: React.FC = () => {
         ),
     },
     {
-      title: '提交时间',
+      title: t('feedback.columns.createdAt'),
       dataIndex: 'created_at',
       width: 160,
-      render: (v: string) => new Date(v).toLocaleString('zh-CN'),
+      render: (v: string) => new Date(v).toLocaleString(i18n.language === 'en' ? 'en-US' : 'zh-CN'),
     },
   ]
 
@@ -176,38 +192,38 @@ const FeedbackPage: React.FC = () => {
     <div style={{ padding: '88px 32px 80px', maxWidth: 1200, margin: '0 auto' }}>
       <Title level={3} style={{ marginBottom: 24 }}>
         <MessageOutlined style={{ marginRight: 8 }} />
-        意见反馈
+        {t('feedback.title')}
       </Title>
 
-      <Card title="提交新建议" style={{ marginBottom: 24 }}>
+      <Card title={t('feedback.formTitle')} style={{ marginBottom: 24 }}>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
             name="category"
-            label="分类"
-            rules={[{ required: true, message: '请选择分类' }]}
+            label={t('feedback.category.label')}
+            rules={[{ required: true, message: t('feedback.category.required') }]}
           >
-            <Select placeholder="选择分类" options={CATEGORY_OPTIONS} />
+            <Select placeholder={t('feedback.category.placeholder')} options={categoryOptions} />
           </Form.Item>
           <Form.Item
             name="subject"
-            label="主题"
-            rules={[{ required: true, message: '请输入主题' }]}
+            label={t('feedback.subject.label')}
+            rules={[{ required: true, message: t('feedback.subject.required') }]}
           >
-            <Input placeholder="简要描述您的建议主题" maxLength={200} showCount />
+            <Input placeholder={t('feedback.subject.placeholder')} maxLength={200} showCount />
           </Form.Item>
           <Form.Item
             name="content"
-            label="详细内容"
-            rules={[{ required: true, message: '请输入详细内容' }]}
+            label={t('feedback.content.label')}
+            rules={[{ required: true, message: t('feedback.content.required') }]}
           >
             <TextArea
-              placeholder="请详细描述您的建议、遇到的问题或数据纠错内容..."
+              placeholder={t('feedback.content.placeholder')}
               rows={6}
               showCount
               maxLength={5000}
             />
           </Form.Item>
-          <Form.Item label="截图附件">
+          <Form.Item label={t('feedback.attachments')}>
             <ImagePasteUpload fileList={fileList} onChange={setFileList} maxCount={5} />
           </Form.Item>
           <Form.Item>
@@ -217,16 +233,16 @@ const FeedbackPage: React.FC = () => {
               icon={<SendOutlined />}
               loading={submitting}
             >
-              提交建议
+              {t('feedback.submit')}
             </Button>
           </Form.Item>
         </Form>
       </Card>
 
-      <Card title="我的历史建议">
+      <Card title={t('feedback.historyTitle')}>
         <Spin spinning={loadingList}>
           {mySuggestions.length === 0 ? (
-            <Empty description="暂无提交记录" />
+            <Empty description={t('feedback.emptyHistory')} />
           ) : (
             <>
               <Table

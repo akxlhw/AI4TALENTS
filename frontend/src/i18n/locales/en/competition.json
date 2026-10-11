@@ -1,0 +1,113 @@
+{
+  "common": {
+    "back": "Back",
+    "retry": "Retry",
+    "reset": "Reset",
+    "loadFailed": "Failed to load",
+    "domain": "Competitions",
+    "totalItems": "{{n}} entries"
+  },
+  "medal": {
+    "gold": "Gold",
+    "silver": "Silver",
+    "bronze": "Bronze",
+    "hm": "Honorable Mention"
+  },
+  "overview": {
+    "loadError": "Failed to load the competition overview",
+    "loadErrorRetry": "Failed to load the competition overview. Please try again later.",
+    "title": "Competition Talents",
+    "subtitle": "Covering top global contests such as ICPC / IOI / IMO / IPhO · Discover elite competitive talents",
+    "emptyTitle": "No competition talent data yet",
+    "adminEmptyDescription": "There are no competition talents in the database yet. Import contest leaderboard data in System Config first.",
+    "goImport": "Go to System Config",
+    "userEmptyDescription": "The administrator has not imported competition data yet. Please check back later.",
+    "stats": {
+      "talents": "Talents",
+      "contests": "Contests",
+      "series": "Series",
+      "medalists": "Gold Medalists"
+    },
+    "medalTop": "Medal Table Top 10",
+    "viewAll": "View all",
+    "contestsCount": "{{n}} contests",
+    "recentContests": "Recent Contests",
+    "resultsCount": "{{n}} results",
+    "noContests": "No contest data yet",
+    "rating": "Rating"
+  },
+  "search": {
+    "breadcrumb": "Talent Search",
+    "keywordPlaceholder": "Search by handle / real name...",
+    "countryPlaceholder": "Country code",
+    "schoolPlaceholder": "School",
+    "minRatingPlaceholder": "Min rating",
+    "rankPlaceholder": "Medal",
+    "sort": {
+      "ratingDesc": "Rating (high to low)",
+      "ratingAsc": "Rating (low to high)",
+      "contestsDesc": "Most contests",
+      "medalsDesc": "Most medals",
+      "recentDesc": "Most recent"
+    },
+    "loadError": "Failed to load the contestant list",
+    "loadErrorRetry": "Failed to load the contestant list. Please try again later.",
+    "noResultTitle": "No matching contestants found",
+    "noResultDescription": "Try adjusting the filters",
+    "clearFilters": "Clear filters",
+    "personCount": "{{n}} people",
+    "contestsCount": "{{n}} contests"
+  },
+  "talent": {
+    "loadError": "Failed to load contestant details",
+    "loadErrorRetry": "Failed to load contestant details. Please try again later.",
+    "notFoundTitle": "Contestant not found or removed",
+    "notFoundDescription": "This contestant may have been removed, or the link is incorrect",
+    "backToSearch": "Back to search",
+    "breadcrumbSearch": "Search",
+    "globalRank": "Global rank #{{rank}}",
+    "currentRating": "Current rating",
+    "maxRating": "Max rating {{rating}}",
+    "contestsCount": "{{n}} contests",
+    "profile": "View Profile",
+    "resultsTab": "Results ({{n}})",
+    "trendTab": "Rating Trend",
+    "contestsTotal": "{{n}} contests",
+    "columns": {
+      "contest": "Contest",
+      "time": "Date",
+      "rank": "Rank",
+      "award": "Award",
+      "ratingChange": "Rating Change"
+    }
+  },
+  "contest": {
+    "loadError": "Failed to load contest details",
+    "loadErrorRetry": "Failed to load contest details. Please try again later.",
+    "notFoundTitle": "Contest not found or removed",
+    "notFoundDescription": "This contest may have been removed, or the link is incorrect",
+    "backToHome": "Back to Competitions",
+    "breadcrumbList": "Contests",
+    "duration": "Duration {{duration}}",
+    "minutes": "{{n}} min",
+    "hours": "{{n}} h",
+    "hoursMinutes": "{{h}} h {{m}} min",
+    "sourceLink": "Source",
+    "individualBoard": "Individual Leaderboard ({{n}})",
+    "teamBoard": "Team Leaderboard ({{n}})",
+    "emptyTitle": "No leaderboard data yet",
+    "emptyDescription": "Results for this contest have not been imported yet",
+    "membersCount": "{{n}} members",
+    "columns": {
+      "rank": "Rank",
+      "player": "Contestant",
+      "team": "Team",
+      "school": "School",
+      "country": "Country",
+      "score": "Score",
+      "ratingChange": "Rating Change",
+      "award": "Award",
+      "members": "Members"
+    }
+  }
+}

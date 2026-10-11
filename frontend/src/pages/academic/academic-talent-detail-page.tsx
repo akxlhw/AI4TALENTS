@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { logger } from '../../utils/logger'
 import { navigateBack } from '../../utils/navigation'
 import {
@@ -38,7 +39,8 @@ import { semanticColors } from '../../theme'
 import FavoriteButton from '../../components/FavoriteButton'
 import CollaborationGraph, { CollaborationNode, CollaborationLink } from '../../components/CollaborationGraph'
 import GenealogyGraph, { GenealogyNode, GenealogyLink } from '../../components/GenealogyGraph'
-import { getRoleTypeConfig } from '../../constants/roleType'
+import { getRoleTypeConfig, LEGACY_ROLE_TYPE_MAP } from '../../constants/roleType'
+import '../../i18n/namespaces/academic'
 import { formatNumber } from '../../utils/format'
 import { getErrorMessage } from '../../utils'
 
@@ -91,6 +93,7 @@ interface SelectedWork {
 const TalentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { t } = useTranslation(['academic', 'common'])
   const [loading, setLoading] = useState(true)
   const [talent, setTalent] = useState<TalentDetail | null>(null)
   const [collabLoading, setCollabLoading] = useState(false)
@@ -117,7 +120,7 @@ const TalentDetailPage: React.FC = () => {
       setTalent(response.data)
     } catch (error) {
       logger.error('Failed to fetch talent detail:', error)
-      setLoadError(getErrorMessage(error, '加载人才详情失败'))
+      setLoadError(getErrorMessage(error, t('detail.loadError')))
     } finally {
       setLoading(false)
     }
@@ -131,7 +134,7 @@ const TalentDetailPage: React.FC = () => {
       setCollabLinks(response.data.links || [])
     } catch (error) {
       logger.error('Failed to fetch collaborations:', error)
-      message.error(getErrorMessage(error, '加载合作信息失败'))
+      message.error(getErrorMessage(error, t('detail.collabError')))
     } finally {
       setCollabLoading(false)
     }
@@ -147,7 +150,7 @@ const TalentDetailPage: React.FC = () => {
       setGenealogyLinks(response.data.links || [])
     } catch (error: any) {
       logger.error('Failed to fetch genealogy:', error)
-      const msg = error?.response?.data?.detail || getErrorMessage(error, '加载族谱数据失败')
+      const msg = error?.response?.data?.detail || getErrorMessage(error, t('detail.genealogyError'))
       setGenealogyError(msg)
       setGenealogyRoot(null)
       setGenealogyNodes([])
@@ -179,31 +182,32 @@ const TalentDetailPage: React.FC = () => {
         {loadError ? (
           <Empty description={loadError}>
             <Button type="primary" onClick={() => id && fetchTalentDetail(parseInt(id))}>
-              重试
+              {t('common:actions.retry')}
             </Button>
           </Empty>
         ) : (
-          <Empty description="未找到该人才信息" />
+          <Empty description={t('detail.notFound')} />
         )}
         <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <Button onClick={() => navigateBack(navigate, '/search-recommend')}>返回</Button>
+          <Button onClick={() => navigateBack(navigate, '/search-recommend')}>{t('detail.back')}</Button>
         </div>
       </Card>
     )
   }
 
   const roleConfig = getRoleTypeConfig(talent.role_type)
+  const roleKey = LEGACY_ROLE_TYPE_MAP[talent.role_type] || talent.role_type
 
   const workColumns = [
     {
-      title: '年份',
+      title: t('columns.year'),
       dataIndex: 'publication_year',
       key: 'publication_year',
       width: 80,
       render: (year: number | null) => year || '-',
     },
     {
-      title: '标题',
+      title: t('columns.workTitle'),
       dataIndex: 'title',
       key: 'title',
       ellipsis: true,
@@ -219,7 +223,7 @@ const TalentDetailPage: React.FC = () => {
       },
     },
     {
-      title: '期刊/会议',
+      title: t('columns.venue'),
       dataIndex: 'venue_name',
       key: 'venue_name',
       width: 200,
@@ -227,7 +231,7 @@ const TalentDetailPage: React.FC = () => {
       render: (venue: string | null) => venue || '-',
     },
     {
-      title: '引用数',
+      title: t('columns.citationCount'),
       dataIndex: 'citation_count',
       key: 'citation_count',
       width: 100,
@@ -243,7 +247,7 @@ const TalentDetailPage: React.FC = () => {
       {/* 返回按钮 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <Button type="link" onClick={() => navigateBack(navigate, '/search-recommend')} style={{ paddingLeft: 0 }}>
-          <ArrowLeftOutlined /> 返回
+          <ArrowLeftOutlined /> {t('detail.back')}
         </Button>
         <FavoriteButton talentId={talent.talent_id} showText />
       </div>
@@ -253,7 +257,7 @@ const TalentDetailPage: React.FC = () => {
         <Alert
           type="warning"
           icon={<ExclamationCircleOutlined />}
-          message="存在待确认信息"
+          message={t('detail.pendingConfirm')}
           description={
             <Space direction="vertical" size={4}>
               {talent.pending_confirm_items.map((item, index) => (
@@ -282,14 +286,14 @@ const TalentDetailPage: React.FC = () => {
               </Title>
               <Space size={8}>
                 <Tag color={roleConfig.color} style={{ fontSize: 14, padding: '2px 8px' }}>
-                  {roleConfig.text}
+                  {t(`roles.${roleKey}`, { defaultValue: roleConfig.text })}
                 </Tag>
                 {talent.is_graduated && (
-                  <Tag color="orange">已毕业</Tag>
+                  <Tag color="orange">{t('detail.graduated')}</Tag>
                 )}
                 {/* Display education school */}
                 {talent.education_school_name && (
-                  <Tooltip title="教育机构">
+                  <Tooltip title={t('detail.educationSchool')}>
                     <Tag
                       icon={<BankOutlined />}
                       color="blue"
@@ -302,7 +306,7 @@ const TalentDetailPage: React.FC = () => {
                 )}
                 {/* Display company school if different from education */}
                 {talent.company_school_name && talent.company_school_name !== talent.education_school_name && (
-                  <Tooltip title="公司机构">
+                  <Tooltip title={t('detail.companySchool')}>
                     <Tag
                       icon={<BankOutlined />}
                       color="green"
@@ -337,7 +341,7 @@ const TalentDetailPage: React.FC = () => {
             <Space direction="vertical" align="end">
               {/* 数据完整度 */}
               <div style={{ textAlign: 'center', marginBottom: 8 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>数据完整度</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{t('detail.dataCompleteness')}</Text>
                 <Progress
                   percent={completeness}
                   size="small"
@@ -357,7 +361,7 @@ const TalentDetailPage: React.FC = () => {
                 </a>
               )}
               {talent.role_reason && (
-                <Tooltip title="角色识别依据">
+                <Tooltip title={t('detail.roleBasis')}>
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     {talent.role_reason}
                   </Text>
@@ -371,11 +375,11 @@ const TalentDetailPage: React.FC = () => {
       <Row gutter={16}>
         {/* 学术统计 */}
         <Col xs={24} lg={8}>
-          <Card title={<><TrophyOutlined style={{ marginRight: 8 }} />学术指标</>} style={{ marginBottom: 16 }}>
+          <Card title={<><TrophyOutlined style={{ marginRight: 8 }} />{t('detail.metricsTitle')}</>} style={{ marginBottom: 16 }}>
             <Row gutter={[16, 16]}>
               <Col span={12}>
                 <Statistic
-                  title="发表论文"
+                  title={t('detail.papers')}
                   value={talent.works_count}
                   prefix={<FileTextOutlined />}
                   valueStyle={{ color: semanticColors.blue }}
@@ -383,21 +387,21 @@ const TalentDetailPage: React.FC = () => {
               </Col>
               <Col span={12}>
                 <Statistic
-                  title="总引用数"
+                  title={t('detail.citations')}
                   value={talent.cited_by_count}
                   valueStyle={{ color: semanticColors.green }}
                 />
               </Col>
               <Col span={12}>
                 <Statistic
-                  title="H指数"
+                  title={t('detail.hIndex')}
                   value={talent.h_index}
                   valueStyle={{ color: semanticColors.purple }}
                 />
               </Col>
               <Col span={12}>
                 <Statistic
-                  title="最近活跃年份"
+                  title={t('detail.latestActiveYear')}
                   value={talent.latest_active_year || '-'}
                   valueStyle={{ color: semanticColors.gold }}
                 />
@@ -405,9 +409,9 @@ const TalentDetailPage: React.FC = () => {
               {talent.academic_age && (
                 <Col span={12}>
                   <Statistic
-                    title="学术年龄"
+                    title={t('detail.academicAge')}
                     value={talent.academic_age}
-                    suffix="年"
+                    suffix={t('detail.yearsUnit')}
                   />
                 </Col>
               )}
@@ -417,7 +421,7 @@ const TalentDetailPage: React.FC = () => {
           {/* 招聘判断摘要 - v1.1新增 */}
           {talent.recruitment_summary && (
             <Card
-              title={<><BulbOutlined style={{ marginRight: 8 }} />招聘判断摘要</>}
+              title={<><BulbOutlined style={{ marginRight: 8 }} />{t('detail.recruitmentSummary')}</>}
               style={{ marginBottom: 16 }}
               styles={{ body: { backgroundColor: semanticColors.greenBg } }}
             >
@@ -431,7 +435,7 @@ const TalentDetailPage: React.FC = () => {
         {/* 研究方向 */}
         <Col xs={24} lg={16}>
           {/* 研究方向 - CR-02: 使用OpenAlex研究主题 */}
-          <Card title={<><BulbOutlined style={{ marginRight: 8 }} />研究方向</>} style={{ marginBottom: 16 }}>
+          <Card title={<><BulbOutlined style={{ marginRight: 8 }} />{t('detail.researchDirections')}</>} style={{ marginBottom: 16 }}>
             {talent.openalex_topics && talent.openalex_topics.length > 0 ? (
               <Space size={[8, 16]} wrap>
                 {talent.openalex_topics.map((topic, index) => (
@@ -469,7 +473,7 @@ const TalentDetailPage: React.FC = () => {
                 ))}
               </Space>
             ) : (
-              <Empty description="暂无研究方向数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              <Empty description={t('detail.noResearch')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
             )}
             {talent.research_interests && (
               <>
@@ -486,17 +490,17 @@ const TalentDetailPage: React.FC = () => {
         <Card style={{ marginBottom: 16 }}>
           <Descriptions column={2}>
             {talent.department_name && (
-              <Descriptions.Item label="院系">{talent.department_name}</Descriptions.Item>
+              <Descriptions.Item label={t('detail.department')}>{talent.department_name}</Descriptions.Item>
             )}
             {talent.lab_name && (
-              <Descriptions.Item label="实验室">{talent.lab_name}</Descriptions.Item>
+              <Descriptions.Item label={t('detail.lab')}>{talent.lab_name}</Descriptions.Item>
             )}
           </Descriptions>
         </Card>
       )}
 
       {/* 代表作品 */}
-      <Card title={<><FileTextOutlined style={{ marginRight: 8 }} />代表作品</>} style={{ marginBottom: 16 }}>
+      <Card title={<><FileTextOutlined style={{ marginRight: 8 }} />{t('detail.selectedWorks')}</>} style={{ marginBottom: 16 }}>
         {talent.selected_works.length > 0 ? (
           <Table
             dataSource={talent.selected_works}
@@ -506,7 +510,7 @@ const TalentDetailPage: React.FC = () => {
             size="small"
           />
         ) : (
-          <Empty description="暂无代表作品数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <Empty description={t('detail.noWorks')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
         )}
       </Card>
 
@@ -520,7 +524,7 @@ const TalentDetailPage: React.FC = () => {
               label: (
                 <span>
                   <TeamOutlined style={{ marginRight: 6 }} />
-                  合作网络
+                  {t('detail.collaborationTab')}
                 </span>
               ),
               children: collabLoading ? (
@@ -543,9 +547,9 @@ const TalentDetailPage: React.FC = () => {
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
                   description={
                     <Space direction="vertical" size={4}>
-                      <Text type="secondary">暂无合作数据</Text>
+                      <Text type="secondary">{t('detail.noCollab')}</Text>
                       <Text type="secondary" style={{ fontSize: 12 }}>
-                        请联系管理员在「采集配置 - 合作网络同步」中同步数据
+                        {t('detail.noCollabHint')}
                       </Text>
                     </Space>
                   }
@@ -557,7 +561,7 @@ const TalentDetailPage: React.FC = () => {
               label: (
                 <span>
                   <GlobalOutlined style={{ marginRight: 6 }} />
-                  学术族谱
+                  {t('detail.genealogyTab')}
                 </span>
               ),
               children: genealogyError ? (
@@ -565,14 +569,14 @@ const TalentDetailPage: React.FC = () => {
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
                   description={
                     <Space direction="vertical" size={4}>
-                      <Text type="danger">族谱加载失败</Text>
+                      <Text type="danger">{t('detail.genealogyFailed')}</Text>
                       <Text type="secondary" style={{ fontSize: 12 }}>
                         {genealogyError}
                       </Text>
                     </Space>
                   }
                 >
-                  <Button onClick={() => fetchGenealogy(talent.talent_id)}>重试</Button>
+                  <Button onClick={() => fetchGenealogy(talent.talent_id)}>{t('common:actions.retry')}</Button>
                 </Empty>
               ) : genealogyLoading ? (
                 <div style={{ textAlign: 'center', padding: '100px 0' }}>
@@ -595,9 +599,9 @@ const TalentDetailPage: React.FC = () => {
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
                   description={
                     <Space direction="vertical" size={4}>
-                      <Text type="secondary">暂无学术族谱数据</Text>
+                      <Text type="secondary">{t('detail.noGenealogy')}</Text>
                       <Text type="secondary" style={{ fontSize: 12 }}>
-                        该学者未推断出族谱关系，或需要管理员重新触发族谱计算
+                        {t('detail.noGenealogyHint')}
                       </Text>
                     </Space>
                   }

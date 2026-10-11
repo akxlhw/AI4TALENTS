@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../services/api'
 import type { CompResultItem, CompTalentDetail } from '../../services/api/competition'
 import { applyDomainCssVars, domainThemes } from '../../theme'
@@ -34,6 +35,7 @@ import { navigateBack } from '../../utils/navigation'
 import PageSkeleton from '../../components/PageSkeleton'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import BreadcrumbNav from '../../components/BreadcrumbNav'
+import '../../i18n/namespaces/competition'
 
 const { Title, Text } = Typography
 
@@ -52,17 +54,12 @@ const RANK_TAG_COLORS: Record<string, string> = {
   'legendary grandmaster': '#cf1322',
 }
 
-const AWARD_MAP: Record<string, { label: string; color: string }> = {
-  gold: { label: '金牌', color: 'gold' },
-  silver: { label: '银牌', color: 'default' },
-  bronze: { label: '铜牌', color: 'volcano' },
-  hm: { label: '荣誉提名', color: 'blue' },
-}
-
-const renderAward = (award: string | null) => {
-  if (!award) return <Text type="secondary">-</Text>
-  const a = AWARD_MAP[award.toLowerCase()]
-  return a ? <Tag color={a.color}>{a.label}</Tag> : <Tag>{award}</Tag>
+// Award tag colors — labels are translated via competition:medal.* at render time
+const AWARD_COLORS: Record<string, string> = {
+  gold: 'gold',
+  silver: 'default',
+  bronze: 'volcano',
+  hm: 'blue',
 }
 
 // rating_before → rating_after，涨绿跌红
@@ -85,9 +82,17 @@ const renderRatingChange = (before: number | null, after: number | null) => {
 }
 
 const CompetitionTalentDetailPage: React.FC = () => {
+  const { t } = useTranslation('competition')
   const { id: idParam } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const id = idParam ? Number(idParam) : NaN
+
+  const renderAward = (award: string | null) => {
+    if (!award) return <Text type="secondary">-</Text>
+    const color = AWARD_COLORS[award.toLowerCase()]
+    if (!color) return <Tag>{award}</Tag>
+    return <Tag color={color}>{t(`medal.${award.toLowerCase()}`, { defaultValue: award })}</Tag>
+  }
 
   const [talent, setTalent] = useState<CompTalentDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -120,7 +125,7 @@ const CompetitionTalentDetailPage: React.FC = () => {
           if (status === 404) {
             setNotFound(true)
           } else {
-            message.error(getErrorMessage(err, '加载选手详情失败'))
+            message.error(getErrorMessage(err, t('talent.loadError')))
             setError(err)
           }
         }
@@ -132,7 +137,7 @@ const CompetitionTalentDetailPage: React.FC = () => {
     return () => {
       cancelled = true
     }
-  }, [id, retryTick])
+  }, [id, retryTick, t])
 
   if (loading) return <PageSkeleton />
 
@@ -140,9 +145,12 @@ const CompetitionTalentDetailPage: React.FC = () => {
     return (
       <div style={{ paddingTop: 64 }}>
         <EmptyPlaceholder
-          title="选手不存在或已删除"
-          description="该选手可能已被移除或链接有误"
-          action={{ label: '返回搜索页', onClick: () => navigate('/competition/search') }}
+          title={t('talent.notFoundTitle')}
+          description={t('talent.notFoundDescription')}
+          action={{
+            label: t('talent.backToSearch'),
+            onClick: () => navigate('/competition/search'),
+          }}
         />
       </div>
     )
@@ -152,9 +160,9 @@ const CompetitionTalentDetailPage: React.FC = () => {
     return (
       <div style={{ paddingTop: 64 }}>
         <EmptyPlaceholder
-          title="加载失败"
-          description={getErrorMessage(error, '加载选手详情失败，请稍后重试')}
-          action={{ label: '重试', onClick: () => setRetryTick(t => t + 1) }}
+          title={t('common.loadFailed')}
+          description={getErrorMessage(error, t('talent.loadErrorRetry'))}
+          action={{ label: t('common.retry'), onClick: () => setRetryTick(t => t + 1) }}
         />
       </div>
     )
@@ -195,27 +203,27 @@ const CompetitionTalentDetailPage: React.FC = () => {
 
   const resultColumns: TableProps<CompResultItem>['columns'] = [
     {
-      title: '赛事',
+      title: t('talent.columns.contest'),
       dataIndex: 'contest_name',
       render: (name: string, r) => (
         <a onClick={() => navigate(`/competition/contests/${r.contest_id}`)}>{name}</a>
       ),
     },
     {
-      title: '时间',
+      title: t('talent.columns.time'),
       dataIndex: 'start_time',
       width: 120,
       render: (v: string | null) => formatUTCToLocalDate(v),
     },
     {
-      title: '名次',
+      title: t('talent.columns.rank'),
       dataIndex: 'rank',
       width: 80,
       render: (v: number | null) => (v != null ? `#${v}` : '-'),
     },
-    { title: '奖项', dataIndex: 'award', width: 110, render: renderAward },
+    { title: t('talent.columns.award'), dataIndex: 'award', width: 110, render: renderAward },
     {
-      title: '积分变化',
+      title: t('talent.columns.ratingChange'),
       width: 200,
       render: (_, r) => renderRatingChange(r.rating_before, r.rating_after),
     },
@@ -224,14 +232,16 @@ const CompetitionTalentDetailPage: React.FC = () => {
   const tabItems: TabsProps['items'] = [
     {
       key: 'results',
-      label: `参赛史 (${talent.results.length})`,
+      label: t('talent.resultsTab', { n: talent.results.length }),
       children: (
         <Table<CompResultItem>
           rowKey={r => String(r.contest_id)}
           columns={resultColumns}
           dataSource={talent.results}
           pagination={
-            talent.results.length > 20 ? { pageSize: 20, showTotal: t => `共 ${t} 场` } : false
+            talent.results.length > 20
+              ? { pageSize: 20, showTotal: count => t('talent.contestsTotal', { n: count }) }
+              : false
           }
           size="middle"
         />
@@ -243,15 +253,30 @@ const CompetitionTalentDetailPage: React.FC = () => {
   if (trendPoints.length >= 2) {
     tabItems.push({
       key: 'trend',
-      label: '积分趋势',
+      label: t('talent.trendTab'),
       children: <ReactECharts option={trendOption} style={{ height: 320 }} />,
     })
   }
 
   const medalStats = [
-    { icon: <CrownOutlined />, color: '#F6AD55', label: '金牌', value: talent.medals_gold },
-    { icon: <TrophyOutlined />, color: '#A0AEC0', label: '银牌', value: talent.medals_silver },
-    { icon: <FireOutlined />, color: '#DD6B20', label: '铜牌', value: talent.medals_bronze },
+    {
+      icon: <CrownOutlined />,
+      color: '#F6AD55',
+      label: t('medal.gold'),
+      value: talent.medals_gold,
+    },
+    {
+      icon: <TrophyOutlined />,
+      color: '#A0AEC0',
+      label: t('medal.silver'),
+      value: talent.medals_silver,
+    },
+    {
+      icon: <FireOutlined />,
+      color: '#DD6B20',
+      label: t('medal.bronze'),
+      value: talent.medals_bronze,
+    },
   ]
 
   return (
@@ -265,8 +290,8 @@ const CompetitionTalentDetailPage: React.FC = () => {
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <BreadcrumbNav
           items={[
-            { label: '竞赛', path: '/competition' },
-            { label: '搜索', path: '/competition/search' },
+            { label: t('common.domain'), path: '/competition' },
+            { label: t('talent.breadcrumbSearch'), path: '/competition/search' },
             { label: talent.handle },
           ]}
         />
@@ -276,7 +301,7 @@ const CompetitionTalentDetailPage: React.FC = () => {
           onClick={() => navigateBack(navigate, '/competition/search')}
           style={{ marginBottom: 16 }}
         >
-          返回
+          {t('common.back')}
         </Button>
 
         <Row gutter={[24, 24]}>
@@ -329,7 +354,7 @@ const CompetitionTalentDetailPage: React.FC = () => {
                 {talent.global_rank != null && (
                   <Text type="secondary" style={{ fontSize: 13 }}>
                     <TrophyOutlined style={{ marginRight: 8 }} />
-                    全球排名 #{formatNumber(talent.global_rank)}
+                    {t('talent.globalRank', { rank: formatNumber(talent.global_rank) })}
                   </Text>
                 )}
               </Space>
@@ -338,7 +363,7 @@ const CompetitionTalentDetailPage: React.FC = () => {
 
               <div style={{ textAlign: 'center' }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  当前积分
+                  {t('talent.currentRating')}
                 </Text>
                 <div
                   style={{
@@ -351,7 +376,7 @@ const CompetitionTalentDetailPage: React.FC = () => {
                   {formatNumber(talent.current_rating)}
                 </div>
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  最高积分 {formatNumber(talent.max_rating)}
+                  {t('talent.maxRating', { rating: formatNumber(talent.max_rating) })}
                 </Text>
               </div>
 
@@ -371,7 +396,7 @@ const CompetitionTalentDetailPage: React.FC = () => {
 
               <div style={{ textAlign: 'center', marginTop: 12 }}>
                 <Text type="secondary" style={{ fontSize: 13 }}>
-                  参赛 {talent.contests_count} 场
+                  {t('talent.contestsCount', { n: talent.contests_count })}
                 </Text>
               </div>
 
@@ -397,7 +422,7 @@ const CompetitionTalentDetailPage: React.FC = () => {
                   target="_blank"
                   style={{ marginTop: 16 }}
                 >
-                  选手主页
+                  {t('talent.profile')}
                 </Button>
               )}
             </Card>

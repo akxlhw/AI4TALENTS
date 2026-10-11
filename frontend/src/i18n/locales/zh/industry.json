@@ -1,0 +1,143 @@
+{
+  "search": {
+    "title": "行业人才搜索",
+    "keywordPlaceholder": "搜索姓名 / 公司 / 职位...",
+    "searchButton": "搜索",
+    "backToHome": "← 返回首页"
+  },
+  "home": {
+    "title": "全球行业顶尖人才库",
+    "subtitle": "对准高端精英、关键稀缺岗位，智能发现行业优秀顶尖人才，加速全球人才供应",
+    "recommended": "推荐候选人",
+    "viewAll": "查看全部 ↓"
+  },
+  "stats": {
+    "openPositions": "在招岗位",
+    "totalCandidates": "候选人总数",
+    "currentResults": "当前结果",
+    "avgMatch": "平均匹配"
+  },
+  "filter": {
+    "position": "在招岗位",
+    "minScore": "最低匹配分",
+    "status": "候选人状态",
+    "sourcePlatform": "来源平台",
+    "techDirection": "技术方向",
+    "clearAll": "清除全部"
+  },
+  "results": {
+    "totalBefore": "共 ",
+    "totalAfter": " 条结果",
+    "filtered": "（已筛选）",
+    "paginationTotal": "共 {{count}} 人",
+    "emptyTitle": "未找到匹配的候选人",
+    "emptyDescription": "试试调整关键词或放宽筛选条件",
+    "clearAllFilters": "清除全部筛选"
+  },
+  "sidebar": {
+    "positionsTitle": "在招岗位",
+    "noPositions": "暂无在招岗位",
+    "allCandidates": "全部候选人",
+    "filters": "筛选条件",
+    "avgMatch": "均匹配 {{score}}"
+  },
+  "status": {
+    "new": "新候选人",
+    "connected": "已连接",
+    "terminated": "已终止"
+  },
+  "platform": {
+    "maimai": "脉脉",
+    "linkedin": "LinkedIn"
+  },
+  "sort": {
+    "matchScoreDesc": "匹配分降序",
+    "matchScoreAsc": "匹配分升序",
+    "createdDesc": "最近导入",
+    "nameAsc": "姓名升序"
+  },
+  "minScore": {
+    "any": "不限分数",
+    "above": "{{score}} 分以上"
+  },
+  "grade": {
+    "s": "S",
+    "aplus": "A+",
+    "a": "A",
+    "bplus": "B+",
+    "c": "C",
+    "none": "—"
+  },
+  "card": {
+    "degree": "学历",
+    "years": "年限",
+    "location": "地区",
+    "morePositions": "+{{count}}岗位",
+    "statusAria": "修改候选人状态",
+    "statusUpdated": "状态已更新为「{{status}}」",
+    "statusUpdateFailed": "状态更新失败"
+  },
+  "detail": {
+    "loadFailed": "加载失败",
+    "loadFailedDescription": "加载人才详情失败，请稍后重试",
+    "notFoundTitle": "人才不存在或已删除",
+    "notFoundDescription": "该人才可能已被移除或链接有误",
+    "backToLibrary": "返回行业人才库",
+    "back": "返回",
+    "breadcrumbRoot": "行业人才库",
+    "tabs": {
+      "info": "基本信息",
+      "timeline": "履历时间线",
+      "positions": "岗位匹配"
+    },
+    "profileLink": {
+      "linkedin": "LinkedIn 主页",
+      "maimai": "脉脉主页"
+    },
+    "expect": "求职意向:{{value}}",
+    "scoreValue": "{{score}}分",
+    "bestMatch": "最高匹配",
+    "fields": {
+      "name": "姓名",
+      "currentOrg": "现任公司",
+      "currentTitle": "现任头衔",
+      "degree": "学历",
+      "yearsOfExp": "工作年限",
+      "location": "所在地",
+      "expect": "求职意向",
+      "sourcePlatform": "来源平台",
+      "profileUrl": "来源链接",
+      "updatedAt": "最近更新"
+    },
+    "timelineEmpty": {
+      "title": "暂无履历数据",
+      "description": "导入数据中没有该人才的履历信息"
+    },
+    "currentTag": "现任",
+    "noPositionsTitle": "暂未命中任何岗位",
+    "noPositionsDescription": "该人才还没有与岗位关联的匹配记录",
+    "subScores": {
+      "school": "院校",
+      "company": "企业",
+      "direction": "方向"
+    },
+    "scoresEditable": "分数可编辑",
+    "clickToEditScore": "点击修改分数",
+    "saved": "已保存",
+    "saveFailed": "保存失败",
+    "scoreUpdateFailed": "分数更新失败",
+    "removeOrphanCleaned": "候选人已移出岗位，且因无其他关联已自动清理",
+    "removed": "已移出本岗位",
+    "removeFailed": "移出失败",
+    "batch": "批次 {{value}}",
+    "updatedAt": "更新于 {{date}}",
+    "recruitingStatus": "招聘状态",
+    "touched": "已触达",
+    "notesPlaceholder": "招聘备注...",
+    "save": "保存",
+    "removeConfirmTitle": "确认移出本岗位？",
+    "removeConfirmDescription": "候选人与该岗位的关联将被删除。如果该候选人没有其他岗位关联，人才记录也会被清理。",
+    "remove": "移出",
+    "removeButton": "移出本岗位"
+  }
+}

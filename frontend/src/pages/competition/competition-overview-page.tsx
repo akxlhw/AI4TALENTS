@@ -10,6 +10,7 @@ import {
   CalendarOutlined,
   RightOutlined,
 } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../services/api'
 import type { CompOverviewOut } from '../../services/api/competition'
 import { applyDomainCssVars, domainThemes } from '../../theme'
@@ -17,6 +18,7 @@ import { getErrorMessage, formatUTCToLocalDate, logger } from '../../utils'
 import { useAuth } from '../../contexts/AuthContext'
 import PageSkeleton from '../../components/PageSkeleton'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
+import '../../i18n/namespaces/competition'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -55,31 +57,35 @@ const MedalCounts: React.FC<{ gold: number; silver: number; bronze: number }> = 
   gold,
   silver,
   bronze,
-}) => (
-  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
-    <span title="金牌">
-      <CrownOutlined style={{ color: '#F6AD55', marginRight: 2 }} />
-      <Text strong style={{ color: '#B7791F', fontSize: 12 }}>
-        {gold}
-      </Text>
+}) => {
+  const { t } = useTranslation('competition')
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
+      <span title={t('medal.gold')}>
+        <CrownOutlined style={{ color: '#F6AD55', marginRight: 2 }} />
+        <Text strong style={{ color: '#B7791F', fontSize: 12 }}>
+          {gold}
+        </Text>
+      </span>
+      <span title={t('medal.silver')}>
+        <TrophyOutlined style={{ color: '#A0AEC0', marginRight: 2 }} />
+        <Text strong style={{ color: '#718096', fontSize: 12 }}>
+          {silver}
+        </Text>
+      </span>
+      <span title={t('medal.bronze')}>
+        <FireOutlined style={{ color: '#DD6B20', marginRight: 2 }} />
+        <Text strong style={{ color: '#C05621', fontSize: 12 }}>
+          {bronze}
+        </Text>
+      </span>
     </span>
-    <span title="银牌">
-      <TrophyOutlined style={{ color: '#A0AEC0', marginRight: 2 }} />
-      <Text strong style={{ color: '#718096', fontSize: 12 }}>
-        {silver}
-      </Text>
-    </span>
-    <span title="铜牌">
-      <FireOutlined style={{ color: '#DD6B20', marginRight: 2 }} />
-      <Text strong style={{ color: '#C05621', fontSize: 12 }}>
-        {bronze}
-      </Text>
-    </span>
-  </span>
-)
+  )
+}
 
 const CompetitionOverviewPage: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation('competition')
   const { isAdmin } = useAuth()
   const [data, setData] = useState<CompOverviewOut | null>(null)
   const [loading, setLoading] = useState(true)
@@ -101,7 +107,7 @@ const CompetitionOverviewPage: React.FC = () => {
       } catch (err) {
         if (!cancelled) {
           logger.error('Failed to fetch competition overview:', err)
-          message.error(getErrorMessage(err, '加载竞赛概览失败'))
+          message.error(getErrorMessage(err, t('overview.loadError')))
           setError(err)
         }
       } finally {
@@ -112,7 +118,7 @@ const CompetitionOverviewPage: React.FC = () => {
     return () => {
       cancelled = true
     }
-  }, [retryTick])
+  }, [retryTick, t])
 
   if (loading) return <PageSkeleton />
 
@@ -120,9 +126,9 @@ const CompetitionOverviewPage: React.FC = () => {
     return (
       <div style={{ paddingTop: 64 }}>
         <EmptyPlaceholder
-          title="加载失败"
-          description={getErrorMessage(error, '加载竞赛概览失败，请稍后重试')}
-          action={{ label: '重试', onClick: () => setRetryTick(t => t + 1) }}
+          title={t('common.loadFailed')}
+          description={getErrorMessage(error, t('overview.loadErrorRetry'))}
+          action={{ label: t('common.retry'), onClick: () => setRetryTick(t => t + 1) }}
         />
       </div>
     )
@@ -133,12 +139,12 @@ const CompetitionOverviewPage: React.FC = () => {
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <TrophyOutlined style={{ fontSize: 32, marginBottom: 12 }} />
         <Title level={2} style={{ margin: 0, marginBottom: 8, color: '#fff' }}>
-          竞赛人才
+          {t('overview.title')}
         </Title>
         <Paragraph
           style={{ color: 'rgba(255,255,255,0.85)', fontSize: 15, margin: 0, maxWidth: 640 }}
         >
-          覆盖 ICPC / IOI / IMO / IPhO 等全球顶级赛事 · 发现顶尖竞赛选手
+          {t('overview.subtitle')}
         </Paragraph>
       </div>
     </div>
@@ -157,21 +163,16 @@ const CompetitionOverviewPage: React.FC = () => {
               <TrophyOutlined
                 style={{ fontSize: 32, color: compTheme.badgeBg, marginBottom: 12 }}
               />
-              <Title level={4}>暂无竞赛人才数据</Title>
-              <Paragraph type="secondary">
-                数据库中还没有竞赛人才，请先在系统配置中导入赛事榜单数据
-              </Paragraph>
-              <Button
-                type="primary"
-                onClick={() => navigate('/system-config?tab=comp-import')}
-              >
-                去系统配置导入
+              <Title level={4}>{t('overview.emptyTitle')}</Title>
+              <Paragraph type="secondary">{t('overview.adminEmptyDescription')}</Paragraph>
+              <Button type="primary" onClick={() => navigate('/system-config?tab=comp-import')}>
+                {t('overview.goImport')}
               </Button>
             </Card>
           ) : (
             <EmptyPlaceholder
-              title="暂无竞赛人才数据"
-              description="管理员尚未导入竞赛数据，请稍后再来"
+              title={t('overview.emptyTitle')}
+              description={t('overview.userEmptyDescription')}
             />
           )}
         </div>
@@ -181,19 +182,29 @@ const CompetitionOverviewPage: React.FC = () => {
 
   const stats = [
     {
-      title: '收录选手',
+      title: t('overview.stats.talents'),
       value: data.total_talents,
       icon: <TeamOutlined />,
       color: compTheme.badgeBg,
     },
     {
-      title: '覆盖赛事',
+      title: t('overview.stats.contests'),
       value: data.total_contests,
       icon: <TrophyOutlined />,
       color: compTheme.secondary,
     },
-    { title: '赛事系列', value: data.total_series, icon: <FlagOutlined />, color: '#ED8936' },
-    { title: '金牌选手', value: data.total_medalists, icon: <CrownOutlined />, color: '#D69E2E' },
+    {
+      title: t('overview.stats.series'),
+      value: data.total_series,
+      icon: <FlagOutlined />,
+      color: '#ED8936',
+    },
+    {
+      title: t('overview.stats.medalists'),
+      value: data.total_medalists,
+      icon: <CrownOutlined />,
+      color: '#D69E2E',
+    },
   ]
 
   return (
@@ -223,21 +234,21 @@ const CompetitionOverviewPage: React.FC = () => {
               title={
                 <span>
                   <TrophyOutlined style={{ color: compTheme.badgeBg, marginRight: 8 }} />
-                  奖牌榜 Top 10
+                  {t('overview.medalTop')}
                 </span>
               }
               extra={
                 <a onClick={() => navigate('/competition/search')}>
-                  查看全部 <RightOutlined style={{ fontSize: 11 }} />
+                  {t('overview.viewAll')} <RightOutlined style={{ fontSize: 11 }} />
                 </a>
               }
               style={{ borderRadius: 12, height: '100%' }}
               styles={{ body: { padding: 8 } }}
             >
-              {data.top_medalists.slice(0, 10).map((t, i) => (
+              {data.top_medalists.slice(0, 10).map((m, i) => (
                 <div
-                  key={t.talent_id}
-                  onClick={() => navigate(`/competition/talents/${t.talent_id}`)}
+                  key={m.talent_id}
+                  onClick={() => navigate(`/competition/talents/${m.talent_id}`)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -254,18 +265,18 @@ const CompetitionOverviewPage: React.FC = () => {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <Text strong ellipsis style={{ fontSize: 14 }}>
-                        {t.handle.startsWith('name:') ? (t.real_name ?? t.handle) : t.handle}
+                        {m.handle.startsWith('name:') ? (m.real_name ?? m.handle) : m.handle}
                       </Text>
-                      <RankTitleTag title={t.rank_title} />
+                      <RankTitleTag title={m.rank_title} />
                     </div>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      {t.school ?? '-'} · {t.country_code ?? '-'}
+                      {m.school ?? '-'} · {m.country_code ?? '-'}
                     </Text>
                   </div>
                   <MedalCounts
-                    gold={t.medals_gold}
-                    silver={t.medals_silver}
-                    bronze={t.medals_bronze}
+                    gold={m.medals_gold}
+                    silver={m.medals_silver}
+                    bronze={m.medals_bronze}
                   />
                   <Text
                     type="secondary"
@@ -275,7 +286,7 @@ const CompetitionOverviewPage: React.FC = () => {
                       textAlign: 'right',
                     }}
                   >
-                    {t.contests_count} 场
+                    {t('overview.contestsCount', { n: m.contests_count })}
                   </Text>
                 </div>
               ))}
@@ -288,7 +299,7 @@ const CompetitionOverviewPage: React.FC = () => {
               title={
                 <span>
                   <CalendarOutlined style={{ color: compTheme.badgeBg, marginRight: 8 }} />
-                  最近赛事
+                  {t('overview.recentContests')}
                 </span>
               }
               style={{ borderRadius: 12, height: '100%' }}
@@ -319,12 +330,12 @@ const CompetitionOverviewPage: React.FC = () => {
                       {formatUTCToLocalDate(c.start_time)}
                     </Text>
                   </div>
-                  <Tag color="orange">{c.results_count} 条成绩</Tag>
+                  <Tag color="orange">{t('overview.resultsCount', { n: c.results_count })}</Tag>
                 </div>
               ))}
               {data.recent_contests.length === 0 && (
                 <Text type="secondary" style={{ display: 'block', padding: 16 }}>
-                  暂无赛事数据
+                  {t('overview.noContests')}
                 </Text>
               )}
             </Card>

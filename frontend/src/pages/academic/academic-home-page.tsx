@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Input, Typography, Tag, Space, Spin, Button, Row, Col, Card, Divider } from 'antd'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   SearchOutlined,
   GlobalOutlined,
   ArrowRightOutlined,
   AppstoreOutlined,
 } from '@ant-design/icons'
+import '../../i18n/namespaces/academic'
 import { useHomepageHighlights, useOverviewStats } from '../../hooks/useQueries'
 import { domainThemes, semanticColors } from '../../theme'
 
@@ -42,6 +44,7 @@ interface HotResearchTopic {
 /* ── Academic Home Page ── */
 const AcademicHomePage: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation(['academic', 'common'])
   const dt = domainThemes['academic']
 
   const { data: overview, isLoading: overviewLoading } = useOverviewStats()
@@ -123,7 +126,7 @@ const AcademicHomePage: React.FC = () => {
                 letterSpacing: '-0.5px',
               }}
             >
-              智能学术界人才库
+              {t('home.title')}
             </Title>
             <Paragraph
               style={{
@@ -133,13 +136,13 @@ const AcademicHomePage: React.FC = () => {
                 fontSize: 16,
               }}
             >
-              基于学术界公开数据的人才发现平台 · 汇聚全球高校科研院所人才信息
+              {t('home.subtitle')}
             </Paragraph>
             <Search
-              placeholder="输入姓名、学校、研究方向等关键词搜索人才..."
+              placeholder={t('home.searchPlaceholder')}
               enterButton={
                 <span style={{ fontWeight: 500 }}>
-                  <SearchOutlined /> 搜索
+                  <SearchOutlined /> {t('common:actions.search')}
                 </span>
               }
               size="large"
@@ -159,23 +162,28 @@ const AcademicHomePage: React.FC = () => {
                 gap: 8,
               }}
             >
-              {['深度学习', '自然语言处理', '计算机视觉', '强化学习', '量子计算'].map((tag) => (
-                <Tag
-                  key={tag}
-                  onClick={() => handleSearch(tag)}
-                  style={{
-                    cursor: 'pointer',
-                    background: 'rgba(255,255,255,0.15)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: 'rgba(255,255,255,0.9)',
-                    borderRadius: 16,
-                    padding: '2px 12px',
-                    fontSize: 12,
-                  }}
-                >
-                  {tag}
-                </Tag>
-              ))}
+              {(['deepLearning', 'nlp', 'computerVision', 'reinforcementLearning', 'quantumComputing'] as const).map(
+                (key) => {
+                  const tag = t(`home.quickTags.${key}`)
+                  return (
+                    <Tag
+                      key={key}
+                      onClick={() => handleSearch(tag)}
+                      style={{
+                        cursor: 'pointer',
+                        background: 'rgba(255,255,255,0.15)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        color: 'rgba(255,255,255,0.9)',
+                        borderRadius: 16,
+                        padding: '2px 12px',
+                        fontSize: 12,
+                      }}
+                    >
+                      {tag}
+                    </Tag>
+                  )
+                }
+              )}
               <div
                 style={{
                   width: 1,
@@ -213,7 +221,7 @@ const AcademicHomePage: React.FC = () => {
                 }}
               >
                 <span>🔮</span>
-                <span>智能推荐</span>
+                <span>{t('home.smartRecommend')}</span>
               </button>
             </div>
           </div>
@@ -227,12 +235,12 @@ const AcademicHomePage: React.FC = () => {
               title={
                 <Space>
                   <AppstoreOutlined style={{ color: dt.primary }} />
-                  <span>技术领域</span>
+                  <span>{t('home.techDomains')}</span>
                 </Space>
               }
               extra={
                 <Button type="link" size="small" onClick={() => navigate('/tech-domain')}>
-                  查看全部 <ArrowRightOutlined />
+                  {t('common:actions.viewAll')} <ArrowRightOutlined />
                 </Button>
               }
               style={{ marginBottom: 16, height: '100%' }}
@@ -241,25 +249,25 @@ const AcademicHomePage: React.FC = () => {
               <div style={{ marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--border-secondary)' }}>
                 <Space size={12} wrap>
                   <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                    技术领域 <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.tech_domain_count || hotTechDomains.length}</strong>
+                    {t('stats.techDomains')} <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.tech_domain_count || hotTechDomains.length}</strong>
                   </Text>
                   <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                    人才总数 <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.talent_count.toLocaleString()}</strong>
+                    {t('stats.totalTalents')} <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.talent_count.toLocaleString()}</strong>
                   </Text>
                   <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                    覆盖国家 <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.country_count || topCountries.length}</strong>
+                    {t('stats.countriesCovered')} <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.country_count || topCountries.length}</strong>
                   </Text>
                   <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                    覆盖院校 <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.school_count.toLocaleString()}</strong>
+                    {t('stats.schoolsCovered')} <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.school_count.toLocaleString()}</strong>
                   </Text>
                   <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                    教授/研究员 <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.professor_count.toLocaleString()}</strong>
+                    {t('stats.professors')} <strong style={{ color: dt.primary, fontSize: 15 }}>{stats.professor_count.toLocaleString()}</strong>
                   </Text>
                 </Space>
               </div>
 
               <div>
-                <Text type="secondary" style={{ fontSize: 12 }}>热门技术领域</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{t('home.hotTechDomains')}</Text>
                 <div style={{ marginTop: 6 }}>
                   {hotTechDomains.slice(0, 8).map((item) => (
                     <Tag
@@ -271,13 +279,13 @@ const AcademicHomePage: React.FC = () => {
                     </Tag>
                   ))}
                   {hotTechDomains.length === 0 && (
-                    <Text type="secondary">暂无数据</Text>
+                    <Text type="secondary">{t('common:status.empty')}</Text>
                   )}
                 </div>
               </div>
 
               <div style={{ marginTop: 12 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>热门研究方向</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{t('home.hotResearchTopics')}</Text>
                 <div style={{ marginTop: 6 }}>
                   {hotResearchTopics.map((item) => (
                     <Tag
@@ -297,7 +305,7 @@ const AcademicHomePage: React.FC = () => {
                     </Tag>
                   ))}
                   {hotResearchTopics.length === 0 && (
-                    <Text type="secondary">暂无数据</Text>
+                    <Text type="secondary">{t('common:status.empty')}</Text>
                   )}
                 </div>
               </div>
@@ -310,12 +318,12 @@ const AcademicHomePage: React.FC = () => {
               title={
                 <Space>
                   <GlobalOutlined style={{ color: dt.secondary }} />
-                  <span>院校机构</span>
+                  <span>{t('home.institutions')}</span>
                 </Space>
               }
               extra={
                 <Button type="link" size="small" onClick={() => navigate('/country-school')}>
-                  查看全部 <ArrowRightOutlined />
+                  {t('common:actions.viewAll')} <ArrowRightOutlined />
                 </Button>
               }
               style={{ marginBottom: 16, height: '100%' }}
@@ -324,26 +332,26 @@ const AcademicHomePage: React.FC = () => {
               <div style={{ marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--border-secondary)' }}>
                 <Space size={12} wrap>
                   <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                    覆盖国家 <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.country_count || topCountries.length}</strong>
+                    {t('stats.countriesCovered')} <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.country_count || topCountries.length}</strong>
                   </Text>
                   <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                    覆盖院校 <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.school_count.toLocaleString()}</strong>
+                    {t('stats.schoolsCovered')} <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.school_count.toLocaleString()}</strong>
                   </Text>
                   <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                    人才总数 <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.talent_count.toLocaleString()}</strong>
+                    {t('stats.totalTalents')} <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.talent_count.toLocaleString()}</strong>
                   </Text>
                   <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                    教授/研究员 <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.professor_count.toLocaleString()}</strong>
+                    {t('stats.professors')} <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.professor_count.toLocaleString()}</strong>
                   </Text>
                   <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                    学生类人才 <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.student_count.toLocaleString()}</strong>
+                    {t('stats.studentTalents')} <strong style={{ color: dt.secondary, fontSize: 15 }}>{stats.student_count.toLocaleString()}</strong>
                   </Text>
                 </Space>
               </div>
 
               {/* Countries */}
               <div style={{ marginBottom: 10 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>人才来源</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{t('home.talentSources')}</Text>
                 <div style={{ marginTop: 6 }}>
                   {topCountries.slice(0, 8).map((item) => (
                     <Tag
@@ -355,7 +363,7 @@ const AcademicHomePage: React.FC = () => {
                     </Tag>
                   ))}
                   {topCountries.length === 0 && (
-                    <Text type="secondary">暂无数据</Text>
+                    <Text type="secondary">{t('common:status.empty')}</Text>
                   )}
                 </div>
               </div>
@@ -367,7 +375,7 @@ const AcademicHomePage: React.FC = () => {
                 {/* Domestic */}
                 <div style={{ marginBottom: 8 }}>
                   <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                    国内顶尖院校机构
+                    {t('home.topDomestic')}
                   </Text>
                   <div>
                     {topDomesticSchools.slice(0, 5).map((item) => (
@@ -380,14 +388,14 @@ const AcademicHomePage: React.FC = () => {
                       </Tag>
                     ))}
                     {topDomesticSchools.length === 0 && (
-                      <Text type="secondary" style={{ fontSize: 12 }}>暂无数据</Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>{t('common:status.empty')}</Text>
                     )}
                   </div>
                 </div>
                 {/* Overseas */}
                 <div>
                   <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                    海外顶尖院校机构
+                    {t('home.topOverseas')}
                   </Text>
                   <div>
                     {topOverseasSchools.slice(0, 5).map((item) => (
@@ -400,7 +408,7 @@ const AcademicHomePage: React.FC = () => {
                       </Tag>
                     ))}
                     {topOverseasSchools.length === 0 && (
-                      <Text type="secondary" style={{ fontSize: 12 }}>暂无数据</Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>{t('common:status.empty')}</Text>
                     )}
                   </div>
                 </div>

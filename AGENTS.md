@@ -182,6 +182,7 @@ Raw（`raw_work`/`raw_author`/`raw_institution`）→ Standardized（`std_author
 - **Lint**：ESLint 9 flat config（`no-explicit-any: off`；允许 `_` 前缀未使用变量）
 - **格式化**：Prettier（`semi: false`、`singleQuote: true`、`tabWidth: 2`、`printWidth: 100`），`npm run format[:check]`
 - **TS**：`strict: true` + `noUnusedLocals/Parameters`；路径别名 `@/` → `src/`
+- **i18n（V5.1.1+）**：新增/修改页面的 UI 文案必须走 `t()`（react-i18next，资源在 `src/i18n/locales/{zh,en}/`），禁止裸中文/英文硬编码；多命名空间时域命名空间放首位（`useTranslation(['academic', 'common'])`——无前缀 key 只查 ns[0]）；技术领域/要素标签用 `useTechElements()` hook；数据库业务内容与后端消息不翻译
 
 ---
 

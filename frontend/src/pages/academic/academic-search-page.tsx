@@ -7,6 +7,7 @@
  */
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Typography,
   Space,
@@ -22,6 +23,7 @@ import {
 } from '@ant-design/icons'
 import { api } from '../../services/api'
 import type { TechDomain } from '../../types'
+import '../../i18n/namespaces/academic'
 import SearchTab from './components/search-tab'
 import JDMatchTab from './components/jd-match-tab'
 import RecommendTab from './components/recommend-tab'
@@ -34,6 +36,7 @@ interface Country { country_code: string; country_name_cn: string }
 
 const SearchRecommendPage: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation('academic')
   const [urlSearchParams] = useSearchParams()
   const initialTab = urlSearchParams.get('tab') || 'search'
   const [activeTab, setActiveTab] = useState(initialTab)
@@ -62,9 +65,9 @@ const SearchRecommendPage: React.FC = () => {
       setCountries(countriesRes.data.items || [])
       setTechDomains(techDomainsRes.data.items || [])
     } catch {
-      message.error('加载筛选数据失败，请刷新重试')
+      message.error(t('search.loadFiltersError'))
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     loadReferenceData()
@@ -72,11 +75,11 @@ const SearchRecommendPage: React.FC = () => {
 
   const handleAddReferenceTalent = (talentId: number, talentName: string) => {
     if (referenceTalentIds.includes(talentId)) {
-      message.warning('该人才已添加')
+      message.warning(t('search.referenceAlreadyAdded'))
       return
     }
     if (referenceTalentIds.length >= 10) {
-      message.warning('最多添加10位参考人才')
+      message.warning(t('search.referenceLimit'))
       return
     }
     setReferenceTalentIds([...referenceTalentIds, talentId])
@@ -85,7 +88,7 @@ const SearchRecommendPage: React.FC = () => {
 
   const handleAddToReference = (talentId: number, talentName: string) => {
     handleAddReferenceTalent(talentId, talentName)
-    message.success(`已将 ${talentName} 添加到参考列表`, 2)
+    message.success(t('search.referenceAdded', { name: talentName }), 2)
   }
 
   const handleResetRecommend = () => {
@@ -124,7 +127,7 @@ const SearchRecommendPage: React.FC = () => {
     <div style={{ padding: '88px 32px 80px' }}>
       <Title level={3} style={{ marginBottom: 20, fontWeight: 700 }}>
         <SearchOutlined style={{ marginRight: 8, color: 'var(--domain-primary)' }} />
-        搜索推荐
+        {t('search.title')}
       </Title>
 
       <Tabs
@@ -134,7 +137,7 @@ const SearchRecommendPage: React.FC = () => {
         items={[
           {
             key: 'search',
-            label: <span><SearchOutlined /> 人才搜索</span>,
+            label: <span><SearchOutlined /> {t('search.talentSearch')}</span>,
             children: (
               <SearchTab
                 schools={schools}
@@ -149,18 +152,18 @@ const SearchRecommendPage: React.FC = () => {
           },
           {
             key: 'recommend',
-            label: <span><BulbOutlined /> 智能推荐</span>,
+            label: <span><BulbOutlined /> {t('search.smartRecommend')}</span>,
             children: (
               <>
                 <div style={{ marginBottom: 16 }}>
                   <Space>
-                    <Text type="secondary">推荐模式:</Text>
+                    <Text type="secondary">{t('search.recommendMode')}</Text>
                     <Segmented
                       value={recommendMode}
                       onChange={(value) => handleRecommendModeChange(value as string)}
                       options={[
-                        { value: 'jd-match', label: <span><RobotOutlined /> 岗位匹配</span> },
-                        { value: 'similar', label: <span><TeamOutlined /> 相似推荐</span> },
+                        { value: 'jd-match', label: <span><RobotOutlined /> {t('search.jdMatch')}</span> },
+                        { value: 'similar', label: <span><TeamOutlined /> {t('search.similar')}</span> },
                       ]}
                     />
                   </Space>

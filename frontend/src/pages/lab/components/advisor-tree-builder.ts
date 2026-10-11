@@ -61,12 +61,45 @@ function initialsOf(name: string): string {
   return name.trim().charAt(0).toUpperCase()
 }
 
+/**
+ * Localized display labels for tree visuals. The zh defaults mirror
+ * locales/zh/lab.json (tree.*); the chart component passes translated
+ * labels at render time via useTranslation('lab').
+ */
+export interface TreeLabels {
+  /** Tooltip title for the founder node, e.g. "👑 创始人 · Name" */
+  founderTitle: (name: string) => string
+  /** Tooltip suffix for co-advised nodes */
+  coAdvisedBy: (names: string[]) => string
+  /** Aggregate node name folding the founder's plain students */
+  studentsAggregate: (count: number) => string
+  /** Tooltip for the founder-students aggregate node */
+  founderStudentsGroup: string
+  /** Aggregate node name grouping advisors outside the founder lineage */
+  otherAdvisors: string
+  /** Tooltip for the other-advisors aggregate node */
+  orgGroup: string
+}
+
+const DEFAULT_TREE_LABELS: TreeLabels = {
+  founderTitle: name => `👑 创始人 · ${name}`,
+  coAdvisedBy: names => `共同指导：${names.join('、')}`,
+  studentsAggregate: n => `学生（${n}）`,
+  founderStudentsGroup: '创始人的学生（组织分组）',
+  otherAdvisors: '其他导师',
+  orgGroup: '组织分组（非师承关系）',
+}
+
 function makeVisual(
   node: NetworkNode | null,
   opts: { founder?: boolean; aggregate?: boolean },
   displayName: string,
   tooltipExtra: string,
-): Pick<TreeNode, 'symbol' | 'symbolSize' | 'symbolKeepAspect' | 'itemStyle' | 'label' | 'tooltip'> {
+  labels: TreeLabels
+): Pick<
+  TreeNode,
+  'symbol' | 'symbolSize' | 'symbolKeepAspect' | 'itemStyle' | 'label' | 'tooltip'
+> {
   const size = opts.founder ? 52 : opts.aggregate ? 30 : node?.is_student ? 28 : 40
   const borderColor = opts.founder
     ? FOUNDER_GOLD
@@ -76,7 +109,7 @@ function makeVisual(
         ? ROLE_COLORS[node.role_type] || (node.is_student ? STUDENT_COLOR : ADVISOR_COLOR)
         : AGGREGATE_COLOR
   const borderWidth = opts.founder ? 3 : 2
-  const title = opts.founder ? `👑 创始人 · ${displayName}` : displayName
+  const title = opts.founder ? labels.founderTitle(displayName) : displayName
   const tooltip = tooltipExtra ? `${title}<br/>${tooltipExtra}` : title
 
   if (!opts.aggregate && node?.photo_url) {
@@ -117,6 +150,7 @@ export function buildTree(
   nodes: NetworkNode[],
   edges: NetworkEdge[],
   labName: string,
+  labels: TreeLabels = DEFAULT_TREE_LABELS
 ): BuiltTree {
   const byName = new Map(nodes.map(n => [n.name, n]))
   const childrenOf = new Map<string, string[]>()
@@ -135,11 +169,11 @@ export function buildTree(
     name: string,
     visited: Set<string>,
     depth = 0,
-    collapseFrom = 0,
+    collapseFrom = 0
   ): TreeNode => {
     const person = byName.get(name) ?? null
     const coList = coOf.get(name) ?? []
-    const tooltipExtra = coList.length ? `共同指导：${coList.join('、')}` : ''
+    const tooltipExtra = coList.length ? labels.coAdvisedBy(coList) : ''
     const kids = visited.has(name)
       ? []
       : (childrenOf.get(name) ?? []).filter(k => byName.has(k) && !visited.has(k))
@@ -151,7 +185,7 @@ export function buildTree(
       talent_id: person?.talent_id ?? null,
       has_children: childNodes.length > 0,
       ...(childNodes.length ? { children: childNodes, collapsed: depth >= collapseFrom } : {}),
-      ...makeVisual(person, { founder }, name, tooltipExtra),
+      ...makeVisual(person, { founder }, name, tooltipExtra, labels),
     }
   }
 
@@ -181,24 +215,24 @@ export function buildTree(
 
     const children: TreeNode[] = [...professorKids]
     if (plainStudents.length) {
-      const label = `学生（${plainStudents.length}）`
+      const label = labels.studentsAggregate(plainStudents.length)
       children.push({
         name: label,
         talent_id: null,
         has_children: true,
         collapsed: true,
         children: plainStudents,
-        ...makeVisual(null, { aggregate: true }, label, '创始人的学生（组织分组）'),
+        ...makeVisual(null, { aggregate: true }, label, labels.founderStudentsGroup, labels),
       })
     }
     if (otherAdvisorTrees.length) {
       children.push({
-        name: '其他导师',
+        name: labels.otherAdvisors,
         talent_id: null,
         has_children: true,
         collapsed: true,
         children: otherAdvisorTrees,
-        ...makeVisual(null, { aggregate: true }, '其他导师', '组织分组（非师承关系）'),
+        ...makeVisual(null, { aggregate: true }, labels.otherAdvisors, labels.orgGroup, labels),
       })
     }
     return withMeasure({ ...founderTree, children, collapsed: false })
@@ -215,7 +249,7 @@ export function buildTree(
     has_children: true,
     collapsed: false,
     children: topAdvisors.map(name => toTreeNode(name, new Set(), 0, 0)),
-    ...makeVisual(null, { aggregate: true }, labName, ''),
+    ...makeVisual(null, { aggregate: true }, labName, '', labels),
   })
 
   function withMeasure(root: TreeNode): BuiltTree {

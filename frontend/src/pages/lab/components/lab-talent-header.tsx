@@ -11,7 +11,9 @@ import {
 } from '@ant-design/icons'
 import type { LabTalentDetail } from '../../../types'
 import { domainThemes } from '../../../theme'
-import { ROLE_LABELS, LEVEL_LABELS } from '../constants/lab-role'
+import { useLabRoles } from '../constants/lab-role'
+import { useTranslation } from 'react-i18next'
+import '../../../i18n/namespaces/lab'
 
 const { Title, Text } = Typography
 const dt = domainThemes.lab
@@ -46,6 +48,8 @@ interface LabTalentHeaderProps {
 }
 
 const LabTalentHeader: React.FC<LabTalentHeaderProps> = ({ talent }) => {
+  const { t } = useTranslation('lab')
+  const { roleLabel, levelLabel } = useLabRoles()
   const initials = talent.name.slice(0, 1)
 
   return (
@@ -67,10 +71,8 @@ const LabTalentHeader: React.FC<LabTalentHeaderProps> = ({ talent }) => {
         {talent.name}
       </Title>
       <Space size={8} wrap style={{ justifyContent: 'center', marginBottom: 8 }}>
-        <Tag color="processing">{ROLE_LABELS[talent.role_type] || talent.role_type}</Tag>
-        {talent.academic_level && (
-          <Tag color="blue">{LEVEL_LABELS[talent.academic_level] || talent.academic_level}</Tag>
-        )}
+        <Tag color="processing">{roleLabel(talent.role_type)}</Tag>
+        {talent.academic_level && <Tag color="blue">{levelLabel(talent.academic_level)}</Tag>}
       </Space>
       {talent.current_title && (
         <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
@@ -85,7 +87,7 @@ const LabTalentHeader: React.FC<LabTalentHeaderProps> = ({ talent }) => {
         )}
         {talent.homepage && (
           <Button icon={<HomeOutlined />} href={talent.homepage} target="_blank" block>
-            个人主页
+            {t('common.homepage')}
           </Button>
         )}
       </Space>
@@ -94,7 +96,10 @@ const LabTalentHeader: React.FC<LabTalentHeaderProps> = ({ talent }) => {
           {Object.entries(talent.social_links).map(([platform, url]) => {
             const label = SOCIAL_LABELS[platform] || platform
             return (
-              <Tooltip key={platform} title={isSearchFallback(url) ? `${label}（搜索）` : label}>
+              <Tooltip
+                key={platform}
+                title={isSearchFallback(url) ? t('detail.socialSearchTooltip', { label }) : label}
+              >
                 <Button
                   shape="circle"
                   icon={SOCIAL_ICONS[platform] || <LinkOutlined />}

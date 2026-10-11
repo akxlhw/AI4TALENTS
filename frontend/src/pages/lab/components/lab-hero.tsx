@@ -2,12 +2,15 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Typography, Input } from 'antd'
 import { SearchOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
+import '../../../i18n/namespaces/lab'
 
 const { Title, Paragraph } = Typography
 const { Search } = Input
 
 const LabHero: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation('lab')
   const [searchValue, setSearchValue] = useState('')
 
   const handleSearch = (value: string) => {
@@ -49,7 +52,7 @@ const LabHero: React.FC = () => {
             letterSpacing: '-0.5px',
           }}
         >
-          AI Native人才库
+          {t('hero.title')}
         </Title>
         <Paragraph
           style={{
@@ -59,19 +62,19 @@ const LabHero: React.FC = () => {
             fontSize: 16,
           }}
         >
-          基于全球 AI 实验室公开信息的人才发现平台 · 汇聚连接顶尖 AI 原生人才
+          {t('hero.subtitle')}
         </Paragraph>
 
         <Search
-          placeholder="输入姓名、实验室、研究方向等关键词搜索人才..."
+          placeholder={t('hero.placeholder')}
           enterButton={
             <span style={{ fontWeight: 500 }}>
-              <SearchOutlined /> 搜索
+              <SearchOutlined /> {t('hero.search')}
             </span>
           }
           size="large"
           value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
+          onChange={e => setSearchValue(e.target.value)}
           onSearch={handleSearch}
           style={{ width: '100%', margin: '0 auto' }}
         />

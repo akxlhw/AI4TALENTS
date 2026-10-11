@@ -23,6 +23,7 @@ import {
   TrophyOutlined,
   FireOutlined,
 } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../services/api'
 import type { CompTalentSummary } from '../../services/api/competition'
 import type { PaginatedResponse } from '../../types'
@@ -31,6 +32,7 @@ import { getErrorMessage, logger } from '../../utils'
 import { navigateBack } from '../../utils/navigation'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import BreadcrumbNav from '../../components/BreadcrumbNav'
+import '../../i18n/namespaces/competition'
 
 const { Text } = Typography
 
@@ -40,17 +42,17 @@ const PAGE_SIZE = 12
 
 // 段位列表（通用，适配多赛事）
 const RANK_OPTIONS = [
-  { label: 'Gold', value: 'gold' },
-  { label: 'Silver', value: 'silver' },
-  { label: 'Bronze', value: 'bronze' },
+  { labelKey: 'medal.gold', value: 'gold' },
+  { labelKey: 'medal.silver', value: 'silver' },
+  { labelKey: 'medal.bronze', value: 'bronze' },
 ]
 
 const SORT_OPTIONS = [
-  { label: '积分降序', value: 'rating_desc' },
-  { label: '积分升序', value: 'rating_asc' },
-  { label: '参赛场次多', value: 'contests_desc' },
-  { label: '奖牌数多', value: 'medals_desc' },
-  { label: '最近参赛', value: 'recent_desc' },
+  { labelKey: 'search.sort.ratingDesc', value: 'rating_desc' },
+  { labelKey: 'search.sort.ratingAsc', value: 'rating_asc' },
+  { labelKey: 'search.sort.contestsDesc', value: 'contests_desc' },
+  { labelKey: 'search.sort.medalsDesc', value: 'medals_desc' },
+  { labelKey: 'search.sort.recentDesc', value: 'recent_desc' },
 ]
 
 const RANK_TAG_COLORS: Record<string, string> = {
@@ -75,35 +77,39 @@ const MedalCounts: React.FC<{ gold: number; silver: number; bronze: number }> = 
   gold,
   silver,
   bronze,
-}) => (
-  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
-    <span title="金牌">
-      <CrownOutlined style={{ color: '#F6AD55', marginRight: 2 }} />
-      <Text strong style={{ color: '#B7791F', fontSize: 12 }}>
-        {gold}
-      </Text>
+}) => {
+  const { t } = useTranslation('competition')
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
+      <span title={t('medal.gold')}>
+        <CrownOutlined style={{ color: '#F6AD55', marginRight: 2 }} />
+        <Text strong style={{ color: '#B7791F', fontSize: 12 }}>
+          {gold}
+        </Text>
+      </span>
+      <span title={t('medal.silver')}>
+        <TrophyOutlined style={{ color: '#A0AEC0', marginRight: 2 }} />
+        <Text strong style={{ color: '#718096', fontSize: 12 }}>
+          {silver}
+        </Text>
+      </span>
+      <span title={t('medal.bronze')}>
+        <FireOutlined style={{ color: '#DD6B20', marginRight: 2 }} />
+        <Text strong style={{ color: '#C05621', fontSize: 12 }}>
+          {bronze}
+        </Text>
+      </span>
     </span>
-    <span title="银牌">
-      <TrophyOutlined style={{ color: '#A0AEC0', marginRight: 2 }} />
-      <Text strong style={{ color: '#718096', fontSize: 12 }}>
-        {silver}
-      </Text>
-    </span>
-    <span title="铜牌">
-      <FireOutlined style={{ color: '#DD6B20', marginRight: 2 }} />
-      <Text strong style={{ color: '#C05621', fontSize: 12 }}>
-        {bronze}
-      </Text>
-    </span>
-  </span>
-)
+  )
+}
 
 const TalentCard: React.FC<{ talent: CompTalentSummary; onClick: () => void }> = ({
-  talent: t,
+  talent: ta,
   onClick,
 }) => {
+  const { t } = useTranslation('competition')
   const ratingPercent =
-    t.current_rating != null ? Math.min((t.current_rating / 4000) * 100, 100) : 0
+    ta.current_rating != null ? Math.min((ta.current_rating / 4000) * 100, 100) : 0
   return (
     <Card
       hoverable
@@ -114,27 +120,27 @@ const TalentCard: React.FC<{ talent: CompTalentSummary; onClick: () => void }> =
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
         <Avatar
           size={48}
-          src={t.avatar_url}
+          src={ta.avatar_url}
           style={{ background: compTheme.gradient, fontSize: 18, fontWeight: 600, flexShrink: 0 }}
         >
-          {(t.handle.startsWith('name:') ? (t.real_name ?? t.handle) : t.handle)
+          {(ta.handle.startsWith('name:') ? (ta.real_name ?? ta.handle) : ta.handle)
             .charAt(0)
             .toUpperCase()}
         </Avatar>
         <div style={{ flex: 1, minWidth: 0 }}>
           <Text strong ellipsis style={{ fontSize: 15, display: 'block' }}>
-            {t.handle.startsWith('name:') ? (t.real_name ?? t.handle) : t.handle}
+            {ta.handle.startsWith('name:') ? (ta.real_name ?? ta.handle) : ta.handle}
           </Text>
-          <RankTitleTag title={t.rank_title} />
+          <RankTitleTag title={ta.rank_title} />
         </div>
       </div>
       <Text type="secondary" ellipsis style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
-        {t.school ?? '-'} · {t.country_code ?? '-'}
+        {ta.school ?? '-'} · {ta.country_code ?? '-'}
       </Text>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <Text style={{ fontSize: 12, color: '#A0AEC0' }}>竞赛积分</Text>
+        <Text style={{ fontSize: 12, color: '#A0AEC0' }}>{t('overview.rating')}</Text>
         <Text strong style={{ color: compTheme.badgeBg, fontSize: 15 }}>
-          {t.current_rating ?? '-'}
+          {ta.current_rating ?? '-'}
         </Text>
       </div>
       <Progress
@@ -146,9 +152,9 @@ const TalentCard: React.FC<{ talent: CompTalentSummary; onClick: () => void }> =
         style={{ marginBottom: 12 }}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <MedalCounts gold={t.medals_gold} silver={t.medals_silver} bronze={t.medals_bronze} />
+        <MedalCounts gold={ta.medals_gold} silver={ta.medals_silver} bronze={ta.medals_bronze} />
         <Text type="secondary" style={{ fontSize: 12 }}>
-          参赛 {t.contests_count} 场
+          {t('search.contestsCount', { n: ta.contests_count })}
         </Text>
       </div>
     </Card>
@@ -156,6 +162,7 @@ const TalentCard: React.FC<{ talent: CompTalentSummary; onClick: () => void }> =
 }
 
 const CompetitionSearchPage: React.FC = () => {
+  const { t } = useTranslation('competition')
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
@@ -236,7 +243,7 @@ const CompetitionSearchPage: React.FC = () => {
       } catch (err) {
         if (!cancelled) {
           logger.error('Failed to fetch competition talents:', err)
-          message.error(getErrorMessage(err, '加载选手列表失败'))
+          message.error(getErrorMessage(err, t('search.loadError')))
           setError(err)
         }
       } finally {
@@ -247,7 +254,7 @@ const CompetitionSearchPage: React.FC = () => {
     return () => {
       cancelled = true
     }
-  }, [paramsKey, retryTick])
+  }, [paramsKey, retryTick, t])
 
   const resetFilters = () => {
     setText({ keyword: '', country: '', school: '' })
@@ -278,9 +285,14 @@ const CompetitionSearchPage: React.FC = () => {
             paddingLeft: 0,
           }}
         >
-          返回
+          {t('common.back')}
         </Button>
-        <BreadcrumbNav items={[{ label: '竞赛', path: '/competition' }, { label: '选手搜索' }]} />
+        <BreadcrumbNav
+          items={[
+            { label: t('common.domain'), path: '/competition' },
+            { label: t('search.breadcrumb') },
+          ]}
+        />
       </div>
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px 48px' }}>
@@ -289,7 +301,7 @@ const CompetitionSearchPage: React.FC = () => {
           <Row gutter={[12, 12]} align="middle">
             <Col xs={24} sm={12} md={8} lg={5}>
               <Input.Search
-                placeholder="搜索 handle / 真名..."
+                placeholder={t('search.keywordPlaceholder')}
                 value={text.keyword}
                 onChange={e => setText(t => ({ ...t, keyword: e.target.value }))}
                 onSearch={v => updateParams({ keyword: v || undefined })}
@@ -298,7 +310,7 @@ const CompetitionSearchPage: React.FC = () => {
             </Col>
             <Col xs={12} sm={6} md={4} lg={3}>
               <Input
-                placeholder="国家代码"
+                placeholder={t('search.countryPlaceholder')}
                 value={text.country}
                 onChange={e => setText(t => ({ ...t, country: e.target.value }))}
                 allowClear
@@ -306,7 +318,7 @@ const CompetitionSearchPage: React.FC = () => {
             </Col>
             <Col xs={12} sm={6} md={4} lg={4}>
               <Input
-                placeholder="学校"
+                placeholder={t('search.schoolPlaceholder')}
                 value={text.school}
                 onChange={e => setText(t => ({ ...t, school: e.target.value }))}
                 allowClear
@@ -316,7 +328,7 @@ const CompetitionSearchPage: React.FC = () => {
               <InputNumber
                 key={minRatingStr}
                 defaultValue={minRatingStr ? Number(minRatingStr) : undefined}
-                placeholder="最低积分"
+                placeholder={t('search.minRatingPlaceholder')}
                 min={0}
                 style={{ width: '100%' }}
                 onBlur={e => commitMinRating(e.target.value)}
@@ -325,11 +337,11 @@ const CompetitionSearchPage: React.FC = () => {
             </Col>
             <Col xs={12} sm={6} md={4} lg={4}>
               <Select
-                placeholder="段位"
+                placeholder={t('search.rankPlaceholder')}
                 style={{ width: '100%' }}
                 value={rankTitle || undefined}
                 onChange={(v?: string) => updateParams({ rank_title: v || undefined })}
-                options={RANK_OPTIONS}
+                options={RANK_OPTIONS.map(o => ({ label: t(o.labelKey), value: o.value }))}
                 allowClear
               />
             </Col>
@@ -338,12 +350,12 @@ const CompetitionSearchPage: React.FC = () => {
                 style={{ width: '100%' }}
                 value={sortBy}
                 onChange={(v: string) => updateParams({ sort_by: v })}
-                options={SORT_OPTIONS}
+                options={SORT_OPTIONS.map(o => ({ label: t(o.labelKey), value: o.value }))}
               />
             </Col>
             <Col xs={12} sm={6} md={4} lg={2}>
               <Button icon={<ReloadOutlined />} onClick={resetFilters} block>
-                重置
+                {t('common.reset')}
               </Button>
             </Col>
           </Row>
@@ -352,9 +364,9 @@ const CompetitionSearchPage: React.FC = () => {
         {/* 结果区 */}
         {error && !data ? (
           <EmptyPlaceholder
-            title="加载失败"
-            description={getErrorMessage(error, '加载选手列表失败，请稍后重试')}
-            action={{ label: '重试', onClick: () => setRetryTick(t => t + 1) }}
+            title={t('common.loadFailed')}
+            description={getErrorMessage(error, t('search.loadErrorRetry'))}
+            action={{ label: t('common.retry'), onClick: () => setRetryTick(t => t + 1) }}
           />
         ) : loading ? (
           <Row gutter={[16, 16]}>
@@ -368,9 +380,9 @@ const CompetitionSearchPage: React.FC = () => {
           </Row>
         ) : items.length === 0 ? (
           <EmptyPlaceholder
-            title="未找到匹配的选手"
-            description="尝试调整筛选条件"
-            action={{ label: '清除筛选', onClick: resetFilters }}
+            title={t('search.noResultTitle')}
+            description={t('search.noResultDescription')}
+            action={{ label: t('search.clearFilters'), onClick: resetFilters }}
           />
         ) : (
           <>
@@ -390,7 +402,7 @@ const CompetitionSearchPage: React.FC = () => {
                 total={total}
                 pageSize={PAGE_SIZE}
                 onChange={p => updateParams({ page: String(p) }, false)}
-                showTotal={t => `共 ${t} 人`}
+                showTotal={count => t('search.personCount', { n: count })}
                 showSizeChanger={false}
               />
             </div>

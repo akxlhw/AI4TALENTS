@@ -12,6 +12,8 @@ import {
   Tooltip,
 } from 'antd'
 import { FilterOutlined, SearchOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
+import '@/i18n/namespaces/open-source'
 import { domainThemes } from '../../../theme'
 import { TECH_ELEMENT_GROUPS } from '@/constants/tech-elements'
 import type { OSSearchQuery } from '../../../types'
@@ -39,12 +41,6 @@ const LANGUAGE_OPTIONS = [
   { value: 'Haskell', label: 'Haskell' },
 ]
 
-const SORT_OPTIONS = [
-  { value: 'stars_desc', label: 'Stars 降序' },
-  { value: 'stars_asc', label: 'Stars 升序' },
-  { value: 'name_asc', label: '名称升序' },
-]
-
 interface OsSearchFilterCardProps {
   query: OSSearchQuery
   filterExpanded: boolean
@@ -66,14 +62,28 @@ const OsSearchFilterCard: React.FC<OsSearchFilterCardProps> = ({
   onSearch,
   onToggleFilterExpanded,
 }) => {
+  const { t } = useTranslation(['openSource', 'common'])
+  // taxonomy 命名空间翻译 TECH_ELEMENT_GROUPS 的 i18n key（域分组 + 要素标签）
+  const { t: tTax } = useTranslation('taxonomy')
   const primary = domainThemes.opensource.primary
+
+  const techElementOptions = TECH_ELEMENT_GROUPS.map(g => ({
+    label: tTax(g.label),
+    options: g.options.map(o => ({ ...o, label: tTax(o.label) })),
+  }))
+
+  const sortOptions = [
+    { value: 'stars_desc', label: t('openSource:sort.starsDesc') },
+    { value: 'stars_asc', label: t('openSource:sort.starsAsc') },
+    { value: 'name_asc', label: t('openSource:sort.nameAsc') },
+  ]
 
   return (
     <Card className="domain-card" style={{ marginBottom: 16 }} styles={{ body: { padding: 20 } }}>
       <Space.Compact style={{ width: '100%', marginBottom: 16 }}>
         <Input
           size="large"
-          placeholder="搜索开发者、技术栈、公司..."
+          placeholder={t('openSource:search.placeholder')}
           prefix={<SearchOutlined />}
           value={query.q}
           onChange={e => onQueryChange({ ...query, q: e.target.value })}
@@ -85,38 +95,38 @@ const OsSearchFilterCard: React.FC<OsSearchFilterCardProps> = ({
           onClick={onSearch}
           style={{ background: primary, borderColor: primary }}
         >
-          搜索
+          {t('common:actions.search')}
         </Button>
       </Space.Compact>
 
       <Space wrap style={{ marginBottom: 8 }}>
         <Button icon={<FilterOutlined />} onClick={onToggleFilterExpanded}>
-          {filterExpanded ? '收起筛选' : '展开筛选'}
+          {filterExpanded ? t('openSource:filter.collapse') : t('openSource:filter.expand')}
         </Button>
         <Segmented
           value={query.mode}
           onChange={v => onQueryChange({ ...query, mode: v as OSSearchQuery['mode'] })}
           options={[
-            { label: '关键词', value: 'keyword' },
-            { label: '语义', value: 'semantic' },
-            { label: '混合', value: 'hybrid' },
+            { label: t('openSource:filter.mode.keyword'), value: 'keyword' },
+            { label: t('openSource:filter.mode.semantic'), value: 'semantic' },
+            { label: t('openSource:filter.mode.hybrid'), value: 'hybrid' },
           ]}
         />
         <Select
           value={query.sort_by}
           onChange={v => onQueryChange({ ...query, sort_by: v })}
           style={{ width: 140 }}
-          options={SORT_OPTIONS}
+          options={sortOptions}
         />
       </Space>
 
       {filterExpanded && (
         <Row gutter={16} style={{ marginTop: 16 }}>
           <Col xs={24} sm={12} md={8} lg={6}>
-            <Form.Item label="技术领域（要素）" style={{ marginBottom: 8 }}>
+            <Form.Item label={t('openSource:filter.techElements')} style={{ marginBottom: 8 }}>
               <Select
                 mode="multiple"
-                placeholder="选择技术要素"
+                placeholder={t('openSource:filter.techElementsPlaceholder')}
                 value={query.tech_elements}
                 onChange={v =>
                   onQueryChangeAndSyncUrl({
@@ -128,15 +138,19 @@ const OsSearchFilterCard: React.FC<OsSearchFilterCardProps> = ({
                 }
                 style={{ width: '100%' }}
                 optionFilterProp="label"
-                options={TECH_ELEMENT_GROUPS}
+                options={techElementOptions}
               />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12} md={8} lg={6}>
-            <Form.Item label="关联仓库" style={{ marginBottom: 8 }}>
+            <Form.Item label={t('openSource:filter.repos')} style={{ marginBottom: 8 }}>
               <Select
                 mode="multiple"
-                placeholder={query.tech_elements?.length ? '选择仓库' : '请先选择技术领域'}
+                placeholder={
+                  query.tech_elements?.length
+                    ? t('openSource:filter.reposPlaceholder')
+                    : t('openSource:filter.reposPlaceholderDisabled')
+                }
                 value={query.repo_full_names}
                 onChange={v => onQueryChangeAndSyncUrl({ ...query, repo_full_names: v, page: 1 })}
                 style={{ width: '100%' }}
@@ -149,28 +163,28 @@ const OsSearchFilterCard: React.FC<OsSearchFilterCardProps> = ({
             </Form.Item>
           </Col>
           <Col xs={24} sm={12} md={8} lg={6}>
-            <Form.Item label="地区" style={{ marginBottom: 8 }}>
+            <Form.Item label={t('openSource:filter.location')} style={{ marginBottom: 8 }}>
               <Input
-                placeholder="如: Beijing"
+                placeholder={t('openSource:filter.locationPlaceholder')}
                 value={query.location}
                 onChange={e => onQueryChange({ ...query, location: e.target.value })}
               />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12} md={8} lg={6}>
-            <Form.Item label="公司" style={{ marginBottom: 8 }}>
+            <Form.Item label={t('openSource:filter.company')} style={{ marginBottom: 8 }}>
               <Input
-                placeholder="如: Microsoft"
+                placeholder={t('openSource:filter.companyPlaceholder')}
                 value={query.company}
                 onChange={e => onQueryChange({ ...query, company: e.target.value })}
               />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12} md={8} lg={6}>
-            <Form.Item label="编程语言" style={{ marginBottom: 8 }}>
+            <Form.Item label={t('openSource:filter.languages')} style={{ marginBottom: 8 }}>
               <Select
                 mode="multiple"
-                placeholder="选择编程语言"
+                placeholder={t('openSource:filter.languagesPlaceholder')}
                 value={query.languages}
                 onChange={v => onQueryChange({ ...query, languages: v })}
                 style={{ width: '100%' }}
@@ -179,39 +193,43 @@ const OsSearchFilterCard: React.FC<OsSearchFilterCardProps> = ({
             </Form.Item>
           </Col>
           <Col xs={24} sm={24} md={16} lg={12}>
-            <Form.Item label="筛选" style={{ marginBottom: 8 }}>
+            <Form.Item label={t('openSource:filter.group')} style={{ marginBottom: 8 }}>
               <Space size={16} style={{ whiteSpace: 'nowrap' }}>
                 <Checkbox
                   checked={query.is_committer}
                   onChange={e => onQueryChange({ ...query, is_committer: e.target.checked })}
                 >
-                  Committer
+                  {t('openSource:filter.committer')}
                 </Checkbox>
                 <Checkbox
                   checked={query.is_student}
                   onChange={e => onQueryChange({ ...query, is_student: e.target.checked })}
                 >
-                  在校生
+                  {t('openSource:filter.student')}
                 </Checkbox>
                 <Checkbox
                   checked={query.china_related}
                   onChange={e => onQueryChange({ ...query, china_related: e.target.checked })}
                 >
-                  <Tooltip title="姓名含中文或命中百家姓拼音，或地区位于中国">中国背景</Tooltip>
+                  <Tooltip title={t('openSource:filter.chinaRelatedTip')}>
+                    {t('openSource:filter.chinaRelated')}
+                  </Tooltip>
                 </Checkbox>
                 <Checkbox
                   checked={query.top_org}
                   onChange={e => onQueryChange({ ...query, top_org: e.target.checked })}
                 >
-                  <Tooltip title="全球头部大厂 / 国内头部互联网 / 知名 AI 初创 / 知名院校（按公司字段匹配）">
-                    名企/名校
+                  <Tooltip title={t('openSource:filter.topOrgTip')}>
+                    {t('openSource:filter.topOrg')}
                   </Tooltip>
                 </Checkbox>
                 <Checkbox
                   checked={query.has_contact}
                   onChange={e => onQueryChange({ ...query, has_contact: e.target.checked })}
                 >
-                  <Tooltip title="主页 / 邮箱 / 社媒，任一即算有联系方式">有联系方式</Tooltip>
+                  <Tooltip title={t('openSource:filter.hasContactTip')}>
+                    {t('openSource:filter.hasContact')}
+                  </Tooltip>
                 </Checkbox>
               </Space>
             </Form.Item>

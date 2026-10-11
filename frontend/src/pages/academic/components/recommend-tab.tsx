@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Card,
   Table,
@@ -23,6 +24,7 @@ import {
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
 import { semanticColors } from '../../../theme'
+import '../../../i18n/namespaces/academic'
 import type { SearchTalent, RecommendResultItem } from '../../../types'
 
 const { Text } = Typography
@@ -43,6 +45,7 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
   onResetReferences,
 }) => {
   const navigate = useNavigate()
+  const { t } = useTranslation('academic')
 
   const [recommendLimit, setRecommendLimit] = useState(10)
   const [recommendLoading, setRecommendLoading] = useState(false)
@@ -61,7 +64,7 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
       const response = await api.talents.list({ keyword: searchQuery, page_size: 10 })
       setTalentOptions(response.data.items || [])
     } catch {
-      message.error('搜索人才失败，请稍后重试')
+      message.error(t('recommend.searchError'))
     } finally {
       setSearchingTalents(false)
     }
@@ -69,7 +72,7 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
 
   const handleGetRecommendations = async () => {
     if (referenceTalentIds.length === 0) {
-      message.warning('请至少添加一位参考人才')
+      message.warning(t('recommend.addReferenceFirst'))
       return
     }
     setRecommendLoading(true)
@@ -80,10 +83,10 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
       })
       setRecommendResults(response.data.items || [])
       setRecommendTookMs(response.data.took_ms)
-      message.success(`找到 ${response.data.total} 位推荐候选人`)
+      message.success(t('recommend.found', { n: response.data.total }))
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } } }
-      message.error(err.response?.data?.detail || '获取推荐失败')
+      message.error(err.response?.data?.detail || t('recommend.getError'))
     } finally {
       setRecommendLoading(false)
     }
@@ -97,7 +100,7 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
 
   const recommendColumns = [
     {
-      title: '排名',
+      title: t('columns.rank'),
       key: 'rank',
       width: 60,
       render: (_: unknown, __: RecommendResultItem, index: number) => (
@@ -105,7 +108,7 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
       ),
     },
     {
-      title: '姓名',
+      title: t('columns.name'),
       dataIndex: 'name',
       key: 'name',
       width: 150,
@@ -113,9 +116,9 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
         <a onClick={() => navigate(`/talents/${record.talent_id}`)} style={{ fontWeight: 500 }}>{name}</a>
       ),
     },
-    { title: '职位', dataIndex: 'title', key: 'title', width: 150, ellipsis: true },
+    { title: t('columns.position'), dataIndex: 'title', key: 'title', width: 150, ellipsis: true },
     {
-      title: '院校机构',
+      title: t('columns.school'),
       key: 'school',
       width: 150,
       ellipsis: true,
@@ -137,7 +140,7 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
       },
     },
     {
-      title: '相似度',
+      title: t('columns.similarity'),
       dataIndex: 'similarity_score',
       key: 'similarity_score',
       width: 120,
@@ -146,7 +149,7 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
       defaultSortOrder: 'descend' as const,
     },
     {
-      title: '推荐原因',
+      title: t('columns.recommendReasons'),
       dataIndex: 'reasons',
       key: 'reasons',
       render: (reasons: string[]) => (
@@ -154,11 +157,11 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
       ),
     },
     {
-      title: '操作',
+      title: t('columns.actions'),
       key: 'actions',
       width: 100,
       render: (_: unknown, record: RecommendResultItem) => (
-        <Tooltip title="设为参考人才">
+        <Tooltip title={t('recommend.setReferenceTip')}>
           <Button type="text" size="small" icon={<PlusOutlined />} onClick={() => onAddReferenceTalent(record.talent_id, record.name)} disabled={referenceTalentIds.includes(record.talent_id)} />
         </Tooltip>
       ),
@@ -167,11 +170,11 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
 
   return (
     <>
-      <Card title="参考人才" style={{ marginBottom: 16 }}>
+      <Card title={t('recommend.referenceTitle')} style={{ marginBottom: 16 }}>
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Select
             showSearch
-            placeholder="搜索人才姓名添加参考..."
+            placeholder={t('recommend.referencePlaceholder')}
             style={{ width: '100%' }}
             size="large"
             value={null}
@@ -186,8 +189,8 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
             }}
             filterOption={false}
             loading={searchingTalents}
-            notFoundContent={searchingTalents ? <Spin size="small" /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="输入姓名搜索人才" />}
-            options={talentOptions.map(t => ({ value: t.talent_id, label: `${t.name} (${t.school_name || '未知院校机构'})` }))}
+            notFoundContent={searchingTalents ? <Spin size="small" /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('recommend.referenceSearchHint')} />}
+            options={talentOptions.map(item => ({ value: item.talent_id, label: `${item.name} (${item.school_name || t('recommend.unknownSchool')})` }))}
           />
           <Space size={[8, 8]} wrap>
             {referenceTalentIds.map((id) => (
@@ -195,28 +198,28 @@ const RecommendTab: React.FC<RecommendTabProps> = ({
                 {referenceTalentNames.get(id) || `ID: ${id}`}
               </Tag>
             ))}
-            {referenceTalentIds.length === 0 && <Text type="secondary">请在上方搜索框输入姓名添加参考人才（最多10位）</Text>}
+            {referenceTalentIds.length === 0 && <Text type="secondary">{t('recommend.referenceHint')}</Text>}
           </Space>
         </Space>
       </Card>
-      <Card title="推荐配置" style={{ marginBottom: 16 }}>
+      <Card title={t('recommend.configTitle')} style={{ marginBottom: 16 }}>
         <Space size="large">
           <Space>
-            <Text>推荐数量:</Text>
+            <Text>{t('recommend.limitLabel')}</Text>
             <InputNumber min={1} max={50} value={recommendLimit} onChange={(value) => setRecommendLimit(value ?? 10)} />
           </Space>
           <Space>
-            <Button type="primary" icon={<BulbOutlined />} onClick={handleGetRecommendations} loading={recommendLoading}>获取推荐 {recommendTookMs && <Text type="secondary">({recommendTookMs.toFixed(0)}ms)</Text>}</Button>
-            <Button icon={<ReloadOutlined />} onClick={handleResetRecommend}>重置</Button>
+            <Button type="primary" icon={<BulbOutlined />} onClick={handleGetRecommendations} loading={recommendLoading}>{t('recommend.getAction')} {recommendTookMs && <Text type="secondary">({recommendTookMs.toFixed(0)}ms)</Text>}</Button>
+            <Button icon={<ReloadOutlined />} onClick={handleResetRecommend}>{t('recommend.reset')}</Button>
           </Space>
         </Space>
       </Card>
-      <Card title={`推荐结果 (${recommendResults.length} 人)`}>
+      <Card title={t('recommend.resultsTitle', { n: recommendResults.length })}>
         <Spin spinning={recommendLoading}>
           {recommendResults.length > 0 ? (
-            <Table dataSource={recommendResults} columns={recommendColumns} rowKey="talent_id" pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 位候选人` }} />
+            <Table dataSource={recommendResults} columns={recommendColumns} rowKey="talent_id" pagination={{ pageSize: 10, showTotal: (count) => t('recommend.candidatesTotal', { n: count }) }} />
           ) : (
-            <Empty description='请添加参考人才并点击"获取推荐"开始' image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Empty description={t('recommend.empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
           )}
         </Spin>
       </Card>

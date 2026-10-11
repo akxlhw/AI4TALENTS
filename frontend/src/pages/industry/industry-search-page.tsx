@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Col, Pagination, Row, Spin, Typography, Card, Statistic, Input, Tag,
   Badge, Select, Button,
@@ -12,16 +13,18 @@ import { useIndustryTalents, useIndustryPositions, useTechDirectionOptions } fro
 import { useIndustrySearchStore } from '../../stores/industrySearchStore'
 import type { IndustrySearchState } from '../../stores/industrySearchStore'
 import { applyDomainCssVars } from '../../theme'
+import '../../i18n/namespaces/industry'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import IndustryTalentCard from './components/industry-talent-card'
 import {
-  CANDIDATE_STATUS_OPTIONS, MIN_SCORE_OPTIONS, SOURCE_PLATFORM_OPTIONS, INDUSTRY_SORT_OPTIONS,
+  candidateStatusOptions, minScoreOptions, sourcePlatformOptions, industrySortOptions,
   formatScore,
 } from './constants/industry-config'
 
 const { Text, Title, Paragraph } = Typography
 
 const IndustrySearchPage: React.FC = () => {
+  const { t } = useTranslation(['industry', 'common'])
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const state = useIndustrySearchStore()
@@ -58,8 +61,8 @@ const IndustrySearchPage: React.FC = () => {
   if (error) {
     return (
       <div style={{ paddingTop: 64 }}>
-        <EmptyPlaceholder title="加载失败" description={error.message || '请稍后重试'}
-          action={{ label: '重试', onClick: () => refetch() }} />
+        <EmptyPlaceholder title={t('industry:detail.loadFailed')} description={error.message || t('industry:detail.loadFailedDescription')}
+          action={{ label: t('common:actions.retry'), onClick: () => refetch() }} />
       </div>
     )
   }
@@ -115,15 +118,15 @@ const IndustrySearchPage: React.FC = () => {
             margin: 0, marginBottom: 12, color: '#fff', fontWeight: 800,
             fontSize: 'clamp(26px, 4vw, 40px)', letterSpacing: '-0.5px',
           }}>
-            全球行业顶尖人才库
+            {t('industry:home.title')}
           </Title>
           <Paragraph style={{
             margin: 0, marginBottom: 32, color: 'rgba(255,255,255,0.85)', fontSize: 15,
           }}>
-            对准高端精英、关键稀缺岗位，智能发现行业优秀顶尖人才，加速全球人才供应
+            {t('industry:home.subtitle')}
           </Paragraph>
           <Input.Search
-            placeholder="搜索姓名 / 公司 / 职位..."
+            placeholder={t('industry:search.keywordPlaceholder')}
             size="large"
             value={kw}
             onChange={e => { setKw(e.target.value); if (!e.target.value) state.setFilter('keyword', '') }}
@@ -131,7 +134,7 @@ const IndustrySearchPage: React.FC = () => {
               state.setFilter('keyword', v.trim())
               if (!browseMode && v.trim()) navigate('/industry/search')
             }}
-            enterButton={<span style={{ fontWeight: 500 }}><SearchOutlined /> 搜索</span>}
+            enterButton={<span style={{ fontWeight: 500 }}><SearchOutlined /> {t('industry:search.searchButton')}</span>}
             style={{ width: '100%', margin: '0 auto' }}
             allowClear
           />
@@ -157,10 +160,10 @@ const IndustrySearchPage: React.FC = () => {
       {!browseMode && (
       <Row gutter={[16, 16]} style={{ maxWidth: 1200, margin: '24px auto 24px', padding: '0 32px' }}>
         {[
-          { title: '在招岗位', value: openPositions.length, icon: <TrophyOutlined />, link: undefined },
-          { title: '候选人总数', value: totalCandidates, icon: <TeamOutlined />, link: undefined },
-          { title: '当前结果', value: total, icon: <UserOutlined />, link: undefined },
-          { title: '平均匹配', value: avgScore ? formatScore(avgScore) : '—', icon: <StarOutlined />, link: undefined },
+          { title: t('industry:stats.openPositions'), value: openPositions.length, icon: <TrophyOutlined />, link: undefined },
+          { title: t('industry:stats.totalCandidates'), value: totalCandidates, icon: <TeamOutlined />, link: undefined },
+          { title: t('industry:stats.currentResults'), value: total, icon: <UserOutlined />, link: undefined },
+          { title: t('industry:stats.avgMatch'), value: avgScore ? formatScore(avgScore) : '—', icon: <StarOutlined />, link: undefined },
         ].map(s => (
           <Col xs={12} sm={6} key={s.title}>
             <Card className="domain-card" size="small" styles={{ body: { padding: '16px 20px' } }}>
@@ -184,52 +187,52 @@ const IndustrySearchPage: React.FC = () => {
         <>
           {/* Title bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Title level={3} style={{ margin: 0 }}>行业人才搜索</Title>
+            <Title level={3} style={{ margin: 0 }}>{t('industry:search.title')}</Title>
             <Button type="link" onClick={exitBrowse} style={{ fontSize: 14, padding: 0 }}>
-              ← 返回首页
+              {t('industry:search.backToHome')}
             </Button>
           </div>
 
           {/* Search + Filter card (full width, top) */}
           <Card className="domain-card" style={{ marginBottom: 16, borderRadius: 12 }} styles={{ body: { padding: 20 } }}>
             <Input.Search
-              placeholder="搜索姓名 / 公司 / 职位..."
+              placeholder={t('industry:search.keywordPlaceholder')}
               size="large"
               value={kw}
               onChange={e => { setKw(e.target.value); if (!e.target.value) state.setFilter('keyword', '') }}
               onSearch={v => state.setFilter('keyword', v.trim())}
-              enterButton={<span style={{ fontWeight: 500 }}><SearchOutlined /> 搜索</span>}
+              enterButton={<span style={{ fontWeight: 500 }}><SearchOutlined /> {t('industry:search.searchButton')}</span>}
               style={{ width: '100%', marginBottom: 16 }}
               allowClear
             />
             <Row gutter={[12, 12]}>
               <Col xs={24} sm={12} md={8} lg={6}>
-                <Select placeholder="在招岗位" style={{ width: '100%' }}
+                <Select placeholder={t('industry:filter.position')} style={{ width: '100%' }}
                   value={state.positionId ?? undefined}
                   onChange={v => { state.setFilter('positionId', v ?? null); state.setFilter('page', 1) }}
                   options={openPositions.map(p => ({ value: p.position_id, label: `${p.title} (${p.candidate_count})` }))}
                   allowClear showSearch optionFilterProp="label" />
               </Col>
               <Col xs={24} sm={12} md={8} lg={6}>
-                <Select placeholder="最低匹配分" style={{ width: '100%' }}
+                <Select placeholder={t('industry:filter.minScore')} style={{ width: '100%' }}
                   value={state.minScore ?? 0}
                   onChange={v => { state.setFilter('minScore', v === 0 ? null : v); state.setFilter('page', 1) }}
-                  options={MIN_SCORE_OPTIONS} />
+                  options={minScoreOptions()} />
               </Col>
               <Col xs={24} sm={12} md={8} lg={6}>
-                <Select placeholder="候选人状态" style={{ width: '100%' }}
+                <Select placeholder={t('industry:filter.status')} style={{ width: '100%' }}
                   value={state.status || undefined}
                   onChange={v => { state.setFilter('status', v || ''); state.setFilter('page', 1) }}
-                  options={CANDIDATE_STATUS_OPTIONS} allowClear />
+                  options={candidateStatusOptions()} allowClear />
               </Col>
               <Col xs={24} sm={12} md={8} lg={6}>
-                <Select placeholder="来源平台" style={{ width: '100%' }}
+                <Select placeholder={t('industry:filter.sourcePlatform')} style={{ width: '100%' }}
                   value={state.sourcePlatform || undefined}
                   onChange={v => { state.setFilter('sourcePlatform', v || ''); state.setFilter('page', 1) }}
-                  options={SOURCE_PLATFORM_OPTIONS} allowClear />
+                  options={sourcePlatformOptions()} allowClear />
               </Col>
               <Col xs={24} sm={12} md={8} lg={6}>
-                <Select placeholder="技术方向" style={{ width: '100%' }}
+                <Select placeholder={t('industry:filter.techDirection')} style={{ width: '100%' }}
                   value={state.techDirection || undefined}
                   onChange={v => { state.setFilter('techDirection', v || ''); state.setFilter('page', 1) }}
                   options={directionOptionsForFilter} allowClear showSearch optionFilterProp="label" />
@@ -238,11 +241,11 @@ const IndustrySearchPage: React.FC = () => {
                 <Select style={{ width: '100%' }}
                   value={state.sortBy}
                   onChange={v => state.setFilter('sortBy', v)}
-                  options={INDUSTRY_SORT_OPTIONS} />
+                  options={industrySortOptions()} />
               </Col>
               <Col xs={24} sm={12} md={8} lg={6}>
                 <Button icon={<ClearOutlined />} onClick={() => { setKw(''); state.resetFilters() }} block>
-                  清除全部
+                  {t('industry:filter.clearAll')}
                 </Button>
               </Col>
             </Row>
@@ -251,8 +254,8 @@ const IndustrySearchPage: React.FC = () => {
           {/* Results toolbar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Text style={{ fontSize: 14 }}>
-              共 <Text strong>{total}</Text> 条结果
-              {hasFilters && '（已筛选）'}
+              {t('industry:results.totalBefore')}<Text strong>{total}</Text>{t('industry:results.totalAfter')}
+              {hasFilters && t('industry:results.filtered')}
             </Text>
           </div>
 
@@ -261,17 +264,17 @@ const IndustrySearchPage: React.FC = () => {
             {items.length === 0 && !isLoading ? (
               <Card className="domain-card" style={{ borderRadius: 12 }}>
                 <EmptyPlaceholder
-                  title="未找到匹配的候选人"
-                  description="试试调整关键词或放宽筛选条件"
-                  action={{ label: '清除全部筛选', onClick: () => { setKw(''); state.resetFilters() } }}
+                  title={t('industry:results.emptyTitle')}
+                  description={t('industry:results.emptyDescription')}
+                  action={{ label: t('industry:results.clearAllFilters'), onClick: () => { setKw(''); state.resetFilters() } }}
                 />
               </Card>
             ) : (
               <>
                 <Row gutter={[16, 16]}>
-                  {items.map(t => (
-                    <Col xs={24} sm={12} lg={8} key={t.talent_id}>
-                      <IndustryTalentCard talent={t} />
+                  {items.map(item => (
+                    <Col xs={24} sm={12} lg={8} key={item.talent_id}>
+                      <IndustryTalentCard talent={item} />
                     </Col>
                   ))}
                 </Row>
@@ -279,7 +282,7 @@ const IndustrySearchPage: React.FC = () => {
                   <Pagination
                     current={state.page} total={total} pageSize={state.pageSize}
                     onChange={p => state.setFilter('page', p)}
-                    showTotal={t => `共 ${t} 人`}
+                    showTotal={count => t('industry:results.paginationTotal', { count })}
                   />
                 </div>
               </>
@@ -305,18 +308,18 @@ const IndustrySearchPage: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Title level={4} style={{ margin: 0 }}>
                 <FireOutlined style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }} />
-                推荐候选人
+                {t('industry:home.recommended')}
               </Title>
               <Button type="link" onClick={enterBrowse} style={{ fontSize: 14, padding: 0 }}>
-                查看全部 ↓
+                {t('industry:home.viewAll')}
               </Button>
             </div>
 
             <Spin spinning={isLoading}>
               <Row gutter={[16, 16]}>
-                {items.map(t => (
-                  <Col xs={24} sm={12} lg={8} key={t.talent_id}>
-                    <IndustryTalentCard talent={t} />
+                {items.map(item => (
+                  <Col xs={24} sm={12} lg={8} key={item.talent_id}>
+                    <IndustryTalentCard talent={item} />
                   </Col>
                 ))}
               </Row>
@@ -341,6 +344,7 @@ const PositionSidebar: React.FC<{
   state: IndustrySearchState
   showFilters?: boolean
 }> = ({ positions, activePositionId, onPositionClick, state, showFilters = true }) => {
+  const { t } = useTranslation('industry')
   const { data: directions } = useTechDirectionOptions()
   const directionOptions = (directions || []).map(d => ({ value: d.code, label: d.name }))
 
@@ -350,15 +354,15 @@ const PositionSidebar: React.FC<{
       <Card className="domain-card" size="small" style={{ borderRadius: 12 }} title={
         <span style={{ fontSize: 14, fontWeight: 600 }}>
           <TrophyOutlined style={{ marginRight: 6, color: 'var(--domain-badge-bg, #6B46C1)' }} />
-          在招岗位
+          {t('sidebar.positionsTitle')}
         </span>
       }>
         {positions.length === 0 ? (
-          <Text type="secondary" style={{ fontSize: 13 }}>暂无在招岗位</Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>{t('sidebar.noPositions')}</Text>
         ) : (
           <>
             <PositionItem
-              title="全部候选人" count={positions.reduce((s, p) => s + p.candidate_count, 0)}
+              title={t('sidebar.allCandidates')} count={positions.reduce((s, p) => s + p.candidate_count, 0)}
               active={activePositionId === null} onClick={() => onPositionClick(null)}
             />
             {positions.map(p => (
@@ -376,30 +380,30 @@ const PositionSidebar: React.FC<{
       {/* Filters — only in browse mode */}
       {showFilters && (
         <Card className="domain-card" size="small" style={{ borderRadius: 12 }} title={
-          <span style={{ fontSize: 14, fontWeight: 600 }}>筛选条件</span>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{t('sidebar.filters')}</span>
         }>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Select placeholder="最低匹配分" size="small" style={{ width: '100%' }}
+            <Select placeholder={t('filter.minScore')} size="small" style={{ width: '100%' }}
               value={state.minScore ?? 0}
               onChange={v => state.setFilter('minScore', v === 0 ? null : v)}
-              options={MIN_SCORE_OPTIONS} />
-            <Select placeholder="候选人状态" size="small" style={{ width: '100%' }}
+              options={minScoreOptions()} />
+            <Select placeholder={t('filter.status')} size="small" style={{ width: '100%' }}
               value={state.status || undefined}
               onChange={v => state.setFilter('status', v || '')}
-              options={CANDIDATE_STATUS_OPTIONS} allowClear />
-            <Select placeholder="来源平台" size="small" style={{ width: '100%' }}
+              options={candidateStatusOptions()} allowClear />
+            <Select placeholder={t('filter.sourcePlatform')} size="small" style={{ width: '100%' }}
               value={state.sourcePlatform || undefined}
               onChange={v => state.setFilter('sourcePlatform', v || '')}
-              options={SOURCE_PLATFORM_OPTIONS} allowClear />
-            <Select placeholder="技术方向" size="small" style={{ width: '100%' }}
+              options={sourcePlatformOptions()} allowClear />
+            <Select placeholder={t('filter.techDirection')} size="small" style={{ width: '100%' }}
               value={state.techDirection || undefined}
               onChange={v => state.setFilter('techDirection', v || '')}
               options={directionOptions} allowClear showSearch optionFilterProp="label" />
             <Select size="small" style={{ width: '100%' }}
               value={state.sortBy} onChange={v => state.setFilter('sortBy', v)}
-              options={INDUSTRY_SORT_OPTIONS} />
+              options={industrySortOptions()} />
             <Button size="small" icon={<ClearOutlined />} onClick={() => state.resetFilters()}>
-              清除全部
+              {t('filter.clearAll')}
             </Button>
           </div>
         </Card>
@@ -411,7 +415,9 @@ const PositionSidebar: React.FC<{
 const PositionItem: React.FC<{
   title: string; department?: string | null; count: number
   avgScore?: number | null; active: boolean; onClick: () => void
-}> = ({ title, department, count, avgScore, active, onClick }) => (
+}> = ({ title, department, count, avgScore, active, onClick }) => {
+  const { t } = useTranslation('industry')
+  return (
   <div onClick={onClick} style={{
     padding: '8px 10px', borderRadius: 8, cursor: 'pointer', marginBottom: 4,
     background: active ? 'var(--domain-light-bg, #FAF5FF)' : 'transparent',
@@ -434,10 +440,11 @@ const PositionItem: React.FC<{
       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
         {department && <span>{department}</span>}
         {department && avgScore != null && <span> · </span>}
-        {avgScore != null && <span>均匹配 {formatScore(avgScore)}</span>}
+        {avgScore != null && <span>{t('sidebar.avgMatch', { score: formatScore(avgScore) })}</span>}
       </div>
     )}
   </div>
-)
+  )
+}
 
 export default IndustrySearchPage

@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Typography, message } from 'antd'
+import '@/i18n/namespaces/open-source'
 import { logger } from '../../utils/logger'
 import { useAuth } from '../../contexts/AuthContext'
 import { api } from '../../services/api'
@@ -16,6 +18,7 @@ import OsInsightsPanel from './components/os-insights-panel'
 const { Title } = Typography
 
 const OpenSourceSearchPage: React.FC = () => {
+  const { t } = useTranslation('openSource')
   const { isAdmin } = useAuth()
   const {
     query,
@@ -82,14 +85,14 @@ const OpenSourceSearchPage: React.FC = () => {
       setDevelopers(res.data.items || [])
       setTotal(res.data.total || 0)
     } catch (err) {
-      const errorMessage = getErrorMessage(err, '搜索失败，请稍后重试')
+      const errorMessage = getErrorMessage(err, t('errors.searchFailed'))
       logger.error('Search failed', err)
       setSearchError(errorMessage)
       message.error(errorMessage)
     } finally {
       setLoading(false)
     }
-  }, [query])
+  }, [query, t])
 
   const loadRepos = useCallback(async (techElements: string[]) => {
     if (!techElements?.length) {
@@ -112,11 +115,11 @@ const OpenSourceSearchPage: React.FC = () => {
     } catch (err) {
       logger.error('Failed to load repos', err)
       setRepoOptions([])
-      message.warning('仓库列表加载失败')
+      message.warning(t('errors.repoListLoadFailed'))
     } finally {
       setRepoLoading(false)
     }
-  }, [])
+  }, [t])
 
   const fetchFavoriteIds = useCallback(async () => {
     try {
@@ -155,7 +158,7 @@ const OpenSourceSearchPage: React.FC = () => {
       }
     } catch (e) {
       logger.error('Favorite toggle failed', e)
-      message.error(getErrorMessage(e, '收藏操作失败'))
+      message.error(getErrorMessage(e, t('errors.favoriteFailed')))
     }
   }
 
@@ -208,26 +211,26 @@ const OpenSourceSearchPage: React.FC = () => {
       }
       const res = await api.openSource.getAllDeveloperIds(params)
       setSelectedIds(new Set(res.data || []))
-      message.success(`已全选 ${res.data.length} 位开发者`)
+      message.success(t('search.selectAllSuccess', { n: res.data.length }))
     } catch (e) {
-      message.error(getErrorMessage(e, '全选失败'))
+      message.error(getErrorMessage(e, t('errors.selectAllFailed')))
     }
   }
 
   const { exporting, exportMenu, exportConfirmVisible, confirmExport, cancelExport } =
     useExportDownload({
       getIds: () => Array.from(selectedIds),
-      emptyWarning: '请先选择要导出的开发者',
+      emptyWarning: t('search.exportEmptyWarning'),
       exportApi: (ids, format) => api.openSource.exportDevelopers(ids, format),
       fileName: 'os_developers_export',
-      successMessage: count => `已导出 ${count} 位开发者`,
-      formatError: e => getErrorMessage(e, '导出失败'),
+      successMessage: count => t('search.exportSuccess', { n: count }),
+      formatError: e => getErrorMessage(e, t('errors.exportFailed')),
     })
 
   return (
     <div style={{ padding: '88px 32px 80px' }}>
       <Title level={3} style={{ marginBottom: 16 }}>
-        开源人才搜索
+        {t('search.title')}
       </Title>
 
       {/* Search & Filter */}

@@ -22,16 +22,19 @@ import { navigateBack } from '../../utils/navigation'
 import PageSkeleton from '../../components/PageSkeleton'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import BreadcrumbNav from '../../components/BreadcrumbNav'
+import { useTranslation } from 'react-i18next'
+import '../../i18n/namespaces/competition'
 
 const { Title, Text } = Typography
 
 const compTheme = domainThemes.competition
 
-const AWARD_MAP: Record<string, { label: string; color: string }> = {
-  gold: { label: '金牌', color: 'gold' },
-  silver: { label: '银牌', color: 'default' },
-  bronze: { label: '铜牌', color: 'volcano' },
-  hm: { label: '荣誉提名', color: 'blue' },
+// Award tag colors — labels are translated via competition:medal.* at render time
+const AWARD_COLORS: Record<string, string> = {
+  gold: 'gold',
+  silver: 'default',
+  bronze: 'volcano',
+  hm: 'blue',
 }
 
 // 名次前三奖牌色圆点
@@ -60,10 +63,11 @@ const renderRank = (rank: number | null) => {
   )
 }
 
-const renderAward = (award: string | null) => {
+const renderAward = (award: string | null, awardLabel: (award: string) => string) => {
   if (!award) return <Text type="secondary">-</Text>
-  const a = AWARD_MAP[award.toLowerCase()]
-  return a ? <Tag color={a.color}>{a.label}</Tag> : <Tag>{award}</Tag>
+  const color = AWARD_COLORS[award.toLowerCase()]
+  if (!color) return <Tag>{award}</Tag>
+  return <Tag color={color}>{awardLabel(award)}</Tag>
 }
 
 // rating_before → rating_after，涨绿跌红
@@ -85,19 +89,22 @@ const renderRatingChange = (before: number | null, after: number | null) => {
   )
 }
 
-const formatDuration = (seconds: number | null): string => {
-  if (seconds == null) return '-'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.round((seconds % 3600) / 60)
-  if (h === 0) return `${m} 分钟`
-  if (m === 0) return `${h} 小时`
-  return `${h} 小时 ${m} 分钟`
-}
-
 const CompetitionContestDetailPage: React.FC = () => {
+  const { t } = useTranslation('competition')
   const { id: idParam } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const id = idParam ? Number(idParam) : NaN
+
+  const awardLabel = (award: string) => t(`medal.${award.toLowerCase()}`, { defaultValue: award })
+
+  const formatDuration = (seconds: number | null): string => {
+    if (seconds == null) return '-'
+    const h = Math.floor(seconds / 3600)
+    const m = Math.round((seconds % 3600) / 60)
+    if (h === 0) return t('contest.minutes', { n: m })
+    if (m === 0) return t('contest.hours', { n: h })
+    return t('contest.hoursMinutes', { h, m })
+  }
 
   const [contest, setContest] = useState<CompContestDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -130,7 +137,7 @@ const CompetitionContestDetailPage: React.FC = () => {
           if (status === 404) {
             setNotFound(true)
           } else {
-            message.error(getErrorMessage(err, '加载赛事详情失败'))
+            message.error(getErrorMessage(err, t('contest.loadError')))
             setError(err)
           }
         }
@@ -142,7 +149,7 @@ const CompetitionContestDetailPage: React.FC = () => {
     return () => {
       cancelled = true
     }
-  }, [id, retryTick])
+  }, [id, retryTick, t])
 
   if (loading) return <PageSkeleton />
 
@@ -150,9 +157,9 @@ const CompetitionContestDetailPage: React.FC = () => {
     return (
       <div style={{ paddingTop: 64 }}>
         <EmptyPlaceholder
-          title="赛事不存在或已删除"
-          description="该赛事可能已被移除或链接有误"
-          action={{ label: '返回竞赛首页', onClick: () => navigate('/competition') }}
+          title={t('contest.notFoundTitle')}
+          description={t('contest.notFoundDescription')}
+          action={{ label: t('contest.backToHome'), onClick: () => navigate('/competition') }}
         />
       </div>
     )
@@ -162,18 +169,18 @@ const CompetitionContestDetailPage: React.FC = () => {
     return (
       <div style={{ paddingTop: 64 }}>
         <EmptyPlaceholder
-          title="加载失败"
-          description={getErrorMessage(error, '加载赛事详情失败，请稍后重试')}
-          action={{ label: '重试', onClick: () => setRetryTick(t => t + 1) }}
+          title={t('common.loadFailed')}
+          description={getErrorMessage(error, t('contest.loadErrorRetry'))}
+          action={{ label: t('common.retry'), onClick: () => setRetryTick(t => t + 1) }}
         />
       </div>
     )
   }
 
   const columns: TableProps<CompLeaderboardEntry>['columns'] = [
-    { title: '名次', dataIndex: 'rank', width: 70, render: renderRank },
+    { title: t('contest.columns.rank'), dataIndex: 'rank', width: 70, render: renderRank },
     {
-      title: '选手',
+      title: t('contest.columns.player'),
       dataIndex: 'handle',
       render: (handle: string | null, r) => {
         if (handle == null) return <Text type="secondary">-</Text>
@@ -196,57 +203,67 @@ const CompetitionContestDetailPage: React.FC = () => {
       },
     },
     {
-      title: '学校',
+      title: t('contest.columns.school'),
       dataIndex: 'school',
       render: (v: string | null) => v ?? <Text type="secondary">-</Text>,
     },
     {
-      title: '国家',
+      title: t('contest.columns.country'),
       dataIndex: 'country_code',
       width: 80,
       render: (v: string | null) => v ?? <Text type="secondary">-</Text>,
     },
     {
-      title: '得分',
+      title: t('contest.columns.score'),
       dataIndex: 'score',
       width: 90,
       render: (v: number | null) => (v != null ? v : <Text type="secondary">-</Text>),
     },
     {
-      title: '积分变动',
+      title: t('contest.columns.ratingChange'),
       width: 190,
       render: (_, r) => renderRatingChange(r.rating_before, r.rating_after),
     },
-    { title: '奖项', dataIndex: 'award', width: 110, render: renderAward },
+    {
+      title: t('contest.columns.award'),
+      dataIndex: 'award',
+      width: 110,
+      render: (v: string | null) => renderAward(v, awardLabel),
+    },
   ]
 
   const teamColumns: TableProps<CompTeamLeaderboardEntry>['columns'] = [
-    { title: '名次', dataIndex: 'rank', width: 70, render: renderRank },
+    { title: t('contest.columns.rank'), dataIndex: 'rank', width: 70, render: renderRank },
     {
-      title: '队伍',
+      title: t('contest.columns.team'),
       dataIndex: 'team_name',
       render: (v: string | null) => v ?? <Text type="secondary">-</Text>,
     },
     {
-      title: '学校',
+      title: t('contest.columns.school'),
       dataIndex: 'school',
       render: (v: string | null) => v ?? <Text type="secondary">-</Text>,
     },
     {
-      title: '国家',
+      title: t('contest.columns.country'),
       dataIndex: 'country_code',
       width: 80,
       render: (v: string | null) => v ?? <Text type="secondary">-</Text>,
     },
     {
-      title: '得分',
+      title: t('contest.columns.score'),
       dataIndex: 'score',
       width: 90,
       render: (v: number | null) => (v != null ? v : <Text type="secondary">-</Text>),
     },
-    { title: '奖项', dataIndex: 'award', width: 110, render: renderAward },
     {
-      title: '成员',
+      title: t('contest.columns.award'),
+      dataIndex: 'award',
+      width: 110,
+      render: (v: string | null) => renderAward(v, awardLabel),
+    },
+    {
+      title: t('contest.columns.members'),
       dataIndex: 'team_members',
       width: 90,
       render: (members: CompTeamLeaderboardEntry['team_members']) =>
@@ -263,7 +280,7 @@ const CompetitionContestDetailPage: React.FC = () => {
               </div>
             }
           >
-            <a>{members.length} 人</a>
+            <a>{t('contest.membersCount', { n: members.length })}</a>
           </Tooltip>
         ) : (
           <Text type="secondary">-</Text>
@@ -282,8 +299,8 @@ const CompetitionContestDetailPage: React.FC = () => {
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <BreadcrumbNav
           items={[
-            { label: '竞赛', path: '/competition' },
-            { label: '赛事列表', path: '/competition' },
+            { label: t('common.domain'), path: '/competition' },
+            { label: t('contest.breadcrumbList'), path: '/competition' },
             { label: contest.name },
           ]}
         />
@@ -293,7 +310,7 @@ const CompetitionContestDetailPage: React.FC = () => {
           onClick={() => navigateBack(navigate, '/competition')}
           style={{ marginBottom: 16 }}
         >
-          返回
+          {t('common.back')}
         </Button>
 
         {/* Header */}
@@ -322,14 +339,14 @@ const CompetitionContestDetailPage: React.FC = () => {
                 {contest.duration_seconds != null && (
                   <Text type="secondary" style={{ fontSize: 13 }}>
                     <ClockCircleOutlined style={{ marginRight: 6 }} />
-                    时长 {formatDuration(contest.duration_seconds)}
+                    {t('contest.duration', { duration: formatDuration(contest.duration_seconds) })}
                   </Text>
                 )}
               </Space>
             </div>
             {contest.source_url && (
               <Button icon={<LinkOutlined />} href={contest.source_url} target="_blank">
-                源站链接
+                {t('contest.sourceLink')}
               </Button>
             )}
           </div>
@@ -341,7 +358,7 @@ const CompetitionContestDetailPage: React.FC = () => {
             title={
               <span>
                 <UserOutlined style={{ color: compTheme.badgeBg, marginRight: 8 }} />
-                个人榜 ({contest.results.length})
+                {t('contest.individualBoard', { n: contest.results.length })}
               </span>
             }
             style={{ borderRadius: 12, marginBottom: 16 }}
@@ -353,7 +370,7 @@ const CompetitionContestDetailPage: React.FC = () => {
               dataSource={contest.results}
               pagination={{
                 pageSize: 50,
-                showTotal: t => `共 ${t} 条`,
+                showTotal: count => t('common.totalItems', { n: count }),
                 hideOnSinglePage: true,
               }}
               size="middle"
@@ -367,7 +384,7 @@ const CompetitionContestDetailPage: React.FC = () => {
             title={
               <span>
                 <TeamOutlined style={{ color: compTheme.badgeBg, marginRight: 8 }} />
-                团队榜 ({contest.team_results.length})
+                {t('contest.teamBoard', { n: contest.team_results.length })}
               </span>
             }
             style={{ borderRadius: 12, marginBottom: 16 }}
@@ -379,7 +396,7 @@ const CompetitionContestDetailPage: React.FC = () => {
               dataSource={contest.team_results}
               pagination={{
                 pageSize: 50,
-                showTotal: t => `共 ${t} 条`,
+                showTotal: count => t('common.totalItems', { n: count }),
                 hideOnSinglePage: true,
               }}
               size="middle"
@@ -389,7 +406,10 @@ const CompetitionContestDetailPage: React.FC = () => {
 
         {contest.results.length === 0 && contest.team_results.length === 0 && (
           <Card style={{ borderRadius: 12 }}>
-            <EmptyPlaceholder title="暂无榜单数据" description="该赛事尚未导入成绩" />
+            <EmptyPlaceholder
+              title={t('contest.emptyTitle')}
+              description={t('contest.emptyDescription')}
+            />
           </Card>
         )}
       </div>

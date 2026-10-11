@@ -1,0 +1,121 @@
+{
+  "common": {
+    "back": "Back",
+    "retry": "Retry",
+    "reset": "Reset",
+    "loadFailed": "Failed to load",
+    "retryLater": "Please try again later",
+    "personCount": "{{n}} people",
+    "personUnit": "people",
+    "officialSite": "Website",
+    "homepage": "Homepage",
+    "labs": "Labs",
+    "search": "Search"
+  },
+  "role": {
+    "professor": "Professor",
+    "student": "Student",
+    "graduate": "Postdoc / Researcher",
+    "alumni": "Alumni",
+    "unknown": "Other"
+  },
+  "level": {
+    "phd": "PhD",
+    "master": "Master",
+    "bachelor": "Bachelor"
+  },
+  "hero": {
+    "title": "AI Native Talent Hub",
+    "subtitle": "A talent discovery platform built on public information from global AI labs · Connecting top AI-native talents",
+    "placeholder": "Search talents by name, lab, or research area...",
+    "search": "Search"
+  },
+  "overview": {
+    "emptyTitle": "No AI lab talent data yet",
+    "emptyDescription": "Ask an administrator to upload and import lab talent data",
+    "goImport": "Go to import",
+    "featuredLabs": "Featured Labs",
+    "labDistribution": "Lab Distribution",
+    "roleDistribution": "Role Distribution",
+    "levelDistribution": "Academic Levels",
+    "topLabs": "Top Research Groups",
+    "total": "Total"
+  },
+  "search": {
+    "all": "All",
+    "allTalents": "All Talents",
+    "allRoles": "All roles",
+    "allLevels": "All levels",
+    "talentList": "Talents",
+    "mentorship": "Mentorship",
+    "keywordPlaceholder": "Enter a name keyword...",
+    "rolePlaceholder": "Role",
+    "levelPlaceholder": "Academic level",
+    "sortPlaceholder": "Sort",
+    "advanced": "Advanced Filters",
+    "parentLabPlaceholder": "Top lab",
+    "labGroupPlaceholder": "Research group",
+    "researchAreaPlaceholder": "Research area",
+    "sort": {
+      "default": "Default",
+      "nameAsc": "Name A–Z",
+      "cohortDesc": "Cohort (newest first)",
+      "createdDesc": "Recently added"
+    },
+    "noResultTitle": "No matching talents found",
+    "noResultDescription": "Try adjusting the filters",
+    "clearFilters": "Clear filters",
+    "loadingNetwork": "Loading advisor network...",
+    "noAdvisorData": "No advisor relationship data for this lab yet",
+    "researchFocus": "Research focus: {{focus}}"
+  },
+  "detail": {
+    "loadFailed": "Failed to load talent details. Please try again later.",
+    "notFoundTitle": "Talent not found or removed",
+    "notFoundDescription": "This talent may have been removed, or the link is incorrect",
+    "backToSearch": "Back to search",
+    "tabs": {
+      "info": "Basic Info",
+      "mentorship": "Mentorship",
+      "homepage": "Homepage"
+    },
+    "fields": {
+      "parentLab": "Top Lab",
+      "labGroup": "Research Group",
+      "department": "Department",
+      "cohortYear": "Enrollment / Join Year",
+      "cohortSource": "Cohort Source"
+    },
+    "researchAreas": "Research Areas",
+    "dataSource": "Source: {{lab}} website",
+    "collectedAt": "Collected on {{date}}",
+    "viewSource": "View source page",
+    "advisor": "Advisor",
+    "coAdvisor": "Co-advisor",
+    "noAdvisor": "No advisor information recorded",
+    "students": "Students Advised",
+    "peopleCount": "{{n}}",
+    "cohortGrade": "Cohort {{year}}",
+    "noStudents": "No advised students recorded",
+    "noMentorship": "No mentorship data available",
+    "loadingMentorship": "Loading mentorship...",
+    "loadingHomepage": "Loading homepage...",
+    "homepageFetchError": "Could not load this homepage — it may be a network issue or the target site blocks access.",
+    "homepageHttpError": "The target site returned {{status}}; preview is unavailable.",
+    "homepageMissing": "This talent has no personal homepage.",
+    "homepagePreviewFailed": "Failed to load the preview. Please try again later.",
+    "openFullHomepage": "Open the full homepage in a new tab →",
+    "socialSearchTooltip": "{{label}} (search)"
+  },
+  "tree": {
+    "defaultLab": "Lab",
+    "legend": "Gold ring 👑 = founder · Dark = advisor · Light = student · Gray group = organizational grouping (not mentorship) · Click a node to expand/collapse, Shift+click to view profile · Scroll to zoom, drag to pan",
+    "founder": "Founder",
+    "coAdvised": "Co-advised by {{names}}",
+    "nameJoiner": ", ",
+    "studentsAggregate": "Students ({{n}})",
+    "founderStudentsGroup": "Founder's students (organizational group)",
+    "otherAdvisors": "Other Advisors",
+    "orgGroup": "Organizational group (not a mentorship relation)"
+  }
+}

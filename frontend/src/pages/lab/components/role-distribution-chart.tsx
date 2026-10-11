@@ -1,6 +1,8 @@
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
-import { ROLE_COLORS, ROLE_LABELS } from '../constants/lab-role'
+import { useTranslation } from 'react-i18next'
+import { ROLE_COLORS, useLabRoles } from '../constants/lab-role'
+import '../../../i18n/namespaces/lab'
 
 interface RoleDistributionChartProps {
   data: { name: string; value: number }[]
@@ -8,11 +10,13 @@ interface RoleDistributionChartProps {
 }
 
 const RoleDistributionChart: React.FC<RoleDistributionChartProps> = ({ data, onSliceClick }) => {
+  const { t } = useTranslation('lab')
+  const { roleLabel } = useLabRoles()
   const total = data.reduce((sum, item) => sum + item.value, 0)
 
-  // Map raw role_type keys to Chinese labels + correct colors
+  // Map raw role_type keys to localized labels + correct colors
   const chartData = data.map(item => ({
-    name: ROLE_LABELS[item.name] || item.name,
+    name: roleLabel(item.name),
     value: item.value,
     itemStyle: { color: ROLE_COLORS[item.name] || '#CBD5E1' },
     // keep raw key for click callback
@@ -54,7 +58,7 @@ const RoleDistributionChart: React.FC<RoleDistributionChartProps> = ({ data, onS
         type: 'text',
         left: 'center',
         top: '50%',
-        style: { text: '总计', align: 'center', fill: '#718096', fontSize: 12 },
+        style: { text: t('overview.total'), align: 'center', fill: '#718096', fontSize: 12 },
       },
     ],
   }

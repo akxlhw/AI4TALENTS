@@ -1,6 +1,8 @@
 import { Button, Card, Checkbox, Col, Row, Space, Tag, Tooltip, Typography } from 'antd'
 import { HeartFilled, HeartOutlined, StarOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import '@/i18n/namespaces/open-source'
 import { domainThemes, semanticColors } from '../../../theme'
 import type { OSDeveloper } from '../../../types'
 
@@ -22,6 +24,7 @@ const OsDeveloperCard: React.FC<OsDeveloperCardProps> = ({
   onToggleSelect,
 }) => {
   const navigate = useNavigate()
+  const { t } = useTranslation('openSource')
   const primary = domainThemes.opensource.primary
 
   return (
@@ -121,7 +124,7 @@ const OsDeveloperCard: React.FC<OsDeveloperCardProps> = ({
                     fontWeight: 600,
                   }}
                 >
-                  在校生
+                  {t('card.student')}
                 </Tag>
               )}
             </div>
@@ -148,7 +151,7 @@ const OsDeveloperCard: React.FC<OsDeveloperCardProps> = ({
         ellipsis={{ rows: 1 }}
         style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}
       >
-        {dev.bio || '暂无简介'}
+        {dev.bio || t('card.noBio')}
       </Paragraph>
 
       <Row gutter={16}>
@@ -160,7 +163,7 @@ const OsDeveloperCard: React.FC<OsDeveloperCardProps> = ({
           </div>
         </Col>
         <Col span={6}>
-          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>开发语言</Text>
+          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{t('card.languages')}</Text>
           <Tooltip
             title={
               <Space size={4} wrap>
@@ -169,7 +172,7 @@ const OsDeveloperCard: React.FC<OsDeveloperCardProps> = ({
                     {lang}
                   </Tag>
                 ))}
-                {(dev.primary_languages || []).length === 0 && '无'}
+                {(dev.primary_languages || []).length === 0 && t('card.none')}
               </Space>
             }
           >
@@ -188,7 +191,7 @@ const OsDeveloperCard: React.FC<OsDeveloperCardProps> = ({
           </Tooltip>
         </Col>
         <Col span={6}>
-          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>公司</Text>
+          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{t('card.company')}</Text>
           <div
             style={{
               fontWeight: 700,
@@ -203,7 +206,7 @@ const OsDeveloperCard: React.FC<OsDeveloperCardProps> = ({
           </div>
         </Col>
         <Col span={6}>
-          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>地区</Text>
+          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{t('card.location')}</Text>
           <div
             style={{
               fontWeight: 700,
@@ -231,7 +234,7 @@ const OsDeveloperCard: React.FC<OsDeveloperCardProps> = ({
         onClick={e => e.stopPropagation()}
       >
         <Checkbox checked={selected} onChange={() => onToggleSelect(dev.developer_id)}>
-          选择
+          {t('card.select')}
         </Checkbox>
       </div>
     </Card>

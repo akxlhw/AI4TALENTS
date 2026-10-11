@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Row, Col, Card, Tag, Typography, Spin } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { useLabStats, useLabList } from '../../hooks/useLabQueries'
 import { applyDomainCssVars } from '../../theme'
 import LabHero from './components/lab-hero'
@@ -10,11 +11,15 @@ import LabCard from './components/lab-card'
 import PageSkeleton from '../../components/PageSkeleton'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import { useAuth } from '../../contexts/AuthContext'
+import { useLabRoles } from './constants/lab-role'
+import '../../i18n/namespaces/lab'
 
 const { Text } = Typography
 
 const LabOverviewPage: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation('lab')
+  const { levelLabel } = useLabRoles()
   const { user } = useAuth()
   const { data: stats, isLoading, error, refetch } = useLabStats()
   const { data: labs, isLoading: labsLoading, error: labsError } = useLabList()
@@ -28,9 +33,9 @@ const LabOverviewPage: React.FC = () => {
   if (error) {
     return (
       <EmptyPlaceholder
-        title="加载失败"
-        description={error.message || '请稍后重试'}
-        action={{ label: '重试', onClick: () => refetch() }}
+        title={t('common.loadFailed')}
+        description={error.message || t('common.retryLater')}
+        action={{ label: t('common.retry'), onClick: () => refetch() }}
       />
     )
   }
@@ -38,11 +43,14 @@ const LabOverviewPage: React.FC = () => {
   if (!stats || stats.total_talents === 0) {
     return (
       <EmptyPlaceholder
-        title="暂无 AI 实验室人才数据"
-        description="请通过管理员上传导入实验室人才数据"
+        title={t('overview.emptyTitle')}
+        description={t('overview.emptyDescription')}
         action={
           user?.role === 'super_admin'
-            ? { label: '去导入', onClick: () => navigate('/system-config?tab=lab-import') }
+            ? {
+                label: t('overview.goImport'),
+                onClick: () => navigate('/system-config?tab=lab-import'),
+              }
             : undefined
         }
       />
@@ -63,16 +71,16 @@ const LabOverviewPage: React.FC = () => {
         }}
       >
         <Card
-          title="收录实验室"
+          title={t('overview.featuredLabs')}
           style={{ borderRadius: 12, marginBottom: 24 }}
           bodyStyle={{ padding: 20 }}
         >
           <Spin spinning={labsLoading}>
             {labsError ? (
               <EmptyPlaceholder
-                title="加载失败"
-                description={labsError.message || '请稍后重试'}
-                action={{ label: '重试', onClick: () => window.location.reload() }}
+                title={t('common.loadFailed')}
+                description={labsError.message || t('common.retryLater')}
+                action={{ label: t('common.retry'), onClick: () => window.location.reload() }}
               />
             ) : (
               <Row gutter={[16, 16]}>
@@ -88,7 +96,10 @@ const LabOverviewPage: React.FC = () => {
 
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
-            <Card title="实验室分布" style={{ borderRadius: 12, height: '100%' }}>
+            <Card
+              title={t('overview.labDistribution')}
+              style={{ borderRadius: 12, height: '100%' }}
+            >
               <LabDistributionChart
                 data={labData}
                 onBarClick={name => navigate(`/lab/search?parent_lab=${encodeURIComponent(name)}`)}
@@ -96,7 +107,10 @@ const LabOverviewPage: React.FC = () => {
             </Card>
           </Col>
           <Col xs={24} lg={12}>
-            <Card title="角色分布" style={{ borderRadius: 12, height: '100%' }}>
+            <Card
+              title={t('overview.roleDistribution')}
+              style={{ borderRadius: 12, height: '100%' }}
+            >
               <RoleDistributionChart
                 data={roleData}
                 onSliceClick={name => navigate(`/lab/search?role_type=${encodeURIComponent(name)}`)}
@@ -107,20 +121,20 @@ const LabOverviewPage: React.FC = () => {
 
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col xs={24} lg={12}>
-            <Card title="学位层次" style={{ borderRadius: 12 }}>
+            <Card title={t('overview.levelDistribution')} style={{ borderRadius: 12 }}>
               {stats.academic_level_distribution.map(l => (
                 <div
                   key={l.name}
                   style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}
                 >
-                  <Text>{l.name}</Text>
+                  <Text>{levelLabel(l.name)}</Text>
                   <Tag color="blue">{l.count}</Tag>
                 </div>
               ))}
             </Card>
           </Col>
           <Col xs={24} lg={12}>
-            <Card title="热门研究组" style={{ borderRadius: 12 }}>
+            <Card title={t('overview.topLabs')} style={{ borderRadius: 12 }}>
               {stats.top_labs.map(lab => (
                 <Tag
                   key={lab.name}

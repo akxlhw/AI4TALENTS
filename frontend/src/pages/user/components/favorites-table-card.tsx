@@ -13,6 +13,7 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import { DownOutlined, DownloadOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { semanticColors } from '../../../theme'
 import type { FavoriteTalent } from '../../../types'
 
@@ -50,6 +51,7 @@ const FavoritesTableCard: React.FC<FavoritesTableCardProps> = ({
   onCompare,
 }) => {
   const navigate = useNavigate()
+  const { t } = useTranslation('user')
 
   return (
     <Card styles={{ body: { padding: 0 } }}>
@@ -63,22 +65,24 @@ const FavoritesTableCard: React.FC<FavoritesTableCardProps> = ({
         >
           <Space>
             <Text>
-              已选择 <strong>{selectedRowKeys.length}</strong> 项
+              {t('table.selectedBefore')}
+              <strong>{selectedRowKeys.length}</strong>
+              {t('table.selectedAfter')}
             </Text>
             <Button size="small" onClick={() => onSelectionChange([])}>
-              取消选择
+              {t('table.clearSelection')}
             </Button>
             <Button
               size="small"
               onClick={onCompare}
               disabled={selectedRowKeys.length < 2 || selectedRowKeys.length > 4}
             >
-              对比 ({selectedRowKeys.length}/4)
+              {t('table.compare', { count: selectedRowKeys.length })}
             </Button>
             {isAdmin && (
               <Dropdown menu={exportMenu} trigger={['click']}>
                 <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>
-                  导出 <DownOutlined />
+                  {t('table.export')} <DownOutlined />
                 </Button>
               </Dropdown>
             )}
@@ -100,14 +104,14 @@ const FavoritesTableCard: React.FC<FavoritesTableCardProps> = ({
             pageSize,
             total: total,
             showSizeChanger: false,
-            showTotal: total => `共 ${total} 位收藏`,
+            showTotal: count => t('table.total', { count }),
           }}
           onChange={onTableChange}
           locale={{
             emptyText: (
-              <Empty description="暂无收藏" image={Empty.PRESENTED_IMAGE_SIMPLE}>
+              <Empty description={t('table.empty')} image={Empty.PRESENTED_IMAGE_SIMPLE}>
                 <Button type="primary" onClick={() => navigate('/search')}>
-                  去搜索人才
+                  {t('table.goSearch')}
                 </Button>
               </Empty>
             ),

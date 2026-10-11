@@ -1,0 +1,147 @@
+{
+  "search": {
+    "title": "Open Source Talent Search",
+    "placeholder": "Search developers, tech stacks, companies...",
+    "noResults": "No developers match the current filters",
+    "clearFilters": "Clear Filters",
+    "resultCount": "{{n}} results",
+    "selectAllSuccess": "Selected all {{n}} developers",
+    "exportEmptyWarning": "Please select developers to export first",
+    "exportSuccess": "Exported {{n}} developers"
+  },
+  "filter": {
+    "collapse": "Hide Filters",
+    "expand": "Show Filters",
+    "mode": {
+      "keyword": "Keyword",
+      "semantic": "Semantic",
+      "hybrid": "Hybrid"
+    },
+    "techElements": "Tech Domain (Element)",
+    "techElementsPlaceholder": "Select tech elements",
+    "repos": "Linked Repositories",
+    "reposPlaceholder": "Select repositories",
+    "reposPlaceholderDisabled": "Select a tech domain first",
+    "location": "Location",
+    "locationPlaceholder": "e.g. Beijing",
+    "company": "Company",
+    "companyPlaceholder": "e.g. Microsoft",
+    "languages": "Programming Languages",
+    "languagesPlaceholder": "Select languages",
+    "group": "Filters",
+    "committer": "Committer",
+    "student": "Student",
+    "chinaRelated": "China Background",
+    "chinaRelatedTip": "Name contains Chinese characters or a pinyin of a common Chinese surname, or location within China",
+    "topOrg": "Top Company/School",
+    "topOrgTip": "Global tech giants / leading Chinese internet companies / notable AI startups / renowned universities (matched on the company field)",
+    "hasContact": "Has Contact Info",
+    "hasContactTip": "Homepage / email / social media — any one counts as contactable"
+  },
+  "sort": {
+    "starsDesc": "Stars High to Low",
+    "starsAsc": "Stars Low to High",
+    "nameAsc": "Name A-Z",
+    "newest": "Recently Added"
+  },
+  "results": {
+    "selectPage": "Select This Page",
+    "selectAll": "Select All Results",
+    "selectedCount": "<strong>{{n}}</strong> developers selected",
+    "cancelSelection": "Clear Selection"
+  },
+  "card": {
+    "student": "Student",
+    "noBio": "No bio yet",
+    "languages": "Languages",
+    "company": "Company",
+    "location": "Location",
+    "none": "None",
+    "select": "Select"
+  },
+  "detail": {
+    "back": "Back",
+    "notFound": "Developer does not exist or has been removed",
+    "backToHome": "Back to Open Source Home",
+    "favorite": "Favorite",
+    "favorited": "Favorited",
+    "website": "Website",
+    "techStack": "Tech Stack:",
+    "tabs": {
+      "repositories": "Repositories ({{n}})",
+      "contributions": "Contributions ({{n}})",
+      "languageSkills": "Language Skills ({{n}})",
+      "similar": "Similar Developers"
+    },
+    "noSimilar": "No similar developers yet",
+    "columns": {
+      "repo": "Repository",
+      "language": "Language",
+      "role": "Role",
+      "repoCount": "Repos",
+      "proficiency": "Proficiency"
+    }
+  },
+  "insights": {
+    "title": "Matched Talent Insights (Admin)",
+    "loadHint": "Expand to load insights",
+    "noMatch": "No matched talent under the current filters",
+    "total": "Matched Talent",
+    "contactable": "Contactable (with contact info)",
+    "techDist": "Tech Element Distribution",
+    "repoTop": "Source Repositories Top 10",
+    "companyTop": "Current Companies Top 10",
+    "scopeNote": "Statistics cover all talent matched by the current filters; under semantic/hybrid search mode, equivalent keyword conditions are used."
+  },
+  "repo": {
+    "backToEco": "Back to Open Source Ecosystem",
+    "listTitle": "Repository List",
+    "searchPlaceholder": "Search repository name...",
+    "techPlaceholder": "Tech Domain (Element)",
+    "sortPlaceholder": "Sort By",
+    "query": "Search",
+    "empty": "No repository data",
+    "noDescription": "No description",
+    "totalRepos": "{{n}} repositories",
+    "detail": {
+      "back": "Back",
+      "notFound": "Repository does not exist or has been removed",
+      "backToHome": "Back to Open Source Home",
+      "viewOnGithub": "View on GitHub",
+      "viewRepo": "View Repository",
+      "noTeam": "No core team member data",
+      "contributorTotal": "{{n}} contributors",
+      "info": {
+        "fullName": "Full Repository Name",
+        "techElements": "Tech Domain (Element)",
+        "mainLanguage": "Primary Language"
+      },
+      "stats": {
+        "contributors": "Contributors",
+        "mainLanguage": "Main Language"
+      },
+      "tabs": {
+        "team": "Core Team",
+        "contributors": "Contributors ({{n}})",
+        "info": "Project Info"
+      },
+      "columns": {
+        "rank": "Rank",
+        "developer": "Developer",
+        "role": "Role",
+        "company": "Company"
+      }
+    }
+  },
+  "errors": {
+    "searchFailed": "Search failed, please try again later",
+    "repoListLoadFailed": "Failed to load the repository list",
+    "favoriteFailed": "Failed to update favorites",
+    "selectAllFailed": "Failed to select all",
+    "exportFailed": "Export failed",
+    "loadDetailFailed": "Failed to load the developer profile",
+    "loadRepoFailed": "Failed to load the repository details",
+    "loadContributorsFailed": "Failed to load contributors",
+    "insightsLoadFailed": "Failed to load insights"
+  }
+}

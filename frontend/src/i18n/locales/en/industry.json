@@ -1,0 +1,143 @@
+{
+  "search": {
+    "title": "Industry Talent Search",
+    "keywordPlaceholder": "Search by name / company / title...",
+    "searchButton": "Search",
+    "backToHome": "← Back to Home"
+  },
+  "home": {
+    "title": "Global Top Industry Talent Pool",
+    "subtitle": "Target elite talent for critical, hard-to-fill roles — intelligently discover top industry talent worldwide and accelerate global talent supply",
+    "recommended": "Recommended Candidates",
+    "viewAll": "View All ↓"
+  },
+  "stats": {
+    "openPositions": "Open Positions",
+    "totalCandidates": "Total Candidates",
+    "currentResults": "Current Results",
+    "avgMatch": "Avg. Match"
+  },
+  "filter": {
+    "position": "Open positions",
+    "minScore": "Min match score",
+    "status": "Candidate status",
+    "sourcePlatform": "Source platform",
+    "techDirection": "Tech direction",
+    "clearAll": "Clear all"
+  },
+  "results": {
+    "totalBefore": "",
+    "totalAfter": " results",
+    "filtered": " (filtered)",
+    "paginationTotal": "{{count}} candidates",
+    "emptyTitle": "No matching candidates found",
+    "emptyDescription": "Try adjusting keywords or relaxing the filters",
+    "clearAllFilters": "Clear all filters"
+  },
+  "sidebar": {
+    "positionsTitle": "Open Positions",
+    "noPositions": "No open positions",
+    "allCandidates": "All Candidates",
+    "filters": "Filters",
+    "avgMatch": "Avg {{score}}"
+  },
+  "status": {
+    "new": "New Candidate",
+    "connected": "Connected",
+    "terminated": "Terminated"
+  },
+  "platform": {
+    "maimai": "Maimai",
+    "linkedin": "LinkedIn"
+  },
+  "sort": {
+    "matchScoreDesc": "Match score high to low",
+    "matchScoreAsc": "Match score low to high",
+    "createdDesc": "Recently imported",
+    "nameAsc": "Name A to Z"
+  },
+  "minScore": {
+    "any": "Any score",
+    "above": "{{score}}+"
+  },
+  "grade": {
+    "s": "S",
+    "aplus": "A+",
+    "a": "A",
+    "bplus": "B+",
+    "c": "C",
+    "none": "—"
+  },
+  "card": {
+    "degree": "Degree",
+    "years": "Years",
+    "location": "Location",
+    "morePositions": "+{{count}} more",
+    "statusAria": "Change candidate status",
+    "statusUpdated": "Status updated to \"{{status}}\"",
+    "statusUpdateFailed": "Failed to update status"
+  },
+  "detail": {
+    "loadFailed": "Failed to load",
+    "loadFailedDescription": "Failed to load talent details. Please try again later.",
+    "notFoundTitle": "Talent not found",
+    "notFoundDescription": "This talent may have been removed, or the link is invalid",
+    "backToLibrary": "Back to Industry Talent",
+    "back": "Back",
+    "breadcrumbRoot": "Industry Talent Pool",
+    "tabs": {
+      "info": "Basic Info",
+      "timeline": "Career Timeline",
+      "positions": "Position Matches"
+    },
+    "profileLink": {
+      "linkedin": "LinkedIn Profile",
+      "maimai": "Maimai Profile"
+    },
+    "expect": "Job intent: {{value}}",
+    "scoreValue": "{{score}} pts",
+    "bestMatch": "Best Match",
+    "fields": {
+      "name": "Name",
+      "currentOrg": "Current Company",
+      "currentTitle": "Current Title",
+      "degree": "Education",
+      "yearsOfExp": "Years of Experience",
+      "location": "Location",
+      "expect": "Job Intent",
+      "sourcePlatform": "Source Platform",
+      "profileUrl": "Source Link",
+      "updatedAt": "Last Updated"
+    },
+    "timelineEmpty": {
+      "title": "No career history",
+      "description": "No experience records for this talent were found in the imported data"
+    },
+    "currentTag": "Current",
+    "noPositionsTitle": "No matching positions",
+    "noPositionsDescription": "This talent has no position match records yet",
+    "subScores": {
+      "school": "School",
+      "company": "Company",
+      "direction": "Direction"
+    },
+    "scoresEditable": "Scores editable",
+    "clickToEditScore": "Click to edit score",
+    "saved": "Saved",
+    "saveFailed": "Save failed",
+    "scoreUpdateFailed": "Failed to update score",
+    "removeOrphanCleaned": "Candidate removed from the position; the talent record was cleaned up automatically as it had no other links",
+    "removed": "Removed from this position",
+    "removeFailed": "Failed to remove",
+    "batch": "Batch {{value}}",
+    "updatedAt": "Updated {{date}}",
+    "recruitingStatus": "Recruiting Status",
+    "touched": "Touched",
+    "notesPlaceholder": "Recruiting notes...",
+    "save": "Save",
+    "removeConfirmTitle": "Remove from this position?",
+    "removeConfirmDescription": "The link between this candidate and the position will be deleted. If the candidate has no other position links, the talent record will also be cleaned up.",
+    "remove": "Remove",
+    "removeButton": "Remove from Position"
+  }
+}

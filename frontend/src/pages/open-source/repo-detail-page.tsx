@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { navigateBack } from '../../utils/navigation'
 import { logger } from '../../utils/logger'
+import '@/i18n/namespaces/open-source'
 import {
   Card,
   Row,
@@ -40,6 +42,7 @@ import type { OSRepositoryDetail, OSRepositoryContributor } from '../../types'
 const { Title, Text, Paragraph, Link } = Typography
 
 const RepoDetailPage: React.FC = () => {
+  const { t } = useTranslation('openSource')
   const { fullLabel } = useTechElements()
   const navigate = useNavigate()
   const { owner, name } = useParams<{ owner: string; name: string }>()
@@ -62,13 +65,13 @@ const RepoDetailPage: React.FC = () => {
         setDetail(res.data)
       } catch (e) {
         logger.error('Failed to load repository detail', e)
-        message.error(getErrorMessage(e, '加载仓库详情失败'))
+        message.error(getErrorMessage(e, t('errors.loadRepoFailed')))
       } finally {
         setLoading(false)
       }
     }
     fetchDetail()
-  }, [owner, name])
+  }, [owner, name, t])
 
   useEffect(() => {
     const fetchContributors = async () => {
@@ -83,13 +86,13 @@ const RepoDetailPage: React.FC = () => {
         setContributorTotal(res.data.total || 0)
       } catch (e) {
         logger.error('Failed to load contributors', e)
-        message.error(getErrorMessage(e, '加载贡献者失败'))
+        message.error(getErrorMessage(e, t('errors.loadContributorsFailed')))
       } finally {
         setContribLoading(false)
       }
     }
     fetchContributors()
-  }, [owner, name, contribPage, contribPageSize])
+  }, [owner, name, contribPage, contribPageSize, t])
 
   const primary = domainThemes.opensource.primary
   const secondary = domainThemes.opensource.secondary
@@ -105,10 +108,10 @@ const RepoDetailPage: React.FC = () => {
   if (!detail) {
     return (
       <div style={{ padding: '88px 32px 80px' }}>
-        <Empty description="仓库不存在或已被移除" />
+        <Empty description={t('repo.detail.notFound')} />
         <div style={{ textAlign: 'center', marginTop: 16 }}>
           <Button onClick={() => navigate('/opensource')} icon={<ArrowLeftOutlined />}>
-            返回开源首页
+            {t('repo.detail.backToHome')}
           </Button>
         </div>
       </div>
@@ -152,7 +155,7 @@ const RepoDetailPage: React.FC = () => {
     <Row gutter={[16, 16]}>
       {ownerOrCommitters.length === 0 ? (
         <Col span={24}>
-          <Empty description="暂无核心团队成员数据" />
+          <Empty description={t('repo.detail.noTeam')} />
         </Col>
       ) : (
         ownerOrCommitters.map((c) => (
@@ -226,12 +229,12 @@ const RepoDetailPage: React.FC = () => {
 
   const contributorColumns = [
     {
-      title: '排名',
+      title: t('repo.detail.columns.rank'),
       width: 60,
       render: (_: unknown, __: unknown, index: number) => rankMedal(index),
     },
     {
-      title: '开发者',
+      title: t('repo.detail.columns.developer'),
       render: (_: unknown, record: OSRepositoryContributor) => (
         <Space>
           {record.avatar_url ? (
@@ -262,7 +265,7 @@ const RepoDetailPage: React.FC = () => {
       ),
     },
     {
-      title: '角色',
+      title: t('repo.detail.columns.role'),
       render: (_: unknown, record: OSRepositoryContributor) => renderRoleTag(record.roles),
     },
     {
@@ -279,7 +282,7 @@ const RepoDetailPage: React.FC = () => {
       dataIndex: 'issues_count',
     },
     {
-      title: '公司',
+      title: t('repo.detail.columns.company'),
       dataIndex: 'company',
       render: (v: string | null) => v || '-',
     },
@@ -296,7 +299,7 @@ const RepoDetailPage: React.FC = () => {
         pageSize: contribPageSize,
         total: contributorTotal,
         showSizeChanger: false,
-        showTotal: (t) => `共 ${t} 位贡献者`,
+        showTotal: count => t('repo.detail.contributorTotal', { n: count }),
         onChange: (p) => setContribPage(p),
       }}
       onRow={(record) => ({
@@ -309,8 +312,10 @@ const RepoDetailPage: React.FC = () => {
   const projectInfo = (
     <Card className="domain-card" style={{ borderLeft: `3px solid ${semanticColors.osGreenLight}` }}>
       <Descriptions column={1} labelStyle={{ fontWeight: 600, width: 120 }}>
-        <Descriptions.Item label="仓库全名">{detail.full_name}</Descriptions.Item>
-        <Descriptions.Item label="技术领域（要素）">
+        <Descriptions.Item label={t('repo.detail.info.fullName')}>
+          {detail.full_name}
+        </Descriptions.Item>
+        <Descriptions.Item label={t('repo.detail.info.techElements')}>
           <Space size={4} wrap>
             {techInfos.length ? (
               techInfos.map(t => (
@@ -323,7 +328,7 @@ const RepoDetailPage: React.FC = () => {
             )}
           </Space>
         </Descriptions.Item>
-        <Descriptions.Item label="主要语言">
+        <Descriptions.Item label={t('repo.detail.info.mainLanguage')}>
           {detail.language ? <Tag>{detail.language}</Tag> : '-'}
         </Descriptions.Item>
         <Descriptions.Item label="Topics">
@@ -340,7 +345,7 @@ const RepoDetailPage: React.FC = () => {
         <Descriptions.Item label="GitHub">
           <Link href={`https://github.com/${detail.full_name}`} target="_blank">
             <GithubOutlined style={{ marginRight: 4 }} />
-            查看仓库
+            {t('repo.detail.viewRepo')}
           </Link>
         </Descriptions.Item>
       </Descriptions>
@@ -356,7 +361,7 @@ const RepoDetailPage: React.FC = () => {
         onClick={() => navigateBack(navigate, '/opensource/repos')}
         style={{ marginBottom: 16 }}
       >
-        返回
+        {t('repo.detail.back')}
       </Button>
 
       {/* Header Card */}
@@ -412,7 +417,7 @@ const RepoDetailPage: React.FC = () => {
               <div style={{ marginTop: 4 }}>
                 <Link href={`https://github.com/${detail.full_name}`} target="_blank" style={{ fontSize: 13 }}>
                   <GithubOutlined style={{ marginRight: 4 }} />
-                  在 GitHub 上查看
+                  {t('repo.detail.viewOnGithub')}
                 </Link>
               </div>
             </Space>
@@ -443,7 +448,7 @@ const RepoDetailPage: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card className="domain-card">
             <Statistic
-              title="贡献者"
+              title={t('repo.detail.stats.contributors')}
               value={detail.contributor_count}
               prefix={<TeamOutlined style={{ color: semanticColors.cyan }} />}
             />
@@ -452,7 +457,7 @@ const RepoDetailPage: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card className="domain-card">
             <Statistic
-              title="主语言"
+              title={t('repo.detail.stats.mainLanguage')}
               value={detail.language || 'Unknown'}
               prefix={<CodeOutlined style={{ color: semanticColors.blue }} />}
             />
@@ -468,17 +473,17 @@ const RepoDetailPage: React.FC = () => {
           items={[
             {
               key: 'team',
-              label: '核心团队',
+              label: t('repo.detail.tabs.team'),
               children: teamCards,
             },
             {
               key: 'contributors',
-              label: `贡献者排行 (${contributorTotal})`,
+              label: t('repo.detail.tabs.contributors', { n: contributorTotal }),
               children: contributorTable,
             },
             {
               key: 'info',
-              label: '项目信息',
+              label: t('repo.detail.tabs.info'),
               children: projectInfo,
             },
           ]}

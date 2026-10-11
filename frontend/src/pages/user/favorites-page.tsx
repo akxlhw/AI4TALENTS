@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { logger } from '../../utils/logger'
 import { useAuth } from '../../contexts/AuthContext'
+import { useTranslation } from 'react-i18next'
 import { Modal, Tabs, Typography, message, type TablePaginationConfig } from 'antd'
 import { FolderOutlined, StarFilled } from '@ant-design/icons'
 import { api } from '../../services/api'
@@ -8,6 +9,8 @@ import TalentCompareModal from '../../components/TalentCompareModal'
 import ExportConfirmModal from '../../components/ExportConfirmModal'
 import { semanticColors } from '../../theme'
 import { useExportDownload } from '../../hooks/useExportDownload'
+import { i18n } from '../../i18n'
+import '../../i18n/namespaces/user'
 import type { FavoriteTalent, TalentPool, FollowupStatus } from '../../types'
 import FavoritesFilterBar from './components/favorites-filter-bar'
 import FavoritesTableCard from './components/favorites-table-card'
@@ -18,6 +21,7 @@ import { AddToPoolModal, CreatePoolModal, EditNotesModal } from './components/fa
 const { Title } = Typography
 
 const FavoritesPage: React.FC = () => {
+  const { t } = useTranslation(['user', 'common'])
   const { isAdmin } = useAuth()
   const [loading, setLoading] = useState(true)
   const [favorites, setFavorites] = useState<FavoriteTalent[]>([])
@@ -68,7 +72,8 @@ const FavoritesPage: React.FC = () => {
       setTotal(response.data.total || 0)
     } catch {
       logger.error('Operation failed')
-      message.error('加载收藏列表失败')
+      // Direct instance call keeps this callback's deps stable across language switches
+      message.error(i18n.t('user:favorites.loadFailed', { ns: 'user' }))
     } finally {
       setLoading(false)
     }
@@ -81,7 +86,7 @@ const FavoritesPage: React.FC = () => {
       setPools(response.data.items || [])
     } catch {
       logger.error('Operation failed')
-      message.error('加载人才池失败')
+      message.error(i18n.t('user:pools.loadFailed', { ns: 'user' }))
     } finally {
       setPoolsLoading(false)
     }
@@ -93,7 +98,7 @@ const FavoritesPage: React.FC = () => {
       setFollowupStatuses(response.data || [])
     } catch {
       logger.error('Operation failed')
-      message.error('加载跟进状态失败')
+      message.error(i18n.t('user:followup.loadFailed', { ns: 'user' }))
     }
   }, [])
 
@@ -131,19 +136,19 @@ const FavoritesPage: React.FC = () => {
 
   const handleRemoveFavorite = (record: FavoriteTalent) => {
     Modal.confirm({
-      title: '取消收藏',
-      content: `确定要取消收藏 "${record.name}" 吗？`,
-      okText: '确定',
-      cancelText: '取消',
+      title: t('user:favorites.removeTitle'),
+      content: t('user:favorites.removeConfirm', { name: record.name }),
+      okText: t('common:actions.confirm'),
+      cancelText: t('common:actions.cancel'),
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           await api.favorites.remove(record.talent_id)
           setFavorites(prev => prev.filter(f => f.favorite_id !== record.favorite_id))
           setTotal(prev => prev - 1)
-          message.success('已取消收藏')
+          message.success(t('user:favorites.removed'))
         } catch {
-          message.error('取消收藏失败')
+          message.error(t('user:favorites.removeFailed'))
         }
       },
     })
@@ -155,9 +160,9 @@ const FavoritesPage: React.FC = () => {
       setFavorites(prev =>
         prev.map(f => (f.talent_id === talentId ? { ...f, followup_status: status } : f))
       )
-      message.success('跟进状态已更新')
+      message.success(t('user:followup.updated'))
     } catch {
-      message.error('更新失败')
+      message.error(t('user:followup.updateFailed'))
     }
   }
 
@@ -175,16 +180,16 @@ const FavoritesPage: React.FC = () => {
     useExportDownload({
       getIds: () =>
         favorites.filter(f => selectedRowKeys.includes(f.favorite_id)).map(f => f.talent_id),
-      emptyWarning: '请先选择要导出的候选人',
+      emptyWarning: t('user:export.emptyWarning'),
       exportApi: (ids, format) => api.talents.export(ids, format),
       fileName: 'favorites_export',
-      successMessage: count => `已导出 ${count} 位候选人`,
-      formatError: () => '导出失败',
+      successMessage: count => t('user:export.success', { count }),
+      formatError: () => t('user:export.failed'),
     })
 
   const handleCompare = () => {
     if (selectedRowKeys.length < 2 || selectedRowKeys.length > 4) {
-      message.warning('请选择2-4位候选人进行对比')
+      message.warning(t('user:compare.warning'))
       return
     }
     setCompareModalVisible(true)
@@ -202,7 +207,7 @@ const FavoritesPage: React.FC = () => {
     <div style={{ padding: '88px 32px 80px' }}>
       <Title level={3}>
         <StarFilled style={{ marginRight: 8, color: semanticColors.gold }} />
-        我的收藏
+        {t('user:favorites.title')}
       </Title>
 
       <Tabs
@@ -213,7 +218,7 @@ const FavoritesPage: React.FC = () => {
             key: 'favorites',
             label: (
               <>
-                <StarFilled /> 收藏列表
+                <StarFilled /> {t('user:favorites.tab')}
               </>
             ),
             children: (
@@ -257,7 +262,7 @@ const FavoritesPage: React.FC = () => {
             key: 'pools',
             label: (
               <>
-                <FolderOutlined /> 人才池
+                <FolderOutlined /> {t('user:pools.tab')}
               </>
             ),
             children: (

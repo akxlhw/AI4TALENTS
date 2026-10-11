@@ -11,6 +11,7 @@
  */
 import { useState, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Card,
   Row,
@@ -41,6 +42,7 @@ import {
   useOverallTalents,
 } from '../../hooks/useQueries'
 import TopicTags from '../../components/TopicTags'
+import '../../i18n/namespaces/academic'
 
 const { Title, Text } = Typography
 
@@ -76,6 +78,7 @@ interface TalentItem {
 
 const TechDomainPage: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation(['academic', 'common'])
   const [searchParams] = useSearchParams()
 
   // 筛选状态
@@ -125,10 +128,10 @@ const TechDomainPage: React.FC = () => {
 
   // 角色类型选项
   const roleTypeOptions = [
-    { value: 'professor', label: '教授/研究员' },
-    { value: 'student', label: '在读学生' },
-    { value: 'graduated', label: '已毕业' },
-    { value: 'unknown', label: '待确认' },
+    { value: 'professor', label: t('roles.professor') },
+    { value: 'student', label: t('roles.enrolledStudent') },
+    { value: 'graduated', label: t('roles.graduated') },
+    { value: 'unknown', label: t('roles.pendingConfirm') },
   ]
 
   // 技术领域选项
@@ -164,7 +167,7 @@ const TechDomainPage: React.FC = () => {
   // 人才明细表格列
   const talentColumns: ColumnsType<TalentItem> = [
     {
-      title: '姓名',
+      title: t('columns.name'),
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => (
@@ -172,39 +175,39 @@ const TechDomainPage: React.FC = () => {
       ),
     },
     {
-      title: '院校机构',
+      title: t('columns.school'),
       dataIndex: 'school_name',
       key: 'school_name',
     },
     {
-      title: '角色',
+      title: t('columns.role'),
       dataIndex: 'role_type',
       key: 'role_type',
       render: (role) => {
-        const roleMap: Record<string, { color: string; text: string }> = {
-          professor: { color: 'blue', text: '教授/研究员' },
-          student: { color: 'green', text: '在读学生' },
-          graduated: { color: 'orange', text: '已毕业' },
-          unknown: { color: 'default', text: '待确认' },
+        const roleMap: Record<string, { color: string; labelKey: string }> = {
+          professor: { color: 'blue', labelKey: 'professor' },
+          student: { color: 'green', labelKey: 'enrolledStudent' },
+          graduated: { color: 'orange', labelKey: 'graduated' },
+          unknown: { color: 'default', labelKey: 'pendingConfirm' },
         }
-        const config = roleMap[role] || { color: 'default', text: role }
-        return <Tag color={config.color}>{config.text}</Tag>
+        const config = roleMap[role]
+        return <Tag color={config?.color || 'default'}>{config ? t(`roles.${config.labelKey}`) : role}</Tag>
       },
     },
     {
-      title: 'H指数',
+      title: t('columns.hIndex'),
       dataIndex: 'h_index',
       key: 'h_index',
       sorter: true,
     },
     {
-      title: '论文数',
+      title: t('columns.papersCount'),
       dataIndex: 'works_count',
       key: 'works_count',
       sorter: true,
     },
     {
-      title: '研究方向',
+      title: t('columns.researchDirections'),
       dataIndex: 'openalex_topics',
       key: 'openalex_topics',
       width: 200,
@@ -220,8 +223,8 @@ const TechDomainPage: React.FC = () => {
     <div style={{ padding: '88px 32px 80px' }}>
       {/* 页面标题 */}
       <div style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>技术领域</Title>
-        <Text type="secondary">从技术领域/技术方向视角分析人才供给</Text>
+        <Title level={4} style={{ margin: 0 }}>{t('techDomain.title')}</Title>
+        <Text type="secondary">{t('techDomain.subtitle')}</Text>
       </div>
 
       {/* 概要统计区 */}
@@ -230,35 +233,35 @@ const TechDomainPage: React.FC = () => {
           <Row gutter={24}>
             <Col span={4}>
               <Statistic
-                title="人才总数"
+                title={t('stats.totalTalents')}
                 value={stats.talent_count}
                 prefix={<TeamOutlined />}
               />
             </Col>
             <Col span={4}>
               <Statistic
-                title="教授/研究员"
+                title={t('stats.professors')}
                 value={stats.professor_count}
                 prefix={<UserOutlined />}
               />
             </Col>
             <Col span={4}>
               <Statistic
-                title="学生"
+                title={t('stats.students')}
                 value={stats.student_count}
                 prefix={<UserOutlined />}
               />
             </Col>
             <Col span={4}>
               <Statistic
-                title="覆盖院校机构"
+                title={t('stats.institutionsCovered')}
                 value={stats.school_count}
                 prefix={<AppstoreOutlined />}
               />
             </Col>
             <Col span={4}>
               <Statistic
-                title="覆盖国家"
+                title={t('stats.countriesCovered')}
                 value={stats.country_count}
                 prefix={<AppstoreOutlined />}
               />
@@ -271,10 +274,10 @@ const TechDomainPage: React.FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={[16, 16]}>
           <Col span={6}>
-            <div style={{ marginBottom: 4 }}><Text type="secondary">技术领域</Text></div>
+            <div style={{ marginBottom: 4 }}><Text type="secondary">{t('filters.techDomain')}</Text></div>
             <Select
               style={{ width: '100%' }}
-              placeholder="全部（可选筛选）"
+              placeholder={t('techDomain.allOptional')}
               value={techDomainId}
               onChange={handleTechDomainChange}
               options={domainOptions}
@@ -285,10 +288,10 @@ const TechDomainPage: React.FC = () => {
             />
           </Col>
           <Col span={6}>
-            <div style={{ marginBottom: 4 }}><Text type="secondary">国家</Text></div>
+            <div style={{ marginBottom: 4 }}><Text type="secondary">{t('filters.country')}</Text></div>
             <Select
               style={{ width: '100%' }}
-              placeholder="全部（可选筛选）"
+              placeholder={t('techDomain.allOptional')}
               value={countryId}
               onChange={setCountryId}
               allowClear
@@ -297,10 +300,10 @@ const TechDomainPage: React.FC = () => {
             />
           </Col>
           <Col span={6}>
-            <div style={{ marginBottom: 4 }}><Text type="secondary">院校机构</Text></div>
+            <div style={{ marginBottom: 4 }}><Text type="secondary">{t('filters.school')}</Text></div>
             <Select
               style={{ width: '100%' }}
-              placeholder="全部（可选筛选）"
+              placeholder={t('techDomain.allOptional')}
               value={schoolId}
               onChange={setSchoolId}
               allowClear
@@ -309,10 +312,10 @@ const TechDomainPage: React.FC = () => {
             />
           </Col>
           <Col span={6}>
-            <div style={{ marginBottom: 4 }}><Text type="secondary">人才角色</Text></div>
+            <div style={{ marginBottom: 4 }}><Text type="secondary">{t('filters.talentRole')}</Text></div>
             <Select
               style={{ width: '100%' }}
-              placeholder="全部（可选筛选）"
+              placeholder={t('techDomain.allOptional')}
               value={roleType}
               onChange={setRoleType}
               options={roleTypeOptions}
@@ -320,9 +323,9 @@ const TechDomainPage: React.FC = () => {
             />
           </Col>
           <Col span={6}>
-            <div style={{ marginBottom: 4 }}><Text type="secondary">关键词</Text></div>
+            <div style={{ marginBottom: 4 }}><Text type="secondary">{t('filters.keyword')}</Text></div>
             <Input
-              placeholder="姓名/研究方向"
+              placeholder={t('techDomain.keywordPlaceholder')}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               onPressEnter={handleSearch}
@@ -332,10 +335,10 @@ const TechDomainPage: React.FC = () => {
             <div style={{ marginBottom: 4 }}><Text type="secondary">&nbsp;</Text></div>
             <Space>
               <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                查询
+                {t('techDomain.query')}
               </Button>
               <Button icon={<ReloadOutlined />} onClick={handleReset}>
-                重置
+                {t('techDomain.reset')}
               </Button>
             </Space>
           </Col>
@@ -354,11 +357,11 @@ const TechDomainPage: React.FC = () => {
             pageSize,
             total,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (count) => t('common:pagination.total', { n: count }),
           }}
           onChange={handleTableChange}
           locale={{
-            emptyText: <Empty description="暂无数据" />,
+            emptyText: <Empty description={t('common:status.empty')} />,
           }}
         />
       </Card>

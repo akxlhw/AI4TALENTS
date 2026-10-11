@@ -1,0 +1,113 @@
+{
+  "common": {
+    "back": "返回",
+    "retry": "重试",
+    "reset": "重置",
+    "loadFailed": "加载失败",
+    "domain": "竞赛",
+    "totalItems": "共 {{n}} 条"
+  },
+  "medal": {
+    "gold": "金牌",
+    "silver": "银牌",
+    "bronze": "铜牌",
+    "hm": "荣誉提名"
+  },
+  "overview": {
+    "loadError": "加载竞赛概览失败",
+    "loadErrorRetry": "加载竞赛概览失败，请稍后重试",
+    "title": "竞赛人才",
+    "subtitle": "覆盖 ICPC / IOI / IMO / IPhO 等全球顶级赛事 · 发现顶尖竞赛选手",
+    "emptyTitle": "暂无竞赛人才数据",
+    "adminEmptyDescription": "数据库中还没有竞赛人才，请先在系统配置中导入赛事榜单数据",
+    "goImport": "去系统配置导入",
+    "userEmptyDescription": "管理员尚未导入竞赛数据，请稍后再来",
+    "stats": {
+      "talents": "收录选手",
+      "contests": "覆盖赛事",
+      "series": "赛事系列",
+      "medalists": "金牌选手"
+    },
+    "medalTop": "奖牌榜 Top 10",
+    "viewAll": "查看全部",
+    "contestsCount": "{{n}} 场",
+    "recentContests": "最近赛事",
+    "resultsCount": "{{n}} 条成绩",
+    "noContests": "暂无赛事数据",
+    "rating": "竞赛积分"
+  },
+  "search": {
+    "breadcrumb": "选手搜索",
+    "keywordPlaceholder": "搜索 handle / 真名...",
+    "countryPlaceholder": "国家代码",
+    "schoolPlaceholder": "学校",
+    "minRatingPlaceholder": "最低积分",
+    "rankPlaceholder": "段位",
+    "sort": {
+      "ratingDesc": "积分降序",
+      "ratingAsc": "积分升序",
+      "contestsDesc": "参赛场次多",
+      "medalsDesc": "奖牌数多",
+      "recentDesc": "最近参赛"
+    },
+    "loadError": "加载选手列表失败",
+    "loadErrorRetry": "加载选手列表失败，请稍后重试",
+    "noResultTitle": "未找到匹配的选手",
+    "noResultDescription": "尝试调整筛选条件",
+    "clearFilters": "清除筛选",
+    "personCount": "共 {{n}} 人",
+    "contestsCount": "参赛 {{n}} 场"
+  },
+  "talent": {
+    "loadError": "加载选手详情失败",
+    "loadErrorRetry": "加载选手详情失败，请稍后重试",
+    "notFoundTitle": "选手不存在或已删除",
+    "notFoundDescription": "该选手可能已被移除或链接有误",
+    "backToSearch": "返回搜索页",
+    "breadcrumbSearch": "搜索",
+    "globalRank": "全球排名 #{{rank}}",
+    "currentRating": "当前积分",
+    "maxRating": "最高积分 {{rating}}",
+    "contestsCount": "参赛 {{n}} 场",
+    "profile": "选手主页",
+    "resultsTab": "参赛史 ({{n}})",
+    "trendTab": "积分趋势",
+    "contestsTotal": "共 {{n}} 场",
+    "columns": {
+      "contest": "赛事",
+      "time": "时间",
+      "rank": "名次",
+      "award": "奖项",
+      "ratingChange": "积分变化"
+    }
+  },
+  "contest": {
+    "loadError": "加载赛事详情失败",
+    "loadErrorRetry": "加载赛事详情失败，请稍后重试",
+    "notFoundTitle": "赛事不存在或已删除",
+    "notFoundDescription": "该赛事可能已被移除或链接有误",
+    "backToHome": "返回竞赛首页",
+    "breadcrumbList": "赛事列表",
+    "duration": "时长 {{duration}}",
+    "minutes": "{{n}} 分钟",
+    "hours": "{{n}} 小时",
+    "hoursMinutes": "{{h}} 小时 {{m}} 分钟",
+    "sourceLink": "源站链接",
+    "individualBoard": "个人榜 ({{n}})",
+    "teamBoard": "团队榜 ({{n}})",
+    "emptyTitle": "暂无榜单数据",
+    "emptyDescription": "该赛事尚未导入成绩",
+    "membersCount": "{{n}} 人",
+    "columns": {
+      "rank": "名次",
+      "player": "选手",
+      "team": "队伍",
+      "school": "学校",
+      "country": "国家",
+      "score": "得分",
+      "ratingChange": "积分变动",
+      "award": "奖项",
+      "members": "成员"
+    }
+  }
+}

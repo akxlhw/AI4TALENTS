@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Modal, Table, Tag, Spin, message, Typography, Space } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { api } from '../services/api'
-import { getRoleTypeConfig } from '../constants/roleType'
+import { getRoleTypeConfig, LEGACY_ROLE_TYPE_MAP } from '../constants/roleType'
+import '../i18n/namespaces/academic'
 
 const { Text } = Typography
 
@@ -38,6 +40,7 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
   talentIds,
   onClose,
 }) => {
+  const { t } = useTranslation(['common', 'academic'])
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<CompareResponse | null>(null)
 
@@ -50,11 +53,11 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
       const detail = error instanceof Error && 'response' in error
         ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
         : undefined
-      message.error(detail || '获取对比数据失败')
+      message.error(detail || t('compare.loadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [talentIds])
+  }, [talentIds, t])
 
   useEffect(() => {
     if (visible && talentIds.length >= 2 && talentIds.length <= 4) {
@@ -73,9 +76,15 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
             )}
           </Space>
         )
-      case 'role_type':
+      case 'role_type': {
         const config = getRoleTypeConfig(talent.role_type)
-        return <Tag color={config.color}>{config.text}</Tag>
+        const normalized = LEGACY_ROLE_TYPE_MAP[talent.role_type] ?? talent.role_type
+        return (
+          <Tag color={config.color}>
+            {t(`roles.${normalized}`, { defaultValue: config.text })}
+          </Tag>
+        )
+      }
       case 'topic_tags':
         return (
           <Space size={4} wrap>
@@ -97,32 +106,32 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
 
   const columns = [
     {
-      title: '对比项',
+      title: t('compare.field'),
       dataIndex: 'label',
       key: 'label',
       width: 120,
       fixed: 'left' as const,
     },
-    ...(data?.talents || []).map((t) => ({
-      title: t.name,
-      dataIndex: `talent_${t.talent_id}`,
-      key: `talent_${t.talent_id}`,
+    ...(data?.talents || []).map((tal) => ({
+      title: tal.name,
+      dataIndex: `talent_${tal.talent_id}`,
+      key: `talent_${tal.talent_id}`,
       width: 200,
-      render: (_: unknown, record: { key: string; label: string }) => renderValue(record.key, t),
+      render: (_: unknown, record: { key: string; label: string }) => renderValue(record.key, tal),
     })),
   ]
 
   const tableData = (data?.comparison_fields || []).map(field => {
     const row: { key: string; label: string; [k: string]: unknown } = { key: field.key, label: field.label }
-    data?.talents.forEach(t => {
-      row[`talent_${t.talent_id}`] = (t as unknown as Record<string, unknown>)[field.key]
+    data?.talents.forEach(tal => {
+      row[`talent_${tal.talent_id}`] = (tal as unknown as Record<string, unknown>)[field.key]
     })
     return row
   })
 
   return (
     <Modal
-      title="候选人对比"
+      title={t('compare.title')}
       open={visible}
       onCancel={onClose}
       footer={null}
@@ -140,7 +149,7 @@ const TalentCompareModal: React.FC<TalentCompareModalProps> = ({
           />
         )}
         {!loading && !data && (
-          <Text type="secondary">请选择2-4位候选人进行对比</Text>
+          <Text type="secondary">{t('compare.selectHint')}</Text>
         )}
       </Spin>
     </Modal>

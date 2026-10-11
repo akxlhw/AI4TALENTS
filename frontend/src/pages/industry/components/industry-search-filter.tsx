@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Button, Card, Col, Input, Row, Select } from 'antd'
 import { ClearOutlined, SearchOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import type { IndustrySearchState } from '../../../stores/industrySearchStore'
 import { useIndustryPositions, useTechDirectionOptions } from '../../../hooks/useIndustryQueries'
 import {
-  CANDIDATE_STATUS_OPTIONS,
-  INDUSTRY_SORT_OPTIONS,
-  MIN_SCORE_OPTIONS,
-  SOURCE_PLATFORM_OPTIONS,
+  candidateStatusOptions,
+  industrySortOptions,
+  minScoreOptions,
+  sourcePlatformOptions,
 } from '../constants/industry-config'
 
 interface IndustrySearchFilterProps {
@@ -19,6 +20,7 @@ interface IndustrySearchFilterProps {
  * The parent page wraps it in a sticky container.
  */
 const IndustrySearchFilter: React.FC<IndustrySearchFilterProps> = ({ state }) => {
+  const { t } = useTranslation('industry')
   const { data: positions } = useIndustryPositions('open')
   const { data: directions } = useTechDirectionOptions()
 
@@ -47,7 +49,7 @@ const IndustrySearchFilter: React.FC<IndustrySearchFilterProps> = ({ state }) =>
       <Row gutter={[12, 12]} align="middle">
         <Col flex="auto">
           <Input.Search
-            placeholder="搜索姓名 / 公司 / 职位..."
+            placeholder={t('search.keywordPlaceholder')}
             prefix={<SearchOutlined style={{ color: '#b6c2d2' }} />}
             value={kw}
             onChange={e => {
@@ -55,7 +57,7 @@ const IndustrySearchFilter: React.FC<IndustrySearchFilterProps> = ({ state }) =>
               if (!e.target.value) state.setFilter('keyword', '')
             }}
             onSearch={v => state.setFilter('keyword', v.trim())}
-            enterButton="搜索"
+            enterButton={t('search.searchButton')}
             allowClear
           />
         </Col>
@@ -65,7 +67,7 @@ const IndustrySearchFilter: React.FC<IndustrySearchFilterProps> = ({ state }) =>
       <Row gutter={[12, 12]} align="middle" style={{ marginTop: 12 }}>
         <Col xs={12} sm={8} md={4}>
           <Select
-            placeholder="在招岗位"
+            placeholder={t('filter.position')}
             style={{ width: '100%' }}
             value={state.positionId ?? undefined}
             onChange={v => state.setFilter('positionId', v ?? null)}
@@ -77,36 +79,36 @@ const IndustrySearchFilter: React.FC<IndustrySearchFilterProps> = ({ state }) =>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Select
-            placeholder="最低匹配分"
+            placeholder={t('filter.minScore')}
             style={{ width: '100%' }}
             value={state.minScore ?? 0}
             onChange={v => state.setFilter('minScore', v === 0 ? null : v)}
-            options={MIN_SCORE_OPTIONS}
+            options={minScoreOptions()}
           />
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Select
-            placeholder="候选人状态"
+            placeholder={t('filter.status')}
             style={{ width: '100%' }}
             value={state.status || undefined}
             onChange={v => state.setFilter('status', v || '')}
-            options={CANDIDATE_STATUS_OPTIONS}
+            options={candidateStatusOptions()}
             allowClear
           />
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Select
-            placeholder="来源平台"
+            placeholder={t('filter.sourcePlatform')}
             style={{ width: '100%' }}
             value={state.sourcePlatform || undefined}
             onChange={v => state.setFilter('sourcePlatform', v || '')}
-            options={SOURCE_PLATFORM_OPTIONS}
+            options={sourcePlatformOptions()}
             allowClear
           />
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Select
-            placeholder="技术方向"
+            placeholder={t('filter.techDirection')}
             style={{ width: '100%' }}
             value={state.techDirection || undefined}
             onChange={v => state.setFilter('techDirection', v || '')}
@@ -123,7 +125,7 @@ const IndustrySearchFilter: React.FC<IndustrySearchFilterProps> = ({ state }) =>
                 style={{ width: '100%' }}
                 value={state.sortBy}
                 onChange={v => state.setFilter('sortBy', v)}
-                options={INDUSTRY_SORT_OPTIONS}
+                options={industrySortOptions()}
               />
             </Col>
             <Col flex="none">
@@ -133,9 +135,9 @@ const IndustrySearchFilter: React.FC<IndustrySearchFilterProps> = ({ state }) =>
                   setKw('')
                   state.resetFilters()
                 }}
-                title="清除全部筛选"
+                title={t('results.clearAllFilters')}
               >
-                清除
+                {t('filter.clearAll')}
               </Button>
             </Col>
           </Row>

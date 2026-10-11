@@ -1,0 +1,147 @@
+{
+  "search": {
+    "title": "开源人才搜索",
+    "placeholder": "搜索开发者、技术栈、公司...",
+    "noResults": "未找到符合条件的开发者",
+    "clearFilters": "清除筛选",
+    "resultCount": "共 {{n}} 条结果",
+    "selectAllSuccess": "已全选 {{n}} 位开发者",
+    "exportEmptyWarning": "请先选择要导出的开发者",
+    "exportSuccess": "已导出 {{n}} 位开发者"
+  },
+  "filter": {
+    "collapse": "收起筛选",
+    "expand": "展开筛选",
+    "mode": {
+      "keyword": "关键词",
+      "semantic": "语义",
+      "hybrid": "混合"
+    },
+    "techElements": "技术领域（要素）",
+    "techElementsPlaceholder": "选择技术要素",
+    "repos": "关联仓库",
+    "reposPlaceholder": "选择仓库",
+    "reposPlaceholderDisabled": "请先选择技术领域",
+    "location": "地区",
+    "locationPlaceholder": "如: Beijing",
+    "company": "公司",
+    "companyPlaceholder": "如: Microsoft",
+    "languages": "编程语言",
+    "languagesPlaceholder": "选择编程语言",
+    "group": "筛选",
+    "committer": "Committer",
+    "student": "在校生",
+    "chinaRelated": "中国背景",
+    "chinaRelatedTip": "姓名含中文或命中百家姓拼音，或地区位于中国",
+    "topOrg": "名企/名校",
+    "topOrgTip": "全球头部大厂 / 国内头部互联网 / 知名 AI 初创 / 知名院校（按公司字段匹配）",
+    "hasContact": "有联系方式",
+    "hasContactTip": "主页 / 邮箱 / 社媒，任一即算有联系方式"
+  },
+  "sort": {
+    "starsDesc": "Stars 降序",
+    "starsAsc": "Stars 升序",
+    "nameAsc": "名称升序",
+    "newest": "最新添加"
+  },
+  "results": {
+    "selectPage": "全选当前页",
+    "selectAll": "全选所有结果",
+    "selectedCount": "已选择 <strong>{{n}}</strong> 位开发者",
+    "cancelSelection": "取消选择"
+  },
+  "card": {
+    "student": "在校生",
+    "noBio": "暂无简介",
+    "languages": "开发语言",
+    "company": "公司",
+    "location": "地区",
+    "none": "无",
+    "select": "选择"
+  },
+  "detail": {
+    "back": "返回",
+    "notFound": "开发者不存在或已被移除",
+    "backToHome": "返回开源首页",
+    "favorite": "收藏",
+    "favorited": "已收藏",
+    "website": "个人主页",
+    "techStack": "技术栈:",
+    "tabs": {
+      "repositories": "仓库 ({{n}})",
+      "contributions": "贡献 ({{n}})",
+      "languageSkills": "语言技能 ({{n}})",
+      "similar": "相似推荐"
+    },
+    "noSimilar": "暂无相似推荐",
+    "columns": {
+      "repo": "仓库",
+      "language": "语言",
+      "role": "身份",
+      "repoCount": "仓库数",
+      "proficiency": "熟练度"
+    }
+  },
+  "insights": {
+    "title": "命中人才洞察（管理员）",
+    "loadHint": "展开后加载洞察数据",
+    "noMatch": "当前筛选无命中人才",
+    "total": "命中人数",
+    "contactable": "可触达（有联系方式）",
+    "techDist": "技术要素分布",
+    "repoTop": "来源仓库 Top 10",
+    "companyTop": "当前公司 Top 10",
+    "scopeNote": "统计范围为当前筛选条件的全部命中人才；语义/混合搜索模式下按关键词等价条件统计。"
+  },
+  "repo": {
+    "backToEco": "返回开源生态",
+    "listTitle": "代码仓库列表",
+    "searchPlaceholder": "搜索仓库名称...",
+    "techPlaceholder": "技术领域（要素）",
+    "sortPlaceholder": "排序方式",
+    "query": "查询",
+    "empty": "暂无仓库数据",
+    "noDescription": "暂无描述",
+    "totalRepos": "共 {{n}} 个仓库",
+    "detail": {
+      "back": "返回",
+      "notFound": "仓库不存在或已被移除",
+      "backToHome": "返回开源首页",
+      "viewOnGithub": "在 GitHub 上查看",
+      "viewRepo": "查看仓库",
+      "noTeam": "暂无核心团队成员数据",
+      "contributorTotal": "共 {{n}} 位贡献者",
+      "info": {
+        "fullName": "仓库全名",
+        "techElements": "技术领域（要素）",
+        "mainLanguage": "主要语言"
+      },
+      "stats": {
+        "contributors": "贡献者",
+        "mainLanguage": "主语言"
+      },
+      "tabs": {
+        "team": "核心团队",
+        "contributors": "贡献者排行 ({{n}})",
+        "info": "项目信息"
+      },
+      "columns": {
+        "rank": "排名",
+        "developer": "开发者",
+        "role": "角色",
+        "company": "公司"
+      }
+    }
+  },
+  "errors": {
+    "searchFailed": "搜索失败，请稍后重试",
+    "repoListLoadFailed": "仓库列表加载失败",
+    "favoriteFailed": "收藏操作失败",
+    "selectAllFailed": "全选失败",
+    "exportFailed": "导出失败",
+    "loadDetailFailed": "加载开发者详情失败",
+    "loadRepoFailed": "加载仓库详情失败",
+    "loadContributorsFailed": "加载贡献者失败",
+    "insightsLoadFailed": "洞察加载失败"
+  }
+}

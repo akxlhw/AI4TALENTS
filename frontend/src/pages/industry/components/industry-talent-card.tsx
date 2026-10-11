@@ -1,12 +1,13 @@
 import { Avatar, Card, Select, Tag, Typography, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import type { IndustryTalentSummary } from '../../../services/api/industry'
 import { useUpdateCandidateStatus } from '../../../hooks/useIndustryQueries'
 import { getErrorMessage } from '../../../utils'
 import {
   CANDIDATE_STATUS_COLORS,
-  CANDIDATE_STATUS_LABELS,
-  CANDIDATE_STATUS_OPTIONS,
+  candidateStatusLabel,
+  candidateStatusOptions,
   badgeStyle,
   badgeWrap,
   formatScore,
@@ -20,6 +21,7 @@ interface IndustryTalentCardProps {
 }
 
 const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
+  const { t } = useTranslation('industry')
   const navigate = useNavigate()
   const updateStatus = useUpdateCandidateStatus()
 
@@ -40,9 +42,9 @@ const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
       await updateStatus.mutateAsync({
         talentId: talent.talent_id, positionId: primary.position_id, patch: { status: value },
       })
-      message.success(`状态已更新为「${CANDIDATE_STATUS_LABELS[value] || value}」`)
+      message.success(t('card.statusUpdated', { status: candidateStatusLabel(value) }))
     } catch (e) {
-      message.error(getErrorMessage(e, '状态更新失败'))
+      message.error(getErrorMessage(e, t('card.statusUpdateFailed')))
     }
   }
 
@@ -124,15 +126,15 @@ const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
       {/* Stats row */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 10 }}>
         <div>
-          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>学历</Text>
+          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{t('card.degree')}</Text>
           <div style={{ fontWeight: 600, fontSize: 12, color: '#333' }}>{talent.degree || '-'}</div>
         </div>
         <div>
-          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>年限</Text>
+          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{t('card.years')}</Text>
           <div style={{ fontWeight: 600, fontSize: 12, color: '#333' }}>{talent.years_of_exp || '-'}</div>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>地区</Text>
+          <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{t('card.location')}</Text>
           <div style={{ fontWeight: 600, fontSize: 12, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {talent.location || '-'}
           </div>
@@ -155,7 +157,7 @@ const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
               </Tag>
             )}
             {otherPositions.length > 0 && (
-              <Text type="secondary" style={{ fontSize: 11 }}>+{otherPositions.length}岗位</Text>
+              <Text type="secondary" style={{ fontSize: 11 }}>{t('card.morePositions', { count: otherPositions.length })}</Text>
             )}
           </div>
         )}
@@ -163,12 +165,12 @@ const IndustryTalentCard: React.FC<IndustryTalentCardProps> = ({ talent }) => {
         {/* Status + action row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Tag color={CANDIDATE_STATUS_COLORS[status] || 'default'} style={{ margin: 0, fontSize: 11, borderRadius: 10, padding: '0 8px' }}>
-            {CANDIDATE_STATUS_LABELS[status] || status}
+            {candidateStatusLabel(status)}
           </Tag>
           {primary && (
-            <Select size="small" variant="borderless" value={status} options={CANDIDATE_STATUS_OPTIONS}
+            <Select size="small" variant="borderless" value={status} options={candidateStatusOptions()}
               loading={updateStatus.isPending} onChange={handleStatusChange}
-              style={{ width: 86, fontSize: 12 }} popupMatchSelectWidth={110} aria-label="修改候选人状态" />
+              style={{ width: 86, fontSize: 12 }} popupMatchSelectWidth={110} aria-label={t('card.statusAria')} />
           )}
         </div>
       </div>

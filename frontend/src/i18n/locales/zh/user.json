@@ -1,0 +1,142 @@
+{
+  "favorites": {
+    "title": "我的收藏",
+    "tab": "收藏列表",
+    "loadFailed": "加载收藏列表失败",
+    "removeTitle": "取消收藏",
+    "removeConfirm": "确定要取消收藏 \"{{name}}\" 吗？",
+    "removed": "已取消收藏",
+    "removeFailed": "取消收藏失败"
+  },
+  "followup": {
+    "loadFailed": "加载跟进状态失败",
+    "updated": "跟进状态已更新",
+    "updateFailed": "更新失败"
+  },
+  "pools": {
+    "tab": "人才池",
+    "loadFailed": "加载人才池失败",
+    "create": "创建人才池",
+    "detailComingSoon": "人才池详情页建设中，敬请期待",
+    "memberCount": "{{count}} 人",
+    "typeCustom": "自定义",
+    "empty": "暂无人才池"
+  },
+  "filter": {
+    "label": "筛选:",
+    "role": "角色",
+    "roleOptions": {
+      "professor": "教授/研究员",
+      "student": "学生",
+      "graduated": "毕业生"
+    },
+    "followup": "跟进状态",
+    "searchPlaceholder": "搜索姓名...",
+    "reset": "重置筛选"
+  },
+  "columns": {
+    "name": "姓名",
+    "role": "角色",
+    "school": "学校",
+    "hIndex": "H指数",
+    "followupStatus": "跟进状态",
+    "notes": "备注",
+    "actions": "操作",
+    "addToPool": "加入人才池",
+    "editNotes": "编辑备注",
+    "removeFavorite": "取消收藏"
+  },
+  "table": {
+    "selectedBefore": "已选择 ",
+    "selectedAfter": " 项",
+    "clearSelection": "取消选择",
+    "compare": "对比 ({{count}}/4)",
+    "export": "导出",
+    "total": "共 {{count}} 位收藏",
+    "empty": "暂无收藏",
+    "goSearch": "去搜索人才"
+  },
+  "export": {
+    "emptyWarning": "请先选择要导出的候选人",
+    "success": "已导出 {{count}} 位候选人",
+    "failed": "导出失败"
+  },
+  "compare": {
+    "warning": "请选择2-4位候选人进行对比"
+  },
+  "notesModal": {
+    "title": "编辑备注",
+    "save": "保存",
+    "candidate": "候选人：",
+    "placeholder": "记录关注该候选人的原因...",
+    "saved": "备注已更新",
+    "saveFailed": "更新备注失败"
+  },
+  "createPool": {
+    "title": "创建人才池",
+    "confirm": "创建",
+    "hint": "人才池可以帮助您分类管理关注的候选人",
+    "namePlaceholder": "人才池名称",
+    "descPlaceholder": "描述（可选）",
+    "nameRequired": "请输入人才池名称",
+    "success": "人才池已创建",
+    "failed": "创建失败"
+  },
+  "addToPool": {
+    "title": "加入人才池",
+    "confirm": "加入",
+    "introBefore": "将 ",
+    "introAfter": " 加入人才池：",
+    "poolPlaceholder": "选择人才池",
+    "poolOption": "{{name}} ({{count}}人)",
+    "empty": "暂无人才池，请先创建",
+    "success": "已加入人才池",
+    "failed": "加入失败"
+  },
+  "feedback": {
+    "title": "意见反馈",
+    "formTitle": "提交新建议",
+    "historyTitle": "我的历史建议",
+    "loadFailed": "加载反馈列表失败",
+    "submitted": "建议提交成功",
+    "submitFailed": "提交失败",
+    "submit": "提交建议",
+    "category": {
+      "label": "分类",
+      "placeholder": "选择分类",
+      "required": "请选择分类",
+      "feature": "功能建议",
+      "bug": "Bug 反馈",
+      "dataIssue": "数据纠错",
+      "experience": "体验反馈",
+      "other": "其他"
+    },
+    "subject": {
+      "label": "主题",
+      "required": "请输入主题",
+      "placeholder": "简要描述您的建议主题"
+    },
+    "content": {
+      "label": "详细内容",
+      "required": "请输入详细内容",
+      "placeholder": "请详细描述您的建议、遇到的问题或数据纠错内容..."
+    },
+    "attachments": "截图附件",
+    "columns": {
+      "category": "分类",
+      "subject": "主题",
+      "content": "内容",
+      "status": "状态",
+      "adminReply": "管理员回复",
+      "attachments": "附件",
+      "createdAt": "提交时间"
+    },
+    "status": {
+      "open": "待处理",
+      "inProgress": "处理中",
+      "resolved": "已解决",
+      "closed": "已关闭"
+    },
+    "emptyHistory": "暂无提交记录"
+  }
+}

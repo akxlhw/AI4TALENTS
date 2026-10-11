@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Card,
   Input,
@@ -21,6 +22,7 @@ import {
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
 import AILoadingOverlay from '../../../components/AILoadingOverlay'
+import '../../../i18n/namespaces/academic'
 import type { TechDomain, JDFeatures, MatchResultItem } from '../../../types'
 
 const { Text } = Typography
@@ -78,6 +80,7 @@ const JDMatchTab: React.FC<JDMatchTabProps> = ({
   onAddToReference,
 }) => {
   const navigate = useNavigate()
+  const { t } = useTranslation('academic')
 
   const savedJDState = getSavedJDState()
   const [jdText, setJdText] = useState(savedJDState.jdText)
@@ -97,7 +100,7 @@ const JDMatchTab: React.FC<JDMatchTabProps> = ({
 
   const handleParseJD = async () => {
     if (!jdText.trim()) {
-      message.warning('请输入职位描述')
+      message.warning(t('jdMatch.enterJD'))
       return
     }
     setParsing(true)
@@ -107,9 +110,9 @@ const JDMatchTab: React.FC<JDMatchTabProps> = ({
       setJdFeatures(features)
       setParsedJdText(jdText)
       saveJDState(jdText, jdText, features, matchResults, jdTookMs)
-      message.success('JD 解析成功')
+      message.success(t('jdMatch.parseSuccess'))
     } catch (error: unknown) {
-      message.error(getErrorMessage(error, 'JD 解析失败'))
+      message.error(getErrorMessage(error, t('jdMatch.parseError')))
     } finally {
       setParsing(false)
     }
@@ -117,7 +120,7 @@ const JDMatchTab: React.FC<JDMatchTabProps> = ({
 
   const handleMatch = async () => {
     if (!jdText.trim()) {
-      message.warning('请输入职位描述')
+      message.warning(t('jdMatch.enterJD'))
       return
     }
     setJdLoading(true)
@@ -142,7 +145,7 @@ const JDMatchTab: React.FC<JDMatchTabProps> = ({
       setJdTookMs(took)
 
       setJdLoading(false)
-      message.success(`找到 ${response.data.total} 位匹配候选人`)
+      message.success(t('jdMatch.found', { n: response.data.total }))
 
       if (jdText !== parsedJdText) {
         try {
@@ -158,7 +161,7 @@ const JDMatchTab: React.FC<JDMatchTabProps> = ({
         saveJDState(jdText, jdText, jdFeatures, results, took)
       }
     } catch (error: unknown) {
-      message.error(getErrorMessage(error, '匹配失败，请检查 LLM 配置'))
+      message.error(getErrorMessage(error, t('jdMatch.matchError')))
       setJdLoading(false)
     }
   }
@@ -190,7 +193,7 @@ const JDMatchTab: React.FC<JDMatchTabProps> = ({
 
   const jdColumns = [
     {
-      title: '排名',
+      title: t('columns.rank'),
       key: 'rank',
       width: 60,
       render: (_: unknown, __: MatchResultItem, index: number) => {
@@ -199,7 +202,7 @@ const JDMatchTab: React.FC<JDMatchTabProps> = ({
       },
     },
     {
-      title: '姓名',
+      title: t('columns.name'),
       dataIndex: 'name',
       key: 'name',
       width: 100,
@@ -208,7 +211,7 @@ const JDMatchTab: React.FC<JDMatchTabProps> = ({
       ),
     },
     {
-      title: '院校机构',
+      title: t('columns.school'),
       key: 'school',
       width: 150,
       ellipsis: true,
@@ -230,16 +233,16 @@ const JDMatchTab: React.FC<JDMatchTabProps> = ({
       },
     },
     {
-      title: '推荐指数',
+      title: t('columns.recommendIndex'),
       dataIndex: 'overall_score',
       key: 'overall_score',
       width: 70,
-      render: (score: number) => <Tag color={score >= 70 ? 'green' : score >= 50 ? 'blue' : 'default'}>{score.toFixed(0)}分</Tag>,
+      render: (score: number) => <Tag color={score >= 70 ? 'green' : score >= 50 ? 'blue' : 'default'}>{t('jdMatch.score', { n: score.toFixed(0) })}</Tag>,
       sorter: (a: MatchResultItem, b: MatchResultItem) => a.overall_score - b.overall_score,
       defaultSortOrder: 'descend' as const,
     },
     {
-      title: '匹配原因',
+      title: t('columns.matchReasons'),
       dataIndex: 'match_reasons',
       key: 'match_reasons',
       width: 200,
@@ -250,12 +253,12 @@ const JDMatchTab: React.FC<JDMatchTabProps> = ({
       ),
     },
     {
-      title: '操作',
+      title: t('columns.actions'),
       key: 'actions',
       width: 100,
       render: (_: unknown, record: MatchResultItem) => (
         <Button type="link" size="small" icon={<UserAddOutlined />} onClick={() => onAddToReference(record.talent_id, record.name)}>
-          加入参考
+          {t('searchTab.addToReference')}
         </Button>
       ),
     },
@@ -263,58 +266,71 @@ const JDMatchTab: React.FC<JDMatchTabProps> = ({
 
   return (
     <>
-      <Card title="职位描述 (JD)" style={{ marginBottom: 16 }}>
-        <TextArea placeholder="请粘贴职位描述内容，包括岗位职责、任职要求、技能要求等..." value={jdText} onChange={(e) => setJdText(e.target.value)} rows={6} showCount maxLength={5000} />
+      <Card title={t('jdMatch.jdTitle')} style={{ marginBottom: 16 }}>
+        <TextArea placeholder={t('jdMatch.placeholder')} value={jdText} onChange={(e) => setJdText(e.target.value)} rows={6} showCount maxLength={5000} />
         <Space style={{ marginTop: 12, flexWrap: 'wrap' }}>
-          <Text type="secondary">筛选:</Text>
-          <Select placeholder="技术领域" value={jdTechDomainFilter} onChange={setJdTechDomainFilter} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techDomainOptions} />
-          <Select placeholder="国家" value={jdCountryFilter} onChange={setJdCountryFilter} allowClear showSearch optionFilterProp="label" style={{ width: 120 }} options={countryOptions} />
-          <Select placeholder="院校机构" value={jdSchoolFilter} onChange={setJdSchoolFilter} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
-          <Select placeholder="角色" value={jdRoleFilter} onChange={setJdRoleFilter} allowClear style={{ width: 140 }} options={[{ value: 'professor', label: '教授/研究员' }, { value: 'student', label: '学生' }, { value: 'graduated', label: '毕业生' }]} />
-          <Select placeholder="最少引用" value={jdMinCitations} onChange={setJdMinCitations} allowClear style={{ width: 120 }} options={[{ value: 100, label: '100次以上' }, { value: 500, label: '500次以上' }, { value: 1000, label: '1000次以上' }]} />
-          {hasJdActiveFilters && <Button type="link" icon={<ReloadOutlined />} onClick={handleResetJdFilters}>重置筛选</Button>}
+          <Text type="secondary">{t('filters.label')}</Text>
+          <Select placeholder={t('filters.techDomain')} value={jdTechDomainFilter} onChange={setJdTechDomainFilter} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techDomainOptions} />
+          <Select placeholder={t('filters.country')} value={jdCountryFilter} onChange={setJdCountryFilter} allowClear showSearch optionFilterProp="label" style={{ width: 120 }} options={countryOptions} />
+          <Select placeholder={t('filters.school')} value={jdSchoolFilter} onChange={setJdSchoolFilter} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
+          <Select placeholder={t('filters.role')} value={jdRoleFilter} onChange={setJdRoleFilter} allowClear style={{ width: 140 }} options={[{ value: 'professor', label: t('roles.professor') }, { value: 'student', label: t('roles.student') }, { value: 'graduated', label: t('roles.graduate') }]} />
+          <Select placeholder={t('filters.minCitations')} value={jdMinCitations} onChange={setJdMinCitations} allowClear style={{ width: 120 }} options={[{ value: 100, label: t('searchTab.minCitations.c100') }, { value: 500, label: t('searchTab.minCitations.c500') }, { value: 1000, label: t('searchTab.minCitations.c1000') }]} />
+          {hasJdActiveFilters && <Button type="link" icon={<ReloadOutlined />} onClick={handleResetJdFilters}>{t('searchTab.resetFilters')}</Button>}
         </Space>
         <Space style={{ marginTop: 12 }}>
-          <Button type="primary" icon={<SearchOutlined />} onClick={handleMatch} loading={jdLoading}>智能匹配 {jdTookMs && <Text type="secondary">({jdTookMs.toFixed(0)}ms)</Text>}</Button>
-          <Button icon={<BulbOutlined />} onClick={handleParseJD} loading={parsing}>解析 JD</Button>
-          <Button icon={<ReloadOutlined />} onClick={handleResetJD}>重置</Button>
+          <Button type="primary" icon={<SearchOutlined />} onClick={handleMatch} loading={jdLoading}>{t('jdMatch.matchAction')} {jdTookMs && <Text type="secondary">({jdTookMs.toFixed(0)}ms)</Text>}</Button>
+          <Button icon={<BulbOutlined />} onClick={handleParseJD} loading={parsing}>{t('jdMatch.parseAction')}</Button>
+          <Button icon={<ReloadOutlined />} onClick={handleResetJD}>{t('jdMatch.reset')}</Button>
         </Space>
       </Card>
       {jdFeatures && (
-        <Card title="JD 解析结果 - 研究方向" style={{ marginBottom: 16 }} size="small">
+        <Card title={t('jdMatch.parseResultTitle')} style={{ marginBottom: 16 }} size="small">
           <Space size={[4, 4]} wrap>
             {jdFeatures.research_areas?.length > 0 ? (
               jdFeatures.research_areas.map((area, idx) => <Tag key={idx} color="green">{area}</Tag>)
             ) : (
-              <span style={{ color: '#999' }}>未识别到研究方向关键词</span>
+              <span style={{ color: '#999' }}>{t('jdMatch.noResearchAreas')}</span>
             )}
           </Space>
         </Card>
       )}
-      <Card title={`匹配结果 (${matchResults.length} 人)`}>
+      <Card title={t('jdMatch.resultsTitle', { n: matchResults.length })}>
         <Spin spinning={jdLoading}>
           {matchResults.length > 0 ? (
             <Table
               dataSource={matchResults}
               columns={jdColumns}
               rowKey="talent_id"
-              pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 位候选人` }}
+              pagination={{ pageSize: 10, showTotal: (count) => t('jdMatch.candidatesTotal', { n: count }) }}
               scroll={{ x: 1200 }}
               onChange={(pagination) => setJdPage(pagination.current || 1)}
             />
           ) : (
-            <Empty description='请输入职位描述并点击"智能匹配"开始搜索' image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Empty description={t('jdMatch.empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
           )}
         </Spin>
       </Card>
 
       <AILoadingOverlay
         visible={jdLoading || parsing}
-        title={parsing ? '解析职位描述' : '智能匹配中'}
+        title={parsing ? t('jdMatch.loadingParseTitle') : t('jdMatch.loadingMatchTitle')}
         steps={
           parsing
-            ? ['连接 AI 服务', '分析职位描述', '提取技能要求', '识别研究方向', '生成特征向量']
-            : ['连接 AI 服务', '解析关键信息', '搜索候选人', '计算匹配度', '生成推荐理由', '排序结果']
+            ? [
+                t('jdMatch.loadingSteps.connect'),
+                t('jdMatch.loadingSteps.analyzeJD'),
+                t('jdMatch.loadingSteps.extractSkills'),
+                t('jdMatch.loadingSteps.identifyDirections'),
+                t('jdMatch.loadingSteps.generateVectors'),
+              ]
+            : [
+                t('jdMatch.loadingSteps.connect'),
+                t('jdMatch.loadingSteps.parseInfo'),
+                t('jdMatch.loadingSteps.searchCandidates'),
+                t('jdMatch.loadingSteps.computeScores'),
+                t('jdMatch.loadingSteps.generateReasons'),
+                t('jdMatch.loadingSteps.rankResults'),
+              ]
         }
       />
     </>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { logger } from '../../utils/logger'
 import { navigateBack } from '../../utils/navigation'
 import {
@@ -26,10 +27,11 @@ import {
 } from '@ant-design/icons'
 import { api } from '../../services/api'
 import { semanticColors } from '../../theme'
-import { getRoleTypeConfig, ROLE_TYPE_MAP } from '../../constants/roleType'
+import { getRoleTypeConfig, LEGACY_ROLE_TYPE_MAP, ROLE_TYPE_MAP } from '../../constants/roleType'
 import TopicTags from '../../components/TopicTags'
 import { formatNumber } from '../../utils/format'
 import { getErrorMessage } from '../../utils'
+import '../../i18n/namespaces/academic'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -75,6 +77,7 @@ interface TalentListResponse {
 const SchoolDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { t } = useTranslation(['academic', 'common'])
   const [loading, setLoading] = useState(true)
   const [school, setSchool] = useState<SchoolDetail | null>(null)
   const [talents, setTalents] = useState<Talent[]>([])
@@ -93,11 +96,11 @@ const SchoolDetailPage: React.FC = () => {
       setSchool(response.data)
     } catch (error) {
       logger.error('Failed to fetch school detail:', error)
-      setLoadError(getErrorMessage(error, '加载院校详情失败'))
+      setLoadError(getErrorMessage(error, t('schoolDetail.loadError')))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   const fetchTalents = useCallback(async (pageNum: number) => {
     if (!school) return
@@ -114,11 +117,11 @@ const SchoolDetailPage: React.FC = () => {
       setPage(pageNum)
     } catch (error) {
       logger.error('Failed to fetch talents:', error)
-      message.error(getErrorMessage(error, '加载人才列表失败'))
+      message.error(getErrorMessage(error, t('schoolDetail.loadTalentsError')))
     } finally {
       setTalentsLoading(false)
     }
-  }, [school, roleFilter])
+  }, [school, roleFilter, t])
 
   useEffect(() => {
     if (id) {
@@ -146,14 +149,14 @@ const SchoolDetailPage: React.FC = () => {
         {loadError ? (
           <Empty description={loadError}>
             <Button type="primary" onClick={() => id && fetchSchoolDetail(parseInt(id))}>
-              重试
+              {t('common:actions.retry')}
             </Button>
           </Empty>
         ) : (
-          <Empty description="未找到该学校信息" />
+          <Empty description={t('schoolDetail.notFound')} />
         )}
         <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <Button onClick={() => navigateBack(navigate, '/country-school')}>返回</Button>
+          <Button onClick={() => navigateBack(navigate, '/country-school')}>{t('detail.back')}</Button>
         </div>
       </Card>
     )
@@ -161,7 +164,7 @@ const SchoolDetailPage: React.FC = () => {
 
   const columns = [
     {
-      title: '姓名',
+      title: t('columns.name'),
       dataIndex: 'name',
       key: 'name',
       width: 160,
@@ -177,24 +180,25 @@ const SchoolDetailPage: React.FC = () => {
       ),
     },
     {
-      title: '角色',
+      title: t('columns.role'),
       dataIndex: 'role_type',
       key: 'role_type',
       width: 100,
       render: (role: string) => {
         const config = getRoleTypeConfig(role)
-        return <Tag color={config.color}>{config.text}</Tag>
+        const roleKey = LEGACY_ROLE_TYPE_MAP[role] || role
+        return <Tag color={config.color}>{t(`roles.${roleKey}`, { defaultValue: config.text })}</Tag>
       },
     },
     {
-      title: '论文',
+      title: t('columns.works'),
       dataIndex: 'works_count',
       key: 'works_count',
       width: 80,
       align: 'center' as const,
     },
     {
-      title: '引用',
+      title: t('columns.citations'),
       dataIndex: 'cited_by_count',
       key: 'cited_by_count',
       width: 100,
@@ -202,14 +206,14 @@ const SchoolDetailPage: React.FC = () => {
       render: (count: number) => formatNumber(count),
     },
     {
-      title: 'H指数',
+      title: t('columns.hIndex'),
       dataIndex: 'h_index',
       key: 'h_index',
       width: 80,
       align: 'center' as const,
     },
     {
-      title: '研究方向',
+      title: t('columns.researchDirections'),
       dataIndex: 'openalex_topics',
       key: 'openalex_topics',
       width: 200,
@@ -245,7 +249,7 @@ const SchoolDetailPage: React.FC = () => {
                 )}
                 {school.homepage_url && (
                   <a href={school.homepage_url} target="_blank" rel="noopener noreferrer">
-                    <Tag color="green">访问官网</Tag>
+                    <Tag color="green">{t('schoolDetail.visitHomepage')}</Tag>
                   </a>
                 )}
               </Space>
@@ -264,7 +268,7 @@ const SchoolDetailPage: React.FC = () => {
         <Row gutter={24}>
           <Col xs={12} sm={6}>
             <Statistic
-              title="总人才数"
+              title={t('stats.totalTalentCount')}
               value={school.talent_count}
               prefix={<TeamOutlined />}
               valueStyle={{ color: semanticColors.blue }}
@@ -272,7 +276,7 @@ const SchoolDetailPage: React.FC = () => {
           </Col>
           <Col xs={12} sm={6}>
             <Statistic
-              title="教授/研究员"
+              title={t('stats.professors')}
               value={school.professor_count}
               prefix={<TrophyOutlined />}
               valueStyle={{ color: semanticColors.green }}
@@ -280,7 +284,7 @@ const SchoolDetailPage: React.FC = () => {
           </Col>
           <Col xs={12} sm={6}>
             <Statistic
-              title="学生"
+              title={t('stats.students')}
               value={school.student_count}
               prefix={<UserOutlined />}
               valueStyle={{ color: semanticColors.gold }}
@@ -288,7 +292,7 @@ const SchoolDetailPage: React.FC = () => {
           </Col>
           <Col xs={12} sm={6}>
             <Statistic
-              title="毕业生"
+              title={t('stats.graduates')}
               value={school.graduate_count}
               valueStyle={{ color: semanticColors.purple }}
             />
@@ -301,19 +305,19 @@ const SchoolDetailPage: React.FC = () => {
         title={
           <Space>
             <TeamOutlined />
-            <span>人才列表</span>
+            <span>{t('schoolDetail.talentsTitle')}</span>
             <Badge count={talentsTotal} showZero style={{ backgroundColor: semanticColors.blue }} />
           </Space>
         }
         extra={
           <Space>
-            <Text type="secondary">筛选:</Text>
+            <Text type="secondary">{t('filters.label')}</Text>
             <Tag
               color={!roleFilter ? 'blue' : 'default'}
               style={{ cursor: 'pointer' }}
               onClick={() => setRoleFilter(undefined)}
             >
-              全部
+              {t('schoolDetail.allRoles')}
             </Tag>
             {Object.entries(ROLE_TYPE_MAP).map(([key, config]) => (
               <Tag
@@ -322,7 +326,7 @@ const SchoolDetailPage: React.FC = () => {
                 style={{ cursor: 'pointer' }}
                 onClick={() => setRoleFilter(key)}
               >
-                {config.text}
+                {t(`roles.${key}`, { defaultValue: config.text })}
               </Tag>
             ))}
           </Space>
@@ -338,11 +342,11 @@ const SchoolDetailPage: React.FC = () => {
             pageSize,
             total: talentsTotal,
             showSizeChanger: false,
-            showTotal: (total) => `共 ${total} 位人才`,
+            showTotal: (total) => t('schoolDetail.talentsTotal', { n: total }),
           }}
           onChange={(pagination) => fetchTalents(pagination.current || 1)}
           locale={{
-            emptyText: <Empty description="该学校暂无人才数据" />,
+            emptyText: <Empty description={t('schoolDetail.empty')} />,
           }}
         />
       </Card>

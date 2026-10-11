@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { navigateBack } from '../../utils/navigation'
 import { logger } from '../../utils/logger'
+import '@/i18n/namespaces/open-source'
 import {
   Card,
   Row,
@@ -39,6 +41,7 @@ const { Title, Text, Paragraph } = Typography
 
 const DeveloperDetailPage: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation('openSource')
   const { id } = useParams<{ id: string }>()
   const developerId = parseInt(id || '0')
 
@@ -59,13 +62,13 @@ const DeveloperDetailPage: React.FC = () => {
         setIsFavorite((favoriteRes.data.developer_ids || []).includes(developerId))
       } catch (e) {
         logger.error('Failed to load developer detail', e)
-        message.error(getErrorMessage(e, '加载开发者详情失败'))
+        message.error(getErrorMessage(e, t('errors.loadDetailFailed')))
       } finally {
         setLoading(false)
       }
     }
     fetchDetail()
-  }, [developerId])
+  }, [developerId, t])
 
   const handleToggleFavorite = async () => {
     try {
@@ -78,7 +81,7 @@ const DeveloperDetailPage: React.FC = () => {
       }
     } catch (e) {
       logger.error('Favorite toggle failed', e)
-      message.error(getErrorMessage(e, '收藏操作失败'))
+      message.error(getErrorMessage(e, t('errors.favoriteFailed')))
     }
   }
 
@@ -96,10 +99,10 @@ const DeveloperDetailPage: React.FC = () => {
   if (!detail) {
     return (
       <div style={{ padding: '88px 32px 80px' }}>
-        <Empty description="开发者不存在或已被移除" />
+        <Empty description={t('detail.notFound')} />
         <div style={{ textAlign: 'center', marginTop: 16 }}>
           <Button onClick={() => navigate('/opensource')} icon={<ArrowLeftOutlined />}>
-            返回开源首页
+            {t('detail.backToHome')}
           </Button>
         </div>
       </div>
@@ -108,7 +111,7 @@ const DeveloperDetailPage: React.FC = () => {
 
   const repoColumns = [
     {
-      title: '仓库',
+      title: t('detail.columns.repo'),
       dataIndex: 'full_name',
       key: 'full_name',
       render: (text: string) => (
@@ -119,7 +122,7 @@ const DeveloperDetailPage: React.FC = () => {
       ),
     },
     {
-      title: '语言',
+      title: t('detail.columns.language'),
       dataIndex: 'language',
       key: 'language',
       render: (lang: string | null) => lang ? <Tag>{lang}</Tag> : '-',
@@ -148,7 +151,7 @@ const DeveloperDetailPage: React.FC = () => {
 
   const contributionColumns = [
     {
-      title: '仓库',
+      title: t('detail.columns.repo'),
       dataIndex: 'repo_full_name',
       key: 'repo_full_name',
       render: (text: string) => <Text style={{ fontFamily: 'monospace', fontSize: 13 }}>{text}</Text>,
@@ -172,7 +175,7 @@ const DeveloperDetailPage: React.FC = () => {
       width: 100,
     },
     {
-      title: '身份',
+      title: t('detail.columns.role'),
       key: 'role',
       width: 120,
       render: (_: unknown, record: OSContribution) => (
@@ -190,19 +193,19 @@ const DeveloperDetailPage: React.FC = () => {
 
   const languageColumns = [
     {
-      title: '语言',
+      title: t('detail.columns.language'),
       dataIndex: 'language',
       key: 'language',
       render: (lang: string) => <Tag color="processing">{lang}</Tag>,
     },
     {
-      title: '仓库数',
+      title: t('detail.columns.repoCount'),
       dataIndex: 'repo_count',
       key: 'repo_count',
       width: 100,
     },
     {
-      title: '熟练度',
+      title: t('detail.columns.proficiency'),
       dataIndex: 'proficiency_score',
       key: 'proficiency_score',
       width: 200,
@@ -223,7 +226,7 @@ const DeveloperDetailPage: React.FC = () => {
       label: (
         <span>
           <GithubOutlined style={{ marginRight: 6 }} />
-          仓库 ({detail.repositories?.length || 0})
+          {t('detail.tabs.repositories', { n: detail.repositories?.length || 0 })}
         </span>
       ),
       children: (
@@ -241,7 +244,7 @@ const DeveloperDetailPage: React.FC = () => {
       label: (
         <span>
           <BranchesOutlined style={{ marginRight: 6 }} />
-          贡献 ({detail.contributions?.length || 0})
+          {t('detail.tabs.contributions', { n: detail.contributions?.length || 0 })}
         </span>
       ),
       children: (
@@ -259,7 +262,7 @@ const DeveloperDetailPage: React.FC = () => {
       label: (
         <span>
           <CodeOutlined style={{ marginRight: 6 }} />
-          语言技能 ({detail.language_skills?.length || 0})
+          {t('detail.tabs.languageSkills', { n: detail.language_skills?.length || 0 })}
         </span>
       ),
       children: (
@@ -277,13 +280,13 @@ const DeveloperDetailPage: React.FC = () => {
       label: (
         <span>
           <UserOutlined style={{ marginRight: 6 }} />
-          相似推荐
+          {t('detail.tabs.similar')}
         </span>
       ),
       children: (
         <Row gutter={[16, 16]}>
           {(detail.similar_developers || []).length === 0 ? (
-            <Col span={24}><Empty description="暂无相似推荐" /></Col>
+            <Col span={24}><Empty description={t('detail.noSimilar')} /></Col>
           ) : (
             (detail.similar_developers || []).map((dev) => (
               <Col xs={24} sm={12} lg={8} key={dev.developer_id}>
@@ -314,7 +317,7 @@ const DeveloperDetailPage: React.FC = () => {
     <div style={{ padding: '88px 32px 80px' }}>
       {/* Breadcrumb */}
       <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigateBack(navigate, '/opensource/search')} style={{ marginBottom: 16 }}>
-        返回
+        {t('detail.back')}
       </Button>
 
       {/* Profile Header */}
@@ -355,7 +358,7 @@ const DeveloperDetailPage: React.FC = () => {
                   {Object.entries(detail.social_links || {}).map(([platform, url]) => (
                     <Tag key={platform} icon={<GlobalOutlined />}>
                       <a href={url} target="_blank" rel="noopener noreferrer">
-                        {platform === 'twitter' ? 'X/Twitter' : platform === 'linkedin' ? 'LinkedIn' : platform === 'website' ? '个人主页' : platform}
+                        {platform === 'twitter' ? 'X/Twitter' : platform === 'linkedin' ? 'LinkedIn' : platform === 'website' ? t('detail.website') : platform}
                       </a>
                     </Tag>
                   ))}
@@ -369,7 +372,7 @@ const DeveloperDetailPage: React.FC = () => {
                   onClick={handleToggleFavorite}
                   style={isFavorite ? { background: semanticColors.red, borderColor: semanticColors.red } : {}}
                 >
-                  {isFavorite ? '已收藏' : '收藏'}
+                  {isFavorite ? t('detail.favorited') : t('detail.favorite')}
                 </Button>
               </Space>
             </div>
@@ -400,7 +403,7 @@ const DeveloperDetailPage: React.FC = () => {
 
       {/* Language Tags */}
       <Card className="domain-card" style={{ marginBottom: 24 }} size="small" styles={{ body: { padding: 16 } }}>
-        <Text strong style={{ marginRight: 12 }}>技术栈:</Text>
+        <Text strong style={{ marginRight: 12 }}>{t('detail.techStack')}</Text>
         <Space wrap>
           {(detail.primary_languages || []).map((lang) => (
             <Tag key={lang} color="blue">{lang}</Tag>

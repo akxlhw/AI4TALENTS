@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Row, Col, Pagination, Typography, Spin, Tag, Tabs, Button, Card } from 'antd'
 import { HomeOutlined, ArrowLeftOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { useLabTalents, useLabProfile, useAdvisorNetwork } from '../../hooks/useLabQueries'
 import { useLabSearchStore } from '../../stores/labSearchStore'
 import { applyDomainCssVars } from '../../theme'
@@ -11,11 +12,13 @@ import LabTalentCard from './components/lab-talent-card'
 import AdvisorNetworkChart from './components/advisor-network-chart'
 import EmptyPlaceholder from '../../components/EmptyPlaceholder'
 import BreadcrumbNav from '../../components/BreadcrumbNav'
-import { ROLE_TAB_CONFIG } from './constants/lab-role'
+import { useRoleTabConfig } from './constants/lab-role'
+import '../../i18n/namespaces/lab'
 
 const { Text } = Typography
 
 const LabSearchPage: React.FC = () => {
+  const { t } = useTranslation('lab')
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const state = useLabSearchStore()
@@ -77,9 +80,9 @@ const LabSearchPage: React.FC = () => {
   if (error) {
     return (
       <EmptyPlaceholder
-        title="加载失败"
-        description={error.message || '请稍后重试'}
-        action={{ label: '重试', onClick: () => refetch() }}
+        title={t('common.loadFailed')}
+        description={error.message || t('common.retryLater')}
+        action={{ label: t('common.retry'), onClick: () => refetch() }}
       />
     )
   }
@@ -114,7 +117,7 @@ const LabSearchPage: React.FC = () => {
                 onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
                 onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
               >
-                <ArrowLeftOutlined style={{ fontSize: 12 }} /> 返回
+                <ArrowLeftOutlined style={{ fontSize: 12 }} /> {t('common.back')}
               </span>
             </div>
 
@@ -150,7 +153,7 @@ const LabSearchPage: React.FC = () => {
                   </Text>
                   {!isLoading && (
                     <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
-                      共 {total} 人
+                      {t('common.personCount', { n: total })}
                     </Text>
                   )}
                   {profile?.homepage && (
@@ -166,7 +169,7 @@ const LabSearchPage: React.FC = () => {
                         gap: 4,
                       }}
                     >
-                      <HomeOutlined /> 官网
+                      <HomeOutlined /> {t('common.officialSite')}
                     </a>
                   )}
                 </div>
@@ -196,7 +199,7 @@ const LabSearchPage: React.FC = () => {
                       marginTop: 4,
                     }}
                   >
-                    研究领域：{profile.research_focus}
+                    {t('search.researchFocus', { focus: profile.research_focus })}
                   </Text>
                 )}
               </div>
@@ -234,9 +237,11 @@ const LabSearchPage: React.FC = () => {
             onClick={() => navigate(-1)}
             style={{ color: 'var(--domain-primary, #0D2B4E)', fontWeight: 500, marginBottom: 4 }}
           >
-            返回
+            {t('common.back')}
           </Button>
-          <BreadcrumbNav items={[{ label: 'AI Native', path: '/lab' }, { label: '全部人才' }]} />
+          <BreadcrumbNav
+            items={[{ label: 'AI Native', path: '/lab' }, { label: t('search.allTalents') }]}
+          />
         </div>
       )}
 
@@ -244,10 +249,11 @@ const LabSearchPage: React.FC = () => {
         {state.parentLab && profile ? (
           <Tabs
             activeKey={mainTab}
-            onChange={k => setMainTab(k as 'talents' | 'advisors')}            items={[
+            onChange={k => setMainTab(k as 'talents' | 'advisors')}
+            items={[
               {
                 key: 'talents',
-                label: '人才列表',
+                label: t('search.talentList'),
                 children: (
                   <RoleTabs
                     roleDist={profile.role_distribution || {}}
@@ -269,7 +275,7 @@ const LabSearchPage: React.FC = () => {
               },
               {
                 key: 'advisors',
-                label: '师从关系',
+                label: t('search.mentorship'),
                 children: (
                   <Card style={{ borderRadius: 12 }}>
                     <AdvisorNetworkInline parentLab={state.parentLab} navigate={navigate} />
@@ -303,18 +309,19 @@ const AdvisorNetworkInline: React.FC<{
   parentLab: string
   navigate: (path: string) => void
 }> = ({ parentLab, navigate }) => {
+  const { t } = useTranslation('lab')
   const { data: network, isLoading } = useAdvisorNetwork(parentLab)
 
   if (isLoading) {
     return (
       <div style={{ textAlign: 'center', padding: 48 }}>
-        <Spin tip="加载导师网络..." />
+        <Spin tip={t('search.loadingNetwork')} />
       </div>
     )
   }
 
   if (!network || network.nodes.length === 0) {
-    return <Text type="secondary">该实验室暂无导师关系数据</Text>
+    return <Text type="secondary">{t('search.noAdvisorData')}</Text>
   }
 
   return (
@@ -335,21 +342,24 @@ const RoleTabs: React.FC<
     onRoleChange: (role: string) => void
   }>
 > = ({ roleDist, activeRole, onRoleChange, children }) => {
+  const roleTabConfig = useRoleTabConfig()
   const total = Object.values(roleDist).reduce((a, b) => a + b, 0)
-  const tabItems = ROLE_TAB_CONFIG.filter(r => {
-    if (r.key === '') return true // always show "全部"
-    return (roleDist[r.key] || 0) > 0
-  }).map(r => ({
-    key: r.key,
-    label: (
-      <span>
-        {r.label}
-        <span style={{ marginLeft: 6, fontSize: 12, color: '#94a3b8' }}>
-          {r.key === '' ? total : roleDist[r.key] || 0}
+  const tabItems = roleTabConfig
+    .filter(r => {
+      if (r.key === '') return true // always show "全部"
+      return (roleDist[r.key] || 0) > 0
+    })
+    .map(r => ({
+      key: r.key,
+      label: (
+        <span>
+          {r.label}
+          <span style={{ marginLeft: 6, fontSize: 12, color: '#94a3b8' }}>
+            {r.key === '' ? total : roleDist[r.key] || 0}
+          </span>
         </span>
-      </span>
-    ),
-  }))
+      ),
+    }))
 
   return (
     <Tabs
@@ -370,13 +380,14 @@ const SearchResults: React.FC<{
   onPageChange: (p: number) => void
   onReset: () => void
 }> = ({ isLoading, items, total, page, pageSize, onPageChange, onReset }) => {
+  const { t } = useTranslation('lab')
   return (
     <Spin spinning={isLoading}>
       {items.length === 0 && !isLoading ? (
         <EmptyPlaceholder
-          title="未找到匹配的人才"
-          description="尝试调整筛选条件"
-          action={{ label: '清除筛选', onClick: onReset }}
+          title={t('search.noResultTitle')}
+          description={t('search.noResultDescription')}
+          action={{ label: t('search.clearFilters'), onClick: onReset }}
         />
       ) : (
         <>
@@ -393,7 +404,7 @@ const SearchResults: React.FC<{
               total={total}
               pageSize={pageSize}
               onChange={onPageChange}
-              showTotal={t => `共 ${t} 人`}
+              showTotal={count => t('common.personCount', { n: count })}
             />
           </div>
         </>

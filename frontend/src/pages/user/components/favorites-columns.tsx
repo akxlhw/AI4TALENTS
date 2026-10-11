@@ -8,6 +8,7 @@ import {
   StarFilled,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { semanticColors } from '../../../theme'
 import { getFollowupStatusConfig, getRoleTypeConfig } from '../../../constants'
 import type { FavoriteTalent, FollowupStatus } from '../../../types'
@@ -30,10 +31,11 @@ export function useFavoriteColumns({
   onAddToPool,
 }: UseFavoriteColumnsOptions): ColumnsType<FavoriteTalent> {
   const navigate = useNavigate()
+  const { t } = useTranslation('user')
 
   return [
     {
-      title: '姓名',
+      title: t('columns.name'),
       dataIndex: 'name',
       key: 'name',
       width: 180,
@@ -52,7 +54,7 @@ export function useFavoriteColumns({
       ),
     },
     {
-      title: '角色',
+      title: t('columns.role'),
       dataIndex: 'role_type',
       key: 'role_type',
       width: 100,
@@ -62,7 +64,7 @@ export function useFavoriteColumns({
       },
     },
     {
-      title: '学校',
+      title: t('columns.school'),
       dataIndex: 'school_name',
       key: 'school_name',
       width: 150,
@@ -75,14 +77,14 @@ export function useFavoriteColumns({
         ),
     },
     {
-      title: 'H指数',
+      title: t('columns.hIndex'),
       dataIndex: 'h_index',
       key: 'h_index',
       width: 80,
       align: 'center' as const,
     },
     {
-      title: '跟进状态',
+      title: t('columns.followupStatus'),
       dataIndex: 'followup_status',
       key: 'followup_status',
       width: 120,
@@ -107,7 +109,7 @@ export function useFavoriteColumns({
       },
     },
     {
-      title: '备注',
+      title: t('columns.notes'),
       dataIndex: 'notes',
       key: 'notes',
       width: 150,
@@ -124,13 +126,13 @@ export function useFavoriteColumns({
         ),
     },
     {
-      title: '操作',
+      title: t('columns.actions'),
       key: 'actions',
       width: 140,
       fixed: 'right' as const,
       render: (_record: FavoriteTalent, record: FavoriteTalent) => (
         <Space size="small">
-          <Tooltip title="加入人才池">
+          <Tooltip title={t('columns.addToPool')}>
             <Button
               type="text"
               size="small"
@@ -138,7 +140,7 @@ export function useFavoriteColumns({
               onClick={() => onAddToPool(record)}
             />
           </Tooltip>
-          <Tooltip title="编辑备注">
+          <Tooltip title={t('columns.editNotes')}>
             <Button
               type="text"
               size="small"
@@ -146,7 +148,7 @@ export function useFavoriteColumns({
               onClick={() => onEditNotes(record)}
             />
           </Tooltip>
-          <Tooltip title="取消收藏">
+          <Tooltip title={t('columns.removeFavorite')}>
             <Button
               type="text"
               size="small"

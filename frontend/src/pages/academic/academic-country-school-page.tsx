@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { logger } from '../../utils/logger'
 import {
   Card,
@@ -32,6 +33,7 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import { api } from '../../services/api'
 import { getErrorMessage } from '../../utils'
+import '../../i18n/namespaces/academic'
 
 const { Title, Text } = Typography
 
@@ -42,22 +44,18 @@ const NORTH_AMERICA_CODES = new Set(['US', 'CA'])
 const ASIA_PACIFIC_CODES = new Set(['CN', 'JP', 'KR', 'SG', 'AU', 'NZ', 'HK', 'MO', 'TW', 'IN', 'MY', 'TH'])
 const EUROPE_CODES = new Set(['GB', 'DE', 'FR', 'CH', 'NL', 'IT', 'ES', 'SE', 'AT', 'BE', 'DK', 'FI', 'NO', 'IE', 'PT', 'PL'])
 
-// 区域配置 - countries 数组会在运行时动态填充
-const REGIONS: Record<string, { name: string; countries: string[] }> = {
+// 区域配置 - countries 数组会在运行时动态填充；区域名走 i18n（countrySchool.regions.<key>）
+const REGIONS: Record<string, { countries: string[] }> = {
   north_america: {
-    name: '北美地区',
     countries: Array.from(NORTH_AMERICA_CODES)
   },
   asia_pacific: {
-    name: '亚太地区',
     countries: Array.from(ASIA_PACIFIC_CODES)
   },
   europe: {
-    name: '欧洲地区',
     countries: Array.from(EUROPE_CODES)
   },
   other: {
-    name: '其他',
     countries: [] // 动态计算
   }
 }
@@ -82,6 +80,7 @@ interface School {
 
 const CountrySchoolPage: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation('academic')
   const [searchParams] = useSearchParams()
 
   // 筛选状态
@@ -169,9 +168,9 @@ const CountrySchoolPage: React.FC = () => {
       setCountries(response.data.items || [])
     } catch (error) {
       logger.error('Failed to fetch countries:', error)
-      message.error(getErrorMessage(error, '加载国家列表失败'))
+      message.error(getErrorMessage(error, t('countrySchool.loadCountriesError')))
     }
-  }, [])
+  }, [t])
 
   // 加载学校列表（分页加载全量数据用于客户端区域筛选）
   const fetchSchools = useCallback(async () => {
@@ -190,11 +189,11 @@ const CountrySchoolPage: React.FC = () => {
       setSchools(allItems)
     } catch (error) {
       logger.error('Failed to fetch schools:', error)
-      message.error(getErrorMessage(error, '加载院校列表失败'))
+      message.error(getErrorMessage(error, t('countrySchool.loadSchoolsError')))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   const fetchSummary = useCallback(async () => {
     setSummaryLoading(true)
@@ -208,11 +207,11 @@ const CountrySchoolPage: React.FC = () => {
       })
     } catch (error) {
       logger.error('Failed to fetch summary:', error)
-      message.error(getErrorMessage(error, '加载统计数据失败'))
+      message.error(getErrorMessage(error, t('countrySchool.loadSummaryError')))
     } finally {
       setSummaryLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     fetchCountries()
@@ -264,7 +263,7 @@ const CountrySchoolPage: React.FC = () => {
   // 学校表格列
   const schoolColumns: ColumnsType<School> = [
     {
-      title: '院校机构',
+      title: t('columns.school'),
       dataIndex: 'school_name',
       key: 'school_name',
       render: (text, record) => (
@@ -272,18 +271,18 @@ const CountrySchoolPage: React.FC = () => {
       ),
     },
     {
-      title: '国家',
+      title: t('columns.country'),
       dataIndex: 'country_name',
       key: 'country_name',
     },
     {
-      title: '教授/研究员',
+      title: t('columns.professorCount'),
       dataIndex: 'professor_count',
       key: 'professor_count',
       sorter: true,
     },
     {
-      title: '学生',
+      title: t('columns.studentCount'),
       dataIndex: 'student_count',
       key: 'student_count',
       sorter: true,
@@ -309,20 +308,20 @@ const CountrySchoolPage: React.FC = () => {
         label: (
           <Space>
             <GlobalOutlined />
-            {REGIONS[regionKey].name}
+            {t(`countrySchool.regions.${regionKey}`)}
             <Tag color="blue" style={{ marginLeft: 4 }}>{regionSchools.length}</Tag>
           </Space>
         ),
       }
     })
-  }, [schools, otherRegionCountryCodes])
+  }, [schools, otherRegionCountryCodes, t])
 
   return (
     <div style={{ padding: '88px 32px 80px' }}>
       {/* 页面标题 */}
       <div style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>院校机构</Title>
-        <Text type="secondary">按区域分类展示院校机构</Text>
+        <Title level={4} style={{ margin: 0 }}>{t('countrySchool.title')}</Title>
+        <Text type="secondary">{t('countrySchool.subtitle')}</Text>
       </div>
 
       {/* 概要统计区 */}
@@ -331,27 +330,27 @@ const CountrySchoolPage: React.FC = () => {
           <Row gutter={24}>
             <Col span={4}>
               <Statistic
-                title="人才总数"
+                title={t('stats.totalTalents')}
                 value={summary.talentCount}
                 prefix={<TeamOutlined />}
               />
             </Col>
             <Col span={4}>
               <Statistic
-                title="教授/研究员"
+                title={t('stats.professors')}
                 value={summary.professorCount}
                 prefix={<UserOutlined />}
               />
             </Col>
             <Col span={4}>
               <Statistic
-                title="学生"
+                title={t('stats.students')}
                 value={summary.studentCount}
               />
             </Col>
             <Col span={4}>
               <Statistic
-                title="覆盖院校机构"
+                title={t('stats.institutionsCovered')}
                 value={summary.schoolCount}
                 prefix={<BankOutlined />}
               />
@@ -364,10 +363,10 @@ const CountrySchoolPage: React.FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={[16, 16]}>
           <Col span={6}>
-            <div style={{ marginBottom: 4 }}><Text type="secondary">国家</Text></div>
+            <div style={{ marginBottom: 4 }}><Text type="secondary">{t('filters.country')}</Text></div>
             <Select
               style={{ width: '100%' }}
-              placeholder="全部国家"
+              placeholder={t('countrySchool.allCountries')}
               value={countryCode}
               onChange={setCountryCode}
               options={countryOptions}
@@ -377,9 +376,9 @@ const CountrySchoolPage: React.FC = () => {
             />
           </Col>
           <Col span={6}>
-            <div style={{ marginBottom: 4 }}><Text type="secondary">关键词</Text></div>
+            <div style={{ marginBottom: 4 }}><Text type="secondary">{t('filters.keyword')}</Text></div>
             <Input
-              placeholder="院校名称"
+              placeholder={t('countrySchool.schoolNamePlaceholder')}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
@@ -388,7 +387,7 @@ const CountrySchoolPage: React.FC = () => {
             <div style={{ marginBottom: 4 }}><Text type="secondary">&nbsp;</Text></div>
             <Space>
               <Button icon={<ReloadOutlined />} onClick={handleReset}>
-                重置
+                {t('countrySchool.reset')}
               </Button>
             </Space>
           </Col>
@@ -407,9 +406,9 @@ const CountrySchoolPage: React.FC = () => {
           dataSource={filteredSchools}
           rowKey="school_id"
           loading={loading}
-          pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 所院校` }}
+          pagination={{ pageSize: 10, showTotal: (total) => t('countrySchool.schoolsTotal', { n: total }) }}
           locale={{
-            emptyText: <Empty description="该区域暂无院校数据" />,
+            emptyText: <Empty description={t('countrySchool.emptyRegion')} />,
           }}
         />
       </Card>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Input, Modal, Select, Typography, message } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../../services/api'
 import type { FavoriteTalent, TalentPool } from '../../../types'
 
@@ -18,6 +19,7 @@ export const EditNotesModal: React.FC<EditNotesModalProps> = ({
   onCancel,
   onSaved,
 }) => {
+  const { t } = useTranslation(['user', 'common'])
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -32,9 +34,9 @@ export const EditNotesModal: React.FC<EditNotesModalProps> = ({
     try {
       await api.favorites.update(favorite.talent_id, notes)
       onSaved(favorite.favorite_id, notes)
-      message.success('备注已更新')
+      message.success(t('user:notesModal.saved'))
     } catch {
-      message.error('更新备注失败')
+      message.error(t('user:notesModal.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -42,22 +44,22 @@ export const EditNotesModal: React.FC<EditNotesModalProps> = ({
 
   return (
     <Modal
-      title="编辑备注"
+      title={t('user:notesModal.title')}
       open={open}
       onOk={handleSave}
       onCancel={onCancel}
       confirmLoading={saving}
-      okText="保存"
-      cancelText="取消"
+      okText={t('user:notesModal.save')}
+      cancelText={t('common:actions.cancel')}
     >
       <div style={{ marginBottom: 16 }}>
         <p style={{ marginBottom: 8 }}>
-          <strong>候选人：</strong>
+          <strong>{t('user:notesModal.candidate')}</strong>
           {favorite?.name}
         </p>
         <Input.TextArea
           rows={4}
-          placeholder="记录关注该候选人的原因..."
+          placeholder={t('user:notesModal.placeholder')}
           value={notes}
           onChange={e => setNotes(e.target.value)}
           maxLength={500}
@@ -75,6 +77,7 @@ interface CreatePoolModalProps {
 }
 
 export const CreatePoolModal: React.FC<CreatePoolModalProps> = ({ open, onCancel, onCreated }) => {
+  const { t } = useTranslation(['user', 'common'])
   const [poolName, setPoolName] = useState('')
   const [poolDesc, setPoolDesc] = useState('')
   const [creating, setCreating] = useState(false)
@@ -86,7 +89,7 @@ export const CreatePoolModal: React.FC<CreatePoolModalProps> = ({ open, onCancel
 
   const handleCreate = async () => {
     if (!poolName.trim()) {
-      message.warning('请输入人才池名称')
+      message.warning(t('user:createPool.nameRequired'))
       return
     }
 
@@ -96,11 +99,11 @@ export const CreatePoolModal: React.FC<CreatePoolModalProps> = ({ open, onCancel
         pool_name: poolName.trim(),
         scope_desc: poolDesc || undefined,
       })
-      message.success('人才池已创建')
+      message.success(t('user:createPool.success'))
       resetFields()
       onCreated()
     } catch {
-      message.error('创建失败')
+      message.error(t('user:createPool.failed'))
     } finally {
       setCreating(false)
     }
@@ -108,7 +111,7 @@ export const CreatePoolModal: React.FC<CreatePoolModalProps> = ({ open, onCancel
 
   return (
     <Modal
-      title="创建人才池"
+      title={t('user:createPool.title')}
       open={open}
       onOk={handleCreate}
       onCancel={() => {
@@ -116,20 +119,20 @@ export const CreatePoolModal: React.FC<CreatePoolModalProps> = ({ open, onCancel
         onCancel()
       }}
       confirmLoading={creating}
-      okText="创建"
-      cancelText="取消"
+      okText={t('user:createPool.confirm')}
+      cancelText={t('common:actions.cancel')}
     >
       <div style={{ marginBottom: 16 }}>
-        <Text type="secondary">人才池可以帮助您分类管理关注的候选人</Text>
+        <Text type="secondary">{t('user:createPool.hint')}</Text>
       </div>
       <Input
-        placeholder="人才池名称"
+        placeholder={t('user:createPool.namePlaceholder')}
         value={poolName}
         onChange={e => setPoolName(e.target.value)}
         style={{ marginBottom: 12 }}
       />
       <Input.TextArea
-        placeholder="描述（可选）"
+        placeholder={t('user:createPool.descPlaceholder')}
         value={poolDesc}
         onChange={e => setPoolDesc(e.target.value)}
         rows={3}
@@ -151,6 +154,7 @@ export const AddToPoolModal: React.FC<AddToPoolModalProps> = ({
   open,
   onClose,
 }) => {
+  const { t } = useTranslation(['user', 'common'])
   const [selectedPoolId, setSelectedPoolId] = useState<number | undefined>()
 
   const handleClose = () => {
@@ -163,46 +167,48 @@ export const AddToPoolModal: React.FC<AddToPoolModalProps> = ({
 
     try {
       await api.talentPools.addMember(selectedPoolId, favorite.talent_id)
-      message.success('已加入人才池')
+      message.success(t('user:addToPool.success'))
       handleClose()
     } catch (err) {
       const axiosError = err as { response?: { data?: { detail?: string } } }
       if (axiosError.response?.data?.detail) {
         message.warning(axiosError.response.data.detail)
       } else {
-        message.error('加入失败')
+        message.error(t('user:addToPool.failed'))
       }
     }
   }
 
   return (
     <Modal
-      title="加入人才池"
+      title={t('user:addToPool.title')}
       open={open}
       onOk={handleAdd}
       onCancel={handleClose}
-      okText="加入"
-      cancelText="取消"
+      okText={t('user:addToPool.confirm')}
+      cancelText={t('common:actions.cancel')}
       okButtonProps={{ disabled: !selectedPoolId }}
     >
       <div style={{ marginBottom: 16 }}>
         <Text>
-          将 <strong>{favorite?.name}</strong> 加入人才池：
+          {t('user:addToPool.introBefore')}
+          <strong>{favorite?.name}</strong>
+          {t('user:addToPool.introAfter')}
         </Text>
       </div>
       <Select
-        placeholder="选择人才池"
+        placeholder={t('user:addToPool.poolPlaceholder')}
         value={selectedPoolId}
         onChange={setSelectedPoolId}
         style={{ width: '100%' }}
         options={pools.map(p => ({
           value: p.pool_id,
-          label: `${p.pool_name} (${p.member_count}人)`,
+          label: t('user:addToPool.poolOption', { name: p.pool_name, count: p.member_count }),
         }))}
       />
       {pools.length === 0 && (
         <Text type="secondary" style={{ marginTop: 8, display: 'block' }}>
-          暂无人才池，请先创建
+          {t('user:addToPool.empty')}
         </Text>
       )}
     </Modal>

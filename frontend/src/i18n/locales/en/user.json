@@ -1,0 +1,142 @@
+{
+  "favorites": {
+    "title": "My Favorites",
+    "tab": "Favorites",
+    "loadFailed": "Failed to load favorites",
+    "removeTitle": "Remove from Favorites",
+    "removeConfirm": "Remove \"{{name}}\" from favorites?",
+    "removed": "Removed from favorites",
+    "removeFailed": "Failed to remove favorite"
+  },
+  "followup": {
+    "loadFailed": "Failed to load follow-up statuses",
+    "updated": "Follow-up status updated",
+    "updateFailed": "Update failed"
+  },
+  "pools": {
+    "tab": "Talent Pools",
+    "loadFailed": "Failed to load talent pools",
+    "create": "Create Pool",
+    "detailComingSoon": "The talent pool detail page is under construction — coming soon",
+    "memberCount": "{{count}} members",
+    "typeCustom": "Custom",
+    "empty": "No talent pools yet"
+  },
+  "filter": {
+    "label": "Filters:",
+    "role": "Role",
+    "roleOptions": {
+      "professor": "Professor / Researcher",
+      "student": "Student",
+      "graduated": "Graduate"
+    },
+    "followup": "Follow-up",
+    "searchPlaceholder": "Search by name...",
+    "reset": "Reset Filters"
+  },
+  "columns": {
+    "name": "Name",
+    "role": "Role",
+    "school": "School",
+    "hIndex": "H-index",
+    "followupStatus": "Follow-up",
+    "notes": "Notes",
+    "actions": "Actions",
+    "addToPool": "Add to talent pool",
+    "editNotes": "Edit notes",
+    "removeFavorite": "Remove from favorites"
+  },
+  "table": {
+    "selectedBefore": "",
+    "selectedAfter": " selected",
+    "clearSelection": "Clear Selection",
+    "compare": "Compare ({{count}}/4)",
+    "export": "Export",
+    "total": "{{count}} favorites",
+    "empty": "No favorites yet",
+    "goSearch": "Search Talent"
+  },
+  "export": {
+    "emptyWarning": "Select candidates to export first",
+    "success": "Exported {{count}} candidates",
+    "failed": "Export failed"
+  },
+  "compare": {
+    "warning": "Select 2-4 candidates to compare"
+  },
+  "notesModal": {
+    "title": "Edit Notes",
+    "save": "Save",
+    "candidate": "Candidate: ",
+    "placeholder": "Note down why you are following this candidate...",
+    "saved": "Notes updated",
+    "saveFailed": "Failed to update notes"
+  },
+  "createPool": {
+    "title": "Create Talent Pool",
+    "confirm": "Create",
+    "hint": "Talent pools help you organize and manage the candidates you follow",
+    "namePlaceholder": "Pool name",
+    "descPlaceholder": "Description (optional)",
+    "nameRequired": "Please enter a pool name",
+    "success": "Talent pool created",
+    "failed": "Failed to create"
+  },
+  "addToPool": {
+    "title": "Add to Talent Pool",
+    "confirm": "Add",
+    "introBefore": "Add ",
+    "introAfter": " to a talent pool:",
+    "poolPlaceholder": "Select a talent pool",
+    "poolOption": "{{name}} ({{count}})",
+    "empty": "No talent pools yet — create one first",
+    "success": "Added to talent pool",
+    "failed": "Failed to add"
+  },
+  "feedback": {
+    "title": "Feedback",
+    "formTitle": "Submit a Suggestion",
+    "historyTitle": "My Past Suggestions",
+    "loadFailed": "Failed to load the feedback list",
+    "submitted": "Suggestion submitted",
+    "submitFailed": "Submit failed",
+    "submit": "Submit Suggestion",
+    "category": {
+      "label": "Category",
+      "placeholder": "Select a category",
+      "required": "Please select a category",
+      "feature": "Feature request",
+      "bug": "Bug report",
+      "dataIssue": "Data correction",
+      "experience": "Experience feedback",
+      "other": "Other"
+    },
+    "subject": {
+      "label": "Subject",
+      "required": "Please enter a subject",
+      "placeholder": "Briefly describe your suggestion"
+    },
+    "content": {
+      "label": "Details",
+      "required": "Please enter the details",
+      "placeholder": "Describe your suggestion, the issue you ran into, or the data to correct..."
+    },
+    "attachments": "Screenshots",
+    "columns": {
+      "category": "Category",
+      "subject": "Subject",
+      "content": "Details",
+      "status": "Status",
+      "adminReply": "Admin Reply",
+      "attachments": "Attachments",
+      "createdAt": "Submitted At"
+    },
+    "status": {
+      "open": "Open",
+      "inProgress": "In Progress",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "emptyHistory": "No submissions yet"
+  }
+}

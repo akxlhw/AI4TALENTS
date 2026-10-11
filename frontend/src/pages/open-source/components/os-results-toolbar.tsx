@@ -1,5 +1,7 @@
 import { Button, Checkbox, Dropdown, Space, Typography, type MenuProps } from 'antd'
 import { DownOutlined, DownloadOutlined } from '@ant-design/icons'
+import { Trans, useTranslation } from 'react-i18next'
+import '@/i18n/namespaces/open-source'
 
 const { Text } = Typography
 
@@ -28,6 +30,8 @@ const OsResultsToolbar: React.FC<OsResultsToolbarProps> = ({
   onSelectAll,
   onClearSelection,
 }) => {
+  const { t } = useTranslation(['openSource', 'common'])
+
   return (
     <div
       style={{
@@ -39,27 +43,34 @@ const OsResultsToolbar: React.FC<OsResultsToolbarProps> = ({
         marginBottom: 16,
       }}
     >
-      <Text style={{ color: 'var(--text-secondary)' }}>共 {total} 条结果</Text>
+      <Text style={{ color: 'var(--text-secondary)' }}>
+        {t('openSource:search.resultCount', { n: total })}
+      </Text>
       {showControls && (
         <Space wrap>
           <Checkbox checked={isPageAllSelected} onChange={onSelectPage}>
-            全选当前页
+            {t('openSource:results.selectPage')}
           </Checkbox>
           <Button size="small" onClick={onSelectAll}>
-            全选所有结果
+            {t('openSource:results.selectAll')}
           </Button>
           <Text>
-            已选择 <strong>{selectedCount}</strong> 位开发者
+            <Trans
+              ns="openSource"
+              i18nKey="results.selectedCount"
+              values={{ n: selectedCount }}
+              components={{ strong: <strong /> }}
+            />
           </Text>
           {selectedCount > 0 && (
             <Button size="small" onClick={onClearSelection}>
-              取消选择
+              {t('openSource:results.cancelSelection')}
             </Button>
           )}
           {isAdmin && (
             <Dropdown menu={exportMenu} trigger={['click']}>
               <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>
-                导出 <DownOutlined />
+                {t('common:actions.export')} <DownOutlined />
               </Button>
             </Dropdown>
           )}

@@ -2,5 +2,24 @@
   "actions": { "search": "搜索", "export": "导出", "cancel": "取消", "confirm": "确定", "close": "关闭", "retry": "重试", "viewAll": "查看全部", "detail": "详情", "delete": "删除" },
   "status": { "loading": "加载中…", "empty": "暂无数据", "error": "加载失败" },
   "pagination": { "total": "共 {{n}} 条" },
-  "footer": { "privacy": "隐私政策", "terms": "用户协议", "cookie": "Cookie 设置", "copyright": "© {{year}} AI4TALENT 智能人才库" }
+  "footer": { "privacy": "隐私政策", "terms": "用户协议", "cookie": "Cookie 设置", "copyright": "© {{year}} AI4TALENT 智能人才库" },
+  "compare": {
+    "title": "候选人对比",
+    "field": "对比项",
+    "loadFailed": "获取对比数据失败",
+    "selectHint": "请选择2-4位候选人进行对比"
+  },
+  "export": {
+    "title": "数据导出声明",
+    "confirm": "确认导出",
+    "intro": "您即将导出人才数据。根据《用户协议》，导出的数据仅限内部研究评估使用，严禁：",
+    "prohibitedContact": "通过邮箱/电话等渠道向人才发起招聘联系",
+    "prohibitedThirdParty": "将数据提供给第三方招聘机构",
+    "prohibitedCommercial": "将数据用于商业营销或数据贩卖",
+    "warning": "违规使用将导致账号封禁及法律责任。",
+    "acknowledge": "我已阅读并承诺遵守上述限制"
+  },
+  "messages": {
+    "operationFailed": "操作失败"
+  }
 }

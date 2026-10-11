@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../../contexts/AuthContext'
 import {
   Card,
@@ -41,7 +42,8 @@ import ExportConfirmModal from '../../../components/ExportConfirmModal'
 import { useKeyboardShortcuts } from '../../../hooks/useKeyboardShortcuts'
 import { useSearchTemplates } from '../../../hooks/useSearchTemplates'
 import { useColumnConfig } from '../../../hooks/useColumnConfig'
-import { getRoleTypeConfig } from '../../../constants/roleType'
+import { getRoleTypeConfig, LEGACY_ROLE_TYPE_MAP } from '../../../constants/roleType'
+import '../../../i18n/namespaces/academic'
 import { formatNumber } from '../../../utils/format'
 import type { SearchTalent, TechDomain, EnhancedSearchResult } from '../../../types'
 
@@ -82,6 +84,7 @@ const SearchTab: React.FC<SearchTabProps> = ({
 }) => {
   const { isAdmin } = useAuth()
   const navigate = useNavigate()
+  const { t } = useTranslation(['academic', 'common'])
   const [urlSearchParams] = useSearchParams()
   const searchInputRef = useRef<InputRef>(null)
 
@@ -182,7 +185,7 @@ const SearchTab: React.FC<SearchTabProps> = ({
       setTookMs(null)
       setPage(pageNum)
     } catch {
-      message.error('加载人才列表失败')
+      message.error(t('searchTab.loadListError'))
     } finally {
       setSearchLoading(false)
     }
@@ -233,7 +236,7 @@ const SearchTab: React.FC<SearchTabProps> = ({
       setSemanticMatchCount(response.data.semantic_count || 0)
       setPage(pageNum)
     } catch {
-      message.error('搜索失败，请重试')
+      message.error(t('searchTab.searchError'))
     } finally {
       setSearchLoading(false)
     }
@@ -274,7 +277,7 @@ const SearchTab: React.FC<SearchTabProps> = ({
 
   const handleExportRequest = (format: 'csv' | 'xlsx') => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要导出的候选人')
+      message.warning(t('searchTab.exportSelectFirst'))
       return
     }
     setPendingExportFormat(format)
@@ -295,9 +298,9 @@ const SearchTab: React.FC<SearchTabProps> = ({
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
-      message.success(`已导出 ${selectedRowKeys.length} 位候选人`)
+      message.success(t('searchTab.exportSuccess', { n: selectedRowKeys.length }))
     } catch {
-      message.error('导出失败')
+      message.error(t('searchTab.exportError'))
     } finally {
       setExporting(false)
       setExportConfirmVisible(false)
@@ -306,13 +309,16 @@ const SearchTab: React.FC<SearchTabProps> = ({
   }
 
   const exportMenu = {
-    items: [{ key: 'csv', label: '导出 CSV' }, { key: 'xlsx', label: '导出 Excel' }],
+    items: [
+      { key: 'csv', label: t('searchTab.exportCsv') },
+      { key: 'xlsx', label: t('searchTab.exportExcel') },
+    ],
     onClick: (e: { key: string }) => handleExportRequest(e.key as 'csv' | 'xlsx'),
   }
 
   const handleCompare = () => {
     if (selectedRowKeys.length < 2 || selectedRowKeys.length > 4) {
-      message.warning('请选择2-4位候选人进行对比')
+      message.warning(t('searchTab.compareSelectRange'))
       return
     }
     setCompareModalVisible(true)
@@ -328,10 +334,10 @@ const SearchTab: React.FC<SearchTabProps> = ({
       })
     },
     items: [
-      { key: 'cited_by_count-desc', label: '引用数 (高到低)' },
-      { key: 'cited_by_count-asc', label: '引用数 (低到高)' },
-      { key: 'works_count-desc', label: '论文数 (高到低)' },
-      { key: 'works_count-asc', label: '论文数 (低到高)' },
+      { key: 'cited_by_count-desc', label: t('searchTab.sortBy.citationsDesc') },
+      { key: 'cited_by_count-asc', label: t('searchTab.sortBy.citationsAsc') },
+      { key: 'works_count-desc', label: t('searchTab.sortBy.worksDesc') },
+      { key: 'works_count-asc', label: t('searchTab.sortBy.worksAsc') },
     ],
   }
 
@@ -339,14 +345,14 @@ const SearchTab: React.FC<SearchTabProps> = ({
 
   const searchColumns = [
     {
-      title: '收藏',
+      title: t('columns.favorite'),
       key: 'favorite',
       width: 60,
       align: 'center' as const,
       render: (_: unknown, record: SearchTalent) => <FavoriteButton talentId={record.talent_id} size="small" />,
     },
     {
-      title: '姓名',
+      title: t('columns.name'),
       dataIndex: 'name',
       key: 'name',
       width: 180,
@@ -367,7 +373,7 @@ const SearchTab: React.FC<SearchTabProps> = ({
         if (isSimilarRecommend) {
           const percent = Math.round((similarity || 0) * 100)
           return (
-            <Tooltip title={`相似推荐 (${percent}%)：该人才研究方向与搜索词语义相近，但非精准匹配`}>
+            <Tooltip title={t('searchTab.similarTooltip', { percent })}>
               {nameContent}
             </Tooltip>
           )
@@ -376,17 +382,18 @@ const SearchTab: React.FC<SearchTabProps> = ({
       },
     },
     {
-      title: '角色',
+      title: t('columns.role'),
       dataIndex: 'role_type',
       key: 'role_type',
       width: 100,
       render: (role: string) => {
         const config = getRoleTypeConfig(role)
-        return <Tag color={config.color}>{config.text}</Tag>
+        const roleKey = LEGACY_ROLE_TYPE_MAP[role] || role
+        return <Tag color={config.color}>{t(`roles.${roleKey}`, { defaultValue: config.text })}</Tag>
       },
     },
     {
-      title: '院校机构',
+      title: t('columns.school'),
       key: 'school',
       width: 150,
       ellipsis: true,
@@ -404,24 +411,24 @@ const SearchTab: React.FC<SearchTabProps> = ({
         )
       },
     },
-    { title: '论文', dataIndex: 'works_count', key: 'works_count', width: 80, align: 'center' as const },
-    { title: '引用', dataIndex: 'cited_by_count', key: 'cited_by_count', width: 100, align: 'right' as const, render: (count: number) => formatNumber(count) },
-    { title: 'H指数', dataIndex: 'h_index', key: 'h_index', width: 80, align: 'center' as const },
+    { title: t('columns.works'), dataIndex: 'works_count', key: 'works_count', width: 80, align: 'center' as const },
+    { title: t('columns.citations'), dataIndex: 'cited_by_count', key: 'cited_by_count', width: 100, align: 'right' as const, render: (count: number) => formatNumber(count) },
+    { title: t('columns.hIndex'), dataIndex: 'h_index', key: 'h_index', width: 80, align: 'center' as const },
     {
-      title: '研究方向',
+      title: t('columns.researchDirections'),
       dataIndex: 'openalex_topics',
       key: 'openalex_topics',
       width: 200,
       render: (topics: string[], record: SearchTalent) => <TopicTags tags={topics && topics.length > 0 ? topics : record.topic_tags} maxVisible={2} />,
     },
     {
-      title: '操作',
+      title: t('columns.actions'),
       key: 'actions',
       width: 100,
       render: (_: unknown, record: SearchTalent) => (
-        <Tooltip title="添加到智能推荐参考列表">
+        <Tooltip title={t('searchTab.addToReferenceTip')}>
           <Button type="link" size="small" icon={<UserAddOutlined />} onClick={() => onAddToReference(record.talent_id, record.name)}>
-            加入参考
+            {t('searchTab.addToReference')}
           </Button>
         </Tooltip>
       ),
@@ -436,11 +443,11 @@ const SearchTab: React.FC<SearchTabProps> = ({
           <Col flex="auto">
             <Search
               ref={searchInputRef}
-              placeholder="搜索姓名、研究主题、论文标题... (按 / 快速搜索)"
+              placeholder={t('searchTab.placeholder')}
               value={query}
               onChange={e => setQuery(e.target.value)}
               onSearch={handleSearch}
-              enterButton="搜索"
+              enterButton={t('common:actions.search')}
               size="large"
               allowClear
             />
@@ -448,7 +455,7 @@ const SearchTab: React.FC<SearchTabProps> = ({
           <Col>
             <Dropdown menu={sortMenu} trigger={['click']}>
               <Button size="large" icon={sortOrder === 'desc' ? <SortDescendingOutlined /> : <SortAscendingOutlined />}>
-                排序 <DownOutlined />
+                {t('searchTab.sort')} <DownOutlined />
               </Button>
             </Dropdown>
           </Col>
@@ -463,29 +470,29 @@ const SearchTab: React.FC<SearchTabProps> = ({
               <Space>
                 <ThunderboltOutlined style={{ color: 'var(--domain-primary)' }} />
                 <span>
-                  智能搜索已启用：
-                  {searchModeUsed === 'hybrid' && '混合搜索（关键词 + 语义向量）'}
-                  {searchModeUsed === 'semantic' && '语义向量搜索'}
-                  {searchModeUsed === 'keyword' && '关键词匹配'}
-                  {searchModeUsed === 'fulltext' && '全文检索'}
+                  {t('searchTab.smartSearchEnabled')}
+                  {searchModeUsed === 'hybrid' && t('searchTab.modeHybrid')}
+                  {searchModeUsed === 'semantic' && t('searchTab.modeSemantic')}
+                  {searchModeUsed === 'keyword' && t('searchTab.modeKeyword')}
+                  {searchModeUsed === 'fulltext' && t('searchTab.modeFulltext')}
                 </span>
               </Space>
-              <span>共 {total} 人</span>
+              <span>{t('searchTab.totalPeople', { n: total })}</span>
               {(fulltextMatchCount > 0 || semanticMatchCount > 0) && (
                 <>
                   {fulltextMatchCount > 0 && (
                     <span style={{ color: semanticColors.orange }}>
-                      关键词匹配 {fulltextMatchCount} 人
+                      {t('searchTab.keywordMatches', { n: fulltextMatchCount })}
                     </span>
                   )}
                   {semanticMatchCount > 0 && (
                     <span style={{ color: 'var(--domain-secondary)' }}>
-                      语义匹配 {semanticMatchCount} 人
+                      {t('searchTab.semanticMatches', { n: semanticMatchCount })}
                     </span>
                   )}
                 </>
               )}
-              <span style={{ color: '#999' }}>耗时 {tookMs.toFixed(0)}ms</span>
+              <span style={{ color: '#999' }}>{t('searchTab.tookMs', { ms: tookMs.toFixed(0) })}</span>
             </Space>
           }
           type="info"
@@ -499,13 +506,13 @@ const SearchTab: React.FC<SearchTabProps> = ({
         <Row gutter={[16, 8]}>
           <Col span={24}>
             <Space size={8} wrap>
-              <Text type="secondary">筛选:</Text>
-              <Select placeholder="技术领域" value={techDomainFilter} onChange={(val) => updateUrl({ tech_domain: val ? String(val) : undefined, page: undefined })} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techDomainOptions} />
-              <Select placeholder="国家" value={countryFilter} onChange={(val) => updateUrl({ country: val || undefined, page: undefined })} allowClear showSearch optionFilterProp="label" style={{ width: 120 }} options={countryOptions} />
-              <Select placeholder="院校机构" value={schoolFilter} onChange={(val) => updateUrl({ school_id: val ? String(val) : undefined, page: undefined })} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
-              <Select placeholder="角色" value={roleFilter} onChange={(val) => updateUrl({ role_type: val || undefined, page: undefined })} allowClear style={{ width: 140 }} options={[{ value: 'professor', label: '教授/研究员' }, { value: 'student', label: '学生' }, { value: 'graduated', label: '毕业生' }]} />
-              <Select placeholder="最少引用" value={minCitations} onChange={(val) => updateUrl({ min_citations: val ? String(val) : undefined, page: undefined })} allowClear style={{ width: 120 }} options={[{ value: 100, label: '100次以上' }, { value: 500, label: '500次以上' }, { value: 1000, label: '1000次以上' }]} />
-              {hasActiveFilters && <Button type="link" icon={<ReloadOutlined />} onClick={handleResetFilters}>重置筛选</Button>}
+              <Text type="secondary">{t('filters.label')}</Text>
+              <Select placeholder={t('filters.techDomain')} value={techDomainFilter} onChange={(val) => updateUrl({ tech_domain: val ? String(val) : undefined, page: undefined })} allowClear showSearch optionFilterProp="label" style={{ width: 140 }} options={techDomainOptions} />
+              <Select placeholder={t('filters.country')} value={countryFilter} onChange={(val) => updateUrl({ country: val || undefined, page: undefined })} allowClear showSearch optionFilterProp="label" style={{ width: 120 }} options={countryOptions} />
+              <Select placeholder={t('filters.school')} value={schoolFilter} onChange={(val) => updateUrl({ school_id: val ? String(val) : undefined, page: undefined })} allowClear showSearch optionFilterProp="label" style={{ width: 180 }} options={schoolOptions} />
+              <Select placeholder={t('filters.role')} value={roleFilter} onChange={(val) => updateUrl({ role_type: val || undefined, page: undefined })} allowClear style={{ width: 140 }} options={[{ value: 'professor', label: t('roles.professor') }, { value: 'student', label: t('roles.student') }, { value: 'graduated', label: t('roles.graduate') }]} />
+              <Select placeholder={t('filters.minCitations')} value={minCitations} onChange={(val) => updateUrl({ min_citations: val ? String(val) : undefined, page: undefined })} allowClear style={{ width: 120 }} options={[{ value: 100, label: t('searchTab.minCitations.c100') }, { value: 500, label: t('searchTab.minCitations.c500') }, { value: 1000, label: t('searchTab.minCitations.c1000') }]} />
+              {hasActiveFilters && <Button type="link" icon={<ReloadOutlined />} onClick={handleResetFilters}>{t('searchTab.resetFilters')}</Button>}
             </Space>
           </Col>
         </Row>
@@ -516,12 +523,12 @@ const SearchTab: React.FC<SearchTabProps> = ({
         {selectedRowKeys.length > 0 && (
           <div style={{ padding: '12px 16px', background: semanticColors.bgGrayLight, borderBottom: `1px solid ${semanticColors.borderGrayLight}` }}>
             <Space>
-              <Text>已选择 <strong>{selectedRowKeys.length}</strong> 项</Text>
-              <Button size="small" onClick={() => setSelectedRowKeys([])}>取消选择</Button>
-              <Button size="small" onClick={handleCompare} disabled={selectedRowKeys.length < 2 || selectedRowKeys.length > 4}>对比 ({selectedRowKeys.length}/4)</Button>
+              <Text>{t('searchTab.selectedPrefix')} <strong>{selectedRowKeys.length}</strong> {t('searchTab.selectedSuffix')}</Text>
+              <Button size="small" onClick={() => setSelectedRowKeys([])}>{t('searchTab.clearSelection')}</Button>
+              <Button size="small" onClick={handleCompare} disabled={selectedRowKeys.length < 2 || selectedRowKeys.length > 4}>{t('searchTab.compare', { n: selectedRowKeys.length })}</Button>
               {isAdmin && (
                 <Dropdown menu={exportMenu} trigger={['click']}>
-                  <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>导出 <DownOutlined /></Button>
+                  <Button type="primary" size="small" icon={<DownloadOutlined />} loading={exporting}>{t('common:actions.export')} <DownOutlined /></Button>
                 </Dropdown>
               )}
             </Space>
@@ -533,15 +540,15 @@ const SearchTab: React.FC<SearchTabProps> = ({
             columns={searchColumns}
             rowKey="talent_id"
             rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-            pagination={{ current: page, pageSize, total, showSizeChanger: false, showTotal: (t) => `共 ${t} 条结果` }}
+            pagination={{ current: page, pageSize, total, showSizeChanger: false, showTotal: (count) => t('searchTab.totalResults', { n: count }) }}
             onChange={handleTableChange}
             locale={{
               emptyText: query ? (
-                <Empty description={`未找到与"${query}"相关的人才`}>
-                  <Button size="small" onClick={handleResetFilters}>清除搜索条件</Button>
+                <Empty description={t('searchTab.noResultsFor', { query })}>
+                  <Button size="small" onClick={handleResetFilters}>{t('searchTab.clearSearch')}</Button>
                 </Empty>
               ) : (
-                <Empty description="暂无人才数据" />
+                <Empty description={t('searchTab.noData')} />
               ),
             }}
           />
@@ -563,20 +570,20 @@ const SearchTab: React.FC<SearchTabProps> = ({
 
       {/* Save Template Modal */}
       <Modal
-        title="保存搜索模板"
+        title={t('searchTab.template.title')}
         open={saveTemplateModalVisible}
         onOk={() => {
-          if (!newTemplateName.trim()) { message.warning('请输入模板名称'); return }
+          if (!newTemplateName.trim()) { message.warning(t('searchTab.template.nameRequired')); return }
           addTemplate(newTemplateName.trim(), { role_type: roleFilter, min_citations: minCitations, sort_by: sortBy, sort_order: sortOrder })
           setNewTemplateName('')
           setSaveTemplateModalVisible(false)
-          message.success('搜索模板已保存')
+          message.success(t('searchTab.template.saved'))
         }}
         onCancel={() => { setSaveTemplateModalVisible(false); setNewTemplateName('') }}
-        okText="保存"
-        cancelText="取消"
+        okText={t('searchTab.template.save')}
+        cancelText={t('common:actions.cancel')}
       >
-        <Input placeholder="输入模板名称..." value={newTemplateName} onChange={(e) => setNewTemplateName(e.target.value)} onPressEnter={() => setSaveTemplateModalVisible(false)} />
+        <Input placeholder={t('searchTab.template.namePlaceholder')} value={newTemplateName} onChange={(e) => setNewTemplateName(e.target.value)} onPressEnter={() => setSaveTemplateModalVisible(false)} />
       </Modal>
     </>
   )

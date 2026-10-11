@@ -30,6 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - React Router v6
 - TanStack React Query (服务器状态管理)
 - Zustand (客户端状态: domain, auth, favorites)
+- react-i18next (中英文切换, V5.1.1+；新页面 UI 文案必须走 `t()`，详见 AGENTS.md「TypeScript / React」i18n 条目)
 - Vitest (单元测试)
 
 ## Common Commands
