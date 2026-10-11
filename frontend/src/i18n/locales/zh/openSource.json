@@ -143,5 +143,30 @@
     "loadRepoFailed": "加载仓库详情失败",
     "loadContributorsFailed": "加载贡献者失败",
     "insightsLoadFailed": "洞察加载失败"
+  },
+  "portal": {
+    "title": "开源生态人才库",
+    "slogan": "基于 GitHub 贡献图谱的开发者发现平台 · 挖掘全球开源社区技术领袖",
+    "searchPlaceholder": "搜索开发者、技术栈、公司...",
+    "stats": {
+      "developers": "收录开发者",
+      "repositories": "覆盖仓库",
+      "organizations": "活跃组织",
+      "techStacks": "技术栈"
+    },
+    "trendingRepos": "Trending 仓库",
+    "topDevelopers": "顶尖开发者",
+    "viewAll": "查看全部 ↓",
+    "noRepos": "暂无仓库数据",
+    "noDevelopers": "暂无开发者数据，请先执行采集任务",
+    "noDescription": "暂无描述",
+    "loadFailed": "加载开源概览失败"
+  },
+  "devCard": {
+    "noBio": "暂无简介",
+    "languages": "开发语言",
+    "none": "无",
+    "company": "公司",
+    "location": "地区"
   }
 }

@@ -1,9 +1,33 @@
 {
-  "actions": { "search": "Search", "export": "Export", "cancel": "Cancel", "confirm": "OK", "close": "Close", "retry": "Retry", "viewAll": "View All", "detail": "Detail", "delete": "Delete", "back": "Back" },
-  "status": { "loading": "Loading…", "empty": "No data", "error": "Failed to load" },
-  "pagination": { "total": "{{n}} items" },
-  "brand": { "tagline": "Talent Platform" },
-  "footer": { "privacy": "Privacy Policy", "terms": "Terms of Use", "cookie": "Cookie Settings", "copyright": "© {{year}} AI4TALENT Talent Platform" },
+  "actions": {
+    "search": "Search",
+    "export": "Export",
+    "cancel": "Cancel",
+    "confirm": "OK",
+    "close": "Close",
+    "retry": "Retry",
+    "viewAll": "View All",
+    "detail": "Detail",
+    "delete": "Delete",
+    "back": "Back"
+  },
+  "status": {
+    "loading": "Loading…",
+    "empty": "No data",
+    "error": "Failed to load"
+  },
+  "pagination": {
+    "total": "{{n}} items"
+  },
+  "brand": {
+    "tagline": "Talent Platform"
+  },
+  "footer": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use",
+    "cookie": "Cookie Settings",
+    "copyright": "© {{year}} AI4TALENT Talent Platform"
+  },
   "compare": {
     "title": "Compare Candidates",
     "field": "Field",
@@ -221,10 +245,36 @@
     "updateFailed": "Failed to update notes"
   },
   "domainThemes": {
-    "academic": { "label": "Academic Talent", "short": "Academic" },
-    "opensource": { "label": "Open Source", "short": "Open Source" },
-    "lab": { "label": "AI Native", "short": "AI Native" },
-    "competition": { "label": "Competition Talent", "short": "Competition" },
-    "industry": { "label": "Industry Talent", "short": "Industry" }
+    "academic": {
+      "label": "Academic Talent",
+      "short": "Academic"
+    },
+    "opensource": {
+      "label": "Open Source",
+      "short": "Open Source"
+    },
+    "lab": {
+      "label": "AI Native",
+      "short": "AI Native"
+    },
+    "competition": {
+      "label": "Competition Talent",
+      "short": "Competition"
+    },
+    "industry": {
+      "label": "Industry Talent",
+      "short": "Industry"
+    }
+  },
+  "demoOpenSource": {
+    "title": "Open Source Talent",
+    "description": "Top contributors from GitHub and the open-source community — framework maintainers, core contributors, and community leaders",
+    "features": [
+      "GitHub developer search & filters",
+      "Contribution & impact assessment",
+      "Tech stack & project matching",
+      "Community activity analytics",
+      "Talent recommendation & similarity"
+    ]
   }
 }

@@ -7,6 +7,7 @@ import {
   BranchesOutlined,
 } from '@ant-design/icons'
 import { DemoPlaceholderPage } from '../../components/DemoPlaceholderPage'
+import { useTranslation } from 'react-i18next'
 
 const mockDevelopers = [
   {
@@ -54,18 +55,13 @@ const mockDevelopers = [
 ]
 
 export default function OpenSourceDemoPage() {
+  const { t } = useTranslation('common')
   return (
     <DemoPlaceholderPage
-      title="开源人才库"
-      description="汇聚 GitHub 等开源社区的顶尖贡献者，涵盖框架维护者、核心贡献者、社区活跃者"
+      title={t('demoOpenSource.title')}
+      description={t('demoOpenSource.description')}
       icon={<GithubOutlined />}
-      features={[
-        'GitHub 开发者搜索与筛选',
-        '贡献度与影响力评估',
-        '技术栈与项目匹配',
-        '开源社区活跃度分析',
-        '人才推荐与相似度计算',
-      ]}
+      features={t('demoOpenSource.features', { returnObjects: true }) as string[]}
     >
       <div style={{ marginTop: 24 }}>
         {mockDevelopers.map((dev) => (

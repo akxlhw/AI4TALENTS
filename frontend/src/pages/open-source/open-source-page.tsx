@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { logger } from '../../utils/logger'
 import {
   Card,
@@ -36,6 +37,7 @@ const { Search } = Input
 const OpenSourcePage: React.FC = () => {
   const navigate = useNavigate()
   const [stats, setStats] = useState<OSStats | null>(null)
+  const { t } = useTranslation(['openSource', 'common'])
   const [topDevelopers, setTopDevelopers] = useState<OSDeveloper[]>([])
   const [trendingRepos, setTrendingRepos] = useState<OSRepoConfig[]>([])
   const [loading, setLoading] = useState(true)
@@ -59,7 +61,7 @@ const OpenSourcePage: React.FC = () => {
         setTrendingRepos(repoRes.data.items || [])
       } catch (e) {
         logger.error('Failed to load open source overview', e)
-        message.error(getErrorMessage(e, '加载开源概览失败'))
+        message.error(getErrorMessage(e, t('portal.loadFailed')))
       } finally {
         setLoading(false)
       }
@@ -116,7 +118,7 @@ const OpenSourcePage: React.FC = () => {
               letterSpacing: '-0.5px',
             }}
           >
-            开源生态人才库
+            {t('portal.title')}
           </Title>
           <Paragraph
             style={{
@@ -126,13 +128,13 @@ const OpenSourcePage: React.FC = () => {
               fontSize: 16,
             }}
           >
-            基于 GitHub 贡献图谱的开发者发现平台 · 挖掘全球开源社区技术领袖
+            {t('portal.slogan')}
           </Paragraph>
           <Search
-            placeholder="搜索开发者、技术栈、公司..."
+            placeholder={t('portal.searchPlaceholder')}
             enterButton={
               <span style={{ fontWeight: 500 }}>
-                <SearchOutlined /> 搜索
+                <SearchOutlined /> {t('common:actions.search')}
               </span>
             }
             size="large"
@@ -176,10 +178,10 @@ const OpenSourcePage: React.FC = () => {
       {/* Stats */}
       <Row gutter={[16, 16]} style={{ marginTop: 32, marginBottom: 24, padding: '0 32px' }}>
         {[
-          { title: '收录开发者', value: stats?.total_developers || 0, icon: <CodeOutlined />, color: primary, link: '/opensource/search' },
-          { title: '覆盖仓库', value: stats?.total_repositories || 0, icon: <GithubOutlined />, color: secondary },
-          { title: '活跃组织', value: stats?.total_organizations || 0, icon: <ForkOutlined />, color: domainThemes.opensource.badgeBg },
-          { title: '技术栈', value: Object.keys(stats?.language_distribution || {}).length || 0, icon: <BranchesOutlined />, color: semanticColors.osGreen },
+          { title: t('portal.stats.developers'), value: stats?.total_developers || 0, icon: <CodeOutlined />, color: primary, link: '/opensource/search' },
+          { title: t('portal.stats.repositories'), value: stats?.total_repositories || 0, icon: <GithubOutlined />, color: secondary },
+          { title: t('portal.stats.organizations'), value: stats?.total_organizations || 0, icon: <ForkOutlined />, color: domainThemes.opensource.badgeBg },
+          { title: t('portal.stats.techStacks'), value: Object.keys(stats?.language_distribution || {}).length || 0, icon: <BranchesOutlined />, color: semanticColors.osGreen },
         ].map((s) => (
           <Col xs={24} sm={12} lg={6} key={s.title}>
             <Card
@@ -208,18 +210,18 @@ const OpenSourcePage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Title level={4} style={{ margin: 0 }}>
               <FireOutlined style={{ marginRight: 8, color: semanticColors.osOrange }} />
-              Trending 仓库
+              {t('portal.trendingRepos')}
             </Title>
             <Button
               type="link"
               onClick={() => navigate('/opensource/repos')}
               style={{ fontSize: 14, padding: 0 }}
             >
-              查看全部 ↓
+              {t('portal.viewAll')}
             </Button>
           </div>
           {trendingRepos.length === 0 ? (
-            <Empty description="暂无仓库数据" />
+            <Empty description={t('portal.noRepos')} />
           ) : (
             <Row gutter={[12, 12]}>
               {trendingRepos.map((repo) => (
@@ -250,7 +252,7 @@ const OpenSourcePage: React.FC = () => {
                       ellipsis={{ rows: 1 }}
                       style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}
                     >
-                      {repo.description || repo.display_name || '暂无描述'}
+                      {repo.description || repo.display_name || t('portal.noDescription')}
                     </Paragraph>
                     <Space size={12}>
                       <Text style={{ fontSize: 12 }}>
@@ -279,18 +281,18 @@ const OpenSourcePage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Title level={4} style={{ margin: 0 }}>
               <StarOutlined style={{ marginRight: 8, color: secondary }} />
-              顶尖开发者
+              {t('portal.topDevelopers')}
             </Title>
             <Button
               type="link"
               onClick={() => navigate('/opensource/search')}
               style={{ fontSize: 14, padding: 0 }}
             >
-              查看全部 ↓
+              {t('portal.viewAll')}
             </Button>
           </div>
           {topDevelopers.length === 0 ? (
-            <Empty description="暂无开发者数据，请先执行采集任务" />
+            <Empty description={t('portal.noDevelopers')} />
           ) : (
             <Row gutter={[12, 12]}>
               {topDevelopers.map((dev) => (
@@ -389,7 +391,7 @@ const OpenSourcePage: React.FC = () => {
                       ellipsis={{ rows: 1 }}
                       style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}
                     >
-                      {dev.bio || '暂无简介'}
+                      {dev.bio || t('devCard.noBio')}
                     </Paragraph>
 
                     <Row gutter={[16, 16]}>
@@ -401,7 +403,7 @@ const OpenSourcePage: React.FC = () => {
                         </div>
                       </Col>
                       <Col span={6}>
-                        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>开发语言</Text>
+                        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{t('devCard.languages')}</Text>
                         <Tooltip
                           title={
                             <Space size={4} wrap>
@@ -410,7 +412,7 @@ const OpenSourcePage: React.FC = () => {
                                   {lang}
                                 </Tag>
                               ))}
-                              {(dev.primary_languages || []).length === 0 && '无'}
+                              {(dev.primary_languages || []).length === 0 && t('devCard.none')}
                             </Space>
                           }
                         >
@@ -429,7 +431,7 @@ const OpenSourcePage: React.FC = () => {
                         </Tooltip>
                       </Col>
                       <Col span={6}>
-                        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>公司</Text>
+                        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{t('devCard.company')}</Text>
                         <div
                           style={{
                             fontWeight: 700,
@@ -444,7 +446,7 @@ const OpenSourcePage: React.FC = () => {
                         </div>
                       </Col>
                       <Col span={6}>
-                        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>地区</Text>
+                        <Text style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{t('devCard.location')}</Text>
                         <div
                           style={{
                             fontWeight: 700,

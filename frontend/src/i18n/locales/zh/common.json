@@ -1,9 +1,33 @@
 {
-  "actions": { "search": "搜索", "export": "导出", "cancel": "取消", "confirm": "确定", "close": "关闭", "retry": "重试", "viewAll": "查看全部", "detail": "详情", "delete": "删除", "back": "返回" },
-  "status": { "loading": "加载中…", "empty": "暂无数据", "error": "加载失败" },
-  "pagination": { "total": "共 {{n}} 条" },
-  "brand": { "tagline": "智能人才库" },
-  "footer": { "privacy": "隐私政策", "terms": "用户协议", "cookie": "Cookie 设置", "copyright": "© {{year}} AI4TALENT 智能人才库" },
+  "actions": {
+    "search": "搜索",
+    "export": "导出",
+    "cancel": "取消",
+    "confirm": "确定",
+    "close": "关闭",
+    "retry": "重试",
+    "viewAll": "查看全部",
+    "detail": "详情",
+    "delete": "删除",
+    "back": "返回"
+  },
+  "status": {
+    "loading": "加载中…",
+    "empty": "暂无数据",
+    "error": "加载失败"
+  },
+  "pagination": {
+    "total": "共 {{n}} 条"
+  },
+  "brand": {
+    "tagline": "智能人才库"
+  },
+  "footer": {
+    "privacy": "隐私政策",
+    "terms": "用户协议",
+    "cookie": "Cookie 设置",
+    "copyright": "© {{year}} AI4TALENT 智能人才库"
+  },
   "compare": {
     "title": "候选人对比",
     "field": "对比项",
@@ -221,10 +245,36 @@
     "updateFailed": "更新备注失败"
   },
   "domainThemes": {
-    "academic": { "label": "学术人才", "short": "学术" },
-    "opensource": { "label": "开源生态", "short": "开源" },
-    "lab": { "label": "AI Native", "short": "AI Native" },
-    "competition": { "label": "竞赛人才", "short": "竞赛" },
-    "industry": { "label": "行业专家", "short": "行业" }
+    "academic": {
+      "label": "学术人才",
+      "short": "学术"
+    },
+    "opensource": {
+      "label": "开源生态",
+      "short": "开源"
+    },
+    "lab": {
+      "label": "AI Native",
+      "short": "AI Native"
+    },
+    "competition": {
+      "label": "竞赛人才",
+      "short": "竞赛"
+    },
+    "industry": {
+      "label": "行业专家",
+      "short": "行业"
+    }
+  },
+  "demoOpenSource": {
+    "title": "开源人才库",
+    "description": "汇聚 GitHub 等开源社区的顶尖贡献者，涵盖框架维护者、核心贡献者、社区活跃者",
+    "features": [
+      "GitHub 开发者搜索与筛选",
+      "贡献度与影响力评估",
+      "技术栈与项目匹配",
+      "开源社区活跃度分析",
+      "人才推荐与相似度计算"
+    ]
   }
 }

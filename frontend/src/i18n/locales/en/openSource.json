@@ -143,5 +143,30 @@
     "loadRepoFailed": "Failed to load the repository details",
     "loadContributorsFailed": "Failed to load contributors",
     "insightsLoadFailed": "Failed to load insights"
+  },
+  "portal": {
+    "title": "Open Source Talent",
+    "slogan": "Developer discovery powered by GitHub contribution graphs · Uncover open-source leaders worldwide",
+    "searchPlaceholder": "Search developers, tech stacks, companies...",
+    "stats": {
+      "developers": "Developers Indexed",
+      "repositories": "Repositories Covered",
+      "organizations": "Active Organizations",
+      "techStacks": "Tech Stacks"
+    },
+    "trendingRepos": "Trending Repositories",
+    "topDevelopers": "Top Developers",
+    "viewAll": "View All ↓",
+    "noRepos": "No repository data",
+    "noDevelopers": "No developer data yet — run a collection task first",
+    "noDescription": "No description",
+    "loadFailed": "Failed to load open-source overview"
+  },
+  "devCard": {
+    "noBio": "No bio",
+    "languages": "Languages",
+    "none": "None",
+    "company": "Company",
+    "location": "Location"
   }
 }
