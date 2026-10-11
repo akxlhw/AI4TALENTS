@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { Empty, Spin, Typography, Space } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { semanticColors } from '../theme'
 
 const { Text } = Typography
@@ -31,6 +32,10 @@ const CollaborationGraph: React.FC<CollaborationGraphProps> = ({
   loading = false,
   onNodeClick,
 }) => {
+  const { t } = useTranslation('common')
+  const currentScholarLabel = t('collaboration.currentScholar')
+  const coauthorLabel = t('collaboration.coauthor')
+
   const option = useMemo(() => {
     if (nodes.length === 0) return null
 
@@ -65,13 +70,14 @@ const CollaborationGraph: React.FC<CollaborationGraphProps> = ({
         trigger: 'item',
         formatter: (params: { dataType: string; data: { name?: string; id?: string; source?: string; target?: string; value?: number } }) => {
           if (params.dataType === 'node') {
-            return `${params.data.name}<br/>合作次数: ${nodes.find(n => n.id === params.data.id)?.collaborationCount || 0}`
+            const count = nodes.find(n => n.id === params.data.id)?.collaborationCount || 0
+            return `${params.data.name}<br/>${t('collaboration.count', { count })}`
           }
-          return `${params.data.source} - ${params.data.target}<br/>合作论文: ${params.data.value}`
+          return `${params.data.source} - ${params.data.target}<br/>${t('collaboration.papers', { count: params.data.value ?? 0 })}`
         },
       },
       legend: {
-        data: ['当前学者', '合作者'],
+        data: [currentScholarLabel, coauthorLabel],
         bottom: 10,
       },
       series: [
@@ -81,8 +87,8 @@ const CollaborationGraph: React.FC<CollaborationGraphProps> = ({
           data: chartNodes,
           links: chartLinks,
           categories: [
-            { name: '当前学者' },
-            { name: '合作者' },
+            { name: currentScholarLabel },
+            { name: coauthorLabel },
           ],
           roam: true,
           label: {
@@ -115,7 +121,7 @@ const CollaborationGraph: React.FC<CollaborationGraphProps> = ({
         },
       ],
     }
-  }, [nodes, links])
+  }, [nodes, links, t, currentScholarLabel, coauthorLabel])
 
   if (loading) {
     return (
@@ -131,9 +137,9 @@ const CollaborationGraph: React.FC<CollaborationGraphProps> = ({
         <Empty
           description={
             <Space direction="vertical">
-              <Text>暂无合作网络数据</Text>
+              <Text>{t('collaboration.emptyTitle')}</Text>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                需要同步论文合作数据后才能展示
+                {t('collaboration.emptyHint')}
               </Text>
             </Space>
           }

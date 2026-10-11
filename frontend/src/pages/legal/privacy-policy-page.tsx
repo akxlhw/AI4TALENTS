@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Typography, Spin, Alert, Card } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../services/api'
+import '../../i18n/namespaces/legal'
 
 const { Title, Paragraph, Text } = Typography
 
 const PrivacyPolicyPage: React.FC = () => {
+  const { t } = useTranslation('legal')
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -46,9 +49,12 @@ const PrivacyPolicyPage: React.FC = () => {
           boxShadow: 'var(--shadow-md)',
         }}
       >
+        <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 12 }}>
+          {t('referenceNote')}
+        </Text>
         <Alert
-          message="核心约束"
-          description="本平台人才数据仅供内部研究参考，严禁使用人才库中的联系方式，直接对外向人才本人发起联系、招聘等用途。"
+          message={t('privacy.alertTitle')}
+          description={t('privacy.alertDescription')}
           type="warning"
           showIcon
           style={{ marginBottom: 24 }}
@@ -79,7 +85,13 @@ const PrivacyPolicyPage: React.FC = () => {
                 </Paragraph>
               )
             }
-            if (line.startsWith('- ') || line.startsWith('1. ') || line.startsWith('2. ') || line.startsWith('3. ') || line.startsWith('4. ')) {
+            if (
+              line.startsWith('- ') ||
+              line.startsWith('1. ') ||
+              line.startsWith('2. ') ||
+              line.startsWith('3. ') ||
+              line.startsWith('4. ')
+            ) {
               return (
                 <Paragraph key={idx} style={{ paddingLeft: 16 }}>
                   {line}

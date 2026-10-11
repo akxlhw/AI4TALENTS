@@ -3,23 +3,27 @@ import {
   Alert, Badge, Button, Card, Checkbox, Col, Form, Input, InputNumber, Modal,
   Popconfirm, Row, Space, Table, Tag, Typography, message,
 } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { KeyOutlined, PlusOutlined } from '@ant-design/icons'
 import { apiKeysApi, type ApiKeyCreated, type ApiKeyListItem } from '../../services/api/apiKeys'
 import { formatDBLocal } from '../../utils/datetime'
+import '../../i18n/namespaces/system-config'
 import { getErrorMessage } from './components/utils'
 
 const { Text, Title } = Typography
 
-// Domain × read/write scope matrix (mirrors backend scope strings)
-const DOMAINS: { code: string; label: string; color: string }[] = [
-  { code: 'academic', label: '学术', color: 'blue' },
-  { code: 'open_source', label: '开源', color: 'purple' },
-  { code: 'competition', label: '竞赛', color: 'gold' },
-  { code: 'lab', label: '实验室', color: 'cyan' },
-  { code: 'industry', label: '行业', color: 'magenta' },
+// Domain × read/write scope matrix (mirrors backend scope strings);
+// labels are resolved through the systemConfig namespace at render time.
+const DOMAINS: { code: string; color: string }[] = [
+  { code: 'academic', color: 'blue' },
+  { code: 'open_source', color: 'purple' },
+  { code: 'competition', color: 'gold' },
+  { code: 'lab', color: 'cyan' },
+  { code: 'industry', color: 'magenta' },
 ]
 
 const ApiKeysTab: React.FC = () => {
+  const { t } = useTranslation(['systemConfig', 'common'])
   const [keys, setKeys] = useState<ApiKeyListItem[]>([])
   const [loading, setLoading] = useState(false)
   const [createVisible, setCreateVisible] = useState(false)
@@ -33,11 +37,11 @@ const ApiKeysTab: React.FC = () => {
       const res = await apiKeysApi.list()
       setKeys(res.data || [])
     } catch (e) {
-      message.error(getErrorMessage(e, '加载 API Key 失败'))
+      message.error(getErrorMessage(e, t('apiKeys.loadFailed')))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     loadKeys()
@@ -57,7 +61,7 @@ const ApiKeysTab: React.FC = () => {
       form.resetFields()
       loadKeys()
     } catch (e) {
-      message.error(getErrorMessage(e, '创建失败'))
+      message.error(getErrorMessage(e, t('apiKeys.createFailed')))
     } finally {
       setCreating(false)
     }
@@ -66,10 +70,10 @@ const ApiKeysTab: React.FC = () => {
   const handleSetActive = async (id: number, isActive: boolean) => {
     try {
       await apiKeysApi.setActive(id, isActive)
-      message.success(isActive ? '已启用' : '已吊销')
+      message.success(isActive ? t('apiKeys.activated') : t('apiKeys.statusRevoked'))
       loadKeys()
     } catch (e) {
-      message.error(getErrorMessage(e, '操作失败'))
+      message.error(getErrorMessage(e, t('apiKeys.operationFailed')))
     }
   }
 
@@ -83,9 +87,9 @@ const ApiKeysTab: React.FC = () => {
         <Text code style={{ fontSize: 12 }}>{prefix}…</Text>
       ),
     },
-    { title: '备注名', dataIndex: 'key_name', key: 'key_name', width: 160 },
+    { title: t('apiKeys.columns.name'), dataIndex: 'key_name', key: 'key_name', width: 160 },
     {
-      title: '权限范围',
+      title: t('apiKeys.columns.scopes'),
       dataIndex: 'scopes',
       key: 'scopes',
       render: (scopes: string[]) => (
@@ -95,7 +99,7 @@ const ApiKeysTab: React.FC = () => {
             const d = DOMAINS.find(x => x.code === domain)
             return (
               <Tag key={s} style={{ margin: 0, fontSize: 11 }}>
-                {d?.label ?? domain}·{action === 'write' ? '读写' : '读'}
+                {(d ? t(`apiKeys.domains.${d.code}`) : domain)}·{action === 'write' ? t('apiKeys.scopeReadWrite') : t('apiKeys.scopeRead')}
               </Tag>
             )
           })}
@@ -103,46 +107,50 @@ const ApiKeysTab: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: t('apiKeys.columns.status'),
       dataIndex: 'is_active',
       key: 'is_active',
       width: 90,
       render: (active: boolean) =>
-        active ? <Badge status="success" text="启用" /> : <Badge status="error" text="已吊销" />,
+        active ? (
+          <Badge status="success" text={t('apiKeys.statusActive')} />
+        ) : (
+          <Badge status="error" text={t('apiKeys.statusRevoked')} />
+        ),
     },
     {
-      title: '限流/分',
+      title: t('apiKeys.columns.rate'),
       dataIndex: 'rate_limit_per_minute',
       key: 'rate',
       width: 90,
-      render: (v: number | null) => (v ? <Text>{v}</Text> : <Text type="secondary">默认</Text>),
+      render: (v: number | null) => (v ? <Text>{v}</Text> : <Text type="secondary">{t('apiKeys.columns.rateDefault')}</Text>),
     },
     {
-      title: '最近使用',
+      title: t('apiKeys.columns.lastUsed'),
       dataIndex: 'last_used_at',
       key: 'last_used_at',
       width: 160,
-      render: (v: string | null) => (v ? formatDBLocal(v) : <Text type="secondary">从未</Text>),
+      render: (v: string | null) => (v ? formatDBLocal(v) : <Text type="secondary">{t('apiKeys.columns.neverUsed')}</Text>),
     },
     {
-      title: '操作',
+      title: t('apiKeys.columns.actions'),
       key: 'actions',
       width: 100,
       render: (_: unknown, record: ApiKeyListItem) =>
         record.is_active ? (
           <Popconfirm
-            title="确定吊销此 Key？"
-            description="吊销后立即生效，使用该 Key 的调用将全部 401"
-            okText="吊销"
-            cancelText="取消"
+            title={t('apiKeys.revokeConfirmTitle')}
+            description={t('apiKeys.revokeConfirmDescription')}
+            okText={t('apiKeys.revoke')}
+            cancelText={t('common.cancel')}
             okButtonProps={{ danger: true }}
             onConfirm={() => handleSetActive(record.api_key_id, false)}
           >
-            <Button type="link" size="small" danger>吊销</Button>
+            <Button type="link" size="small" danger>{t('apiKeys.revoke')}</Button>
           </Popconfirm>
         ) : (
           <Button type="link" size="small" onClick={() => handleSetActive(record.api_key_id, true)}>
-            启用
+            {t('apiKeys.enable')}
           </Button>
         ),
     },
@@ -153,14 +161,14 @@ const ApiKeysTab: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={5} style={{ margin: 0 }}>
           <KeyOutlined style={{ marginRight: 8 }} />
-          API Key 管理
+          {t('apiKeys.title')}
         </Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateVisible(true)}>
-          创建 Key
+          {t('apiKeys.createButton')}
         </Button>
       </div>
       <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
-        供外部工具 / Skill 调用开放 API（/api/v1/open-api/*）。明文 Key 仅创建时展示一次；权限按 域×读写 粒度授权。
+        {t('apiKeys.intro')}
       </Text>
 
       <Table
@@ -172,59 +180,59 @@ const ApiKeysTab: React.FC = () => {
       />
 
       <Modal
-        title="创建 API Key"
+        title={t('apiKeys.createModalTitle')}
         open={createVisible}
         onCancel={() => setCreateVisible(false)}
         onOk={handleCreate}
         confirmLoading={creating}
-        okText="创建"
-        cancelText="取消"
+        okText={t('apiKeys.createOkText')}
+        cancelText={t('common.cancel')}
       >
         <Form form={form} layout="vertical">
           <Form.Item
             name="key_name"
-            label="备注名"
-            rules={[{ required: true, message: '请输入备注名' }]}
+            label={t('apiKeys.nameLabel')}
+            rules={[{ required: true, message: t('apiKeys.nameRequired') }]}
           >
-            <Input placeholder="如：洞察 Skill / 数据看板" maxLength={100} />
+            <Input placeholder={t('apiKeys.namePlaceholder')} maxLength={100} />
           </Form.Item>
           <Form.Item
             name="scopes"
-            label="权限范围（域 × 读写）"
-            rules={[{ required: true, message: '至少勾选一个权限' }]}
+            label={t('apiKeys.scopesLabel')}
+            rules={[{ required: true, message: t('apiKeys.scopesRequired') }]}
           >
             <Checkbox.Group style={{ width: '100%' }}>
               {DOMAINS.map(d => (
                 <Row key={d.code} gutter={8} style={{ marginBottom: 4 }}>
                   <Col span={5}>
-                    <Tag color={d.color} style={{ margin: 0 }}>{d.label}</Tag>
+                    <Tag color={d.color} style={{ margin: 0 }}>{t(`apiKeys.domains.${d.code}`)}</Tag>
                   </Col>
                   <Col>
-                    <Checkbox value={`${d.code}:read`}>只读</Checkbox>
+                    <Checkbox value={`${d.code}:read`}>{t('apiKeys.readOnly')}</Checkbox>
                     <Checkbox value={`${d.code}:write`} style={{ marginLeft: 16 }}>
-                      读写（含导入）
+                      {t('apiKeys.readWriteWithImport')}
                     </Checkbox>
                   </Col>
                 </Row>
               ))}
             </Checkbox.Group>
           </Form.Item>
-          <Form.Item name="rate_limit_per_minute" label="限流（次/分钟，留空用全局默认）">
-            <InputNumber min={1} max={10000} style={{ width: '100%' }} placeholder="默认" />
+          <Form.Item name="rate_limit_per_minute" label={t('apiKeys.rateLimitLabel')}>
+            <InputNumber min={1} max={10000} style={{ width: '100%' }} placeholder={t('apiKeys.rateLimitPlaceholder')} />
           </Form.Item>
         </Form>
       </Modal>
 
       <Modal
-        title="Key 已创建"
+        title={t('apiKeys.createdModalTitle')}
         open={!!created}
         onCancel={() => setCreated(null)}
-        footer={<Button type="primary" onClick={() => setCreated(null)}>我已保存</Button>}
+        footer={<Button type="primary" onClick={() => setCreated(null)}>{t('apiKeys.createdOkText')}</Button>}
       >
         <Alert
           type="warning"
           showIcon
-          message="明文 Key 仅此一次展示，关闭后无法再查看"
+          message={t('apiKeys.createdWarning')}
           style={{ marginBottom: 12 }}
         />
         {created && (

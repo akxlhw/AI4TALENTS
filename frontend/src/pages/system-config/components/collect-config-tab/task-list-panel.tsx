@@ -13,6 +13,8 @@ import {
   Spin,
 } from 'antd'
 import { StopOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
+import '../../../../i18n/namespaces/system-config'
 import { getTaskStatusConfig } from '../../../../constants'
 import type { CollectTask } from '../../../../types'
 import { formatUTCToLocal } from '../../../../utils/datetime'
@@ -40,11 +42,25 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
   onCancelTask,
   onDeleteTask,
 }) => {
+  const { t } = useTranslation(['systemConfig', 'common'])
+
+  const yearLabel = (year: number | null | undefined) =>
+    year == null ? t('collectConfig.taskList.present') : t('collectConfig.taskList.year', { year })
+
   const taskColumns = [
-    { title: '任务编码', dataIndex: 'task_code', key: 'task_code', width: 180 },
-    { title: '技术领域', dataIndex: 'tech_domain_name', key: 'tech_domain_name' },
     {
-      title: '顶刊顶会',
+      title: t('collectConfig.taskList.colTaskCode'),
+      dataIndex: 'task_code',
+      key: 'task_code',
+      width: 180,
+    },
+    {
+      title: t('collectConfig.taskList.colTechDomain'),
+      dataIndex: 'tech_domain_name',
+      key: 'tech_domain_name',
+    },
+    {
+      title: t('collectConfig.taskList.colVenues'),
       key: 'venues',
       render: (_: unknown, record: CollectTask) => {
         const sources = record.venue_snapshot || []
@@ -52,7 +68,7 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
         const displayVenues = sources.slice(0, 5)
         return (
           <Space size={[4, 4]} wrap>
-            {displayVenues.map((v) => (
+            {displayVenues.map(v => (
               <Tooltip key={v.id} title={v.name || v.id}>
                 <Tag>{v.id.toUpperCase()}</Tag>
               </Tooltip>
@@ -63,25 +79,33 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
       },
     },
     {
-      title: '时间范围',
+      title: t('collectConfig.taskList.colTimeRange'),
       key: 'time_range',
       render: (_: unknown, record: CollectTask) => (
         <Text>
-          {record.start_year}年 ~ {record.end_year ? `${record.end_year}年` : '至今'}
+          {t('collectConfig.taskList.timeRange', {
+            start: yearLabel(record.start_year),
+            end: yearLabel(record.end_year),
+          })}
         </Text>
       ),
     },
     {
-      title: '状态',
+      title: t('collectConfig.taskList.colStatus'),
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => {
         const item = getTaskStatusConfig(status)
-        return <Badge status={item.status} text={item.label} />
+        return (
+          <Badge
+            status={item.status}
+            text={t(`collectConfig.status.${status}`, { defaultValue: status })}
+          />
+        )
       },
     },
     {
-      title: '进度',
+      title: t('collectConfig.taskList.colProgress'),
       dataIndex: 'progress_percent',
       key: 'progress_percent',
       width: 150,
@@ -100,30 +124,31 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
       ),
     },
     {
-      title: '采集统计',
+      title: t('collectConfig.taskList.colStats'),
       key: 'records',
       render: (_: unknown, record: CollectTask) => (
         <Space direction="vertical" size={0}>
-          <Text>论文: {record.total_records}</Text>
+          <Text>{t('collectConfig.taskList.papers', { n: record.total_records })}</Text>
           <Text>
-            人才: <Text type="success">{record.success_records}</Text>
+            {t('collectConfig.taskList.talents')}:{' '}
+            <Text type="success">{record.success_records}</Text>
           </Text>
         </Space>
       ),
     },
     {
-      title: '触发时间',
+      title: t('collectConfig.taskList.colTriggeredAt'),
       dataIndex: 'triggered_at',
       key: 'triggered_at',
       render: (date: string) => formatUTCToLocal(date),
     },
     {
-      title: '操作',
+      title: t('collectConfig.taskList.colActions'),
       key: 'actions',
       width: 150,
       render: (_: unknown, record: CollectTask) => (
         <Space>
-          <Tooltip title="查看详情">
+          <Tooltip title={t('collectConfig.taskList.viewDetail')}>
             <Button
               type="link"
               size="small"
@@ -133,21 +158,21 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
           </Tooltip>
           {(record.status === 'running' || record.status === 'pending') && (
             <Popconfirm
-              title="确定取消此任务？"
+              title={t('collectConfig.taskList.cancelConfirm')}
               onConfirm={() => onCancelTask(record.task_id)}
-              okText="确定"
-              cancelText="取消"
+              okText={t('common:actions.confirm')}
+              cancelText={t('common:actions.cancel')}
             >
               <Button type="link" size="small" danger icon={<StopOutlined />} />
             </Popconfirm>
           )}
           {['completed', 'failed', 'cancelled'].includes(record.status) && (
             <Popconfirm
-              title="确定删除此任务记录？"
-              description="删除后不可恢复"
+              title={t('collectConfig.taskList.deleteConfirm')}
+              description={t('collectConfig.taskList.deleteIrreversible')}
               onConfirm={() => onDeleteTask(record.task_id)}
-              okText="确定"
-              cancelText="取消"
+              okText={t('common:actions.confirm')}
+              cancelText={t('common:actions.cancel')}
               okButtonProps={{ danger: true }}
             >
               <Button type="link" size="small" danger icon={<DeleteOutlined />} />
@@ -169,10 +194,12 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
             current: taskPage,
             pageSize: 10,
             total: taskTotal,
-            showTotal: (t) => `共 ${t} 个任务`,
+            showTotal: count => t('collectConfig.taskList.total', { n: count }),
             onChange: onPageChange,
           }}
-          locale={{ emptyText: <Empty description="暂无采集任务" /> }}
+          locale={{
+            emptyText: <Empty description={t('collectConfig.taskList.empty')} />,
+          }}
         />
       </Spin>
     </Card>

@@ -14,12 +14,14 @@ import {
   Tag,
   message,
 } from 'antd'
+import { useTranslation } from 'react-i18next'
 import {
   GlobalOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
+import '../../../i18n/namespaces/system-config'
 import { getErrorMessage } from './utils'
 
 interface ProxyConfig {
@@ -32,6 +34,7 @@ interface ProxyConfig {
 }
 
 const ProxyConfigTab: React.FC = () => {
+  const { t } = useTranslation(['systemConfig', 'common'])
   const [proxyConfig, setProxyConfig] = useState<ProxyConfig | null>(null)
   const [proxyForm] = Form.useForm()
   const [proxyLoading, setProxyLoading] = useState(false)
@@ -57,7 +60,7 @@ const ProxyConfigTab: React.FC = () => {
         password: response.data.password_masked,
       })
     } catch {
-      message.error('加载代理配置失败')
+      message.error(t('proxy.loadFailed'))
     } finally {
       setProxyLoading(false)
     }
@@ -73,10 +76,10 @@ const ProxyConfigTab: React.FC = () => {
       const values = await proxyForm.validateFields()
       setProxyLoading(true)
       await api.systemConfig.updateProxyConfig(values)
-      message.success('代理配置已保存')
+      message.success(t('proxy.saveSuccess'))
       loadProxyConfig()
     } catch (error) {
-      message.error(getErrorMessage(error, '保存失败'))
+      message.error(getErrorMessage(error, t('common.saveFailed')))
     } finally {
       setProxyLoading(false)
     }
@@ -93,12 +96,12 @@ const ProxyConfigTab: React.FC = () => {
         results: response.data.results,
       })
       if (response.data.success) {
-        message.success('代理配置测试成功')
+        message.success(t('proxy.testSuccess'))
       } else {
         message.warning(response.data.message)
       }
     } catch (error) {
-      const errorMsg = getErrorMessage(error, '连接测试失败')
+      const errorMsg = getErrorMessage(error, t('common.testFailed'))
       setTestProxyResult({ success: false, message: errorMsg })
       message.error(errorMsg)
     } finally {
@@ -110,8 +113,8 @@ const ProxyConfigTab: React.FC = () => {
     <Card>
       <Spin spinning={proxyLoading}>
         <Alert
-          message="网络代理配置"
-          description="配置 HTTP 代理以访问外网 API（OpenAlex、LLM 等）。适用于企业内网环境。密码将被加密存储。"
+          message={t('proxy.infoTitle')}
+          description={t('proxy.infoDescription')}
           type="info"
           showIcon
           style={{ marginBottom: 24 }}
@@ -124,34 +127,34 @@ const ProxyConfigTab: React.FC = () => {
         >
           <Row gutter={24}>
             <Col span={8}>
-              <Form.Item name="enabled" label="启用代理" valuePropName="checked">
-                <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+              <Form.Item name="enabled" label={t('proxy.enableProxy')} valuePropName="checked">
+                <Switch checkedChildren={t('common.on')} unCheckedChildren={t('common.off')} />
               </Form.Item>
             </Col>
           </Row>
           <Form.Item
             name="url"
-            label="代理地址"
-            rules={[{ required: false, message: '请输入代理地址' }]}
+            label={t('proxy.url')}
+            rules={[{ required: false, message: t('proxy.urlRequired') }]}
           >
             <Input placeholder="http://proxy.company.com:8080" />
           </Form.Item>
           <Row gutter={24}>
             <Col span={12}>
-              <Form.Item name="username" label="用户名（可选）">
-                <Input placeholder="代理认证用户名" />
+              <Form.Item name="username" label={t('proxy.username')}>
+                <Input placeholder={t('proxy.usernamePlaceholder')} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="password" label="密码（可选）">
-                <Input.Password placeholder={proxyConfig?.password_masked || '代理认证密码'} />
+              <Form.Item name="password" label={t('proxy.password')}>
+                <Input.Password placeholder={proxyConfig?.password_masked || t('proxy.passwordPlaceholder')} />
               </Form.Item>
             </Col>
           </Row>
           <Form.Item
             name="no_proxy"
-            label="不走代理的地址"
-            tooltip="内网服务地址，多个用逗号分隔。匹配这些地址的请求将直连而不走代理。"
+            label={t('proxy.noProxy')}
+            tooltip={t('proxy.noProxyTooltip')}
           >
             <Input.TextArea
               placeholder="localhost,127.0.0.1,*.internal.com,10.*,192.168.*"
@@ -160,23 +163,23 @@ const ProxyConfigTab: React.FC = () => {
           </Form.Item>
           <Form.Item
             name="ssl_verify"
-            label="验证 SSL 证书"
+            label={t('proxy.sslVerify')}
             valuePropName="checked"
-            tooltip="企业代理使用自签名证书时需关闭验证。关闭后存在中间人攻击风险，请谨慎使用。"
+            tooltip={t('proxy.sslVerifyTooltip')}
           >
-            <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+            <Switch checkedChildren={t('common.on')} unCheckedChildren={t('common.off')} />
           </Form.Item>
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit" loading={proxyLoading}>保存配置</Button>
-              <Button onClick={handleTestProxy} loading={testingProxy} icon={<GlobalOutlined />}>测试连接</Button>
+              <Button type="primary" htmlType="submit" loading={proxyLoading}>{t('common.saveConfig')}</Button>
+              <Button onClick={handleTestProxy} loading={testingProxy} icon={<GlobalOutlined />}>{t('common.testConnection')}</Button>
             </Space>
           </Form.Item>
         </Form>
         {testProxyResult && (
           <div style={{ marginTop: 16 }}>
             <Alert
-              message={testProxyResult.success ? '测试通过' : '测试失败'}
+              message={testProxyResult.success ? t('common.testPassed') : t('common.testFailedShort')}
               description={testProxyResult.message}
               type={testProxyResult.success ? 'success' : 'error'}
               showIcon
@@ -184,7 +187,7 @@ const ProxyConfigTab: React.FC = () => {
               style={{ marginBottom: 12 }}
             />
             {testProxyResult.results && testProxyResult.results.length > 0 && (
-              <Card size="small" title="测试详情" style={{ background: semanticColors.bgGrayLight }}>
+              <Card size="small" title={t('common.testDetails')} style={{ background: semanticColors.bgGrayLight }}>
                 {testProxyResult.results.map((result, index) => (
                   <div
                     key={index}
@@ -202,12 +205,12 @@ const ProxyConfigTab: React.FC = () => {
                     )}
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 500 }}>
-                        {result.used_proxy ? '外网代理' : '内网直连'}
+                        {result.used_proxy ? t('proxy.viaExternalProxy') : t('proxy.directInternal')}
                         <Tag
                           color={result.used_proxy ? 'blue' : 'green'}
                           style={{ marginLeft: 8 }}
                         >
-                          {result.used_proxy ? '走代理' : '直连'}
+                          {result.used_proxy ? t('proxy.tagViaProxy') : t('proxy.tagDirect')}
                         </Tag>
                       </div>
                       <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>

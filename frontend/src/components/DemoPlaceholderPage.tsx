@@ -1,6 +1,7 @@
 import { Card, Row, Col, Typography, Button, Space } from 'antd'
 import { ArrowLeftOutlined, LockOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -20,6 +21,7 @@ export function DemoPlaceholderPage({
   children,
 }: DemoPlaceholderPageProps) {
   const navigate = useNavigate()
+  const { t } = useTranslation('common')
 
   return (
     <div style={{ padding: '88px 24px 24px', maxWidth: 1200, margin: '0 auto' }}>
@@ -28,7 +30,7 @@ export function DemoPlaceholderPage({
         onClick={() => navigate(-1)}
         style={{ marginBottom: 24 }}
       >
-        返回
+        {t('actions.back')}
       </Button>
 
       <Row gutter={[24, 24]}>
@@ -62,7 +64,7 @@ export function DemoPlaceholderPage({
         </Col>
 
         <Col xs={24} lg={8}>
-          <Card title="功能预览" bordered={false}>
+          <Card title={t('demo.featurePreview')} bordered={false}>
             {features.map((f, i) => (
               <div
                 key={i}
@@ -79,7 +81,7 @@ export function DemoPlaceholderPage({
           <Card style={{ marginTop: 16 }} bordered={false}>
             <Space>
               <LockOutlined style={{ color: '#faad14' }} />
-              <Text type="secondary">完整功能开发中，敬请期待</Text>
+              <Text type="secondary">{t('demo.comingSoon')}</Text>
             </Space>
           </Card>
         </Col>

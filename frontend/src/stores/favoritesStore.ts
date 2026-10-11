@@ -8,6 +8,7 @@
 import { create } from 'zustand'
 import { message } from 'antd'
 import { api } from '../services/api'
+import { i18n } from '../i18n'
 import type { FavoriteTalent } from '../types'
 import { logger } from '../utils/logger'
 
@@ -42,7 +43,7 @@ export const useFavoritesStore = create<FavoritesState>()((set, get) => ({
       })
     } catch (err) {
       logger.error('Failed to load favorites:', err)
-      message.error('收藏状态加载失败，收藏标记可能不准确')
+      message.error(i18n.t('favorites.loadFailed', { ns: 'common' }))
     } finally {
       set({ loading: false })
     }
@@ -55,13 +56,13 @@ export const useFavoritesStore = create<FavoritesState>()((set, get) => ({
         favoriteIds: new Set(state.favoriteIds).add(talentId),
         favorites: [response.data, ...state.favorites],
       }))
-      message.success('已添加到收藏')
+      message.success(i18n.t('favorites.added', { ns: 'common' }))
     } catch (err) {
       const axiosError = err as { response?: { data?: { detail?: string } } }
       if (axiosError.response?.data?.detail) {
         message.warning(axiosError.response.data.detail)
       } else {
-        message.error('添加收藏失败')
+        message.error(i18n.t('favorites.addFailed', { ns: 'common' }))
       }
       throw err
     }
@@ -78,10 +79,11 @@ export const useFavoritesStore = create<FavoritesState>()((set, get) => ({
           favorites: state.favorites.filter((f) => f.talent_id !== talentId),
         }
       })
-      message.success('已取消收藏')
+      message.success(i18n.t('favorites.removed', { ns: 'common' }))
     } catch {
-      message.error('取消收藏失败')
-      throw new Error('取消收藏失败')
+      const msg = i18n.t('favorites.removeFailed', { ns: 'common' })
+      message.error(msg)
+      throw new Error(msg)
     }
   },
 
@@ -93,10 +95,11 @@ export const useFavoritesStore = create<FavoritesState>()((set, get) => ({
           f.talent_id === talentId ? { ...f, notes } : f
         ),
       }))
-      message.success('备注已更新')
+      message.success(i18n.t('favorites.notesUpdated', { ns: 'common' }))
     } catch {
-      message.error('更新备注失败')
-      throw new Error('更新备注失败')
+      const msg = i18n.t('favorites.updateFailed', { ns: 'common' })
+      message.error(msg)
+      throw new Error(msg)
     }
   },
 

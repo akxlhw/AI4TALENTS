@@ -7,12 +7,15 @@
  */
 
 import type { ThemeConfig } from 'antd'
+import { useTranslation } from 'react-i18next'
 
 export type Domain = 'academic' | 'opensource' | 'lab' | 'competition' | 'industry'
 
 export interface DomainTheme {
   key: Domain
+  /** i18n KEY (common namespace) — translate via useDomainThemeLabels(). */
   label: string
+  /** i18n KEY (common namespace) — translate via useDomainThemeLabels(). */
   shortLabel: string
   primary: string
   secondary: string
@@ -26,8 +29,8 @@ export interface DomainTheme {
 export const domainThemes: Record<Domain, DomainTheme> = {
   academic: {
     key: 'academic',
-    label: '学术人才',
-    shortLabel: '学术',
+    label: 'common:domainThemes.academic.label',
+    shortLabel: 'common:domainThemes.academic.short',
     primary: '#1E3A5F',
     secondary: '#4A90A4',
     gradient: 'linear-gradient(135deg, #1E3A5F 0%, #2D5A87 50%, #4A90A4 100%)',
@@ -38,8 +41,8 @@ export const domainThemes: Record<Domain, DomainTheme> = {
   },
   opensource: {
     key: 'opensource',
-    label: '开源生态',
-    shortLabel: '开源',
+    label: 'common:domainThemes.opensource.label',
+    shortLabel: 'common:domainThemes.opensource.short',
     primary: '#2D3748',
     secondary: '#48BB78',
     gradient: 'linear-gradient(135deg, #2D3748 0%, #38A169 100%)',
@@ -50,8 +53,8 @@ export const domainThemes: Record<Domain, DomainTheme> = {
   },
   competition: {
     key: 'competition',
-    label: '竞赛人才',
-    shortLabel: '竞赛',
+    label: 'common:domainThemes.competition.label',
+    shortLabel: 'common:domainThemes.competition.short',
     primary: '#1A202C',
     secondary: '#F6AD55',
     gradient: 'linear-gradient(135deg, #1A202C 0%, #DD6B20 100%)',
@@ -62,8 +65,8 @@ export const domainThemes: Record<Domain, DomainTheme> = {
   },
   industry: {
     key: 'industry',
-    label: '行业专家',
-    shortLabel: '行业',
+    label: 'common:domainThemes.industry.label',
+    shortLabel: 'common:domainThemes.industry.short',
     primary: '#1A365D',
     secondary: '#805AD5',
     gradient: 'linear-gradient(135deg, #1A365D 0%, #6B46C1 100%)',
@@ -74,8 +77,8 @@ export const domainThemes: Record<Domain, DomainTheme> = {
   },
   lab: {
     key: 'lab',
-    label: 'AI Native',
-    shortLabel: 'AI Native',
+    label: 'common:domainThemes.lab.label',
+    shortLabel: 'common:domainThemes.lab.short',
     primary: '#0D2B4E',
     secondary: '#0EA5E9',
     gradient: 'linear-gradient(135deg, #0D2B4E 0%, #0EA5E9 100%)',
@@ -84,6 +87,15 @@ export const domainThemes: Record<Domain, DomainTheme> = {
     badgeBg: '#0EA5E9',
     iconColor: '#0EA5E9',
   },
+}
+
+/** Render-side translated domain theme labels (components only). */
+export const useDomainThemeLabels = () => {
+  const { t } = useTranslation('common')
+  return {
+    label: (domain: Domain) => t(`domainThemes.${domain}.label`, { defaultValue: domain }),
+    shortLabel: (domain: Domain) => t(`domainThemes.${domain}.short`, { defaultValue: domain }),
+  }
 }
 
 /** Platform-neutral tokens — all domains share these */

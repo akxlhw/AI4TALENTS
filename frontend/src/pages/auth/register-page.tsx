@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Form, Input, Button, Card, Typography, Space, message, Checkbox } from 'antd'
 import { UserOutlined, LockOutlined, IdcardOutlined, MailOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../services/api'
 import { domainThemes } from '../../theme'
 
@@ -20,6 +21,7 @@ interface RegisterForm {
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation('auth')
   const [loading, setLoading] = useState(false)
   const [form] = Form.useForm()
 
@@ -36,13 +38,14 @@ const RegisterPage: React.FC = () => {
         terms_of_use_accepted: values.terms_of_use_accepted,
         storage_consent_level: 'necessary',
       })
-      message.success('注册成功，请等待管理员审核')
+      message.success(t('register.success'))
       setTimeout(() => navigate('/login'), 1500)
     } catch (err: unknown) {
-      const detail = err instanceof Error && 'response' in err
-        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
-        : undefined
-      message.error(detail || '注册失败，请稍后重试')
+      const detail =
+        err instanceof Error && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined
+      message.error(detail || t('register.failed'))
     } finally {
       setLoading(false)
     }
@@ -70,7 +73,8 @@ const RegisterPage: React.FC = () => {
           background: 'rgba(255,255,255,0.88)',
           backdropFilter: 'blur(20px) saturate(130%)',
           WebkitBackdropFilter: 'blur(20px) saturate(130%)',
-          boxShadow: '0 12px 48px rgba(30,58,95,0.08), 0 2px 8px rgba(30,58,95,0.04), inset 0 1px 0 rgba(255,255,255,0.8)',
+          boxShadow:
+            '0 12px 48px rgba(30,58,95,0.08), 0 2px 8px rgba(30,58,95,0.04), inset 0 1px 0 rgba(255,255,255,0.8)',
         }}
         styles={{ body: { padding: '44px 36px' } }}
       >
@@ -84,7 +88,7 @@ const RegisterPage: React.FC = () => {
                 letterSpacing: '2px',
               }}
             >
-              用户注册
+              {t('register.title')}
             </span>
             <Text
               style={{
@@ -94,7 +98,7 @@ const RegisterPage: React.FC = () => {
                 marginTop: 6,
               }}
             >
-              注册后需管理员审核通过方可登录
+              {t('register.subtitle')}
             </Text>
           </div>
 
@@ -109,13 +113,13 @@ const RegisterPage: React.FC = () => {
             <Form.Item
               name="username"
               rules={[
-                { required: true, message: '请输入用户名' },
-                { min: 3, message: '用户名至少3位' },
+                { required: true, message: t('register.usernameRequired') },
+                { min: 3, message: t('register.usernameMin') },
               ]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: 'var(--text-tertiary)' }} />}
-                placeholder="用户名"
+                placeholder={t('register.username')}
                 style={{ borderRadius: 10, height: 44 }}
               />
             </Form.Item>
@@ -123,13 +127,13 @@ const RegisterPage: React.FC = () => {
             <Form.Item
               name="email"
               rules={[
-                { required: true, message: '请输入邮箱' },
-                { type: 'email', message: '请输入有效的邮箱地址' },
+                { required: true, message: t('register.emailRequired') },
+                { type: 'email', message: t('register.emailInvalid') },
               ]}
             >
               <Input
                 prefix={<MailOutlined style={{ color: 'var(--text-tertiary)' }} />}
-                placeholder="邮箱"
+                placeholder={t('register.email')}
                 style={{ borderRadius: 10, height: 44 }}
               />
             </Form.Item>
@@ -137,16 +141,16 @@ const RegisterPage: React.FC = () => {
             <Form.Item
               name="employee_id"
               rules={[
-                { required: true, message: '请输入工号' },
+                { required: true, message: t('register.employeeIdRequired') },
                 {
                   pattern: /^[a-zA-Z]\d{8}$/,
-                  message: '工号格式为1个字母+8个数字，如 h00123456',
+                  message: t('register.employeeIdInvalid'),
                 },
               ]}
             >
               <Input
                 prefix={<IdcardOutlined style={{ color: 'var(--text-tertiary)' }} />}
-                placeholder="工号（如 h00123456）"
+                placeholder={t('register.employeeId')}
                 style={{ borderRadius: 10, height: 44 }}
               />
             </Form.Item>
@@ -154,7 +158,7 @@ const RegisterPage: React.FC = () => {
             <Form.Item name="display_name">
               <Input
                 prefix={<UserOutlined style={{ color: 'var(--text-tertiary)' }} />}
-                placeholder="显示名称（可选）"
+                placeholder={t('register.displayNameOptional')}
                 style={{ borderRadius: 10, height: 44 }}
               />
             </Form.Item>
@@ -162,13 +166,13 @@ const RegisterPage: React.FC = () => {
             <Form.Item
               name="password"
               rules={[
-                { required: true, message: '请输入密码' },
-                { min: 8, message: '密码至少8位' },
+                { required: true, message: t('register.passwordRequired') },
+                { min: 8, message: t('register.passwordMin') },
               ]}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: 'var(--text-tertiary)' }} />}
-                placeholder="密码"
+                placeholder={t('register.password')}
                 style={{ borderRadius: 10, height: 44 }}
               />
             </Form.Item>
@@ -177,20 +181,20 @@ const RegisterPage: React.FC = () => {
               name="confirm_password"
               dependencies={['password']}
               rules={[
-                { required: true, message: '请确认密码' },
+                { required: true, message: t('register.confirmPasswordRequired') },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
                     if (!value || getFieldValue('password') === value) {
                       return Promise.resolve()
                     }
-                    return Promise.reject(new Error('两次输入的密码不一致'))
+                    return Promise.reject(new Error(t('register.passwordMismatch')))
                   },
                 }),
               ]}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: 'var(--text-tertiary)' }} />}
-                placeholder="确认密码"
+                placeholder={t('register.confirmPassword')}
                 style={{ borderRadius: 10, height: 44 }}
               />
             </Form.Item>
@@ -201,16 +205,24 @@ const RegisterPage: React.FC = () => {
               rules={[
                 {
                   validator: (_, value) =>
-                    value ? Promise.resolve() : Promise.reject(new Error('必须同意隐私政策')),
+                    value
+                      ? Promise.resolve()
+                      : Promise.reject(new Error(t('register.privacyRequired'))),
                 },
               ]}
               style={{ marginBottom: 8 }}
             >
               <Checkbox>
                 <Text style={{ fontSize: 13, color: '#555' }}>
-                  我已阅读并同意{' '}
-                  <a onClick={(e) => { e.preventDefault(); navigate('/privacy-policy') }} style={{ color: domainThemes.academic.primary }}>
-                    《隐私政策》
+                  {t('register.agreePrefix')}{' '}
+                  <a
+                    onClick={e => {
+                      e.preventDefault()
+                      navigate('/privacy-policy')
+                    }}
+                    style={{ color: domainThemes.academic.primary }}
+                  >
+                    {t('register.privacyLink')}
                   </a>
                 </Text>
               </Checkbox>
@@ -222,18 +234,26 @@ const RegisterPage: React.FC = () => {
               rules={[
                 {
                   validator: (_, value) =>
-                    value ? Promise.resolve() : Promise.reject(new Error('必须同意用户协议')),
+                    value
+                      ? Promise.resolve()
+                      : Promise.reject(new Error(t('register.termsRequired'))),
                 },
               ]}
               style={{ marginBottom: 12 }}
             >
               <Checkbox>
                 <Text style={{ fontSize: 13, color: '#555' }}>
-                  我已阅读并同意{' '}
-                  <a onClick={(e) => { e.preventDefault(); navigate('/terms-of-use') }} style={{ color: domainThemes.academic.primary }}>
-                    《用户协议》
+                  {t('register.agreePrefix')}{' '}
+                  <a
+                    onClick={e => {
+                      e.preventDefault()
+                      navigate('/terms-of-use')
+                    }}
+                    style={{ color: domainThemes.academic.primary }}
+                  >
+                    {t('register.termsLink')}
                   </a>
-                  （含人才数据使用限制条款）
+                  {t('register.termsSuffix')}
                 </Text>
               </Checkbox>
             </Form.Item>
@@ -254,16 +274,19 @@ const RegisterPage: React.FC = () => {
                   boxShadow: '0 4px 15px rgba(30,58,95,0.25)',
                 }}
               >
-                注 册
+                {t('register.submit')}
               </Button>
             </Form.Item>
           </Form>
 
           <div style={{ textAlign: 'center' }}>
             <Text style={{ fontSize: 13, color: '#666' }}>
-              已有账号？{' '}
-              <a onClick={() => navigate('/login')} style={{ color: 'var(--domain-gradient)', cursor: 'pointer' }}>
-                立即登录
+              {t('register.hasAccount')}{' '}
+              <a
+                onClick={() => navigate('/login')}
+                style={{ color: 'var(--domain-gradient)', cursor: 'pointer' }}
+              >
+                {t('register.loginNow')}
               </a>
             </Text>
           </div>

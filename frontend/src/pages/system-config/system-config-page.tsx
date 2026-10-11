@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react'
 import { Tabs, Typography } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { ApiOutlined, KeyOutlined, ThunderboltOutlined, GlobalOutlined, GithubOutlined } from '@ant-design/icons'
 import { useSearchParams } from 'react-router-dom'
+import '../../i18n/namespaces/system-config'
 import CollectConfigTab from './components/collect-config-tab'
 import LLMConfigTab from './components/llm-config-tab'
 import ProxyConfigTab from './components/proxy-config-tab'
@@ -29,6 +31,7 @@ const COLLECT_SUB_TAB_KEYS = [
 ]
 
 const SystemConfigPage: React.FC = () => {
+  const { t } = useTranslation(['systemConfig', 'common'])
   const [searchParams, setSearchParams] = useSearchParams()
 
   const { initialActiveTab, initialCollectSubTab } = useMemo(() => {
@@ -56,7 +59,7 @@ const SystemConfigPage: React.FC = () => {
       label: (
         <span>
           <ThunderboltOutlined style={{ marginRight: 6 }} />
-          采集配置
+          {t('page.tabs.collect')}
         </span>
       ),
       children: <CollectConfigTab initialSubTab={initialCollectSubTab} />,
@@ -66,7 +69,7 @@ const SystemConfigPage: React.FC = () => {
       label: (
         <span>
           <ApiOutlined style={{ marginRight: 6 }} />
-          LLM 配置
+          {t('page.tabs.llm')}
         </span>
       ),
       children: <LLMConfigTab />,
@@ -76,7 +79,7 @@ const SystemConfigPage: React.FC = () => {
       label: (
         <span>
           <GlobalOutlined style={{ marginRight: 6 }} />
-          代理配置
+          {t('page.tabs.proxy')}
         </span>
       ),
       children: <ProxyConfigTab />,
@@ -86,7 +89,7 @@ const SystemConfigPage: React.FC = () => {
       label: (
         <span>
           <GithubOutlined style={{ marginRight: 6 }} />
-          GitHub 配置
+          {t('page.tabs.github')}
         </span>
       ),
       children: <GitHubConfigTab />,
@@ -96,7 +99,7 @@ const SystemConfigPage: React.FC = () => {
       label: (
         <span>
           <KeyOutlined style={{ marginRight: 6 }} />
-          API Key 管理
+          {t('page.tabs.apiKeys')}
         </span>
       ),
       children: <ApiKeysTab />,
@@ -105,7 +108,7 @@ const SystemConfigPage: React.FC = () => {
 
   return (
     <div style={{ padding: '88px 32px 80px' }}>
-      <Title level={4}>系统配置</Title>
+      <Title level={4}>{t('page.title')}</Title>
       <Tabs
         activeKey={activeTab}
         onChange={handleTabChange}

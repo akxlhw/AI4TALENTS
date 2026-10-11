@@ -1,16 +1,7 @@
-import {
-  Card,
-  Typography,
-  Space,
-  Button,
-  Alert,
-  Progress,
-  Spin,
-  Row,
-  Col,
-  Statistic,
-} from 'antd'
+import { Card, Typography, Space, Button, Alert, Progress, Spin, Row, Col, Statistic } from 'antd'
 import { ReloadOutlined, SyncOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
+import '../../../../i18n/namespaces/system-config'
 import { semanticColors } from '../../../../theme'
 import { formatNumber } from '../../../../utils/format'
 
@@ -44,12 +35,15 @@ const AcademicEmbeddingPanel: React.FC<AcademicEmbeddingPanelProps> = ({
   onCancel,
   onRefresh,
 }) => {
+  const { t } = useTranslation(['systemConfig', 'common'])
+  const K = 'collectConfig.embeddings.academic'
+
   return (
     <Card>
       <Spin spinning={embeddingLoading}>
         <Alert
-          message="学术人才向量嵌入"
-          description="生成学术人才向量嵌入用于语义搜索和智能推荐。需要先配置 LLM API。生成过程为后台异步执行，耗时取决于人才数量。"
+          message={t(`${K}.title`)}
+          description={t(`${K}.description`)}
           type="info"
           showIcon
           style={{ marginBottom: 24 }}
@@ -57,13 +51,16 @@ const AcademicEmbeddingPanel: React.FC<AcademicEmbeddingPanelProps> = ({
         <Row gutter={16} style={{ marginBottom: 24 }}>
           <Col span={6}>
             <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
-              <Statistic title="人才总数" value={embeddingStatus?.total_talents || 0} />
+              <Statistic
+                title={t(`${K}.totalTalents`)}
+                value={embeddingStatus?.total_talents || 0}
+              />
             </Card>
           </Col>
           <Col span={6}>
             <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
               <Statistic
-                title="已生成向量"
+                title={t(`${K}.embedded`)}
                 value={embeddingStatus?.embedded_talents || 0}
                 valueStyle={{ color: semanticColors.green }}
               />
@@ -72,7 +69,7 @@ const AcademicEmbeddingPanel: React.FC<AcademicEmbeddingPanelProps> = ({
           <Col span={6}>
             <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
               <Statistic
-                title="待生成"
+                title={t(`${K}.pending`)}
                 value={embeddingStatus?.pending_talents || 0}
                 valueStyle={{ color: semanticColors.gold }}
               />
@@ -80,7 +77,11 @@ const AcademicEmbeddingPanel: React.FC<AcademicEmbeddingPanelProps> = ({
           </Col>
           <Col span={6}>
             <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
-              <Statistic title="覆盖率" value={embeddingStatus?.progress_percent || 0} suffix="%" />
+              <Statistic
+                title={t(`${K}.coverage`)}
+                value={embeddingStatus?.progress_percent || 0}
+                suffix="%"
+              />
             </Card>
           </Col>
         </Row>
@@ -91,7 +92,7 @@ const AcademicEmbeddingPanel: React.FC<AcademicEmbeddingPanelProps> = ({
             icon={<SyncOutlined spin />}
             style={{ marginBottom: 16 }}
             message={
-              embeddingProgress?.status === 'pending' ? '正在启动向量生成...' : '向量生成进行中...'
+              embeddingProgress?.status === 'pending' ? t(`${K}.starting`) : t(`${K}.running`)
             }
             description={
               <div>
@@ -105,11 +106,15 @@ const AcademicEmbeddingPanel: React.FC<AcademicEmbeddingPanelProps> = ({
                 />
                 <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                   <Text type="secondary">
-                    已处理 {formatNumber(embeddingProgress?.processed)} /{' '}
-                    {formatNumber(embeddingProgress?.total)} 位人才
+                    {t(`${K}.processedOf`, {
+                      processed: formatNumber(embeddingProgress?.processed),
+                      total: formatNumber(embeddingProgress?.total),
+                    })}
                   </Text>
                   {embeddingProgress?.failed > 0 && (
-                    <Text type="danger">失败 {embeddingProgress.failed}</Text>
+                    <Text type="danger">
+                      {t(`${K}.failedCount`, { n: embeddingProgress.failed })}
+                    </Text>
                   )}
                 </Space>
               </div>
@@ -122,12 +127,12 @@ const AcademicEmbeddingPanel: React.FC<AcademicEmbeddingPanelProps> = ({
             showIcon
             icon={<CheckCircleOutlined />}
             style={{ marginBottom: 16 }}
-            message="向量生成完成"
-            description={`成功处理 ${embeddingProgress.processed} 位人才`}
+            message={t(`${K}.completed`)}
+            description={t(`${K}.completedDesc`, { n: embeddingProgress.processed })}
           />
         )}
         {embeddingProgress?.status === 'error' && (
-          <Alert type="error" showIcon style={{ marginBottom: 16 }} message="向量生成失败" />
+          <Alert type="error" showIcon style={{ marginBottom: 16 }} message={t(`${K}.error`)} />
         )}
         <Space>
           <Button
@@ -137,18 +142,20 @@ const AcademicEmbeddingPanel: React.FC<AcademicEmbeddingPanelProps> = ({
             loading={embeddingProgress?.status === 'running'}
             disabled={embeddingProgress?.status === 'running'}
           >
-            {embeddingProgress?.status === 'running' ? '生成中...' : '生成向量'}
+            {embeddingProgress?.status === 'running' ? t(`${K}.generating`) : t(`${K}.generate`)}
           </Button>
           <Button
             danger
             onClick={() => onGenerate(true)}
             disabled={embeddingProgress?.status === 'running'}
           >
-            强制重新生成
+            {t(`${K}.forceRegenerate`)}
           </Button>
-          {embeddingProgress?.status === 'running' && <Button onClick={onCancel}>取消</Button>}
+          {embeddingProgress?.status === 'running' && (
+            <Button onClick={onCancel}>{t('common:actions.cancel')}</Button>
+          )}
           <Button icon={<ReloadOutlined />} onClick={onRefresh} loading={embeddingLoading}>
-            刷新状态
+            {t('actions.refreshStatus')}
           </Button>
         </Space>
       </Spin>

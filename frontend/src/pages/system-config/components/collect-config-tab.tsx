@@ -1,4 +1,5 @@
 import { Tabs } from 'antd'
+import { useTranslation } from 'react-i18next'
 import {
   SettingOutlined,
   ThunderboltOutlined,
@@ -25,12 +26,14 @@ import EmbeddingPanel from './collect-config-tab/embedding-panel'
 import VenueConfigModal from './collect-config-tab/venue-config-modal'
 import CollectConfirmModal from './collect-config-tab/collect-confirm-modal'
 import TaskDetailModal from './collect-config-tab/task-detail-modal'
+import '../../../i18n/namespaces/system-config'
 
 interface CollectConfigTabProps {
   initialSubTab?: string
 }
 
 const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) => {
+  const { t } = useTranslation(['systemConfig', 'common'])
   const config = useCollectConfig(initialSubTab)
 
   return (
@@ -44,7 +47,7 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
             key: 'tech-domains',
             label: (
               <span>
-                <SettingOutlined /> 技术领域配置
+                <SettingOutlined /> {t('collectConfig.tabs.techDomains')}
               </span>
             ),
             children: (
@@ -60,7 +63,7 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
             key: 'tasks',
             label: (
               <span>
-                <ThunderboltOutlined /> 采集任务
+                <ThunderboltOutlined /> {t('collectConfig.tabs.tasks')}
               </span>
             ),
             children: (
@@ -80,7 +83,7 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
             key: 'collaborations',
             label: (
               <span>
-                <TeamOutlined /> 合作网络同步
+                <TeamOutlined /> {t('collectConfig.tabs.collaborations')}
               </span>
             ),
             children: (
@@ -97,7 +100,7 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
             key: 'genealogy',
             label: (
               <span>
-                <TeamOutlined /> 学术族谱
+                <TeamOutlined /> {t('collectConfig.tabs.genealogy')}
               </span>
             ),
             children: (
@@ -113,7 +116,7 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
             key: 'opensource-repos',
             label: (
               <span>
-                <GithubOutlined /> 开源仓库配置
+                <GithubOutlined /> {t('collectConfig.tabs.osRepoConfig')}
               </span>
             ),
             children: <OSRepoConfigSubTab />,
@@ -122,7 +125,7 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
             key: 'opensource-tasks',
             label: (
               <span>
-                <PlayCircleOutlined /> 开源采集任务
+                <PlayCircleOutlined /> {t('collectConfig.tabs.osCollectTasks')}
               </span>
             ),
             children: <OSCollectTaskSubTab />,
@@ -131,7 +134,8 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
             key: 'lab-import',
             label: (
               <span>
-                <LabIcon style={{ fontSize: 16, marginRight: 4 }} /> AI实验室人才导入
+                <LabIcon style={{ fontSize: 16, marginRight: 4 }} />{' '}
+                {t('collectConfig.tabs.labImport')}
               </span>
             ),
             children: <LabImportTab />,
@@ -140,7 +144,7 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
             key: 'comp-import',
             label: (
               <span>
-                <TrophyOutlined style={{ marginRight: 4 }} /> 竞赛人才导入
+                <TrophyOutlined style={{ marginRight: 4 }} /> {t('collectConfig.tabs.compImport')}
               </span>
             ),
             children: <CompImportTab />,
@@ -149,7 +153,8 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
             key: 'industry-positions',
             label: (
               <span>
-                <BuildOutlined style={{ marginRight: 4 }} /> 行业人才岗位
+                <BuildOutlined style={{ marginRight: 4 }} />{' '}
+                {t('collectConfig.tabs.industryPositions')}
               </span>
             ),
             children: <IndustryPositionsTab />,
@@ -158,7 +163,8 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
             key: 'industry-import',
             label: (
               <span>
-                <BuildOutlined style={{ marginRight: 4 }} /> 行业人才导入
+                <BuildOutlined style={{ marginRight: 4 }} />{' '}
+                {t('collectConfig.tabs.industryImport')}
               </span>
             ),
             children: <IndustryImportTab />,
@@ -167,7 +173,7 @@ const CollectConfigTab: React.FC<CollectConfigTabProps> = ({ initialSubTab }) =>
             key: 'embeddings',
             label: (
               <span>
-                <CloudUploadOutlined /> 向量生成
+                <CloudUploadOutlined /> {t('collectConfig.tabs.embeddings')}
               </span>
             ),
             children: (

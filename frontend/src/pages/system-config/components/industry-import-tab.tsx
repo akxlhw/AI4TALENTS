@@ -15,6 +15,7 @@ import {
   message,
 } from 'antd'
 import type { UploadProps } from 'antd'
+import { useTranslation } from 'react-i18next'
 import {
   ApiOutlined,
   BuildOutlined,
@@ -31,6 +32,7 @@ import type { IndustryImportReport } from '../../../services/api/industry'
 import { useIndustryPositions } from '../../../hooks/useIndustryQueries'
 import { queryKeys } from '../../../hooks/queryClient'
 import { getErrorMessage } from '../../../utils'
+import '../../../i18n/namespaces/system-config'
 
 const { Dragger } = Upload
 const { Text, Title } = Typography
@@ -44,6 +46,7 @@ const MAX_SIZE_BYTES = 20 * 1024 * 1024
  * state preserved).
  */
 const IndustryImportTab: React.FC = () => {
+  const { t } = useTranslation(['systemConfig', 'common'])
   const queryClient = useQueryClient()
   const { data: positions, isLoading: positionsLoading } = useIndustryPositions('open')
   const [positionId, setPositionId] = useState<number | null>(null)
@@ -54,11 +57,11 @@ const IndustryImportTab: React.FC = () => {
 
   const beforeUpload: UploadProps['beforeUpload'] = file => {
     if (!file.name.endsWith('.jsonl')) {
-      message.error('请上传 .jsonl 文件')
+      message.error(t('common.invalidJsonl'))
       return Upload.LIST_IGNORE
     }
     if (file.size > MAX_SIZE_BYTES) {
-      message.error('文件超过 20MB 上限')
+      message.error(t('industryImport.tooLarge'))
       return Upload.LIST_IGNORE
     }
     setSelectedFile(file)
@@ -72,11 +75,11 @@ const IndustryImportTab: React.FC = () => {
 
   const handleImport = async () => {
     if (!positionId) {
-      message.warning('请先选择目标岗位')
+      message.warning(t('industryImport.noPositionSelected'))
       return
     }
     if (!selectedFile) {
-      message.warning('请先选择 JSONL 文件')
+      message.warning(t('common.noFileSelected'))
       return
     }
     setUploading(true)
@@ -86,14 +89,18 @@ const IndustryImportTab: React.FC = () => {
       setReport(res.data)
       setSelectedFile(null)
       message.success(
-        `导入完成：人才新增 ${res.data.talents_inserted} / 更新 ${res.data.talents_updated}，` +
-          `关联新增 ${res.data.links_inserted} / 更新 ${res.data.links_updated}，` +
-          `${res.data.skipped} 行跳过`
+        t('industryImport.importDone', {
+          inserted: res.data.talents_inserted,
+          updated: res.data.talents_updated,
+          linksInserted: res.data.links_inserted,
+          linksUpdated: res.data.links_updated,
+          skipped: res.data.skipped,
+        })
       )
       // Fresh candidates may now appear in the talent pool / position aggregates
       queryClient.invalidateQueries({ queryKey: queryKeys.industry.all })
     } catch (e) {
-      message.error(getErrorMessage(e, '导入失败'))
+      message.error(getErrorMessage(e, t('common.importFailed')))
     } finally {
       setUploading(false)
     }
@@ -101,22 +108,21 @@ const IndustryImportTab: React.FC = () => {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Card title={<><ApiOutlined style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }} />Agent 自动导入通道</>}>
+      <Card title={<><ApiOutlined style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }} />{t('industryImport.agentChannel.cardTitle')}</>}>
         <AgentChannelGuide />
       </Card>
       <Card>
         <Title level={5}>
           <BuildOutlined style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }} />
-          行业人才导入
+          {t('industryImport.heading')}
         </Title>
         <Text type="secondary">
-          上传 smart-talent-sourcing skill 产出的候选人 JSONL（schema
-          v1.0）。导入为增量更新：空字段不覆盖已有数据，已有招聘状态（触达/状态/备注）会被保留。
+          {t('industryImport.description')}
         </Text>
 
         <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Select
-            placeholder="选择目标岗位（必选）"
+            placeholder={t('industryImport.selectPositionPlaceholder')}
             style={{ minWidth: 280, flex: 1 }}
             loading={positionsLoading}
             value={positionId ?? undefined}
@@ -129,7 +135,7 @@ const IndustryImportTab: React.FC = () => {
             optionFilterProp="label"
           />
           <Input
-            placeholder="导入批次标识（可选，如 2026-08-llm）"
+            placeholder={t('industryImport.batchPlaceholder')}
             style={{ minWidth: 240, flex: 1 }}
             value={batch}
             onChange={e => setBatch(e.target.value)}
@@ -149,8 +155,8 @@ const IndustryImportTab: React.FC = () => {
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>
-            <p className="ant-upload-text">点击或拖拽 JSONL 文件到此区域上传</p>
-            <p className="ant-upload-hint">仅支持单个 .jsonl 文件（skill 输出格式，≤ 20MB）</p>
+            <p className="ant-upload-text">{t('common.uploadDragText')}</p>
+            <p className="ant-upload-hint">{t('industryImport.uploadHint')}</p>
           </Dragger>
         </div>
 
@@ -162,32 +168,32 @@ const IndustryImportTab: React.FC = () => {
             onClick={handleImport}
             disabled={!selectedFile || !positionId}
           >
-            开始导入
+            {t('common.startImport')}
           </Button>
         </div>
       </Card>
 
       {report && (
-        <Card title="导入报告">
+        <Card title={t('industryImport.report.title')}>
           <Descriptions column={2} bordered size="small">
-            <Descriptions.Item label="总行数">{report.total_lines}</Descriptions.Item>
-            <Descriptions.Item label="解析成功">{report.total_parsed}</Descriptions.Item>
-            <Descriptions.Item label="人才新增">
+            <Descriptions.Item label={t('industryImport.report.totalLines')}>{report.total_lines}</Descriptions.Item>
+            <Descriptions.Item label={t('industryImport.report.parsed')}>{report.total_parsed}</Descriptions.Item>
+            <Descriptions.Item label={t('industryImport.report.talentsInserted')}>
               <Tag color="green">{report.talents_inserted}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="人才更新">
+            <Descriptions.Item label={t('industryImport.report.talentsUpdated')}>
               <Tag color="blue">{report.talents_updated}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="关联新增">
+            <Descriptions.Item label={t('industryImport.report.linksInserted')}>
               <Tag color="green">{report.links_inserted}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="关联更新">
+            <Descriptions.Item label={t('industryImport.report.linksUpdated')}>
               <Tag color="blue">{report.links_updated}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="跳过">
+            <Descriptions.Item label={t('industryImport.report.skipped')}>
               <Tag color={report.skipped > 0 ? 'warning' : 'default'}>{report.skipped}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="警告（缺公司）">
+            <Descriptions.Item label={t('industryImport.report.warnings')}>
               <Tag color={report.warnings > 0 ? 'warning' : 'default'}>{report.warnings}</Tag>
             </Descriptions.Item>
           </Descriptions>
@@ -197,8 +203,8 @@ const IndustryImportTab: React.FC = () => {
               style={{ marginTop: 16 }}
               type="warning"
               showIcon
-              message={`${report.warnings} 行缺少 current_org`}
-              description="缺少现任公司时去重区分度较弱（dedup_hash 退化），建议人工关注这些记录。"
+              message={t('industryImport.report.missingOrgTitle', { count: report.warnings })}
+              description={t('industryImport.report.missingOrgDescription')}
             />
           )}
 
@@ -207,8 +213,8 @@ const IndustryImportTab: React.FC = () => {
               style={{ marginTop: 16 }}
               type="error"
               showIcon
-              message="导入已中止：未写入任何数据"
-              description="文件中没有可导入的有效记录（空文件或全部行无效），请检查文件内容后重新上传。"
+              message={t('industryImport.report.abortedTitle')}
+              description={t('industryImport.report.abortedDescription')}
             />
           )}
 
@@ -216,12 +222,12 @@ const IndustryImportTab: React.FC = () => {
             <Alert
               style={{ marginTop: 16 }}
               type="warning"
-              message={`${report.skip_reasons.length} 行被跳过（前 50 条）`}
+              message={t('common.skipSummary', { count: report.skip_reasons.length })}
               description={
                 <div style={{ maxHeight: 200, overflow: 'auto' }}>
                   {report.skip_reasons.slice(0, 50).map((r, i) => (
                     <div key={i} style={{ fontSize: 12 }}>
-                      <Text type="secondary">行 {r.line}：</Text>
+                      <Text type="secondary">{t('common.lineLabel', { line: r.line })}</Text>
                       <Text>{r.reason}</Text>
                     </div>
                   ))}
@@ -233,9 +239,9 @@ const IndustryImportTab: React.FC = () => {
       )}
 
       {/* Batch management — delete bad imports */}
-      <Card title="导入批次管理">
+      <Card title={t('industryImport.batch.cardTitle')}>
         <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
-          选择岗位查看已导入的批次。如果某次导入的数据质量不满意，可以删除该批次（候选人关联和打分会一并删除；不再被任何岗位关联的人才也会被清理）。
+          {t('industryImport.batch.description')}
         </Text>
         <BatchManager />
       </Card>
@@ -248,6 +254,7 @@ export default IndustryImportTab
 // --- Batch Manager sub-component ---
 
 const BatchManager: React.FC = () => {
+  const { t } = useTranslation(['systemConfig', 'common'])
   const queryClient = useQueryClient()
   const { data: positions } = useIndustryPositions()
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null)
@@ -264,7 +271,7 @@ const BatchManager: React.FC = () => {
       const res = await api.industry.listBatches(positionId)
       setBatches(res.data)
     } catch (e) {
-      message.error(getErrorMessage(e, '加载批次失败'))
+      message.error(getErrorMessage(e, t('industryImport.batch.loadFailed')))
       setBatches([])
     } finally {
       setLoading(false)
@@ -277,12 +284,15 @@ const BatchManager: React.FC = () => {
     try {
       const res = await api.industry.deleteBatch(selectedPosition, batchName)
       message.success(
-        `已删除 ${res.data.links_deleted} 条关联，清理 ${res.data.talents_deleted} 个孤立人才`
+        t('industryImport.batch.deleted', {
+          links: res.data.links_deleted,
+          talents: res.data.talents_deleted,
+        })
       )
       queryClient.invalidateQueries({ queryKey: queryKeys.industry.all })
       await loadBatches(selectedPosition)
     } catch (e) {
-      message.error(getErrorMessage(e, '删除失败'))
+      message.error(getErrorMessage(e, t('industryImport.batch.deleteFailed')))
     } finally {
       setDeleting(null)
     }
@@ -310,9 +320,9 @@ const BatchManager: React.FC = () => {
       a.click()
       document.body.removeChild(a)
       window.URL.revokeObjectURL(url)
-      message.success(`已导出 ${filename}`)
+      message.success(t('industryImport.batch.exported', { filename }))
     } catch (e) {
-      message.error(getErrorMessage(e, '导出失败'))
+      message.error(getErrorMessage(e, t('industryImport.batch.exportFailed')))
     } finally {
       setExporting(null)
     }
@@ -322,7 +332,7 @@ const BatchManager: React.FC = () => {
     <>
       <Space style={{ marginBottom: 16 }}>
         <Select
-          placeholder="选择岗位查看批次"
+          placeholder={t('industryImport.batch.selectPlaceholder')}
           style={{ width: 360 }}
           value={selectedPosition ?? undefined}
           onChange={v => {
@@ -344,7 +354,7 @@ const BatchManager: React.FC = () => {
             loading={exporting === '__all__'}
             onClick={() => handleExport(undefined)}
           >
-            导出全部
+            {t('industryImport.batch.exportAll')}
           </Button>
         )}
       </Space>
@@ -356,24 +366,24 @@ const BatchManager: React.FC = () => {
           dataSource={batches}
           rowKey={(r: { batch: string | null }) => r.batch ?? '__none__'}
           pagination={false}
-          locale={{ emptyText: '暂无导入批次' }}
+          locale={{ emptyText: t('industryImport.batch.empty') }}
           columns={[
             {
-              title: '批次',
+              title: t('industryImport.batch.columns.batch'),
               dataIndex: 'batch',
               key: 'batch',
-              render: (v: string | null) => v ?? '（无批次）',
+              render: (v: string | null) => v ?? t('industryImport.batch.columns.noBatch'),
             },
-            { title: '候选人数', dataIndex: 'count', key: 'count', width: 100 },
+            { title: t('industryImport.batch.columns.candidates'), dataIndex: 'count', key: 'count', width: 100 },
             {
-              title: '导入时间',
+              title: t('industryImport.batch.columns.time'),
               dataIndex: 'latest',
               key: 'latest',
               width: 180,
               render: (v: string | null) => (v ? v.slice(0, 19).replace('T', ' ') : '—'),
             },
             {
-              title: '操作',
+              title: t('industryImport.batch.columns.actions'),
               key: 'action',
               width: 180,
               render: (_: unknown, record: { batch: string | null }) => (
@@ -384,13 +394,13 @@ const BatchManager: React.FC = () => {
                     loading={exporting === (record.batch ?? '__none__')}
                     onClick={() => handleExport(record.batch)}
                   >
-                    导出
+                    {t('industryImport.batch.export')}
                   </Button>
                   <Popconfirm
-                    title="确认删除该批次？"
-                    description="该批次的全部候选人关联和打分将被删除。"
-                    okText="删除"
-                    cancelText="取消"
+                    title={t('industryImport.batch.deleteConfirmTitle')}
+                    description={t('industryImport.batch.deleteConfirmDescription')}
+                    okText={t('common.delete')}
+                    cancelText={t('common.cancel')}
                     okButtonProps={{ danger: true }}
                     onConfirm={() => handleDelete(record.batch)}
                   >
@@ -400,7 +410,7 @@ const BatchManager: React.FC = () => {
                       icon={<DeleteOutlined />}
                       loading={deleting === (record.batch ?? '__none__')}
                     >
-                      删除
+                      {t('common.delete')}
                     </Button>
                   </Popconfirm>
                 </Space>
@@ -416,6 +426,7 @@ const BatchManager: React.FC = () => {
 // --- Agent import channel guide (API keys now live in the shared API Key tab) ---
 
 const AgentChannelGuide: React.FC = () => {
+  const { t } = useTranslation(['systemConfig', 'common'])
   const navigate = useNavigate()
 
   return (
@@ -424,12 +435,12 @@ const AgentChannelGuide: React.FC = () => {
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="API Key 已统一迁移至「API Key 管理」"
+        message={t('industryImport.agentChannel.movedTitle')}
         description={
           <>
-            导入通道鉴权已并入开放 API Key 体系（scope：
-            <Text code>industry:write</Text>）。创建、吊销、限流均在「API Key
-            管理」页完成；此处仅保留调用方式说明。
+            {t('industryImport.agentChannel.movedDescriptionBefore')}
+            <Text code>industry:write</Text>
+            {t('industryImport.agentChannel.movedDescriptionAfter')}
           </>
         }
       />
@@ -438,23 +449,27 @@ const AgentChannelGuide: React.FC = () => {
         icon={<KeyOutlined />}
         onClick={() => navigate('/system-config?tab=api-keys')}
       >
-        前往 API Key 管理
+        {t('industryImport.agentChannel.gotoApiKeys')}
       </Button>
 
       <Alert
         type="info"
         style={{ marginTop: 16 }}
-        message="调用示例"
+        message={t('industryImport.agentChannel.exampleTitle')}
         description={
           <>
             <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
-              第一步：查询岗位 ID
+              {t('industryImport.agentChannel.step1')}
             </Text>
-            <pre style={{ margin: 0, fontSize: 12, overflow: 'auto' }}>{`curl "${window.location.origin}/api/v1/industry/positions?status=open"   -H "X-API-Key: <你的Key>"`}</pre>
+            <pre style={{ margin: 0, fontSize: 12, overflow: 'auto' }}>
+              {t('industryImport.agentChannel.step1Command', { origin: window.location.origin })}
+            </pre>
             <Text type="secondary" style={{ display: 'block', margin: '12px 0 8px' }}>
-              第二步：导入候选人 JSONL
+              {t('industryImport.agentChannel.step2')}
             </Text>
-            <pre style={{ margin: 0, fontSize: 12, overflow: 'auto' }}>{`curl -X POST "${window.location.origin}/api/v1/industry/import?position_id=<岗位ID>&batch=<批次>"   -H "X-API-Key: <你的Key>"   -H "Content-Type: application/x-jsonlines"   --data-binary @scored.jsonl`}</pre>
+            <pre style={{ margin: 0, fontSize: 12, overflow: 'auto' }}>
+              {t('industryImport.agentChannel.step2Command', { origin: window.location.origin })}
+            </pre>
           </>
         }
       />

@@ -12,12 +12,14 @@ import {
   Col,
   message,
 } from 'antd'
+import { useTranslation } from 'react-i18next'
 import {
   GithubOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
+import '../../../i18n/namespaces/system-config'
 import { getErrorMessage } from './utils'
 
 interface GitHubConfig {
@@ -27,6 +29,7 @@ interface GitHubConfig {
 }
 
 const GitHubConfigTab: React.FC = () => {
+  const { t } = useTranslation(['systemConfig', 'common'])
   const [githubConfig, setGitHubConfig] = useState<GitHubConfig | null>(null)
   const [githubForm] = Form.useForm()
   const [githubLoading, setGitHubLoading] = useState(false)
@@ -44,7 +47,7 @@ const GitHubConfigTab: React.FC = () => {
         rate_limit: response.data.rate_limit,
       })
     } catch {
-      message.error('加载 GitHub 配置失败')
+      message.error(t('github.loadFailed'))
     } finally {
       setGitHubLoading(false)
     }
@@ -55,10 +58,10 @@ const GitHubConfigTab: React.FC = () => {
       const values = await githubForm.validateFields()
       setGitHubLoading(true)
       await api.systemConfig.updateGitHubConfig(values)
-      message.success('GitHub 配置已保存')
+      message.success(t('github.saveSuccess'))
       loadGitHubConfig()
     } catch (error) {
-      message.error(getErrorMessage(error, '保存失败'))
+      message.error(getErrorMessage(error, t('common.saveFailed')))
     } finally {
       setGitHubLoading(false)
     }
@@ -74,12 +77,12 @@ const GitHubConfigTab: React.FC = () => {
         message: response.data.message,
       })
       if (response.data.success) {
-        message.success('GitHub API 连接测试成功')
+        message.success(t('github.testSuccess'))
       } else {
         message.warning(response.data.message)
       }
     } catch (error) {
-      const errorMsg = getErrorMessage(error, '连接测试失败')
+      const errorMsg = getErrorMessage(error, t('common.testFailed'))
       setTestGitHubResult({ success: false, message: errorMsg })
       message.error(errorMsg)
     } finally {
@@ -96,8 +99,8 @@ const GitHubConfigTab: React.FC = () => {
     <Card>
       <Spin spinning={githubLoading}>
         <Alert
-          message="GitHub API 配置"
-          description="配置 GitHub Personal Access Token 用于开源人才数据采集。支持多 Token 轮询（逗号分隔），单个 Token 速率限制为 5000 req/hour。"
+          message={t('github.infoTitle')}
+          description={t('github.infoDescription')}
           type="info"
           showIcon
           style={{ marginBottom: 24 }}
@@ -109,12 +112,12 @@ const GitHubConfigTab: React.FC = () => {
         >
           <Form.Item
             name="tokens"
-            label="GitHub Token"
-            tooltip="支持多个 Token，用逗号分隔。每个 Token 需要有 repo 和 read:user 权限。"
+            label={t('github.token')}
+            tooltip={t('github.tokenTooltip')}
             rules={[{ required: false }]}
           >
             <Input.TextArea
-              placeholder={githubConfig?.tokens_masked || '请输入 GitHub Personal Access Token'}
+              placeholder={githubConfig?.tokens_masked || t('github.tokenPlaceholder')}
               rows={2}
             />
           </Form.Item>
@@ -122,8 +125,8 @@ const GitHubConfigTab: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 name="base_url"
-                label="API 基础地址"
-                rules={[{ required: true, message: '请输入 API 基础地址' }]}
+                label={t('github.baseUrl')}
+                rules={[{ required: true, message: t('github.baseUrlRequired') }]}
               >
                 <Input placeholder="https://api.github.com" />
               </Form.Item>
@@ -131,8 +134,8 @@ const GitHubConfigTab: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 name="rate_limit"
-                label="单 Token 速率限制（req/hour）"
-                tooltip="用于监控预警，达到 80% 时触发警告"
+                label={t('github.rateLimit')}
+                tooltip={t('github.rateLimitTooltip')}
                 rules={[{ required: true }]}
               >
                 <InputNumber min={60} max={50000} style={{ width: '100%' }} />
@@ -141,14 +144,14 @@ const GitHubConfigTab: React.FC = () => {
           </Row>
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit" loading={githubLoading}>保存配置</Button>
-              <Button onClick={handleTestGitHub} loading={testingGitHub} icon={<GithubOutlined />}>测试连接</Button>
+              <Button type="primary" htmlType="submit" loading={githubLoading}>{t('common.saveConfig')}</Button>
+              <Button onClick={handleTestGitHub} loading={testingGitHub} icon={<GithubOutlined />}>{t('common.testConnection')}</Button>
             </Space>
           </Form.Item>
         </Form>
         {testGitHubResult && (
           <Alert
-            message={testGitHubResult.success ? '测试通过' : '测试失败'}
+            message={testGitHubResult.success ? t('common.testPassed') : t('common.testFailedShort')}
             description={testGitHubResult.message}
             type={testGitHubResult.success ? 'success' : 'error'}
             showIcon

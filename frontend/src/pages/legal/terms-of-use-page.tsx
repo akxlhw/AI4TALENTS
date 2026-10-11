@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Typography, Spin, Alert, Card } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../services/api'
+import '../../i18n/namespaces/legal'
 
 const { Title, Paragraph, Text } = Typography
 
 const TermsOfUsePage: React.FC = () => {
+  const { t } = useTranslation('legal')
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -46,9 +49,12 @@ const TermsOfUsePage: React.FC = () => {
           boxShadow: 'var(--shadow-md)',
         }}
       >
+        <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 12 }}>
+          {t('referenceNote')}
+        </Text>
         <Alert
-          message="法律约束"
-          description="违反人才数据使用限制条款可能导致账号封禁及法律责任。"
+          message={t('terms.alertTitle')}
+          description={t('terms.alertDescription')}
           type="error"
           showIcon
           style={{ marginBottom: 24 }}

@@ -14,12 +14,14 @@ import {
   Select,
   message,
 } from 'antd'
+import { useTranslation } from 'react-i18next'
 import {
   ApiOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from '@ant-design/icons'
 import { api } from '../../../services/api'
+import '../../../i18n/namespaces/system-config'
 import { getErrorMessage } from './utils'
 
 const { Text, Title } = Typography
@@ -40,6 +42,7 @@ interface LLMConfig {
 }
 
 const LLMConfigTab: React.FC = () => {
+  const { t } = useTranslation(['systemConfig', 'common'])
   const [llmConfig, setLLMConfig] = useState<LLMConfig | null>(null)
   const [llmForm] = Form.useForm()
   const [llmLoading, setLLMLoading] = useState(false)
@@ -59,7 +62,7 @@ const LLMConfigTab: React.FC = () => {
         embedding_api_key: response.data.embedding_api_key_masked,
       })
     } catch {
-      message.error('加载 LLM 配置失败')
+      message.error(t('llm.loadFailed'))
     } finally {
       setLLMLoading(false)
     }
@@ -75,13 +78,13 @@ const LLMConfigTab: React.FC = () => {
       const values = await llmForm.validateFields()
       setLLMLoading(true)
       const response = await api.systemConfig.updateLLMConfig(values)
-      message.success('LLM 配置已保存')
+      message.success(t('llm.saveSuccess'))
       if (response.data?.warning) {
         message.warning(response.data.warning, 6)
       }
       loadLLMConfig()
     } catch (error) {
-      message.error(getErrorMessage(error, '保存失败'))
+      message.error(getErrorMessage(error, t('common.saveFailed')))
     } finally {
       setLLMLoading(false)
     }
@@ -97,12 +100,12 @@ const LLMConfigTab: React.FC = () => {
         message: response.data.message,
       })
       if (response.data.success) {
-        message.success('LLM 连接测试成功')
+        message.success(t('llm.chatTestSuccess'))
       } else {
         message.warning(response.data.message)
       }
     } catch (error) {
-      const errorMsg = getErrorMessage(error, '连接测试失败')
+      const errorMsg = getErrorMessage(error, t('common.testFailed'))
       setTestResult({ success: false, message: errorMsg })
       message.error(errorMsg)
     } finally {
@@ -120,12 +123,12 @@ const LLMConfigTab: React.FC = () => {
         message: response.data.message,
       })
       if (response.data.success) {
-        message.success('嵌入模型连接测试成功')
+        message.success(t('llm.embeddingTestSuccess'))
       } else {
         message.warning(response.data.message)
       }
     } catch (error) {
-      const errorMsg = getErrorMessage(error, '嵌入模型连接测试失败')
+      const errorMsg = getErrorMessage(error, t('llm.embeddingTestFailed'))
       setEmbeddingTestResult({ success: false, message: errorMsg })
       message.error(errorMsg)
     } finally {
@@ -137,8 +140,8 @@ const LLMConfigTab: React.FC = () => {
     <Card>
       <Spin spinning={llmLoading}>
         <Alert
-          message="LLM 配置说明"
-          description="配置 LLM API 以启用岗位匹配、智能推荐等功能。API Key 将被加密存储，前端仅显示脱敏值。"
+          message={t('llm.infoTitle')}
+          description={t('llm.infoDescription')}
           type="info"
           showIcon
           style={{ marginBottom: 24 }}
@@ -152,62 +155,62 @@ const LLMConfigTab: React.FC = () => {
           <Row gutter={48}>
             {/* 左侧：对话模型配置 */}
             <Col span={12}>
-              <Title level={5} style={{ marginBottom: 8 }}>对话模型</Title>
+              <Title level={5} style={{ marginBottom: 8 }}>{t('llm.chatTitle')}</Title>
               <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-                用于 JD 解析、推荐理由生成
+                {t('llm.chatSubtitle')}
               </Text>
-              <Form.Item name="enabled" label="启用" valuePropName="checked">
-                <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+              <Form.Item name="enabled" label={t('common.enabled')} valuePropName="checked">
+                <Switch checkedChildren={t('common.on')} unCheckedChildren={t('common.off')} />
               </Form.Item>
-              <Form.Item name="api_format" label="API 格式" tooltip="openai: OpenAI 兼容格式；minimax: MiniMax 专用格式">
+              <Form.Item name="api_format" label={t('llm.apiFormat')} tooltip={t('llm.apiFormatTooltip')}>
                 <Select options={[
-                  { value: 'openai', label: 'OpenAI 兼容格式' },
-                  { value: 'minimax', label: 'MiniMax 格式' },
+                  { value: 'openai', label: t('llm.openaiFormatLabel') },
+                  { value: 'minimax', label: t('llm.minimaxFormatLabel') },
                 ]} />
               </Form.Item>
-              <Form.Item name="api_key" label="API Key">
-                <Input.Password placeholder={llmConfig?.api_key_masked || '请输入 API Key'} />
+              <Form.Item name="api_key" label={t('llm.apiKey')}>
+                <Input.Password placeholder={llmConfig?.api_key_masked || t('llm.apiKeyPlaceholder')} />
               </Form.Item>
-              <Form.Item name="api_base" label="API 地址">
-                <Input placeholder="如 https://api.deepseek.com/v1" />
+              <Form.Item name="api_base" label={t('llm.apiBase')}>
+                <Input placeholder={t('llm.apiBasePlaceholder')} />
               </Form.Item>
-              <Form.Item name="model" label="模型名称">
-                <Input placeholder="如 deepseek-chat, gpt-4o" />
+              <Form.Item name="model" label={t('llm.model')}>
+                <Input placeholder={t('llm.modelPlaceholder')} />
               </Form.Item>
               <Form.Item>
-                <Button onClick={handleTestLLM} loading={testingLLM} icon={<ApiOutlined />}>测试连接</Button>
+                <Button onClick={handleTestLLM} loading={testingLLM} icon={<ApiOutlined />}>{t('common.testConnection')}</Button>
               </Form.Item>
             </Col>
 
             {/* 右侧：嵌入模型配置 */}
             <Col span={12}>
-              <Title level={5} style={{ marginBottom: 8 }}>嵌入模型</Title>
+              <Title level={5} style={{ marginBottom: 8 }}>{t('llm.embeddingTitle')}</Title>
               <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-                用于语义搜索、相似人才推荐
+                {t('llm.embeddingSubtitle')}
               </Text>
-              <Form.Item name="embedding_enabled" label="启用" valuePropName="checked">
-                <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+              <Form.Item name="embedding_enabled" label={t('common.enabled')} valuePropName="checked">
+                <Switch checkedChildren={t('common.on')} unCheckedChildren={t('common.off')} />
               </Form.Item>
-              <Form.Item name="embedding_api_format" label="API 格式" tooltip="嵌入模型的 API 格式，留空则使用对话模型的 API 格式">
-                <Select allowClear placeholder="留空使用对话模型格式" options={[
-                  { value: 'openai', label: 'OpenAI 兼容格式' },
-                  { value: 'minimax', label: 'MiniMax 格式' },
+              <Form.Item name="embedding_api_format" label={t('llm.apiFormat')} tooltip={t('llm.embeddingApiFormatTooltip')}>
+                <Select allowClear placeholder={t('llm.embeddingApiFormatPlaceholder')} options={[
+                  { value: 'openai', label: t('llm.openaiFormatLabel') },
+                  { value: 'minimax', label: t('llm.minimaxFormatLabel') },
                 ]} />
               </Form.Item>
-              <Form.Item name="embedding_api_key" label="API Key">
-                <Input.Password placeholder={llmConfig?.embedding_api_key_masked || '请输入 API Key'} />
+              <Form.Item name="embedding_api_key" label={t('llm.apiKey')}>
+                <Input.Password placeholder={llmConfig?.embedding_api_key_masked || t('llm.apiKeyPlaceholder')} />
               </Form.Item>
-              <Form.Item name="embedding_api_base" label="API 地址">
-                <Input placeholder="如 https://api.openai.com/v1" />
+              <Form.Item name="embedding_api_base" label={t('llm.apiBase')}>
+                <Input placeholder={t('llm.embeddingApiBasePlaceholder')} />
               </Form.Item>
-              <Form.Item name="embedding_model" label="模型名称">
-                <Input placeholder="如 text-embedding-3-small, bge-m3" />
+              <Form.Item name="embedding_model" label={t('llm.model')}>
+                <Input placeholder={t('llm.embeddingModelPlaceholder')} />
               </Form.Item>
-              <Form.Item name="embedding_dimension" label="向量维度" tooltip="嵌入模型输出的向量维度。常见值：OpenAI 1536，千问/BGE 1024。注意：修改维度会清空学术人才库与开源人才库的现有向量数据">
+              <Form.Item name="embedding_dimension" label={t('llm.dimension')} tooltip={t('llm.dimensionTooltip')}>
                 <InputNumber min={128} max={4096} style={{ width: '100%' }} placeholder="1024" />
               </Form.Item>
               <Form.Item>
-                <Button onClick={handleTestEmbedding} loading={testingEmbedding} icon={<ApiOutlined />}>测试连接</Button>
+                <Button onClick={handleTestEmbedding} loading={testingEmbedding} icon={<ApiOutlined />}>{t('common.testConnection')}</Button>
               </Form.Item>
             </Col>
           </Row>
@@ -215,19 +218,19 @@ const LLMConfigTab: React.FC = () => {
           {/* 公共配置 */}
           <Row gutter={24} style={{ marginTop: 16 }}>
             <Col span={12}>
-              <Form.Item name="timeout" label="超时时间（秒）">
+              <Form.Item name="timeout" label={t('llm.timeout')}>
                 <InputNumber min={10} max={300} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" loading={llmLoading}>保存配置</Button>
+            <Button type="primary" htmlType="submit" loading={llmLoading}>{t('common.saveConfig')}</Button>
           </Form.Item>
         </Form>
         {testResult && (
           <Alert
-            message={testResult.success ? '对话模型连接成功' : '对话模型连接失败'}
+            message={testResult.success ? t('llm.chatConnected') : t('llm.chatConnectFailed')}
             description={testResult.message}
             type={testResult.success ? 'success' : 'error'}
             showIcon
@@ -237,7 +240,7 @@ const LLMConfigTab: React.FC = () => {
         )}
         {embeddingTestResult && (
           <Alert
-            message={embeddingTestResult.success ? '嵌入模型连接成功' : '嵌入模型连接失败'}
+            message={embeddingTestResult.success ? t('llm.embeddingConnected') : t('llm.embeddingConnectFailed')}
             description={embeddingTestResult.message}
             type={embeddingTestResult.success ? 'success' : 'error'}
             showIcon

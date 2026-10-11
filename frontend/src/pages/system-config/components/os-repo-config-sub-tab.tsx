@@ -48,9 +48,11 @@ import {
   getTechElementColor,
   useTechElements,
 } from '@/constants/tech-elements'
+import '../../../i18n/namespaces/system-config'
 import OsDiscoverSubTab from './os-discover-sub-tab'
 
 const OSRepoConfigSubTab: React.FC = () => {
+  const { t } = useTranslation(['systemConfig', 'common'])
   const { fullLabel } = useTechElements()
   const [data, setData] = useState<OSRepoConfig[]>([])
 
@@ -120,11 +122,11 @@ const OSRepoConfigSubTab: React.FC = () => {
       setData(response.data.items || [])
       setTotal(response.data.total || 0)
     } catch {
-      message.error('加载仓库配置失败')
+      message.error(t('osRepoConfig.messages.loadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [page, pageSize, filterTechElement, searchKeyword])
+  }, [page, pageSize, filterTechElement, searchKeyword, t])
 
   useEffect(() => {
     loadData()
@@ -157,25 +159,25 @@ const OSRepoConfigSubTab: React.FC = () => {
       const values = await form.validateFields()
       if (editingRecord) {
         await api.openSource.updateRepoConfig(editingRecord.repo_config_id, values)
-        message.success('仓库配置已更新')
+        message.success(t('osRepoConfig.messages.updated'))
       } else {
         await api.openSource.createRepoConfig(values)
-        message.success('仓库配置已创建')
+        message.success(t('osRepoConfig.messages.created'))
       }
       setModalVisible(false)
       loadData()
     } catch (error) {
-      message.error(getErrorMessage(error, '保存失败'))
+      message.error(getErrorMessage(error, t('osRepoConfig.messages.saveFailed')))
     }
   }
 
   const handleDelete = async (id: number) => {
     try {
       await api.openSource.deleteRepoConfig(id)
-      message.success('仓库配置已删除')
+      message.success(t('osRepoConfig.messages.deleted'))
       loadData()
     } catch (error) {
-      message.error(getErrorMessage(error, '删除失败'))
+      message.error(getErrorMessage(error, t('osRepoConfig.messages.deleteFailed')))
     }
   }
 
@@ -187,15 +189,15 @@ const OSRepoConfigSubTab: React.FC = () => {
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
     }
     const header = [
-      '仓库全名',
-      '显示名称',
-      '技术领域',
-      '主要语言',
-      'Stars',
-      '启用展示',
-      '参与采集',
-      '描述',
-      '备注',
+      t('osRepoConfig.csv.repoFullName'),
+      t('osRepoConfig.csv.displayName'),
+      t('osRepoConfig.csv.techDomain'),
+      t('osRepoConfig.csv.language'),
+      t('osRepoConfig.csv.stars'),
+      t('osRepoConfig.csv.activeDisplay'),
+      t('osRepoConfig.csv.collectEnabled'),
+      t('osRepoConfig.csv.description'),
+      t('osRepoConfig.csv.notes'),
     ]
     const lines = rows.map(r =>
       [
@@ -206,8 +208,8 @@ const OSRepoConfigSubTab: React.FC = () => {
           .join(' | '),
         r.language || '',
         r.stars_count ?? 0,
-        r.is_active ? '是' : '否',
-        r.collect_enabled ? '是' : '否',
+        r.is_active ? t('osRepoConfig.yes') : t('osRepoConfig.no'),
+        r.collect_enabled ? t('osRepoConfig.yes') : t('osRepoConfig.no'),
         r.description || '',
         r.notes || '',
       ]
@@ -219,10 +221,12 @@ const OSRepoConfigSubTab: React.FC = () => {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `开源仓库配置_${new Date().toISOString().slice(0, 10)}.csv`
+    a.download = t('osRepoConfig.csv.filename', {
+      date: new Date().toISOString().slice(0, 10),
+    })
     a.click()
     window.URL.revokeObjectURL(url)
-    message.success(`已导出 ${rows.length} 个仓库配置`)
+    message.success(t('osRepoConfig.messages.exported', { n: rows.length }))
   }
 
   const handleCollect = async (record: OSRepoConfig) => {
@@ -252,7 +256,7 @@ const OSRepoConfigSubTab: React.FC = () => {
       })
       setPurgePreview(response.data)
     } catch (error) {
-      message.error(getErrorMessage(error, '获取清理预览失败'))
+      message.error(getErrorMessage(error, t('osRepoConfig.messages.purgePreviewFailed')))
       setPurgeModalVisible(false)
     } finally {
       setPurgeLoading(false)
@@ -269,14 +273,17 @@ const OSRepoConfigSubTab: React.FC = () => {
       })
       const result: OSPurgePreview = response.data
       message.success(
-        `已清理 ${result.repo_full_name} 的采集数据：删除贡献 ${result.contributions} 条、` +
-          `独占人才 ${result.developers_exclusive} 名` +
-          (result.config_deleted ? '，仓库配置已一并删除' : '')
+        t('osRepoConfig.purge.done', {
+          repo: result.repo_full_name,
+          contributions: result.contributions,
+          developers: result.developers_exclusive,
+          configDeleted: result.config_deleted ? t('osRepoConfig.purge.configDeleted') : '',
+        })
       )
       setPurgeModalVisible(false)
       loadData()
     } catch (error) {
-      message.error(getErrorMessage(error, '清理失败'))
+      message.error(getErrorMessage(error, t('osRepoConfig.purge.failed')))
     } finally {
       setPurgeExecuting(false)
     }
@@ -288,7 +295,7 @@ const OSRepoConfigSubTab: React.FC = () => {
       .map(l => l.trim())
       .filter(Boolean)
     if (lines.length === 0) {
-      message.warning('请输入至少一个仓库链接')
+      message.warning(t('osRepoConfig.messages.batchAddEmpty'))
       return
     }
     setBatchAddLoading(true)
@@ -306,7 +313,7 @@ const OSRepoConfigSubTab: React.FC = () => {
         parts.push(
           <div key="created" style={{ marginBottom: 12 }}>
             <Text strong style={{ color: '#52c41a' }}>
-              ✅ 创建成功 {created.length} 个
+              {t('osRepoConfig.batchAdd.created', { n: created.length })}
             </Text>
             {created.map(
               (c: { repo_full_name: string; language?: string; stars_count?: number }) => (
@@ -327,7 +334,7 @@ const OSRepoConfigSubTab: React.FC = () => {
         parts.push(
           <div key="skipped" style={{ marginBottom: 12 }}>
             <Text strong style={{ color: '#faad14' }}>
-              ⚠️ 已存在/跳过 {skipped.length} 个
+              {t('osRepoConfig.batchAdd.skipped', { n: skipped.length })}
             </Text>
             {skipped.map((s: { repo_input: string; reason: string }, i: number) => (
               <div key={i} style={{ fontSize: 12, marginLeft: 16, marginTop: 2 }}>
@@ -341,7 +348,7 @@ const OSRepoConfigSubTab: React.FC = () => {
         parts.push(
           <div key="failed">
             <Text strong style={{ color: '#ff4d4f' }}>
-              ❌ 获取失败 {failed.length} 个
+              {t('osRepoConfig.batchAdd.failed', { n: failed.length })}
             </Text>
             {failed.map((f: { repo_input: string; reason: string }, i: number) => (
               <div key={i} style={{ fontSize: 12, marginLeft: 16, marginTop: 2 }}>
@@ -353,14 +360,14 @@ const OSRepoConfigSubTab: React.FC = () => {
       }
       if (parts.length > 0) {
         Modal.info({
-          title: '批量添加结果',
+          title: t('osRepoConfig.batchAdd.resultTitle'),
           width: 520,
           content: <div style={{ maxHeight: 400, overflow: 'auto' }}>{parts}</div>,
         })
       }
       loadData()
     } catch (error) {
-      message.error(getErrorMessage(error, '批量添加失败'))
+      message.error(getErrorMessage(error, t('osRepoConfig.messages.batchAddFailed')))
     } finally {
       setBatchAddLoading(false)
     }
@@ -368,7 +375,7 @@ const OSRepoConfigSubTab: React.FC = () => {
 
   const handleBatchTechUpdate = async () => {
     if (batchTechValue.length === 0) {
-      message.warning('请选择至少一个技术领域')
+      message.warning(t('osRepoConfig.messages.techEmpty'))
       return
     }
     const ids = selectedRowKeys.map(k => Number(k))
@@ -382,11 +389,11 @@ const OSRepoConfigSubTab: React.FC = () => {
       setBatchTechModalVisible(false)
       const { updated, failed } = res.data
       if (updated > 0) {
-        message.success(`已更新 ${updated} 个仓库的技术领域，关联人才标签已同步`)
+        message.success(t('osRepoConfig.messages.techUpdated', { n: updated }))
       }
       if (failed.length > 0) {
         Modal.warning({
-          title: `${failed.length} 个仓库更新失败`,
+          title: t('osRepoConfig.batchTech.updateFailedTitle', { n: failed.length }),
           content: (
             <div style={{ maxHeight: 240, overflow: 'auto' }}>
               {failed.map((f: { repo_input: string; reason: string }, i: number) => (
@@ -401,7 +408,7 @@ const OSRepoConfigSubTab: React.FC = () => {
       setSelectedRowKeys([])
       loadData()
     } catch (error) {
-      message.error(getErrorMessage(error, '批量更新失败'))
+      message.error(getErrorMessage(error, t('osRepoConfig.messages.techUpdateFailed')))
     } finally {
       setBatchTechLoading(false)
     }
@@ -413,9 +420,11 @@ const OSRepoConfigSubTab: React.FC = () => {
       setCollectModalVisible(false)
       setCollectingIds(prev => new Set(prev).add(collectRecord.repo_config_id))
       await api.openSource.collectRepo(collectRecord.repo_config_id)
-      message.success(`已启动 ${collectRecord.repo_full_name} 的采集任务`)
+      message.success(
+        t('osRepoConfig.messages.collectStarted', { repo: collectRecord.repo_full_name })
+      )
     } catch (error) {
-      message.error(getErrorMessage(error, '启动采集失败'))
+      message.error(getErrorMessage(error, t('osRepoConfig.messages.collectStartFailed')))
     } finally {
       setCollectingIds(prev => {
         const next = new Set(prev)
@@ -452,15 +461,15 @@ const OSRepoConfigSubTab: React.FC = () => {
       const response = await api.openSource.collectBatchRepos(ids, batchContributorsPerRepo)
       const { created, skipped } = response.data
       if (created.length > 0) {
-        message.success(`已成功启动 ${created.length} 个仓库的采集任务`)
+        message.success(t('osRepoConfig.messages.batchCollectStarted', { n: created.length }))
       }
       if (skipped.length > 0) {
         const reasons = skipped.map(
           (s: { repo_full_name?: string; reason: string }) =>
-            `${s.repo_full_name || '未知仓库'}: ${s.reason}`
+            `${s.repo_full_name || t('osRepoConfig.messages.unknownRepo')}: ${s.reason}`
         )
         Modal.warning({
-          title: `${skipped.length} 个仓库被跳过`,
+          title: t('osRepoConfig.batchCollect.skippedTitle', { n: skipped.length }),
           content: (
             <div style={{ maxHeight: 240, overflow: 'auto' }}>
               {reasons.map((r: string, i: number) => (
@@ -473,11 +482,11 @@ const OSRepoConfigSubTab: React.FC = () => {
         })
       }
       if (created.length === 0 && skipped.length === 0) {
-        message.info('未启动任何采集任务')
+        message.info(t('osRepoConfig.messages.batchCollectNoneStarted'))
       }
       setSelectedRowKeys([])
     } catch (error) {
-      message.error(getErrorMessage(error, '批量启动采集失败'))
+      message.error(getErrorMessage(error, t('osRepoConfig.messages.batchCollectStartFailed')))
     } finally {
       ids.forEach(id => {
         setCollectingIds(prev => {
@@ -497,7 +506,7 @@ const OSRepoConfigSubTab: React.FC = () => {
 
   const columns = [
     {
-      title: '显示名称',
+      title: t('osRepoConfig.columns.displayName'),
       dataIndex: 'display_name',
       key: 'display_name',
       render: (name: string, record: OSRepoConfig) => (
@@ -508,7 +517,7 @@ const OSRepoConfigSubTab: React.FC = () => {
       ),
     },
     {
-      title: '仓库全名',
+      title: t('osRepoConfig.columns.repoFullName'),
       dataIndex: 'repo_full_name',
       key: 'repo_full_name',
       render: (name: string) => (
@@ -518,7 +527,7 @@ const OSRepoConfigSubTab: React.FC = () => {
       ),
     },
     {
-      title: '技术领域（要素）',
+      title: t('osRepoConfig.columns.techElement'),
       dataIndex: 'tech_element',
       key: 'tech_element',
       width: 200,
@@ -537,12 +546,12 @@ const OSRepoConfigSubTab: React.FC = () => {
     },
 
     {
-      title: '操作',
+      title: t('osRepoConfig.columns.actions'),
       key: 'actions',
       width: 150,
       render: (_: unknown, record: OSRepoConfig) => (
         <Space>
-          <Tooltip title="开始采集">
+          <Tooltip title={t('osRepoConfig.tooltips.startCollect')}>
             <Button
               type="link"
               size="small"
@@ -551,7 +560,7 @@ const OSRepoConfigSubTab: React.FC = () => {
               loading={collectingIds.has(record.repo_config_id)}
               disabled={!record.collect_enabled || collectingIds.has(record.repo_config_id)}
             >
-              采集
+              {t('osRepoConfig.actions.collect')}
             </Button>
           </Tooltip>
           <Button
@@ -560,19 +569,19 @@ const OSRepoConfigSubTab: React.FC = () => {
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
           >
-            编辑
+            {t('osRepoConfig.actions.edit')}
           </Button>
           <Popconfirm
-            title="确定删除此仓库配置？"
+            title={t('osRepoConfig.deleteConfirm')}
             onConfirm={() => handleDelete(record.repo_config_id)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
+              {t('common:actions.delete')}
             </Button>
           </Popconfirm>
-          <Tooltip title="清理该仓库的采集数据（贡献/独占人才等）">
+          <Tooltip title={t('osRepoConfig.tooltips.purge')}>
             <Button
               type="link"
               size="small"
@@ -580,7 +589,7 @@ const OSRepoConfigSubTab: React.FC = () => {
               icon={<ClearOutlined />}
               onClick={() => handlePurge(record)}
             >
-              清理数据
+              {t('osRepoConfig.actions.purge')}
             </Button>
           </Tooltip>
         </Space>
@@ -601,9 +610,9 @@ const OSRepoConfigSubTab: React.FC = () => {
                 <RadarChartOutlined
                   style={{ marginRight: 6, color: 'var(--domain-badge-bg, #6B46C1)' }}
                 />
-                <Text strong>自动探测知名开源项目</Text>
+                <Text strong>{t('osRepoConfig.discover.title')}</Text>
                 <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                  按技术方向搜索 GitHub star 达标项目，勾选后导入下方仓库配置
+                  {t('osRepoConfig.discover.brief')}
                 </Text>
               </span>
             ),
@@ -619,7 +628,7 @@ const OSRepoConfigSubTab: React.FC = () => {
               <Space>
                 <Select
                   mode="multiple"
-                  placeholder="筛选技术领域（可多选）"
+                  placeholder={t('osRepoConfig.toolbar.filterTechPlaceholder')}
                   allowClear
                   style={{ minWidth: 200, maxWidth: 360 }}
                   value={filterTechElement}
@@ -630,7 +639,7 @@ const OSRepoConfigSubTab: React.FC = () => {
                   options={translatedTechGroups}
                 />
                 <Input.Search
-                  placeholder="搜索仓库名称..."
+                  placeholder={t('osRepoConfig.toolbar.searchPlaceholder')}
                   allowClear
                   style={{ width: 240 }}
                   value={searchKeyword}
@@ -645,13 +654,13 @@ const OSRepoConfigSubTab: React.FC = () => {
             <Col>
               <Space>
                 <Button icon={<ReloadOutlined />} onClick={loadData}>
-                  刷新
+                  {t('actions.refresh')}
                 </Button>
                 <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-                  新增仓库
+                  {t('osRepoConfig.actions.addRepo')}
                 </Button>
                 <Button icon={<DatabaseOutlined />} onClick={() => setBatchAddModalVisible(true)}>
-                  批量添加
+                  {t('osRepoConfig.actions.batchAdd')}
                 </Button>
               </Space>
             </Col>
@@ -670,14 +679,16 @@ const OSRepoConfigSubTab: React.FC = () => {
               }}
             >
               <Text>
-                已选择 <strong>{selectedRowKeys.length}</strong> 个仓库
+                {t('osRepoConfig.toolbar.selectedCountPrefix')}
+                <strong>{selectedRowKeys.length}</strong>
+                {t('osRepoConfig.toolbar.selectedCountSuffix')}
               </Text>
               <Space>
                 <Button size="small" onClick={() => setSelectedRowKeys([])}>
-                  取消选择
+                  {t('osRepoConfig.actions.clearSelection')}
                 </Button>
                 <Button size="small" icon={<DownloadOutlined />} onClick={handleExportSelected}>
-                  导出选中
+                  {t('osRepoConfig.actions.exportSelected')}
                 </Button>
                 <Button
                   size="small"
@@ -687,7 +698,7 @@ const OSRepoConfigSubTab: React.FC = () => {
                     setBatchTechModalVisible(true)
                   }}
                 >
-                  批量设置技术领域
+                  {t('osRepoConfig.actions.batchSetTech')}
                 </Button>
                 <Button
                   type="primary"
@@ -695,7 +706,7 @@ const OSRepoConfigSubTab: React.FC = () => {
                   icon={<PlayCircleOutlined />}
                   onClick={handleBatchCollect}
                 >
-                  批量采集
+                  {t('osRepoConfig.actions.batchCollect')}
                 </Button>
               </Space>
             </div>
@@ -712,7 +723,7 @@ const OSRepoConfigSubTab: React.FC = () => {
               current: page,
               pageSize,
               total,
-              showTotal: t => `共 ${t} 个仓库`,
+              showTotal: count => t('osRepoConfig.toolbar.total', { n: count }),
               showSizeChanger: true,
               pageSizeOptions: [10, 20, 50, 100],
               onChange: p => setPage(p),
@@ -721,85 +732,110 @@ const OSRepoConfigSubTab: React.FC = () => {
                 setPageSize(size)
               },
             }}
-            locale={{ emptyText: <Empty description="暂无仓库配置" /> }}
+            locale={{ emptyText: <Empty description={t('osRepoConfig.toolbar.empty')} /> }}
           />
         </Spin>
 
         <Modal
-          title={editingRecord ? '编辑仓库配置' : '新增仓库配置'}
+          title={editingRecord ? t('osRepoConfig.form.editTitle') : t('osRepoConfig.form.addTitle')}
           open={modalVisible}
           onCancel={() => setModalVisible(false)}
           onOk={handleSave}
-          okText="保存"
+          okText={t('osRepoConfig.save')}
           width={560}
         >
           <Form form={form} layout="vertical">
             <Form.Item
               name="repo_full_name"
-              label="GitHub 仓库全名"
+              label={t('osRepoConfig.form.repoFullName')}
               rules={[
-                { required: true, message: '请输入仓库全名' },
-                { pattern: /^[\w.-]+\/[\w.-]+$/, message: '格式应为 owner/repo' },
+                { required: true, message: t('osRepoConfig.form.repoFullNameRequired') },
+                {
+                  pattern: /^[\w.-]+\/[\w.-]+$/,
+                  message: t('osRepoConfig.form.repoFullNamePattern'),
+                },
               ]}
             >
-              <Input disabled={!!editingRecord} placeholder="如 pytorch/pytorch" />
+              <Input
+                disabled={!!editingRecord}
+                placeholder={t('osRepoConfig.form.repoFullNamePlaceholder')}
+              />
             </Form.Item>
-            <Form.Item name="display_name" label="显示名称">
-              <Input placeholder="如 PyTorch" />
+            <Form.Item name="display_name" label={t('osRepoConfig.form.displayName')}>
+              <Input placeholder={t('osRepoConfig.form.displayNamePlaceholder')} />
             </Form.Item>
-            <Form.Item name="description" label="描述">
-              <Input.TextArea rows={2} placeholder="仓库描述" />
+            <Form.Item name="description" label={t('osRepoConfig.form.description')}>
+              <Input.TextArea
+                rows={2}
+                placeholder={t('osRepoConfig.form.descriptionPlaceholder')}
+              />
             </Form.Item>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
                   name="tech_element"
-                  label="技术领域（可多选）"
-                  rules={[{ required: true, message: '请选择技术领域' }]}
+                  label={t('osRepoConfig.form.techElement')}
+                  rules={[{ required: true, message: t('osRepoConfig.form.techElementRequired') }]}
                 >
                   <Select
                     mode="multiple"
-                    placeholder="选择技术领域"
+                    placeholder={t('osRepoConfig.form.techElementPlaceholder')}
                     options={translatedTechGroups}
                   />
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item name="language" label="主要语言">
-                  <Input placeholder="如 Python" />
+                <Form.Item name="language" label={t('osRepoConfig.form.language')}>
+                  <Input placeholder={t('osRepoConfig.form.languagePlaceholder')} />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
               <Col span={12}>
-                <Form.Item name="is_active" label="启用展示" valuePropName="checked">
-                  <Switch checkedChildren="是" unCheckedChildren="否" />
+                <Form.Item
+                  name="is_active"
+                  label={t('osRepoConfig.form.isActive')}
+                  valuePropName="checked"
+                >
+                  <Switch
+                    checkedChildren={t('osRepoConfig.yes')}
+                    unCheckedChildren={t('osRepoConfig.no')}
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item name="collect_enabled" label="参与采集" valuePropName="checked">
-                  <Switch checkedChildren="是" unCheckedChildren="否" />
+                <Form.Item
+                  name="collect_enabled"
+                  label={t('osRepoConfig.form.collectEnabled')}
+                  valuePropName="checked"
+                >
+                  <Switch
+                    checkedChildren={t('osRepoConfig.yes')}
+                    unCheckedChildren={t('osRepoConfig.no')}
+                  />
                 </Form.Item>
               </Col>
             </Row>
-            <Form.Item name="notes" label="备注">
-              <Input.TextArea rows={2} placeholder="管理员备注" />
+            <Form.Item name="notes" label={t('osRepoConfig.form.notes')}>
+              <Input.TextArea rows={2} placeholder={t('osRepoConfig.form.notesPlaceholder')} />
             </Form.Item>
           </Form>
         </Modal>
 
         {/* Collect Confirm Modal */}
         <Modal
-          title="确认采集"
+          title={t('osRepoConfig.collectConfirm.title')}
           open={collectModalVisible}
           onCancel={() => setCollectModalVisible(false)}
           onOk={handleConfirmCollect}
-          okText="确认采集"
-          cancelText="取消"
+          okText={t('osRepoConfig.collectConfirm.okText')}
+          cancelText={t('common:actions.cancel')}
           width={420}
         >
           <p style={{ margin: 0, fontSize: 14 }}>
-            确认要采集 <strong>{collectRecord?.repo_full_name}</strong> 的贡献者数据吗？
+            {t('osRepoConfig.collectConfirm.messagePrefix')}
+            <strong>{collectRecord?.repo_full_name}</strong>
+            {t('osRepoConfig.collectConfirm.messageSuffix')}
           </p>
           {collectHistory && (
             <div
@@ -812,29 +848,36 @@ const OSRepoConfigSubTab: React.FC = () => {
                 fontSize: 13,
               }}
             >
-              ⚠️ 该仓库已于 {collectHistory.last_collected_at?.slice(0, 10)}{' '}
-              {collectHistory.last_status_label}
-              {collectHistory.last_records > 0 && `（${collectHistory.last_records} 条记录）`}
-              ，确认要重新采集吗？
+              {t('osRepoConfig.collectConfirm.historyPrefix', {
+                date: collectHistory.last_collected_at?.slice(0, 10),
+                status: collectHistory.last_status_label,
+              })}
+              {collectHistory.last_records > 0 &&
+                t('osRepoConfig.collectConfirm.historyRecords', {
+                  n: collectHistory.last_records,
+                })}
+              {t('osRepoConfig.collectConfirm.historyRecollect')}
             </div>
           )}
         </Modal>
 
         {/* Batch Collect Confirm Modal */}
         <Modal
-          title="确认批量采集"
+          title={t('osRepoConfig.batchCollect.title')}
           open={batchCollectModalVisible}
           onCancel={() => setBatchCollectModalVisible(false)}
           onOk={handleConfirmBatchCollect}
-          okText="确认"
-          cancelText="取消"
+          okText={t('common:actions.confirm')}
+          cancelText={t('common:actions.cancel')}
           width={400}
         >
           <p style={{ margin: '0 0 16px 0', fontSize: 14 }}>
-            确认要批量采集 <strong>{selectedRowKeys.length}</strong> 个仓库的贡献者数据吗？
+            {t('osRepoConfig.batchCollect.messagePrefix')}
+            <strong>{selectedRowKeys.length}</strong>
+            {t('osRepoConfig.batchCollect.messageSuffix')}
           </p>
           <div style={{ marginBottom: 8 }}>
-            <Text type="secondary">每个仓库采集贡献者数量（0=全部）</Text>
+            <Text type="secondary">{t('osRepoConfig.batchCollect.contributorsPerRepo')}</Text>
           </div>
           <InputNumber
             min={0}
@@ -847,21 +890,23 @@ const OSRepoConfigSubTab: React.FC = () => {
 
         {/* Batch Tech Element Modal */}
         <Modal
-          title="批量设置技术领域"
+          title={t('osRepoConfig.batchTech.title')}
           open={batchTechModalVisible}
           onCancel={() => setBatchTechModalVisible(false)}
           onOk={handleBatchTechUpdate}
-          okText="确认"
-          cancelText="取消"
+          okText={t('common:actions.confirm')}
+          cancelText={t('common:actions.cancel')}
           confirmLoading={batchTechLoading}
           width={440}
         >
           <p style={{ margin: '0 0 12px 0', fontSize: 14 }}>
-            为选中的 <strong>{selectedRowKeys.length}</strong> 个仓库设置技术领域（覆盖原有设置）：
+            {t('osRepoConfig.batchTech.messagePrefix')}
+            <strong>{selectedRowKeys.length}</strong>
+            {t('osRepoConfig.batchTech.messageSuffix')}
           </p>
           <Select
             mode="multiple"
-            placeholder="选择一个或多个技术领域"
+            placeholder={t('osRepoConfig.batchTech.selectPlaceholder')}
             value={batchTechValue}
             onChange={setBatchTechValue}
             style={{ width: '100%' }}
@@ -869,21 +914,21 @@ const OSRepoConfigSubTab: React.FC = () => {
           />
           <div style={{ marginTop: 8 }}>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              更新后，这些仓库关联人才的技术标签将按新设置自动重算。
+              {t('osRepoConfig.batchTech.hint')}
             </Text>
           </div>
         </Modal>
 
         {/* Batch History — 3-choice modal (some repos already collected) */}
         <Modal
-          title="部分仓库已采集过"
+          title={t('osRepoConfig.batchHistory.title')}
           open={batchHistoryModal.visible}
           onCancel={() => setBatchHistoryModal(prev => ({ ...prev, visible: false }))}
           width={480}
           footer={
             <Space>
               <Button onClick={() => setBatchHistoryModal(prev => ({ ...prev, visible: false }))}>
-                取消
+                {t('common:actions.cancel')}
               </Button>
               <Button
                 disabled={batchHistoryModal.allIds.length === batchHistoryModal.collected.length}
@@ -901,8 +946,9 @@ const OSRepoConfigSubTab: React.FC = () => {
                   }
                 }}
               >
-                只采集未采集的（
-                {batchHistoryModal.allIds.length - batchHistoryModal.collected.length} 个）
+                {t('osRepoConfig.batchHistory.onlyNew', {
+                  n: batchHistoryModal.allIds.length - batchHistoryModal.collected.length,
+                })}
               </Button>
               <Button
                 type="primary"
@@ -912,7 +958,9 @@ const OSRepoConfigSubTab: React.FC = () => {
                   await executeBatchCollect(allIds)
                 }}
               >
-                继续全部采集（{batchHistoryModal.allIds.length} 个）
+                {t('osRepoConfig.batchHistory.collectAll', {
+                  n: batchHistoryModal.allIds.length,
+                })}
               </Button>
             </Space>
           }
@@ -927,25 +975,28 @@ const OSRepoConfigSubTab: React.FC = () => {
               fontSize: 13,
             }}
           >
-            ⚠️ 以下 {batchHistoryModal.collected.length} 个仓库之前已采集过：
+            {t('osRepoConfig.batchHistory.warning', {
+              n: batchHistoryModal.collected.length,
+            })}
           </div>
           <div style={{ maxHeight: 240, overflow: 'auto', fontSize: 13, marginBottom: 16 }}>
             {batchHistoryModal.collected.map(c => (
               <div key={c.repo_config_id} style={{ marginBottom: 4 }}>
                 • <strong>{c.repo_full_name}</strong> — {c.last_collected_at?.slice(0, 10)}{' '}
                 {c.last_status_label}
-                {c.last_records > 0 && `（${c.last_records} 条）`}
+                {c.last_records > 0 &&
+                  t('osRepoConfig.batchHistory.records', { n: c.last_records })}
               </div>
             ))}
           </div>
           <Text type="secondary" style={{ fontSize: 13 }}>
-            请选择操作方式：
+            {t('osRepoConfig.batchHistory.chooseAction')}
           </Text>
         </Modal>
 
         {/* Batch Add Modal */}
         <Modal
-          title="批量添加仓库"
+          title={t('osRepoConfig.batchAdd.title')}
           open={batchAddModalVisible}
           onCancel={() => {
             setBatchAddModalVisible(false)
@@ -953,13 +1004,19 @@ const OSRepoConfigSubTab: React.FC = () => {
           }}
           onOk={handleBatchAdd}
           confirmLoading={batchAddLoading}
-          okText={`添加并自动获取信息${batchAddText.split('\n').filter(l => l.trim()).length > 0 ? ` (${batchAddText.split('\n').filter(l => l.trim()).length} 个)` : ''}`}
-          cancelText="取消"
+          okText={`${t('osRepoConfig.batchAdd.okText')}${
+            batchAddText.split('\n').filter(l => l.trim()).length > 0
+              ? t('osRepoConfig.batchAdd.okCount', {
+                  n: batchAddText.split('\n').filter(l => l.trim()).length,
+                })
+              : ''
+          }`}
+          cancelText={t('common:actions.cancel')}
           width={560}
         >
           <div style={{ marginBottom: 12 }}>
             <Text type="secondary" style={{ fontSize: 13 }}>
-              技术领域（可多选，统一应用到整批）
+              {t('osRepoConfig.batchAdd.techLabel')}
             </Text>
             <Select
               mode="multiple"
@@ -967,12 +1024,12 @@ const OSRepoConfigSubTab: React.FC = () => {
               value={batchAddTech}
               onChange={setBatchAddTech}
               options={translatedTechGroups}
-              placeholder="选择技术领域"
+              placeholder={t('osRepoConfig.batchAdd.techPlaceholder')}
             />
           </div>
           <div style={{ marginBottom: 8 }}>
             <Text type="secondary" style={{ fontSize: 13 }}>
-              仓库链接（每行一个，支持 GitHub URL 或 owner/repo 格式）
+              {t('osRepoConfig.batchAdd.linksLabel')}
             </Text>
           </div>
           <Input.TextArea
@@ -986,25 +1043,25 @@ const OSRepoConfigSubTab: React.FC = () => {
           />
           <div style={{ marginTop: 8 }}>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              系统将自动通过 GitHub API 获取仓库名称、描述、主要语言和 Star 数
+              {t('osRepoConfig.batchAdd.autoFetchHint')}
             </Text>
           </div>
         </Modal>
 
         {/* Batch Tech Element Modal */}
         <Modal
-          title={`批量设置技术领域（${selectedRowKeys.length} 个仓库）`}
+          title={t('osRepoConfig.batchTech.titleCount', { n: selectedRowKeys.length })}
           open={batchTechModalVisible}
           onCancel={() => setBatchTechModalVisible(false)}
           onOk={handleBatchTechUpdate}
           confirmLoading={batchTechLoading}
-          okText="应用"
-          cancelText="取消"
+          okText={t('osRepoConfig.batchTech.apply')}
+          cancelText={t('common:actions.cancel')}
           width={480}
         >
           <div style={{ marginBottom: 12 }}>
             <Text type="secondary" style={{ fontSize: 13 }}>
-              将以下技术领域统一应用到全部选中的仓库（覆盖现有值）：
+              {t('osRepoConfig.batchTech.applyMessage')}
             </Text>
           </div>
           <Select
@@ -1013,7 +1070,7 @@ const OSRepoConfigSubTab: React.FC = () => {
             value={batchTechValue}
             onChange={setBatchTechValue}
             options={translatedTechGroups}
-            placeholder="选择技术领域（可多选）"
+            placeholder={t('osRepoConfig.batchTech.selectPlaceholderMulti')}
           />
           <div
             style={{
@@ -1024,20 +1081,22 @@ const OSRepoConfigSubTab: React.FC = () => {
               fontSize: 12,
             }}
           >
-            💡 应用后，这些仓库的关联人才的技术标签会自动按
-            <Text code>所有关联仓库的技术领域并集</Text>
-            重新计算。
+            {t('osRepoConfig.batchTech.hintPrefix')}
+            <Text code>{t('osRepoConfig.batchTech.hintUnion')}</Text>
+            {t('osRepoConfig.batchTech.hintSuffix')}
           </div>
         </Modal>
 
         {/* Purge Confirm Modal */}
         <Modal
-          title={`清理采集数据 - ${purgeRecord?.repo_full_name ?? ''}`}
+          title={t('osRepoConfig.purge.title', {
+            repo: purgeRecord?.repo_full_name ?? '',
+          })}
           open={purgeModalVisible}
           onCancel={() => setPurgeModalVisible(false)}
           onOk={handleConfirmPurge}
-          okText="确认清理"
-          cancelText="取消"
+          okText={t('osRepoConfig.purge.okText')}
+          cancelText={t('common:actions.cancel')}
           okButtonProps={{
             danger: true,
             disabled: purgeConfirmText !== purgeRecord?.repo_full_name,
@@ -1047,35 +1106,40 @@ const OSRepoConfigSubTab: React.FC = () => {
         >
           <Spin spinning={purgeLoading}>
             {purgePreview && !purgePreview.repo_found && (
-              <p style={{ fontSize: 14 }}>
-                该仓库尚未采集过数据（无仓库与贡献记录），清理不会产生任何删除。
-              </p>
+              <p style={{ fontSize: 14 }}>{t('osRepoConfig.purge.nothing')}</p>
             )}
             {purgePreview && purgePreview.repo_found && (
               <div style={{ fontSize: 14 }}>
                 <p>
-                  将删除 <strong>{purgePreview.contributions}</strong> 条贡献记录、
+                  {t('osRepoConfig.purge.warningPrefix')}
+                  <strong>{purgePreview.contributions}</strong>
+                  {t('osRepoConfig.purge.warningMiddle')}
                   <strong style={{ color: '#cf1322' }}>
                     {' '}
                     {purgePreview.developers_exclusive}{' '}
                   </strong>
-                  名独占人才（连带语言技能 {purgePreview.skills} 条、向量 {purgePreview.embeddings}{' '}
-                  条、原始数据 {purgePreview.raw} 条），以及该仓库本身。
+                  {t('osRepoConfig.purge.warningSkills', {
+                    skills: purgePreview.skills,
+                    embeddings: purgePreview.embeddings,
+                    raw: purgePreview.raw,
+                  })}
                 </p>
                 <p>
-                  <strong>{purgePreview.developers_shared}</strong>{' '}
-                  名人才因被其他已配置仓库引用而保留，
+                  <strong>{purgePreview.developers_shared}</strong>
+                  {t('osRepoConfig.purge.retainedShared')}
                   <strong> {purgePreview.developers_protected} </strong>
-                  名人才因被收藏或加入人才池而保留。
+                  {t('osRepoConfig.purge.retainedProtected')}
                 </p>
-                <p style={{ color: '#cf1322' }}>此操作不可恢复，采集任务历史记录会保留。</p>
+                <p style={{ color: '#cf1322' }}>{t('osRepoConfig.purge.irreversible')}</p>
               </div>
             )}
             {!purgeLoading && (
               <>
                 <div style={{ margin: '12px 0 8px' }}>
                   <Text type="secondary">
-                    请输入仓库全名 <Text code>{purgeRecord?.repo_full_name}</Text> 以确认清理
+                    {t('osRepoConfig.purge.promptPrefix')}{' '}
+                    <Text code>{purgeRecord?.repo_full_name}</Text>{' '}
+                    {t('osRepoConfig.purge.promptSuffix')}
                   </Text>
                 </div>
                 <Input
@@ -1090,7 +1154,7 @@ const OSRepoConfigSubTab: React.FC = () => {
                     size="small"
                     style={{ marginRight: 8 }}
                   />
-                  <Text type="secondary">同时删除该仓库的配置行</Text>
+                  <Text type="secondary">{t('osRepoConfig.purge.deleteConfig')}</Text>
                 </div>
               </>
             )}

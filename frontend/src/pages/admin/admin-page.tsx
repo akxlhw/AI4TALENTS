@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Form, message } from 'antd'
 import dayjs from 'dayjs'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
+import '../../i18n/namespaces/admin'
 import UserTableSection from './components/user-table-section'
 import UserFormModal from './components/user-form-modal'
 import UserDetailDrawer from './components/user-detail-drawer'
@@ -11,6 +13,7 @@ import { getApiErrorDetail } from './components/types'
 import type { ActivityItem, Scope, User } from './components/types'
 
 const AdminPage: React.FC = () => {
+  const { t } = useTranslation(['admin', 'common'])
   const { isSuperAdmin } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [total, setTotal] = useState(0)
@@ -75,11 +78,11 @@ const AdminPage: React.FC = () => {
       setUsers(response.data.items)
       setTotal(response.data.total)
     } catch {
-      message.error('加载用户列表失败')
+      message.error(t('users.messages.loadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [page, activeTab, roleFilter, statusFilter, dateRange, sortBy, sortOrder])
+  }, [page, activeTab, roleFilter, statusFilter, dateRange, sortBy, sortOrder, t])
 
   useEffect(() => {
     loadUsers()
@@ -88,20 +91,20 @@ const AdminPage: React.FC = () => {
   const handleApproveUser = async (userId: number) => {
     try {
       await api.admin.approveUser(userId)
-      message.success('用户已通过')
+      message.success(t('users.messages.approved'))
       loadUsers()
     } catch (error: unknown) {
-      message.error(getApiErrorDetail(error) || '操作失败')
+      message.error(getApiErrorDetail(error) || t('common:messages.operationFailed'))
     }
   }
 
   const handleRejectUser = async (userId: number) => {
     try {
       await api.admin.rejectUser(userId)
-      message.success('用户已拒绝')
+      message.success(t('users.messages.rejected'))
       loadUsers()
     } catch (error: unknown) {
-      message.error(getApiErrorDetail(error) || '操作失败')
+      message.error(getApiErrorDetail(error) || t('common:messages.operationFailed'))
     }
   }
 
@@ -126,35 +129,35 @@ const AdminPage: React.FC = () => {
     try {
       if (editingUser) {
         await api.admin.updateUser(editingUser.user_id, values)
-        message.success('用户更新成功')
+        message.success(t('users.messages.updateSuccess'))
       } else {
         await api.admin.createUser(values as Parameters<typeof api.admin.createUser>[0])
-        message.success('用户创建成功')
+        message.success(t('users.messages.createSuccess'))
       }
       setUserModalVisible(false)
       loadUsers()
     } catch (error: unknown) {
-      message.error(getApiErrorDetail(error) || '操作失败')
+      message.error(getApiErrorDetail(error) || t('common:messages.operationFailed'))
     }
   }
 
   const handleDeactivateUser = async (userId: number) => {
     try {
       await api.admin.deactivateUser(userId)
-      message.success('用户已禁用')
+      message.success(t('users.messages.deactivated'))
       loadUsers()
     } catch (error: unknown) {
-      message.error(getApiErrorDetail(error) || '操作失败')
+      message.error(getApiErrorDetail(error) || t('common:messages.operationFailed'))
     }
   }
 
   const handleActivateUser = async (userId: number) => {
     try {
       await api.admin.activateUser(userId)
-      message.success('用户已启用')
+      message.success(t('users.messages.activated'))
       loadUsers()
     } catch (error: unknown) {
-      message.error(getApiErrorDetail(error) || '操作失败')
+      message.error(getApiErrorDetail(error) || t('common:messages.operationFailed'))
     }
   }
 
@@ -164,7 +167,7 @@ const AdminPage: React.FC = () => {
       const response = await api.admin.getUserScopes(userId)
       setUserScopes(response.data.items)
     } catch {
-      message.error('加载权限失败')
+      message.error(t('scopes.messages.loadFailed'))
     }
     setScopeModalVisible(true)
   }
@@ -188,7 +191,7 @@ const AdminPage: React.FC = () => {
       setActivitiesTotal(response.data.total)
       setActivitiesPage(pageNum)
     } catch {
-      message.error('加载活动记录失败')
+      message.error(t('users.messages.activitiesLoadFailed'))
     } finally {
       setActivitiesLoading(false)
     }
@@ -201,13 +204,13 @@ const AdminPage: React.FC = () => {
       await api.admin.addUserScope(selectedUserId, {
         ...(values as Omit<Parameters<typeof api.admin.addUserScope>[1], 'user_id'>),
       })
-      message.success('权限添加成功')
+      message.success(t('scopes.messages.addSuccess'))
       scopeForm.resetFields()
       // Reload scopes
       const response = await api.admin.getUserScopes(selectedUserId)
       setUserScopes(response.data.items)
     } catch (error: unknown) {
-      message.error(getApiErrorDetail(error) || '添加失败')
+      message.error(getApiErrorDetail(error) || t('scopes.messages.addFailed'))
     }
   }
 
@@ -216,12 +219,12 @@ const AdminPage: React.FC = () => {
 
     try {
       await api.admin.removeUserScope(selectedUserId, scopeId)
-      message.success('权限已移除')
+      message.success(t('scopes.messages.removeSuccess'))
       // Reload scopes
       const response = await api.admin.getUserScopes(selectedUserId)
       setUserScopes(response.data.items)
     } catch (error: unknown) {
-      message.error(getApiErrorDetail(error) || '移除失败')
+      message.error(getApiErrorDetail(error) || t('scopes.messages.removeFailed'))
     }
   }
 

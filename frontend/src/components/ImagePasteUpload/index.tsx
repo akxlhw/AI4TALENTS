@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Upload, message, Typography } from 'antd'
 import { PlusOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import type { UploadFile } from 'antd/es/upload/interface'
 
 const { Text } = Typography
@@ -20,6 +21,7 @@ const ImagePasteUpload: React.FC<ImagePasteUploadProps> = ({
   maxCount = 5,
   maxSizeMB = 5,
 }) => {
+  const { t } = useTranslation('common')
   const containerRef = useRef<HTMLDivElement>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewImage, setPreviewImage] = useState('')
@@ -31,7 +33,7 @@ const ImagePasteUpload: React.FC<ImagePasteUploadProps> = ({
     const current = fileListRef.current
     const remaining = maxCount - current.length
     if (remaining <= 0) {
-      message.error(`最多上传 ${maxCount} 张图片`)
+      message.error(t('upload.maxCountExceeded', { count: maxCount }))
       return
     }
 
@@ -49,15 +51,15 @@ const ImagePasteUpload: React.FC<ImagePasteUploadProps> = ({
 
   const handleBeforeUpload = (file: File) => {
     if (!ACCEPT_TYPES.includes(file.type)) {
-      message.error('仅支持 PNG、JPEG、GIF、WEBP 格式图片')
+      message.error(t('upload.unsupportedFormat'))
       return Upload.LIST_IGNORE
     }
     if (file.size > maxSizeMB * 1024 * 1024) {
-      message.error(`单张图片大小不能超过 ${maxSizeMB}MB`)
+      message.error(t('upload.fileTooLarge', { size: maxSizeMB }))
       return Upload.LIST_IGNORE
     }
     if (fileList.length >= maxCount) {
-      message.error(`最多上传 ${maxCount} 张图片`)
+      message.error(t('upload.maxCountExceeded', { count: maxCount }))
       return Upload.LIST_IGNORE
     }
     return false
@@ -142,7 +144,7 @@ const ImagePasteUpload: React.FC<ImagePasteUploadProps> = ({
           <div style={{ width: 100, height: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
             <PlusOutlined />
             <div style={{ marginTop: 8 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>点击或粘贴</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>{t('upload.clickOrPaste')}</Text>
             </div>
           </div>
         )}
@@ -195,7 +197,7 @@ const ImagePasteUpload: React.FC<ImagePasteUploadProps> = ({
 
       <div>
         <Text type="secondary" style={{ fontSize: 12 }}>
-          支持粘贴截图（Ctrl+V），最多 {maxCount} 张，单张不超过 {maxSizeMB}MB
+          {t('upload.pasteHint', { count: maxCount, size: maxSizeMB })}
         </Text>
       </div>
 

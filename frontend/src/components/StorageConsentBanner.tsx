@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button, Radio, Space, Typography, Modal } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
 
@@ -10,6 +11,7 @@ type ConsentLevel = 'necessary' | 'functional' | 'analytics'
 const STORAGE_KEY = 'storage_consent_level'
 
 const StorageConsentBanner: React.FC = () => {
+  const { t } = useTranslation('common')
   const [visible, setVisible] = useState(false)
   const [level, setLevel] = useState<ConsentLevel>('necessary')
   const user = useAuthStore((s) => s.user)
@@ -96,19 +98,19 @@ const StorageConsentBanner: React.FC = () => {
       >
         <Space direction="vertical" size={4} style={{ flex: 1, minWidth: 280 }}>
           <Text style={{ fontSize: 14, fontWeight: 500 }}>
-            我们使用本地存储来改善您的体验
+            {t('consent.title')}
           </Text>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            您可以选择允许哪些类型的数据存储。必要类存储用于维持登录状态，功能类用于记住您的偏好设置。
+            {t('consent.description')}
           </Text>
           <Radio.Group
             value={level}
             onChange={(e) => setLevel(e.target.value)}
             size="small"
           >
-            <Radio value="necessary">仅必要</Radio>
-            <Radio value="functional">功能偏好</Radio>
-            <Radio value="analytics">分析统计</Radio>
+            <Radio value="necessary">{t('consent.necessary')}</Radio>
+            <Radio value="functional">{t('consent.functional')}</Radio>
+            <Radio value="analytics">{t('consent.analytics')}</Radio>
           </Radio.Group>
         </Space>
 
@@ -118,21 +120,21 @@ const StorageConsentBanner: React.FC = () => {
             size="small"
             onClick={() =>
               Modal.info({
-                title: '隐私政策',
+                title: t('footer.privacy'),
                 content: (
                   <div style={{ maxHeight: 400, overflow: 'auto' }}>
-                    <p>请访问「隐私政策」页面查看完整内容。</p>
+                    <p>{t('consent.privacyModalBody')}</p>
                   </div>
                 ),
                 onOk: () => window.open('/privacy-policy', '_blank'),
-                okText: '查看完整政策',
+                okText: t('consent.viewFullPolicy'),
               })
             }
           >
-            查看隐私政策
+            {t('consent.viewPrivacyPolicy')}
           </Button>
           <Button type="primary" size="small" onClick={handleAccept}>
-            接受所选
+            {t('consent.accept')}
           </Button>
         </Space>
       </div>

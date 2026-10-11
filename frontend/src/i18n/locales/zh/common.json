@@ -1,7 +1,8 @@
 {
-  "actions": { "search": "搜索", "export": "导出", "cancel": "取消", "confirm": "确定", "close": "关闭", "retry": "重试", "viewAll": "查看全部", "detail": "详情", "delete": "删除" },
+  "actions": { "search": "搜索", "export": "导出", "cancel": "取消", "confirm": "确定", "close": "关闭", "retry": "重试", "viewAll": "查看全部", "detail": "详情", "delete": "删除", "back": "返回" },
   "status": { "loading": "加载中…", "empty": "暂无数据", "error": "加载失败" },
   "pagination": { "total": "共 {{n}} 条" },
+  "brand": { "tagline": "智能人才库" },
   "footer": { "privacy": "隐私政策", "terms": "用户协议", "cookie": "Cookie 设置", "copyright": "© {{year}} AI4TALENT 智能人才库" },
   "compare": {
     "title": "候选人对比",
@@ -21,5 +22,209 @@
   },
   "messages": {
     "operationFailed": "操作失败"
+  },
+  "aiLoading": {
+    "title": "智能分析中",
+    "tagline": "智能人才发现平台",
+    "steps": {
+      "connect": "连接 AI 服务",
+      "parseJD": "解析职位描述",
+      "extractSkills": "提取技能要求",
+      "match": "匹配候选人",
+      "generate": "生成推荐结果"
+    }
+  },
+  "changelog": {
+    "title": "更新日志",
+    "currentVersion": "当前版本 v{{version}}",
+    "empty": "暂无更新记录",
+    "orderingHint": "版本由新到旧排列，展开任意版本查看完整变更明细。",
+    "latest": "最新"
+  },
+  "collaboration": {
+    "currentScholar": "当前学者",
+    "coauthor": "合作者",
+    "count": "合作次数: {{count}}",
+    "papers": "合作论文: {{count}}",
+    "emptyTitle": "暂无合作网络数据",
+    "emptyHint": "需要同步论文合作数据后才能展示"
+  },
+  "columnSettings": {
+    "title": "列显示设置",
+    "reset": "恢复默认",
+    "hint": "选择要显示的列（已选择 {{count}} 列）",
+    "required": "（固定）"
+  },
+  "columns": {
+    "favorite": "收藏",
+    "name": "姓名",
+    "role_type": "角色",
+    "school_name": "学校",
+    "works_count": "论文数",
+    "cited_by_count": "引用数",
+    "h_index": "H指数",
+    "topic_tags": "研究方向"
+  },
+  "demo": {
+    "featurePreview": "功能预览",
+    "comingSoon": "完整功能开发中，敬请期待"
+  },
+  "favorite": {
+    "addTitle": "添加收藏",
+    "removeTitle": "取消收藏",
+    "removeConfirm": "确定要取消收藏该候选人吗？",
+    "addedLabel": "已收藏",
+    "addLabel": "收藏",
+    "addedTooltip": "已收藏，点击取消",
+    "addTooltip": "添加收藏",
+    "notesHint": "可以添加备注记录关注该候选人的原因（可选）",
+    "notesPlaceholder": "例如：研究方向匹配、学术背景优秀等..."
+  },
+  "consent": {
+    "title": "我们使用本地存储来改善您的体验",
+    "description": "您可以选择允许哪些类型的数据存储。必要类存储用于维持登录状态，功能类用于记住您的偏好设置。",
+    "necessary": "仅必要",
+    "functional": "功能偏好",
+    "analytics": "分析统计",
+    "privacyModalBody": "请访问「隐私政策」页面查看完整内容。",
+    "viewFullPolicy": "查看完整政策",
+    "viewPrivacyPolicy": "查看隐私政策",
+    "accept": "接受所选"
+  },
+  "genealogy": {
+    "tiers": {
+      "tier1": "学术领军",
+      "tier2": "中坚学者",
+      "tier3": "青年才俊",
+      "tier4": "新锐研究者"
+    },
+    "relations": {
+      "advisor_student": "导师-学生",
+      "mentor_mentee": "导师-门徒",
+      "senior_junior": "前辈-后辈"
+    },
+    "aggNode": "+{{count}} 人",
+    "tooltip": {
+      "aggHidden": "该层级另有 {{count}} 位学者已折叠<br/>点击此节点展开全部",
+      "institution": "机构: {{value}}",
+      "score": "综合评分: {{value}}",
+      "tier": "层级: {{value}}",
+      "citations": "引用: {{value}}",
+      "confidence": "置信度: {{value}}",
+      "evidence": "证据: {{value}} 篇"
+    },
+    "relationType": "关系类型",
+    "allRelations": "全部关系",
+    "minConfidence": "最低置信度: {{value}}",
+    "tierFilter": "层级过滤",
+    "allTiers": "全部层级",
+    "displayCount": "显示 {{nodes}} 个节点 / {{links}} 条关系",
+    "filteredHint": "（原始共 {{total}} 条，当前过滤后 {{shown}} 条）",
+    "noRelationsAfterFilter": "当前学者「{{name}}」暂无通过置信度 ≥ {{value}} 的族谱关系。尝试降低最低置信度，或等待管理员重新触发族谱计算。",
+    "noNodesAfterFilter": "过滤后没有可显示的节点"
+  },
+  "upload": {
+    "maxCountExceeded": "最多上传 {{count}} 张图片",
+    "unsupportedFormat": "仅支持 PNG、JPEG、GIF、WEBP 格式图片",
+    "fileTooLarge": "单张图片大小不能超过 {{size}}MB",
+    "clickOrPaste": "点击或粘贴",
+    "pasteHint": "支持粘贴截图（Ctrl+V），最多 {{count}} 张，单张不超过 {{size}}MB"
+  },
+  "labImport": {
+    "title": "AI 实验室人才导入",
+    "subtitle": "上传 ai-lab-talent-crawler 产出的 JSONL 文件，按实验室全量替换。",
+    "labName": "实验室名称（parent_lab）",
+    "labNamePlaceholder": "如：南京大学LAMDA实验室；若 JSONL 首行包含 lab 元数据则可留空",
+    "labNameHint": "可选。当 JSONL 第一行包含 type=lab 的实验室元数据时会自动读取；填写时优先使用此处值",
+    "dragText": "点击或拖拽 JSONL 文件到此区域上传",
+    "hint": "仅支持单个 .jsonl 文件（crawler 输出格式）",
+    "start": "开始导入",
+    "report": "导入报告",
+    "fields": {
+      "lab": "实验室",
+      "totalLines": "总行数",
+      "parsed": "成功解析",
+      "inserted": "写入",
+      "skipped": "跳过"
+    },
+    "jsonlOnly": "请上传 .jsonl 文件",
+    "selectFirst": "请先选择 JSONL 文件",
+    "importDone": "导入完成：{{inserted}} 人入库，{{skipped}} 行跳过",
+    "importFailed": "导入失败",
+    "skipReasonsTitle": "{{count}} 行被跳过（前 50 条）",
+    "line": "行 {{line}}：",
+    "prefetchTitle": "主页预抓取",
+    "prefetchRunning": "正在批量抓取个人主页并缓存... ({{processed}}/{{total}})",
+    "prefetchStale": "（心跳超时，可重新触发）",
+    "prefetchCurrent": "当前：{{current}}",
+    "prefetchDone": "预抓取完成：共 {{total}} 人",
+    "prefetchDoneErrors": "，{{count}} 个失败",
+    "prefetchDoneDesc": "个人主页已缓存，详情页的\"加载预览\"将秒开。",
+    "prefetchFailed": "预抓取失败，请稍后重试",
+    "prefetchCancelled": "预抓取已取消",
+    "starting": "启动中..."
+  },
+  "taskStatus": {
+    "pending": "待执行",
+    "running": "执行中",
+    "completed": "已完成",
+    "failed": "失败",
+    "cancelled": "已取消"
+  },
+  "venueType": {
+    "conference": "会议",
+    "journal": "期刊",
+    "workshop": "研讨会"
+  },
+  "yearOptions": {
+    "year": "{{year}} 年",
+    "endYear": "至今"
+  },
+  "followupStatus": {
+    "new_found": "新发现",
+    "reviewed": "已审阅",
+    "followed": "已跟进",
+    "pending_evaluation": "待评估",
+    "recommend_contact": "推荐联系",
+    "no_followup": "暂不跟进"
+  },
+  "roleType": {
+    "professor": "教授/研究员",
+    "student": "学生",
+    "graduate": "毕业生",
+    "unknown": "未知"
+  },
+  "collectNotify": {
+    "nameFallback": "任务 #{{id}}",
+    "doneTitle": "采集任务完成",
+    "doneDesc": "「{{name}}」已完成",
+    "failedTitle": "采集任务失败",
+    "failedDesc": "「{{name}}」已失败，请前往采集配置查看",
+    "cancelledTitle": "采集任务已取消",
+    "cancelledDesc": "「{{name}}」已取消"
+  },
+  "exportMenu": {
+    "csv": "导出 CSV",
+    "xlsx": "导出 Excel"
+  },
+  "auth": {
+    "welcomeBack": "欢迎回来，{{name}}！",
+    "loggedOut": "已退出登录"
+  },
+  "favorites": {
+    "loadFailed": "收藏状态加载失败，收藏标记可能不准确",
+    "added": "已添加到收藏",
+    "addFailed": "添加收藏失败",
+    "removed": "已取消收藏",
+    "removeFailed": "取消收藏失败",
+    "notesUpdated": "备注已更新",
+    "updateFailed": "更新备注失败"
+  },
+  "domainThemes": {
+    "academic": { "label": "学术人才", "short": "学术" },
+    "opensource": { "label": "开源生态", "short": "开源" },
+    "lab": { "label": "AI Native", "short": "AI Native" },
+    "competition": { "label": "竞赛人才", "short": "竞赛" },
+    "industry": { "label": "行业专家", "short": "行业" }
   }
 }

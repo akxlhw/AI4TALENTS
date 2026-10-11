@@ -1,0 +1,11 @@
+{
+  "referenceNote": "中文版本为权威版本；英文译文仅供参考。",
+  "privacy": {
+    "alertTitle": "核心约束",
+    "alertDescription": "本平台人才数据仅供内部研究参考，严禁使用人才库中的联系方式，直接对外向人才本人发起联系、招聘等用途。"
+  },
+  "terms": {
+    "alertTitle": "法律约束",
+    "alertDescription": "违反人才数据使用限制条款可能导致账号封禁及法律责任。"
+  }
+}

@@ -15,6 +15,7 @@ import {
 import { InboxOutlined, UploadOutlined, CloudSyncOutlined } from '@ant-design/icons'
 import LabIcon from './lab-icon'
 import type { UploadProps } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { api } from '../services/api'
 import { getErrorMessage } from '../utils'
 
@@ -37,6 +38,7 @@ interface LabImportFormProps {
 }
 
 const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
+  const { t } = useTranslation('common')
   const [parentLab, setParentLab] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -115,7 +117,7 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
     const isJsonl =
       file.name.endsWith('.jsonl') || file.type === 'application/jsonl' || file.type === ''
     if (!isJsonl) {
-      message.error('请上传 .jsonl 文件')
+      message.error(t('labImport.jsonlOnly'))
       return Upload.LIST_IGNORE
     }
     setSelectedFile(file)
@@ -129,7 +131,7 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
 
   const handleImport = async () => {
     if (!selectedFile) {
-      message.warning('请先选择 JSONL 文件')
+      message.warning(t('labImport.selectFirst'))
       return
     }
     setUploading(true)
@@ -138,7 +140,12 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
       const res = await api.lab.importUpload(selectedFile, parentLab.trim() || undefined)
       setReport(res.data as ImportReport)
       setSelectedFile(null)
-      message.success(`导入完成：${res.data.inserted} 人入库，${res.data.skipped} 行跳过`)
+      message.success(
+        t('labImport.importDone', {
+          inserted: res.data.inserted,
+          skipped: res.data.skipped,
+        })
+      )
       onSuccess?.(res.data as ImportReport)
 
       // Auto-trigger homepage prefetch
@@ -155,7 +162,7 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
             status: 'pending',
             processed: 0,
             total: 0,
-            current: '启动中...',
+            current: t('labImport.starting'),
             errors: 0,
           })
           startPolling(labName)
@@ -177,7 +184,7 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
         }
       }
     } catch (e) {
-      message.error(getErrorMessage(e, '导入失败'))
+      message.error(getErrorMessage(e, t('labImport.importFailed')))
     } finally {
       setUploading(false)
     }
@@ -188,22 +195,22 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
       <Card>
         <Title level={5}>
           <LabIcon style={{ fontSize: 20, marginRight: 8 }} />
-          AI 实验室人才导入
+          {t('labImport.title')}
         </Title>
         <Text type="secondary">
-          上传 ai-lab-talent-crawler 产出的 JSONL 文件，按实验室全量替换。
+          {t('labImport.subtitle')}
         </Text>
 
         <div style={{ marginTop: 16 }}>
-          <Text strong>实验室名称（parent_lab）</Text>
+          <Text strong>{t('labImport.labName')}</Text>
           <Input
-            placeholder="如：南京大学LAMDA实验室；若 JSONL 首行包含 lab 元数据则可留空"
+            placeholder={t('labImport.labNamePlaceholder')}
             value={parentLab}
             onChange={e => setParentLab(e.target.value)}
             style={{ marginTop: 4, maxWidth: 400 }}
           />
           <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
-            可选。当 JSONL 第一行包含 type=lab 的实验室元数据时会自动读取；填写时优先使用此处值
+            {t('labImport.labNameHint')}
           </Text>
         </div>
 
@@ -218,8 +225,8 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>
-            <p className="ant-upload-text">点击或拖拽 JSONL 文件到此区域上传</p>
-            <p className="ant-upload-hint">仅支持单个 .jsonl 文件（crawler 输出格式）</p>
+            <p className="ant-upload-text">{t('labImport.dragText')}</p>
+            <p className="ant-upload-hint">{t('labImport.hint')}</p>
           </Dragger>
         </div>
 
@@ -231,23 +238,23 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
             onClick={handleImport}
             disabled={!selectedFile}
           >
-            开始导入
+            {t('labImport.start')}
           </Button>
         </div>
       </Card>
 
       {report && (
-        <Card title="导入报告">
+        <Card title={t('labImport.report')}>
           <Descriptions column={2} bordered size="small">
-            <Descriptions.Item label="实验室">{report.parent_lab}</Descriptions.Item>
-            <Descriptions.Item label="总行数">{report.total_lines}</Descriptions.Item>
-            <Descriptions.Item label="成功解析">
+            <Descriptions.Item label={t('labImport.fields.lab')}>{report.parent_lab}</Descriptions.Item>
+            <Descriptions.Item label={t('labImport.fields.totalLines')}>{report.total_lines}</Descriptions.Item>
+            <Descriptions.Item label={t('labImport.fields.parsed')}>
               <Tag color="green">{report.total_parsed}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="写入">
+            <Descriptions.Item label={t('labImport.fields.inserted')}>
               <Tag color="blue">{report.inserted}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="跳过">
+            <Descriptions.Item label={t('labImport.fields.skipped')}>
               <Tag color={report.skipped > 0 ? 'warning' : 'default'}>{report.skipped}</Tag>
             </Descriptions.Item>
           </Descriptions>
@@ -256,12 +263,12 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
             <Alert
               style={{ marginTop: 16 }}
               type="warning"
-              message={`${report.skip_reasons.length} 行被跳过（前 50 条）`}
+              message={t('labImport.skipReasonsTitle', { count: report.skip_reasons.length })}
               description={
                 <div style={{ maxHeight: 200, overflow: 'auto' }}>
                   {report.skip_reasons.map((r, i) => (
                     <div key={i} style={{ fontSize: 12 }}>
-                      <Text type="secondary">行 {r.line}：</Text>
+                      <Text type="secondary">{t('labImport.line', { line: r.line })}</Text>
                       <Text>{r.reason}</Text>
                     </div>
                   ))}
@@ -277,22 +284,25 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
           title={
             <Space>
               <CloudSyncOutlined spin={prefetchStatus.status === 'running'} />
-              主页预抓取
+              {t('labImport.prefetchTitle')}
             </Space>
           }
         >
           {prefetchStatus.status === 'pending' || prefetchStatus.status === 'running' ? (
             <>
               <Text type="secondary">
-                正在批量抓取个人主页并缓存... ({prefetchStatus.processed}/{prefetchStatus.total})
-                {prefetchStatus.stale && '（心跳超时，可重新触发）'}
+                {t('labImport.prefetchRunning', {
+                  processed: prefetchStatus.processed,
+                  total: prefetchStatus.total,
+                })}
+                {prefetchStatus.stale && t('labImport.prefetchStale')}
               </Text>
               {prefetchStatus.current &&
                 prefetchStatus.current !== 'starting' &&
                 prefetchStatus.current !== 'initializing' && (
                   <div style={{ marginTop: 4 }}>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      当前：{prefetchStatus.current}
+                      {t('labImport.prefetchCurrent', { current: prefetchStatus.current })}
                     </Text>
                   </div>
                 )}
@@ -310,15 +320,17 @@ const LabImportForm: React.FC<LabImportFormProps> = ({ onSuccess }) => {
             <Alert
               type="success"
               showIcon
-              message={`预抓取完成：共 ${prefetchStatus.total} 人${
-                prefetchStatus.errors > 0 ? `，${prefetchStatus.errors} 个失败` : ''
+              message={`${t('labImport.prefetchDone', { total: prefetchStatus.total })}${
+                prefetchStatus.errors > 0
+                  ? t('labImport.prefetchDoneErrors', { count: prefetchStatus.errors })
+                  : ''
               }`}
-              description={'个人主页已缓存，详情页的"加载预览"将秒开。'}
+              description={t('labImport.prefetchDoneDesc')}
             />
           ) : prefetchStatus.status === 'error' ? (
-            <Alert type="error" showIcon message="预抓取失败，请稍后重试" />
+            <Alert type="error" showIcon message={t('labImport.prefetchFailed')} />
           ) : prefetchStatus.status === 'cancelled' ? (
-            <Alert type="warning" showIcon message="预抓取已取消" />
+            <Alert type="warning" showIcon message={t('labImport.prefetchCancelled')} />
           ) : null}
         </Card>
       )}

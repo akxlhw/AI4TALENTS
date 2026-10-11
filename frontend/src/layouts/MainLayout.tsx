@@ -223,7 +223,7 @@ const MainLayout: React.FC = () => {
                   letterSpacing: '0.5px',
                 }}
               >
-                智能人才库
+                {t('brand.tagline')}
               </Text>
             )}
           </Space>

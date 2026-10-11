@@ -1,7 +1,9 @@
 import { Card, Space, Button, Alert, Progress, Spin, Row, Col, Statistic } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { ReloadOutlined, SyncOutlined, TeamOutlined } from '@ant-design/icons'
 import { semanticColors } from '../../../../theme'
 import { formatUTCToLocal } from '../../../../utils/datetime'
+import '../../../../i18n/namespaces/system-config'
 
 interface CollabSyncPanelProps {
   collabSyncStatus: {
@@ -27,6 +29,8 @@ const CollabSyncPanel: React.FC<CollabSyncPanelProps> = ({
   onSyncAll,
   onRefresh,
 }) => {
+  const { t } = useTranslation(['systemConfig', 'common'])
+
   return (
     <Card>
       <Spin spinning={collabSyncLoading}>
@@ -34,7 +38,7 @@ const CollabSyncPanel: React.FC<CollabSyncPanelProps> = ({
           <Col span={8}>
             <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
               <Statistic
-                title="已同步学者数"
+                title={t('collectConfig.collabSync.syncedTalents')}
                 value={collabDataStatus?.talents_with_collaborations || 0}
                 prefix={<TeamOutlined />}
               />
@@ -43,7 +47,7 @@ const CollabSyncPanel: React.FC<CollabSyncPanelProps> = ({
           <Col span={8}>
             <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
               <Statistic
-                title="合作关系数"
+                title={t('collectConfig.collabSync.collaborations')}
                 value={collabDataStatus?.total_collaborations || 0}
                 prefix={<TeamOutlined />}
               />
@@ -52,7 +56,7 @@ const CollabSyncPanel: React.FC<CollabSyncPanelProps> = ({
           <Col span={8}>
             <Card size="small" bordered={false} style={{ background: semanticColors.bgGray }}>
               <Statistic
-                title="最后同步时间"
+                title={t('collectConfig.collabSync.lastSync')}
                 value={formatUTCToLocal(collabDataStatus?.last_sync)}
                 valueStyle={{ fontSize: 16 }}
               />
@@ -67,7 +71,9 @@ const CollabSyncPanel: React.FC<CollabSyncPanelProps> = ({
               icon={<SyncOutlined spin />}
               style={{ marginBottom: 8 }}
               message={
-                collabSyncStatus?.status === 'pending' ? '正在启动同步任务...' : '同步进行中...'
+                collabSyncStatus?.status === 'pending'
+                  ? t('collectConfig.collabSync.starting')
+                  : t('collectConfig.collabSync.running')
               }
             />
             {collabSyncStatus?.status === 'running' && collabSyncStatus?.total > 0 && (
@@ -76,7 +82,11 @@ const CollabSyncPanel: React.FC<CollabSyncPanelProps> = ({
                   percent={Math.round((collabSyncStatus.processed / collabSyncStatus.total) * 100)}
                   status="active"
                   format={() =>
-                    `${collabSyncStatus.processed}/${collabSyncStatus.total} 论文，${collabSyncStatus.collaborations} 条合作关系`
+                    t('collectConfig.collabSync.progressFormat', {
+                      processed: collabSyncStatus.processed,
+                      total: collabSyncStatus.total,
+                      collaborations: collabSyncStatus.collaborations,
+                    })
                   }
                 />
               </div>
@@ -91,10 +101,12 @@ const CollabSyncPanel: React.FC<CollabSyncPanelProps> = ({
             loading={collabSyncStatus?.status === 'running'}
             disabled={collabSyncStatus?.status === 'running'}
           >
-            {collabSyncStatus?.status === 'running' ? '同步中...' : '批量同步所有学者'}
+            {collabSyncStatus?.status === 'running'
+              ? t('collectConfig.collabSync.syncing')
+              : t('collectConfig.collabSync.syncAll')}
           </Button>
           <Button icon={<ReloadOutlined />} onClick={onRefresh} loading={collabSyncLoading}>
-            刷新状态
+            {t('actions.refreshStatus')}
           </Button>
         </Space>
       </Spin>

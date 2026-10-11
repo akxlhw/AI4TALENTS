@@ -1,4 +1,5 @@
 import { Alert, Collapse, Drawer, Empty, Space, Tag, Typography } from 'antd'
+import { useTranslation } from 'react-i18next'
 
 import { CHANGELOG_RELEASES, type ChangelogRelease } from '../utils/changelog'
 
@@ -20,6 +21,7 @@ const ChangelogDrawer: React.FC<{
   /** 仅供测试：强制渲染空态 */
   forceEmpty?: boolean
 }> = ({ open, onClose, forceEmpty = false }) => {
+  const { t } = useTranslation('common')
   const list: ChangelogRelease[] = forceEmpty ? [] : CHANGELOG_RELEASES
   const latestVersion = CHANGELOG_RELEASES[0]?.version
 
@@ -28,11 +30,11 @@ const ChangelogDrawer: React.FC<{
       title={
         <Space direction="vertical" size={0}>
           <Title level={5} style={{ margin: 0 }}>
-            更新日志
+            {t('changelog.title')}
           </Title>
           {latestVersion && (
             <Text type="secondary" style={{ fontSize: 12 }}>
-              当前版本 v{latestVersion}
+              {t('changelog.currentVersion', { version: latestVersion })}
             </Text>
           )}
         </Space>
@@ -43,14 +45,14 @@ const ChangelogDrawer: React.FC<{
       onClose={onClose}
     >
       {list.length === 0 ? (
-        <Empty description="暂无更新记录" style={{ marginTop: 80 }} />
+        <Empty description={t('changelog.empty')} style={{ marginTop: 80 }} />
       ) : (
         <>
           <Alert
             type="info"
             showIcon
             style={{ marginBottom: 12 }}
-            message="版本由新到旧排列，展开任意版本查看完整变更明细。"
+            message={t('changelog.orderingHint')}
           />
           <Collapse
             defaultActiveKey={[list[0].version]}
@@ -61,7 +63,7 @@ const ChangelogDrawer: React.FC<{
                   <Text strong>v{r.version}</Text>
                   {r === list[0] && (
                     <Tag color="geekblue" style={{ margin: 0 }}>
-                      最新
+                      {t('changelog.latest')}
                     </Tag>
                   )}
                   {r.date && (

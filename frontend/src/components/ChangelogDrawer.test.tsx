@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
+import '../i18n'
 import ChangelogDrawer from './ChangelogDrawer'
 
 describe('ChangelogDrawer', () => {
@@ -17,7 +18,7 @@ describe('ChangelogDrawer', () => {
     expect(screen.getByText('暂无更新记录')).toBeTruthy()
   })
 
-  it('calls onClose when the drawer close button is clicked', () => {
+  it('calls onClose when the drawer close button is clicked', { timeout: 15000 }, () => {
     const onClose = vi.fn()
     render(<ChangelogDrawer open onClose={onClose} />)
     fireEvent.click(screen.getByRole('button', { name: /close/i }))

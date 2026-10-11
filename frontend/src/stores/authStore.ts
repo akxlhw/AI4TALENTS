@@ -9,6 +9,7 @@ import { create } from 'zustand'
 import { message } from 'antd'
 import { api } from '../services/api'
 import { applyDomainCssVars } from '../theme'
+import { i18n } from '../i18n'
 import type { User } from '../types'
 import { logger } from '../utils/logger'
 
@@ -38,7 +39,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
     localStorage.setItem('user', JSON.stringify(user))
 
     set({ user })
-    message.success(`欢迎回来，${user.display_name || user.username}！`)
+    message.success(
+      i18n.t('auth.welcomeBack', {
+        ns: 'common',
+        name: user.display_name || user.username,
+      })
+    )
   },
 
   logout: async () => {
@@ -52,7 +58,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       localStorage.removeItem('user')
       set({ user: null })
       applyDomainCssVars('academic')
-      message.info('已退出登录')
+      message.info(i18n.t('auth.loggedOut', { ns: 'common' }))
     }
   },
 

@@ -1,10 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Alert, Button, Card, Col, Collapse, InputNumber, Progress, Row, Select,
-  Space, Spin, Table, Tag, Tooltip, Typography, message,
+  Alert,
+  Button,
+  Card,
+  Col,
+  Collapse,
+  InputNumber,
+  Progress,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+  message,
 } from 'antd'
 import { RadarChartOutlined, ImportOutlined, ReloadOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../../services/api'
+import '../../../i18n/namespaces/system-config'
 import { useTechDirectionOptions } from '../../../hooks/useIndustryQueries'
 import { mergeGroupSelection } from './os-discover-selection'
 import { getErrorMessage } from './utils'
@@ -39,6 +55,7 @@ interface DiscoverStatus {
  * Embedded inside the repo-config page: onImported refreshes the repo table
  * after a successful import so new repos show up immediately. */
 const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported }) => {
+  const { t } = useTranslation(['systemConfig', 'common'])
   const { data: directions } = useTechDirectionOptions()
   const [selectedDirections, setSelectedDirections] = useState<string[]>([])
   const [minStars, setMinStars] = useState<number>(30000)
@@ -55,9 +72,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
     value: d.code,
     label: `${d.name}（${d.domainName}）`,
   }))
-  const directionNameMap = Object.fromEntries(
-    (directions || []).map(d => [d.code, d.name])
-  )
+  const directionNameMap = Object.fromEntries((directions || []).map(d => [d.code, d.name]))
 
   const fetchStatus = async () => {
     try {
@@ -72,7 +87,9 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
   // Poll while running
   useEffect(() => {
     fetchStatus()
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
   }, [])
 
   useEffect(() => {
@@ -96,10 +113,10 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
         min_stars: minStars || 30000,
         min_contributors: minContributors || 0,
       })
-      message.success('探测任务已启动，结果将实时更新')
+      message.success(t('osDiscover.started'))
       fetchStatus()
     } catch (e) {
-      message.error(getErrorMessage(e, '启动探测失败'))
+      message.error(getErrorMessage(e, t('osDiscover.startFailed')))
     } finally {
       setStarting(false)
     }
@@ -121,17 +138,21 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
       const res = await api.openSource.importDiscovered(repos)
       const { created, skipped, failed } = res.data
       setImportResult(
-        `导入完成：成功 ${created.length}，已存在 ${skipped.length}，失败 ${failed.length}`
+        t('osDiscover.importResult', {
+          created: created.length,
+          skipped: skipped.length,
+          failed: failed.length,
+        })
       )
       if (created.length > 0) {
-        message.success(`已导入 ${created.length} 个仓库，见下方仓库配置列表`)
+        message.success(t('osDiscover.imported', { n: created.length }))
         onImported?.()
       }
       // Refresh status to update exists_in_config flags
       fetchStatus()
       setSelectedRepos([])
     } catch (e) {
-      message.error(getErrorMessage(e, '导入失败'))
+      message.error(getErrorMessage(e, t('osDiscover.importFailed')))
     } finally {
       setImporting(false)
     }
@@ -141,10 +162,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
   // rowSelection.onChange reports only that group's keys, so selections must
   // MERGE into the global state — otherwise picking in one group wipes the
   // selections made in another.
-  const handleGroupSelectionChange = (
-    groupRepos: DiscoveredRepo[],
-    keys: React.Key[]
-  ) => {
+  const handleGroupSelectionChange = (groupRepos: DiscoveredRepo[], keys: React.Key[]) => {
     setSelectedRepos(prev =>
       mergeGroupSelection(
         prev,
@@ -159,9 +177,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
     importableRepos.length > 0 &&
     importableRepos.every(r => selectedRepos.includes(r.repo_full_name))
   const handleSelectAll = () => {
-    setSelectedRepos(
-      allImportableSelected ? [] : importableRepos.map(r => r.repo_full_name)
-    )
+    setSelectedRepos(allImportableSelected ? [] : importableRepos.map(r => r.repo_full_name))
   }
 
   // Group results by primary direction for display
@@ -173,32 +189,31 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
       if (!groups[key]) groups[key] = []
       groups[key].push(r)
     }
-    return Object.entries(groups).sort(
-      (a, b) => b[1].length - a[1].length
-    )
+    return Object.entries(groups).sort((a, b) => b[1].length - a[1].length)
   })()
 
   const isRunning = status?.status === 'running'
-  const progressPercent = status && status.total > 0
-    ? Math.round((status.processed / status.total) * 100) : 0
+  const progressPercent =
+    status && status.total > 0 ? Math.round((status.processed / status.total) * 100) : 0
 
   return (
     <div>
       {/* ── Control card ── */}
       <Card className="domain-card" size="small" style={{ borderRadius: 12, marginBottom: 16 }}>
         <Title level={5} style={{ marginTop: 0 }}>
-          <RadarChartOutlined style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }} />
-          自动探测知名开源项目
+          <RadarChartOutlined
+            style={{ marginRight: 8, color: 'var(--domain-badge-bg, #6B46C1)' }}
+          />
+          {t('osDiscover.title')}
         </Title>
         <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
-          按技术方向搜索 GitHub 上 star/贡献者达标的知名开源项目（只预览不入库，勾选后可导入仓库配置）。
-          探测 75 个方向约需 2-5 分钟（受 GitHub Search API 限速约束）。
+          {t('osDiscover.description')}
         </Text>
         <Row gutter={[12, 12]} align="middle">
           <Col xs={24} md={12}>
             <Select
               mode="multiple"
-              placeholder="选择技术方向（留空 = 全部 75 个方向）"
+              placeholder={t('osDiscover.directionsPlaceholder')}
               style={{ width: '100%' }}
               value={selectedDirections}
               onChange={setSelectedDirections}
@@ -219,12 +234,12 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
               onChange={v => setMinStars(v ?? 30000)}
               formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               parser={t => Number((t || '').replace(/,/g, ''))}
-              addonBefore="Star ≥"
+              addonBefore={t('osDiscover.starsAddon')}
               disabled={isRunning}
             />
           </Col>
           <Col xs={8} md={4}>
-            <Tooltip title="贡献者人数下限（0 = 不限），过滤个人小项目">
+            <Tooltip title={t('osDiscover.contributorsTooltip')}>
               <InputNumber
                 style={{ width: '100%' }}
                 min={0}
@@ -232,7 +247,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
                 step={50}
                 value={minContributors}
                 onChange={v => setMinContributors(v ?? 0)}
-                addonBefore="贡献者 ≥"
+                addonBefore={t('osDiscover.contributorsAddon')}
                 disabled={isRunning}
               />
             </Tooltip>
@@ -246,7 +261,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
               onClick={handleStart}
               disabled={isRunning}
             >
-              {isRunning ? '探测中…' : '开始探测'}
+              {isRunning ? t('osDiscover.probing') : t('osDiscover.start')}
             </Button>
           </Col>
         </Row>
@@ -258,12 +273,14 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
           <Progress
             percent={progressPercent}
             status="active"
-            format={() => `${status.processed}/${status.total} 方向`}
+            format={() =>
+              t('osDiscover.progressFormat', { processed: status.processed, total: status.total })
+            }
           />
           <Text type="secondary" style={{ fontSize: 13 }}>
-            当前：{directionNameMap[status.current] || status.current}
-            {status.found > 0 && ` · 已发现 ${status.found} 个项目`}
-            {status.errors > 0 && ` · ${status.errors} 次搜索失败`}
+            {t('osDiscover.current', { name: directionNameMap[status.current] || status.current })}
+            {status.found > 0 && t('osDiscover.foundSuffix', { n: status.found })}
+            {status.errors > 0 && t('osDiscover.errorsSuffix', { n: status.errors })}
           </Text>
         </Card>
       )}
@@ -274,8 +291,8 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
           type="error"
           showIcon
           style={{ marginBottom: 16 }}
-          message="探测任务异常终止"
-          description="可能是网络或 GitHub API 限速导致，稍后可重新探测（已发现的部分结果保留在下表）。"
+          message={t('osDiscover.errorTitle')}
+          description={t('osDiscover.errorDescription')}
         />
       )}
       {status?.status === 'cancelled' && (
@@ -283,38 +300,49 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
-          message="探测任务被中断"
-          description="服务重启或代码热更新会终止后台探测任务。已发现的部分结果保留在下表，可直接导入或重新探测。"
+          message={t('osDiscover.cancelledTitle')}
+          description={t('osDiscover.cancelledDescription')}
         />
       )}
 
       {/* ── Import bar + Results ── */}
       {status?.results && status.results.length > 0 && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 12,
+            }}
+          >
             <Text>
-              共发现 <strong>{status.results.length}</strong> 个项目
+              {t('osDiscover.foundTotalPrefix')}
+              <strong>{status.results.length}</strong>
+              {t('osDiscover.foundTotalSuffix')}
               {importableRepos.length < status.results.length &&
-                `，其中 ${importableRepos.length} 个可导入（其余已在库）`}
-              {status.status === 'completed' && '（探测完成）'}
+                t('osDiscover.importableSuffix', { n: importableRepos.length })}
+              {status.status === 'completed' && t('osDiscover.completedSuffix')}
             </Text>
             <Space>
               <Button size="small" icon={<ReloadOutlined />} onClick={fetchStatus}>
-                刷新状态
+                {t('actions.refreshStatus')}
               </Button>
               <Button
                 size="small"
                 onClick={handleSelectAll}
                 disabled={importableRepos.length === 0 || importing}
               >
-                {allImportableSelected ? '取消全选' : '全选可导入'}
+                {allImportableSelected
+                  ? t('osDiscover.deselectAll')
+                  : t('osDiscover.selectAllImportable')}
               </Button>
               <Button
                 size="small"
                 onClick={() => setSelectedRepos([])}
                 disabled={selectedRepos.length === 0 || importing}
               >
-                清空选择
+                {t('osDiscover.clearSelection')}
               </Button>
               <Button
                 type="primary"
@@ -324,7 +352,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
                 disabled={selectedRepos.length === 0}
                 onClick={handleImport}
               >
-                导入选中的 {selectedRepos.length} 个仓库
+                {t('osDiscover.importSelected', { n: selectedRepos.length })}
               </Button>
             </Space>
           </div>
@@ -340,7 +368,9 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
                 label: (
                   <Space>
                     <Text strong>{directionNameMap[direction] || direction}</Text>
-                    <Tag style={{ margin: 0 }}>{repos.length} 个项目</Tag>
+                    <Tag style={{ margin: 0 }}>
+                      {t('osDiscover.projectCount', { n: repos.length })}
+                    </Tag>
                   </Space>
                 ),
                 children: (
@@ -356,30 +386,39 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
                     }}
                     columns={[
                       {
-                        title: '仓库',
+                        title: t('osDiscover.columns.repo'),
                         dataIndex: 'repo_full_name',
                         width: 240,
                         render: (name: string, r: DiscoveredRepo) => (
                           <Space direction="vertical" size={0}>
-                            <a href={r.html_url} target="_blank" rel="noreferrer" style={{ fontFamily: 'monospace' }}>
+                            <a
+                              href={r.html_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ fontFamily: 'monospace' }}
+                            >
                               {name}
                             </a>
                             {r.exists_in_config && (
-                              <Tag color="default" style={{ fontSize: 10, margin: 0 }}>已在库</Tag>
+                              <Tag color="default" style={{ fontSize: 10, margin: 0 }}>
+                                {t('osDiscover.inLibrary')}
+                              </Tag>
                             )}
                           </Space>
                         ),
                       },
                       {
-                        title: '描述',
+                        title: t('osDiscover.columns.description'),
                         dataIndex: 'description',
                         ellipsis: true,
                         render: (d: string) => (
-                          <Text type="secondary" style={{ fontSize: 12 }}>{d || '—'}</Text>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {d || '—'}
+                          </Text>
                         ),
                       },
                       {
-                        title: 'Star',
+                        title: t('osDiscover.columns.stars'),
                         dataIndex: 'stars',
                         width: 90,
                         sorter: (a: DiscoveredRepo, b: DiscoveredRepo) => a.stars - b.stars,
@@ -388,7 +427,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
                         ),
                       },
                       {
-                        title: '贡献者',
+                        title: t('osDiscover.columns.contributors'),
                         dataIndex: 'contributors',
                         width: 90,
                         sorter: (a: DiscoveredRepo, b: DiscoveredRepo) =>
@@ -397,13 +436,14 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
                           c === undefined ? '—' : c >= 1000 ? `${(c / 1000).toFixed(1)}k` : c,
                       },
                       {
-                        title: '语言',
+                        title: t('osDiscover.columns.language'),
                         dataIndex: 'language',
                         width: 100,
-                        render: (l: string | null) => l ? <Tag style={{ margin: 0 }}>{l}</Tag> : '—',
+                        render: (l: string | null) =>
+                          l ? <Tag style={{ margin: 0 }}>{l}</Tag> : '—',
                       },
                       {
-                        title: '命中方向',
+                        title: t('osDiscover.columns.directions'),
                         dataIndex: 'direction_codes',
                         width: 160,
                         render: (codes: string[]) => (
@@ -428,9 +468,7 @@ const OsDiscoverSubTab: React.FC<{ onImported?: () => void }> = ({ onImported })
       {/* ── Empty hint ── */}
       {(!status || (status.status === 'idle' && status.results.length === 0)) && (
         <Card className="domain-card" size="small" style={{ borderRadius: 12 }}>
-          <Text type="secondary">
-            尚无探测结果。选择方向（或留空探测全部）并设置 star 阈值后，点击「开始探测」。
-          </Text>
+          <Text type="secondary">{t('osDiscover.emptyHint')}</Text>
         </Card>
       )}
     </div>

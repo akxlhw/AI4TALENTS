@@ -7,7 +7,8 @@
  * - 微妙的 AI 视觉元素
  * - 进度可视化反馈
  */
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import './AILoadingOverlay.css'
 
 interface AILoadingOverlayProps {
@@ -16,21 +17,22 @@ interface AILoadingOverlayProps {
   steps?: string[]
 }
 
-const DEFAULT_STEPS = [
-  '连接 AI 服务',
-  '解析职位描述',
-  '提取技能要求',
-  '匹配候选人',
-  '生成推荐结果',
-]
-
 const STEP_INTERVAL = 2500
 
-const AILoadingOverlay: React.FC<AILoadingOverlayProps> = ({
-  visible,
-  title = '智能分析中',
-  steps = DEFAULT_STEPS,
-}) => {
+const AILoadingOverlay: React.FC<AILoadingOverlayProps> = ({ visible, title, steps }) => {
+  const { t } = useTranslation('common')
+  const defaultSteps = useMemo(
+    () => [
+      t('aiLoading.steps.connect'),
+      t('aiLoading.steps.parseJD'),
+      t('aiLoading.steps.extractSkills'),
+      t('aiLoading.steps.match'),
+      t('aiLoading.steps.generate'),
+    ],
+    [t]
+  )
+  const resolvedTitle = title ?? t('aiLoading.title')
+  const resolvedSteps = steps ?? defaultSteps
   const [currentStep, setCurrentStep] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -48,7 +50,7 @@ const AILoadingOverlay: React.FC<AILoadingOverlayProps> = ({
 
     timerRef.current = setInterval(() => {
       setCurrentStep((prev) => {
-        if (prev >= steps.length - 1) {
+        if (prev >= resolvedSteps.length - 1) {
           return prev
         }
         return prev + 1
@@ -61,7 +63,7 @@ const AILoadingOverlay: React.FC<AILoadingOverlayProps> = ({
         timerRef.current = null
       }
     }
-  }, [visible, steps.length])
+  }, [visible, resolvedSteps])
 
   if (!visible) return null
 
@@ -75,7 +77,7 @@ const AILoadingOverlay: React.FC<AILoadingOverlayProps> = ({
             <span className="brand-connector">4</span>
             <span className="brand-recruit">RECRUIT</span>
           </div>
-          <div className="brand-tagline">智能人才发现平台</div>
+          <div className="brand-tagline">{t('aiLoading.tagline')}</div>
         </div>
 
         {/* 主视觉区域 */}
@@ -112,19 +114,19 @@ const AILoadingOverlay: React.FC<AILoadingOverlayProps> = ({
 
         {/* 状态区域 */}
         <div className="status-section">
-          <h3 className="status-title">{title}</h3>
+          <h3 className="status-title">{resolvedTitle}</h3>
 
           {/* 步骤进度条 */}
           <div className="step-progress">
             <div className="progress-track">
               <div
                 className="progress-fill"
-                style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                style={{ width: `${((currentStep + 1) / resolvedSteps.length) * 100}%` }}
               />
             </div>
             <div className="step-label">
-              <span className="step-number">{currentStep + 1}/{steps.length}</span>
-              <span className="step-text">{steps[currentStep]}</span>
+              <span className="step-number">{currentStep + 1}/{resolvedSteps.length}</span>
+              <span className="step-text">{resolvedSteps[currentStep]}</span>
             </div>
           </div>
         </div>

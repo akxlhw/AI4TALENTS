@@ -30,6 +30,8 @@ import {
 import { api } from '../../services/api'
 import { formatUTCToLocal } from '../../utils/datetime'
 import { formatNumber } from '../../utils/format'
+import { useTranslation } from 'react-i18next'
+import '../../i18n/namespaces/admin'
 
 const { Text, Title } = Typography
 
@@ -88,6 +90,7 @@ interface Correction {
 }
 
 const DataVersionPage: React.FC = () => {
+  const { t } = useTranslation(['admin', 'common'])
   // Version state
   const [versions, setVersions] = useState<DataVersion[]>([])
   const [versionTotal, setVersionTotal] = useState(0)
@@ -114,9 +117,9 @@ const DataVersionPage: React.FC = () => {
       setVersions(response.data.items)
       setVersionTotal(response.data.total)
     } catch {
-      message.error('加载版本列表失败')
+      message.error(t('dataVersion.messages.loadVersionsFailed'))
     }
-  }, [versionPage])
+  }, [versionPage, t])
 
   const loadActiveVersion = useCallback(async () => {
     try {
@@ -138,19 +141,27 @@ const DataVersionPage: React.FC = () => {
 
   const loadCorrections = useCallback(async () => {
     try {
-      const response = await api.dataVersion.listCorrections({ page: correctionPage, page_size: 10 })
+      const response = await api.dataVersion.listCorrections({
+        page: correctionPage,
+        page_size: 10,
+      })
       setCorrections(response.data.items)
       setCorrectionTotal(response.data.total)
     } catch {
-      message.error('加载纠偏记录失败')
+      message.error(t('dataVersion.messages.loadCorrectionsFailed'))
     }
-  }, [correctionPage])
+  }, [correctionPage, t])
 
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true)
       try {
-        await Promise.all([loadVersions(), loadActiveVersion(), loadQualityMetrics(), loadCorrections()])
+        await Promise.all([
+          loadVersions(),
+          loadActiveVersion(),
+          loadQualityMetrics(),
+          loadCorrections(),
+        ])
       } finally {
         setLoading(false)
       }
@@ -179,93 +190,95 @@ const DataVersionPage: React.FC = () => {
         version_type: (values.version_type as string) || 'snapshot',
         description: values.description as string | undefined,
       })
-      message.success('版本创建成功')
+      message.success(t('dataVersion.messages.createSuccess'))
       setVersionModalVisible(false)
       loadVersions()
     } catch (error: unknown) {
-      const detail = error instanceof Error && 'response' in error
-        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
-        : undefined
-      message.error(detail || '创建失败')
+      const detail =
+        error instanceof Error && 'response' in error
+          ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined
+      message.error(detail || t('dataVersion.messages.createFailed'))
     }
   }
 
   const handlePublishVersion = async (versionId: number) => {
     try {
       await api.dataVersion.publishVersion(versionId)
-      message.success('版本发布成功')
+      message.success(t('dataVersion.messages.publishSuccess'))
       loadVersions()
       loadActiveVersion()
     } catch (error: unknown) {
-      const detail = error instanceof Error && 'response' in error
-        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
-        : undefined
-      message.error(detail || '发布失败')
+      const detail =
+        error instanceof Error && 'response' in error
+          ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined
+      message.error(detail || t('dataVersion.messages.publishFailed'))
     }
   }
 
   // Version columns
   const versionColumns = [
     {
-      title: '版本编码',
+      title: t('dataVersion.versionColumns.code'),
       dataIndex: 'version_code',
       key: 'version_code',
       width: 150,
     },
     {
-      title: '版本名称',
+      title: t('dataVersion.versionColumns.name'),
       dataIndex: 'version_name',
       key: 'version_name',
     },
     {
-      title: '类型',
+      title: t('dataVersion.versionColumns.type'),
       dataIndex: 'version_type',
       key: 'version_type',
       render: (type: string) => (
         <Tag color={type === 'release' ? 'green' : 'blue'}>
-          {type === 'release' ? '发布版' : '快照'}
+          {type === 'release'
+            ? t('dataVersion.versionType.release')
+            : t('dataVersion.versionType.snapshot')}
         </Tag>
       ),
     },
     {
-      title: '数据统计',
+      title: t('dataVersion.versionColumns.stats'),
       key: 'stats',
       render: (_: unknown, record: DataVersion) => (
         <Space size={4}>
-          <Tooltip title="人才">
-            <Tag>{record.total_talents} 人才</Tag>
+          <Tooltip title={t('dataVersion.stats.talentTooltip')}>
+            <Tag>{t('dataVersion.stats.talents', { n: record.total_talents })}</Tag>
           </Tooltip>
-          <Tooltip title="学校">
-            <Tag>{record.total_schools} 学校</Tag>
+          <Tooltip title={t('dataVersion.stats.schoolTooltip')}>
+            <Tag>{t('dataVersion.stats.schools', { n: record.total_schools })}</Tag>
           </Tooltip>
         </Space>
       ),
     },
     {
-      title: '状态',
+      title: t('dataVersion.versionColumns.status'),
       key: 'status',
       render: (_: unknown, record: DataVersion) => (
         <Space>
-          {record.is_active && (
-            <Badge status="success" text="当前生效" />
-          )}
+          {record.is_active && <Badge status="success" text={t('dataVersion.badges.active')} />}
           {record.is_published && !record.is_active && (
-            <Badge status="default" text="已发布" />
+            <Badge status="default" text={t('dataVersion.badges.published')} />
           )}
           {!record.is_published && (
-            <Badge status="warning" text="未发布" />
+            <Badge status="warning" text={t('dataVersion.badges.unpublished')} />
           )}
         </Space>
       ),
     },
     {
-      title: '创建时间',
+      title: t('dataVersion.versionColumns.createdAt'),
       dataIndex: 'created_at',
       key: 'created_at',
       render: (date: string) => formatUTCToLocal(date),
     },
     {
-      title: '操作',
+      title: t('dataVersion.versionColumns.actions'),
       key: 'actions',
       width: 120,
       render: (_: unknown, record: DataVersion) => (
@@ -277,7 +290,7 @@ const DataVersionPage: React.FC = () => {
               icon={<ThunderboltOutlined />}
               onClick={() => handlePublishVersion(record.version_id)}
             >
-              发布
+              {t('dataVersion.actions.publish')}
             </Button>
           )}
         </Space>
@@ -288,58 +301,62 @@ const DataVersionPage: React.FC = () => {
   // Correction columns
   const correctionColumns = [
     {
-      title: '目标类型',
+      title: t('dataVersion.correctionColumns.targetType'),
       dataIndex: 'target_type',
       key: 'target_type',
-      render: (type: string) => {
-        const map: Record<string, string> = {
-          talent: '人才',
-          school: '学校',
-          tech_tag: '技术标签',
-        }
-        return map[type] || type
-      },
+      render: (type: string) => t(`dataVersion.targets.${type}`, { defaultValue: type }),
     },
     {
-      title: '目标ID',
+      title: t('dataVersion.correctionColumns.targetId'),
       dataIndex: 'target_id',
       key: 'target_id',
     },
     {
-      title: '字段',
+      title: t('dataVersion.correctionColumns.field'),
       dataIndex: 'field_name',
       key: 'field_name',
     },
     {
-      title: '修正类型',
+      title: t('dataVersion.correctionColumns.correctionType'),
       dataIndex: 'correction_type',
       key: 'correction_type',
       render: (type: string) => {
-        const map: Record<string, { label: string; color: string }> = {
-          manual: { label: '手动', color: 'blue' },
-          system: { label: '系统', color: 'green' },
-          import: { label: '导入', color: 'orange' },
+        const colorMap: Record<string, string> = {
+          manual: 'blue',
+          system: 'green',
+          import: 'orange',
         }
-        const item = map[type] || { label: type, color: 'default' }
-        return <Tag color={item.color}>{item.label}</Tag>
+        return (
+          <Tag color={colorMap[type] || 'default'}>
+            {t(`dataVersion.correctionTypes.${type}`, { defaultValue: type })}
+          </Tag>
+        )
       },
     },
     {
-      title: '状态',
+      title: t('dataVersion.correctionColumns.status'),
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => {
-        const map: Record<string, { label: string; status: 'success' | 'processing' | 'error' | 'default' }> = {
-          applied: { label: '已应用', status: 'success' },
-          pending: { label: '待处理', status: 'processing' },
-          reverted: { label: '已撤销', status: 'error' },
+        const statusBadgeMap: Record<
+          string,
+          { status: 'success' | 'processing' | 'error' | 'default' }
+        > = {
+          applied: { status: 'success' },
+          pending: { status: 'processing' },
+          reverted: { status: 'error' },
         }
-        const item = map[status] || { label: status, status: 'default' as const }
-        return <Badge status={item.status} text={item.label} />
+        const item = statusBadgeMap[status] || { status: 'default' as const }
+        return (
+          <Badge
+            status={item.status}
+            text={t(`dataVersion.correctionStatus.${status}`, { defaultValue: status })}
+          />
+        )
       },
     },
     {
-      title: '修正时间',
+      title: t('dataVersion.correctionColumns.correctedAt'),
       dataIndex: 'created_at',
       key: 'created_at',
       render: (date: string) => formatUTCToLocal(date),
@@ -348,7 +365,7 @@ const DataVersionPage: React.FC = () => {
 
   return (
     <div style={{ padding: '88px 32px 80px' }}>
-      <Title level={4}>数据版本管理</Title>
+      <Title level={4}>{t('dataVersion.title')}</Title>
 
       {/* Active Version & Quality Overview */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -357,22 +374,30 @@ const DataVersionPage: React.FC = () => {
             title={
               <Space>
                 <DatabaseOutlined />
-                当前版本
+                {t('dataVersion.currentVersion')}
               </Space>
             }
           >
             {activeVersion ? (
               <Descriptions column={1} size="small">
-                <Descriptions.Item label="版本">{activeVersion.version_name}</Descriptions.Item>
-                <Descriptions.Item label="编码">{activeVersion.version_code}</Descriptions.Item>
-                <Descriptions.Item label="人才数">{formatNumber(activeVersion.total_talents)}</Descriptions.Item>
-                <Descriptions.Item label="学校数">{formatNumber(activeVersion.total_schools)}</Descriptions.Item>
-                <Descriptions.Item label="发布时间">
+                <Descriptions.Item label={t('dataVersion.labels.version')}>
+                  {activeVersion.version_name}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('dataVersion.labels.code')}>
+                  {activeVersion.version_code}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('dataVersion.labels.talentCount')}>
+                  {formatNumber(activeVersion.total_talents)}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('dataVersion.labels.schoolCount')}>
+                  {formatNumber(activeVersion.total_schools)}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('dataVersion.labels.publishedAt')}>
                   {formatUTCToLocal(activeVersion.published_at)}
                 </Descriptions.Item>
               </Descriptions>
             ) : (
-              <Text type="secondary">暂无生效版本</Text>
+              <Text type="secondary">{t('dataVersion.noActiveVersion')}</Text>
             )}
           </Card>
         </Col>
@@ -381,7 +406,7 @@ const DataVersionPage: React.FC = () => {
             title={
               <Space>
                 <CheckCircleOutlined />
-                数据质量概览
+                {t('dataVersion.qualityOverview')}
               </Space>
             }
           >
@@ -389,18 +414,20 @@ const DataVersionPage: React.FC = () => {
               <Row gutter={16}>
                 <Col span={6}>
                   <Statistic
-                    title="人才数据"
+                    title={t('dataVersion.quality.talent')}
                     value={qualityMetrics.talent_total}
                     suffix={
                       <Text type="secondary" style={{ fontSize: 12 }}>
-                        完整度 {qualityMetrics.talent_completeness_avg}%
+                        {t('dataVersion.quality.completeness', {
+                          value: qualityMetrics.talent_completeness_avg,
+                        })}
                       </Text>
                     }
                   />
                 </Col>
                 <Col span={6}>
                   <Statistic
-                    title="学校数据"
+                    title={t('dataVersion.quality.school')}
                     value={qualityMetrics.school_total}
                     suffix={
                       <Text type="secondary" style={{ fontSize: 12 }}>
@@ -411,7 +438,7 @@ const DataVersionPage: React.FC = () => {
                 </Col>
                 <Col span={6}>
                   <Statistic
-                    title="论文数据"
+                    title={t('dataVersion.quality.works')}
                     value={qualityMetrics.work_total}
                     suffix={
                       <Text type="secondary" style={{ fontSize: 12 }}>
@@ -422,14 +449,19 @@ const DataVersionPage: React.FC = () => {
                 </Col>
                 <Col span={6}>
                   <Statistic
-                    title="待确认标签"
+                    title={t('dataVersion.quality.pendingTags')}
                     value={qualityMetrics.tech_tag_pending}
-                    valueStyle={{ color: qualityMetrics.tech_tag_pending > 0 ? semanticColors.gold : semanticColors.green }}
+                    valueStyle={{
+                      color:
+                        qualityMetrics.tech_tag_pending > 0
+                          ? semanticColors.gold
+                          : semanticColors.green,
+                    }}
                   />
                 </Col>
               </Row>
             ) : (
-              <Text type="secondary">暂无质量数据</Text>
+              <Text type="secondary">{t('dataVersion.noQualityData')}</Text>
             )}
           </Card>
         </Col>
@@ -442,15 +474,15 @@ const DataVersionPage: React.FC = () => {
             label: (
               <span>
                 <DatabaseOutlined />
-                数据版本
+                {t('dataVersion.tabs.versions')}
               </span>
             ),
             children: (
               <Card
                 extra={
                   <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateVersion}>
-                创建版本
-              </Button>
+                    {t('dataVersion.createVersion')}
+                  </Button>
                 }
               >
                 <Table
@@ -462,8 +494,8 @@ const DataVersionPage: React.FC = () => {
                     current: versionPage,
                     pageSize: 10,
                     total: versionTotal,
-                    showTotal: (t) => `共 ${t} 个版本`,
-                    onChange: (p) => setVersionPage(p),
+                    showTotal: count => t('dataVersion.totalVersions', { n: count }),
+                    onChange: p => setVersionPage(p),
                   }}
                 />
               </Card>
@@ -474,7 +506,7 @@ const DataVersionPage: React.FC = () => {
             label: (
               <span>
                 <EditOutlined />
-                纠偏记录
+                {t('dataVersion.tabs.corrections')}
               </span>
             ),
             children: (
@@ -488,8 +520,8 @@ const DataVersionPage: React.FC = () => {
                     current: correctionPage,
                     pageSize: 10,
                     total: correctionTotal,
-                    showTotal: (t) => `共 ${t} 条记录`,
-                    onChange: (p) => setCorrectionPage(p),
+                    showTotal: count => t('dataVersion.totalRecords', { n: count }),
+                    onChange: p => setCorrectionPage(p),
                   }}
                 />
               </Card>
@@ -500,7 +532,7 @@ const DataVersionPage: React.FC = () => {
 
       {/* Create Version Modal */}
       <Modal
-        title="创建数据版本"
+        title={t('dataVersion.modal.title')}
         open={versionModalVisible}
         onCancel={() => setVersionModalVisible(false)}
         onOk={() => versionForm.submit()}
@@ -508,31 +540,31 @@ const DataVersionPage: React.FC = () => {
         <Form form={versionForm} layout="vertical" onFinish={handleSaveVersion}>
           <Form.Item
             name="version_code"
-            label="版本编码"
+            label={t('dataVersion.form.code')}
             rules={[{ required: true }]}
           >
-            <Input placeholder="如: V20240101" />
+            <Input placeholder={t('dataVersion.form.codePlaceholder')} />
           </Form.Item>
           <Form.Item
             name="version_name"
-            label="版本名称"
+            label={t('dataVersion.form.name')}
             rules={[{ required: true }]}
           >
-            <Input placeholder="如: 2024年1月数据快照" />
+            <Input placeholder={t('dataVersion.form.namePlaceholder')} />
           </Form.Item>
           <Form.Item
             name="version_type"
-            label="版本类型"
+            label={t('dataVersion.form.type')}
             rules={[{ required: true }]}
           >
             <Select
               options={[
-                { value: 'snapshot', label: '快照' },
-                { value: 'release', label: '发布版' },
+                { value: 'snapshot', label: t('dataVersion.versionType.snapshot') },
+                { value: 'release', label: t('dataVersion.versionType.release') },
               ]}
             />
           </Form.Item>
-          <Form.Item name="description" label="描述">
+          <Form.Item name="description" label={t('dataVersion.form.description')}>
             <Input.TextArea rows={2} />
           </Form.Item>
         </Form>

@@ -1,6 +1,8 @@
 import { Modal, Typography, Tag, Alert, Spin, Transfer } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { getVenueTypeConfig } from '../../../../constants'
 import type { VenueItem, TechDomainCollect } from '../../../../types'
+import '../../../../i18n/namespaces/system-config'
 
 const { Text } = Typography
 
@@ -25,32 +27,41 @@ const VenueConfigModal: React.FC<VenueConfigModalProps> = ({
   onCancel,
   onOk,
 }) => {
+  const { t } = useTranslation(['systemConfig', 'common'])
+
   return (
     <Modal
-      title={`配置采集范围 - ${selectedDomain?.domain_name || ''}`}
+      title={t('collectConfig.venueModal.title', {
+        name: selectedDomain?.domain_name || '',
+      })}
       open={open}
       onCancel={onCancel}
       onOk={onOk}
       width={800}
-      okText="保存配置"
+      okText={t('collectConfig.venueModal.saveConfig')}
       confirmLoading={venueLoading}
     >
-      <Alert message="勾选需要采集的顶会顶刊" type="info" showIcon style={{ marginBottom: 16 }} />
+      <Alert
+        message={t('collectConfig.venueModal.selectHint')}
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+      />
       <Spin spinning={venueLoading}>
         <Transfer
-          dataSource={allVenues.map((v) => ({
+          dataSource={allVenues.map(v => ({
             key: String(v.venue_id),
             title: (v.venue_code || v.venue_name).toUpperCase(),
             description: v.venue_name,
             venue_type: v.venue_type,
           }))}
-          titles={['不采集', '待采集']}
+          titles={[t('collectConfig.venueModal.exclude'), t('collectConfig.venueModal.include')]}
           targetKeys={selectedVenueIds}
-          onChange={(newTargetKeys) => onSelectedVenueIdsChange(newTargetKeys as string[])}
-          render={(item) => (
+          onChange={newTargetKeys => onSelectedVenueIdsChange(newTargetKeys as string[])}
+          render={item => (
             <span>
               <Tag color={getVenueTypeConfig(item.venue_type).color} style={{ marginRight: 4 }}>
-                {getVenueTypeConfig(item.venue_type).label}
+                {t(`venueTypes.${item.venue_type}`, { defaultValue: item.venue_type })}
               </Tag>
               <Text strong>{item.title}</Text>
               <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
@@ -61,10 +72,10 @@ const VenueConfigModal: React.FC<VenueConfigModalProps> = ({
           listStyle={{ width: 350, height: 400 }}
           showSearch
           locale={{
-            itemUnit: '个',
-            itemsUnit: '个',
-            searchPlaceholder: '搜索...',
-            notFoundContent: '暂无数据',
+            itemUnit: t('collectConfig.venueModal.itemUnit'),
+            itemsUnit: t('collectConfig.venueModal.itemsUnit'),
+            searchPlaceholder: t('collectConfig.venueModal.searchPlaceholder'),
+            notFoundContent: t('common:status.empty'),
           }}
         />
       </Spin>

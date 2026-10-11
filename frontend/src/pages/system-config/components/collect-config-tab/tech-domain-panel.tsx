@@ -1,6 +1,8 @@
 import { Card, Table, Typography, Tag, Space, Button, Tooltip, Empty, Spin, Badge } from 'antd'
 import { SettingOutlined, PlayCircleOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { getVenueTypeConfig } from '../../../../constants'
+import '../../../../i18n/namespaces/system-config'
 import type { TechDomainCollect } from '../../../../types'
 
 const { Text } = Typography
@@ -18,24 +20,27 @@ const TechDomainPanel: React.FC<TechDomainPanelProps> = ({
   onConfigVenues,
   onOpenCollect,
 }) => {
+  const { t } = useTranslation(['systemConfig', 'common'])
+
   const elementColumns = [
     {
-      title: '技术领域',
+      title: t('collectConfig.techDomains.colTechDomain'),
       dataIndex: 'domain_name',
       key: 'domain_name',
       width: 120,
       render: (name: string) => <Text strong>{name}</Text>,
     },
     {
-      title: '关联顶会顶刊',
+      title: t('collectConfig.techDomains.colVenues'),
       key: 'venues',
       render: (_: unknown, record: TechDomainCollect) => {
         const sources = record.collect_sources || []
-        if (sources.length === 0) return <Text type="secondary">未配置</Text>
+        if (sources.length === 0)
+          return <Text type="secondary">{t('collectConfig.techDomains.notConfigured')}</Text>
         const displayVenues = sources.slice(0, 10)
         return (
           <Space size={[4, 4]} wrap>
-            {displayVenues.map((v) => (
+            {displayVenues.map(v => (
               <Tooltip key={v.id} title={v.name || v.id}>
                 <Tag color={getVenueTypeConfig(v.type).color}>{v.id.toUpperCase()}</Tag>
               </Tooltip>
@@ -46,7 +51,7 @@ const TechDomainPanel: React.FC<TechDomainPanelProps> = ({
       },
     },
     {
-      title: '顶会顶刊数',
+      title: t('collectConfig.techDomains.colVenueCount'),
       dataIndex: 'venue_count',
       key: 'venue_count',
       width: 100,
@@ -55,22 +60,22 @@ const TechDomainPanel: React.FC<TechDomainPanelProps> = ({
       ),
     },
     {
-      title: '操作',
+      title: t('collectConfig.techDomains.colActions'),
       key: 'actions',
       width: 180,
       render: (_: unknown, record: TechDomainCollect) => (
         <Space>
-          <Tooltip title="配置顶会顶刊">
+          <Tooltip title={t('collectConfig.techDomains.configVenuesTooltip')}>
             <Button
               type="link"
               size="small"
               icon={<SettingOutlined />}
               onClick={() => onConfigVenues(record)}
             >
-              配置
+              {t('collectConfig.techDomains.configAction')}
             </Button>
           </Tooltip>
-          <Tooltip title="启动采集">
+          <Tooltip title={t('collectConfig.techDomains.collectTooltip')}>
             <Button
               type="primary"
               size="small"
@@ -78,7 +83,7 @@ const TechDomainPanel: React.FC<TechDomainPanelProps> = ({
               onClick={() => onOpenCollect(record)}
               disabled={!record.collect_sources || record.collect_sources.length === 0}
             >
-              采集
+              {t('collectConfig.techDomains.collectAction')}
             </Button>
           </Tooltip>
         </Space>
@@ -94,7 +99,9 @@ const TechDomainPanel: React.FC<TechDomainPanelProps> = ({
           columns={elementColumns}
           rowKey="tech_domain_id"
           pagination={false}
-          locale={{ emptyText: <Empty description="暂无技术领域数据" /> }}
+          locale={{
+            emptyText: <Empty description={t('collectConfig.techDomains.empty')} />,
+          }}
         />
       </Spin>
     </Card>

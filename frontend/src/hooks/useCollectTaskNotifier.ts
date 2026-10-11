@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { notification } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { useActiveCollectTasks } from './useQueries'
 
 interface ActiveTask {
@@ -16,6 +17,7 @@ const TERMINAL_STATUSES = new Set(['completed', 'failed', 'cancelled'])
  * away from the collection config page. Mounted once in MainLayout.
  */
 export function useCollectTaskNotifier() {
+  const { t } = useTranslation('common')
   const { data } = useActiveCollectTasks()
   const prevStatuses = useRef<Map<number, string>>(new Map())
 
@@ -28,22 +30,31 @@ export function useCollectTaskNotifier() {
       // Only notify on a live transition; statuses seen for the first time
       // (e.g. on page load) are recorded silently.
       if (prev && !TERMINAL_STATUSES.has(prev) && TERMINAL_STATUSES.has(task.status)) {
-        const name = task.task_name || `任务 #${task.task_id}`
+        const name = task.task_name || t('collectNotify.nameFallback', { id: task.task_id })
         if (task.status === 'completed') {
-          notification.success({ message: '采集任务完成', description: `「${name}」已完成` })
+          notification.success({
+            message: t('collectNotify.doneTitle'),
+            description: t('collectNotify.doneDesc', { name }),
+          })
         } else if (task.status === 'failed') {
-          notification.error({ message: '采集任务失败', description: `「${name}」已失败，请前往采集配置查看` })
+          notification.error({
+            message: t('collectNotify.failedTitle'),
+            description: t('collectNotify.failedDesc', { name }),
+          })
         } else {
-          notification.info({ message: '采集任务已取消', description: `「${name}」已取消` })
+          notification.info({
+            message: t('collectNotify.cancelledTitle'),
+            description: t('collectNotify.cancelledDesc', { name }),
+          })
         }
       }
       prevStatuses.current.set(task.task_id, task.status)
     }
 
     // Drop tasks that disappeared from the active list (e.g. deleted)
-    const ids = new Set(tasks.map((t) => t.task_id))
+    const ids = new Set(tasks.map(task => task.task_id))
     for (const id of prevStatuses.current.keys()) {
       if (!ids.has(id)) prevStatuses.current.delete(id)
     }
-  }, [data])
+  }, [data, t])
 }

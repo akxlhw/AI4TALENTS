@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Table, Tag, Space, DatePicker, Select, Button } from 'antd'
 import { FileTextOutlined, ReloadOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../services/api'
 import { formatUTCToLocal } from '../../utils/datetime'
+import '../../i18n/namespaces/admin'
 import dayjs from 'dayjs'
 
 const { RangePicker } = DatePicker
@@ -27,40 +29,14 @@ interface UserMapItem {
   employee_id: string | null
 }
 
-const EVENT_TYPE_MAP: Record<string, string> = {
-  authentication: '认证',
-  authorization: '权限',
-  data_operation: '数据',
-}
-
-const OPERATION_MAP: Record<string, string> = {
-  login: '登录',
-  logout: '登出',
-  register: '注册',
-  change_password: '修改密码',
-  create: '创建用户',
-  update: '更新用户',
-  deactivate: '禁用用户',
-  approve: '审批通过',
-  reject: '审批拒绝',
-  grant_scope: '授予权限',
-  revoke_scope: '移除权限',
-  export: '导出',
-}
-
 const STATUS_COLOR_MAP: Record<string, string> = {
   success: 'green',
   failure: 'red',
   partial: 'orange',
 }
 
-const STATUS_TEXT_MAP: Record<string, string> = {
-  success: '成功',
-  failure: '失败',
-  partial: '部分',
-}
-
 const AuditLogPage: React.FC = () => {
+  const { t } = useTranslation(['admin', 'common'])
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -114,27 +90,40 @@ const AuditLogPage: React.FC = () => {
   }, [loadLogs])
 
   const formatEvent = (record: AuditLog) => {
-    const typeLabel = EVENT_TYPE_MAP[record.event_type] || record.event_type
-    const opLabel = OPERATION_MAP[record.operation] || record.operation
+    const typeLabel = t(`audit.eventTypes.${record.event_type}`, {
+      defaultValue: record.event_type,
+    })
+    const opLabel = t(`audit.operations.${record.operation}`, {
+      defaultValue: record.operation,
+    })
     const resourceLabel =
-      record.resource_type === 'talent' ? '人才'
-        : record.resource_type === 'os_developer' ? '开源人才'
-          : ''
-    if (record.event_type === 'data_operation' && record.operation === 'export' && record.operation_detail) {
+      record.resource_type === 'talent' || record.resource_type === 'os_developer'
+        ? t(`audit.resources.${record.resource_type}`)
+        : ''
+    const base = t('audit.eventPlain', {
+      type: typeLabel,
+      operation: opLabel,
+      resource: resourceLabel,
+    })
+    if (
+      record.event_type === 'data_operation' &&
+      record.operation === 'export' &&
+      record.operation_detail
+    ) {
       const count = record.operation_detail.count as number | undefined
       const fmt = record.operation_detail.format as string | undefined
-      return `${typeLabel} · ${opLabel}${resourceLabel} (${count || '?'}条${fmt ? ` ${fmt}` : ''})`
+      const countText = fmt
+        ? t('audit.exportCountFormat', { count: count || '?', format: fmt })
+        : t('audit.exportCountPlain', { count: count || '?' })
+      return `${base} ${countText}`
     }
-    if (resourceLabel) {
-      return `${typeLabel} · ${opLabel}${resourceLabel}`
-    }
-    return `${typeLabel} · ${opLabel}`
+    return base
   }
 
   const formatOperator = (userId: number | null) => {
-    if (!userId) return '系统'
+    if (!userId) return t('audit.system')
     const user = userMap.get(userId)
-    if (!user) return `用户#${userId}`
+    if (!user) return t('audit.userNo', { id: userId })
     if (user.employee_id) {
       return `${user.username} (${user.employee_id})`
     }
@@ -143,49 +132,57 @@ const AuditLogPage: React.FC = () => {
 
   const columns = [
     {
-      title: '时间',
+      title: t('audit.columns.time'),
       dataIndex: 'event_time',
       key: 'event_time',
       width: 170,
       render: (date: string) => formatUTCToLocal(date),
     },
     {
-      title: '操作人',
+      title: t('audit.columns.operator'),
       dataIndex: 'user_id',
       key: 'user_id',
       width: 180,
       render: (id: number | null) => formatOperator(id),
     },
     {
-      title: '事件',
+      title: t('audit.columns.event'),
       key: 'event',
       width: 200,
       render: (_: unknown, record: AuditLog) => (
-        <Tag color={record.event_type === 'authentication' ? 'blue' : record.event_type === 'authorization' ? 'orange' : 'green'}>
+        <Tag
+          color={
+            record.event_type === 'authentication'
+              ? 'blue'
+              : record.event_type === 'authorization'
+                ? 'orange'
+                : 'green'
+          }
+        >
           {formatEvent(record)}
         </Tag>
       ),
     },
     {
-      title: '状态',
+      title: t('audit.columns.status'),
       dataIndex: 'status',
       key: 'status',
       width: 80,
       render: (status: string) => (
         <Tag color={STATUS_COLOR_MAP[status] || 'default'}>
-          {STATUS_TEXT_MAP[status] || status}
+          {t(`audit.statuses.${status}`, { defaultValue: status })}
         </Tag>
       ),
     },
     {
-      title: 'IP',
+      title: t('audit.columns.ip'),
       dataIndex: 'user_ip',
       key: 'user_ip',
       width: 130,
       render: (ip: string | null) => ip || '-',
     },
     {
-      title: '详情',
+      title: t('audit.columns.detail'),
       key: 'detail',
       ellipsis: true,
       render: (_: unknown, record: AuditLog) => {
@@ -197,7 +194,9 @@ const AuditLogPage: React.FC = () => {
           if (detail.count !== undefined) {
             const count = detail.count as number
             const fmt = detail.format as string | undefined
-            return `导出 ${count} 条${fmt ? ` (${fmt})` : ''}`
+            return fmt
+              ? t('audit.exportDetailFormat', { count, format: fmt })
+              : t('audit.exportDetail', { count })
           }
           return JSON.stringify(detail).slice(0, 60)
         }
@@ -212,32 +211,32 @@ const AuditLogPage: React.FC = () => {
         title={
           <Space>
             <FileTextOutlined />
-            <span>审计日志</span>
+            <span>{t('audit.title')}</span>
           </Space>
         }
       >
         <Space style={{ marginBottom: 16 }} wrap>
           <Select
-            placeholder="事件类型"
+            placeholder={t('audit.filter.eventType')}
             allowClear
             style={{ width: 140 }}
             value={filters.event_type}
-            onChange={(val) => setFilters((f) => ({ ...f, event_type: val }))}
+            onChange={val => setFilters(f => ({ ...f, event_type: val }))}
             options={[
-              { value: 'authentication', label: '认证' },
-              { value: 'authorization', label: '权限' },
-              { value: 'data_operation', label: '数据' },
+              { value: 'authentication', label: t('audit.eventTypes.authentication') },
+              { value: 'authorization', label: t('audit.eventTypes.authorization') },
+              { value: 'data_operation', label: t('audit.eventTypes.data_operation') },
             ]}
           />
           <RangePicker
             showTime
             value={filters.date_range}
-            onChange={(val) =>
-              setFilters((f) => ({ ...f, date_range: val as [dayjs.Dayjs, dayjs.Dayjs] | undefined }))
+            onChange={val =>
+              setFilters(f => ({ ...f, date_range: val as [dayjs.Dayjs, dayjs.Dayjs] | undefined }))
             }
           />
           <Button icon={<ReloadOutlined />} onClick={loadLogs}>
-            刷新
+            {t('actions.refresh')}
           </Button>
         </Space>
 
@@ -255,7 +254,7 @@ const AuditLogPage: React.FC = () => {
                 <div style={{ padding: '8px 16px' }}>
                   {record.error_message && (
                     <div style={{ color: '#ff4d4f', marginBottom: 8 }}>
-                      <strong>错误信息：</strong>
+                      <strong>{t('audit.errorMessage')}</strong>
                       {record.error_message}
                     </div>
                   )}
@@ -283,9 +282,9 @@ const AuditLogPage: React.FC = () => {
             pageSize,
             total,
             showSizeChanger: false,
-            showTotal: (t) => `共 ${t} 条记录`,
+            showTotal: records => t('audit.totalRecords', { n: records }),
           }}
-          onChange={(pagination) => setPage(pagination.current || 1)}
+          onChange={pagination => setPage(pagination.current || 1)}
         />
       </Card>
     </div>

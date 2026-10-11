@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { Empty, Spin, Typography, Space, Select, Slider, Card, Row, Col, Badge, Alert } from 'antd'
+import { useTranslation } from 'react-i18next'
 
 const { Text } = Typography
 
@@ -41,20 +42,7 @@ const TIER_COLORS: Record<string, string> = {
   tier4: '#66bb6a',
 }
 
-const TIER_NAMES: Record<string, string> = {
-  tier1: '学术领军',
-  tier2: '中坚学者',
-  tier3: '青年才俊',
-  tier4: '新锐研究者',
-}
-
 const TIER_ORDER = ['tier1', 'tier2', 'tier3', 'tier4']
-
-const RELATIONSHIP_NAMES: Record<string, string> = {
-  advisor_student: '导师-学生',
-  mentor_mentee: '导师-门徒',
-  senior_junior: '前辈-后辈',
-}
 
 // Max nodes rendered per tier row before collapsing into "Top N + aggregate".
 const MAX_PER_TIER = 12
@@ -67,6 +55,15 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
   loading = false,
   onNodeClick,
 }) => {
+  const { t } = useTranslation(['academic', 'common'])
+  const tierName = useCallback(
+    (tier: string) => t(`genealogy.tiers.${tier}`, { ns: 'common', defaultValue: tier }),
+    [t]
+  )
+  const relationName = useCallback(
+    (type: string) => t(`genealogy.relations.${type}`, { ns: 'common', defaultValue: type }),
+    [t]
+  )
   const [relFilter, setRelFilter] = useState<string | null>(null)
   // Default matches backend default min_confidence=0.3
   const [minConf, setMinConf] = useState<number>(0.3)
@@ -200,7 +197,7 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
       if (hiddenCount > 0) {
         chartNodes.push({
           id: `${AGG_NODE_PREFIX}${groupIdx}`,
-          name: `+${hiddenCount} 人`,
+          name: t('genealogy.aggNode', { ns: 'common', count: hiddenCount }),
           x: MARGIN_LEFT + usableWidth,
           y: tierYPositions[groupIdx],
           symbolSize: 22,
@@ -238,7 +235,7 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
     }))
 
     const categories = TIER_ORDER.map((tier) => ({
-      name: TIER_NAMES[tier],
+      name: tierName(tier),
       itemStyle: { color: TIER_COLORS[tier] },
     }))
 
@@ -251,17 +248,32 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
             if (id.startsWith(AGG_NODE_PREFIX)) {
               const tierIdx = Number(id.slice(AGG_NODE_PREFIX.length))
               const hidden = displayGroups[tierIdx]?.hiddenCount ?? 0
-              return `该层级另有 ${hidden} 位学者已折叠<br/>点击此节点展开全部`
+              return t('genealogy.tooltip.aggHidden', { ns: 'common', count: hidden })
             }
             const node = filteredNodes.find((n) => String(n.talent_id) === id)
             if (!node) return params.data.name
-            return `${node.name}<br/>机构: ${node.institution || '-'}<br/>综合评分: ${node.composite_score.toFixed(1)}<br/>层级: ${TIER_NAMES[node.tier]}<br/>h-index: ${node.h_index}<br/>引用: ${node.cited_by_count}`
+            return [
+              node.name,
+              t('genealogy.tooltip.institution', { ns: 'common', value: node.institution || '-' }),
+              t('genealogy.tooltip.score', { ns: 'common', value: node.composite_score.toFixed(1) }),
+              t('genealogy.tooltip.tier', { ns: 'common', value: tierName(node.tier) }),
+              `h-index: ${node.h_index}`,
+              t('genealogy.tooltip.citations', { ns: 'common', value: node.cited_by_count }),
+            ].join('<br/>')
           }
           const link = displayLinks[params.dataIndex]
           if (!link) return ''
           const advisorNode = filteredNodes.find((n) => n.talent_id === link.target)
           const studentNode = filteredNodes.find((n) => n.talent_id === link.source)
-          return `${advisorNode?.name || link.target} → ${studentNode?.name || link.source}<br/>${RELATIONSHIP_NAMES[link.type] || link.type}<br/>置信度: ${(link.confidence * 100).toFixed(0)}%<br/>证据: ${link.evidence_count} 篇`
+          return [
+            `${advisorNode?.name || link.target} → ${studentNode?.name || link.source}`,
+            relationName(link.type),
+            t('genealogy.tooltip.confidence', {
+              ns: 'common',
+              value: `${(link.confidence * 100).toFixed(0)}%`,
+            }),
+            t('genealogy.tooltip.evidence', { ns: 'common', value: link.evidence_count }),
+          ].join('<br/>')
         },
       },
       legend: {
@@ -314,7 +326,7 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
         },
       ],
     }
-  }, [filteredNodes, filteredLinks, expandedTiers, containerWidth])
+  }, [filteredNodes, filteredLinks, expandedTiers, containerWidth, t, tierName, relationName])
 
   if (loading) {
     return (
@@ -330,9 +342,9 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
         <Empty
           description={
             <Space direction="vertical">
-              <Text>暂无学术族谱数据</Text>
+              <Text>{t('detail.noGenealogy', { ns: 'academic' })}</Text>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                该学者未推断出族谱关系，或需要管理员重新触发族谱计算
+                {t('detail.noGenealogyHint', { ns: 'academic' })}
               </Text>
             </Space>
           }
@@ -348,22 +360,27 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
       <Card size="small" style={{ marginBottom: 12 }}>
         <Row gutter={16} align="middle">
           <Col xs={24} sm={6}>
-            <Text type="secondary">关系类型</Text>
+            <Text type="secondary">{t('genealogy.relationType', { ns: 'common' })}</Text>
             <Select
               allowClear
-              placeholder="全部关系"
+              placeholder={t('genealogy.allRelations', { ns: 'common' })}
               style={{ width: '100%', marginTop: 4 }}
               value={relFilter}
               onChange={setRelFilter}
               options={[
-                { label: '导师-学生', value: 'advisor_student' },
-                { label: 'Mentor-Mentee', value: 'mentor_mentee' },
-                { label: 'Senior-Junior', value: 'senior_junior' },
+                { label: relationName('advisor_student'), value: 'advisor_student' },
+                { label: relationName('mentor_mentee'), value: 'mentor_mentee' },
+                { label: relationName('senior_junior'), value: 'senior_junior' },
               ]}
             />
           </Col>
           <Col xs={24} sm={6}>
-            <Text type="secondary">最低置信度: {(minConf * 100).toFixed(0)}%</Text>
+            <Text type="secondary">
+              {t('genealogy.minConfidence', {
+                ns: 'common',
+                value: `${(minConf * 100).toFixed(0)}%`,
+              })}
+            </Text>
             <Slider
               min={0.3}
               max={1.0}
@@ -374,30 +391,38 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
             />
           </Col>
           <Col xs={24} sm={6}>
-            <Text type="secondary">层级过滤</Text>
+            <Text type="secondary">{t('genealogy.tierFilter', { ns: 'common' })}</Text>
             <Select
               allowClear
-              placeholder="全部层级"
+              placeholder={t('genealogy.allTiers', { ns: 'common' })}
               style={{ width: '100%', marginTop: 4 }}
               value={tierFilter}
               onChange={setTierFilter}
               options={[
-                { label: <Badge color="#e94560" text="T1 学术领军" />, value: 'tier1' },
-                { label: <Badge color="#ffa726" text="T2 中坚学者" />, value: 'tier2' },
-                { label: <Badge color="#42a5f5" text="T3 青年才俊" />, value: 'tier3' },
-                { label: <Badge color="#66bb6a" text="T4 新锐研究者" />, value: 'tier4' },
+                { label: <Badge color="#e94560" text={`T1 ${tierName('tier1')}`} />, value: 'tier1' },
+                { label: <Badge color="#ffa726" text={`T2 ${tierName('tier2')}`} />, value: 'tier2' },
+                { label: <Badge color="#42a5f5" text={`T3 ${tierName('tier3')}`} />, value: 'tier3' },
+                { label: <Badge color="#66bb6a" text={`T4 ${tierName('tier4')}`} />, value: 'tier4' },
               ]}
             />
           </Col>
           <Col xs={24} sm={6}>
             <div style={{ textAlign: 'right', paddingTop: 20 }}>
               <Text type="secondary">
-                显示 {filteredNodes.length} 个节点 / {filteredLinks.length} 条关系
+                {t('genealogy.displayCount', {
+                  ns: 'common',
+                  nodes: filteredNodes.length,
+                  links: filteredLinks.length,
+                })}
               </Text>
               {links.length > 0 && filteredLinks.length < links.length && (
                 <div>
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    (原始共 {links.length} 条，当前过滤后 {filteredLinks.length} 条)
+                    {t('genealogy.filteredHint', {
+                      ns: 'common',
+                      total: links.length,
+                      shown: filteredLinks.length,
+                    })}
                   </Text>
                 </div>
               )}
@@ -406,7 +431,11 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
         </Row>
         {hasNoLinksAfterFilter && (
           <Alert
-            message={`当前学者「${rootTalent.name}」暂无通过置信度 ≥ ${(minConf * 100).toFixed(0)}% 的族谱关系。尝试降低最低置信度，或等待管理员重新触发族谱计算。`}
+            message={t('genealogy.noRelationsAfterFilter', {
+              ns: 'common',
+              name: rootTalent.name,
+              value: `${(minConf * 100).toFixed(0)}%`,
+            })}
             type="info"
             showIcon
             style={{ marginTop: 12 }}
@@ -439,7 +468,7 @@ const GenealogyGraph: React.FC<GenealogyGraphProps> = ({
       )}
       {!option && (
         <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Empty description="过滤后没有可显示的节点" />
+          <Empty description={t('genealogy.noNodesAfterFilter', { ns: 'common' })} />
         </div>
       )}
     </div>

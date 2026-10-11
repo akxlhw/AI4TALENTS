@@ -1,5 +1,7 @@
 import { Card, Space, Button, Alert, Progress, Spin } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { ReloadOutlined, SyncOutlined } from '@ant-design/icons'
+import '../../../../i18n/namespaces/system-config'
 
 interface GenealogyPanelProps {
   genealogySyncStatus: {
@@ -20,12 +22,14 @@ const GenealogyPanel: React.FC<GenealogyPanelProps> = ({
   onSync,
   onRefresh,
 }) => {
+  const { t } = useTranslation(['systemConfig', 'common'])
+
   return (
     <Card>
       <Spin spinning={genealogySyncLoading}>
         <Alert
-          message="学术族谱计算"
-          description="从 RawWork 论文数据推断导师-学生传承关系，并计算学者影响力评分。计算过程为后台异步执行，耗时取决于论文数量。"
+          message={t('collectConfig.genealogy.title')}
+          description={t('collectConfig.genealogy.description')}
           type="info"
           showIcon
           style={{ marginBottom: 24 }}
@@ -40,8 +44,10 @@ const GenealogyPanel: React.FC<GenealogyPanelProps> = ({
               style={{ marginBottom: 8 }}
               message={
                 genealogySyncStatus?.status === 'pending'
-                  ? '正在启动计算任务...'
-                  : `族谱计算进行中... (${genealogySyncStatus?.current_phase || ''})`
+                  ? t('collectConfig.genealogy.starting')
+                  : t('collectConfig.genealogy.running', {
+                      phase: genealogySyncStatus?.current_phase || '',
+                    })
               }
             />
             {genealogySyncStatus?.status === 'running' && genealogySyncStatus?.total > 0 && (
@@ -53,7 +59,11 @@ const GenealogyPanel: React.FC<GenealogyPanelProps> = ({
                   )}
                   status="active"
                   format={() =>
-                    `${genealogySyncStatus.processed}/${genealogySyncStatus.total} 论文，${genealogySyncStatus.edges} 条关系`
+                    t('collectConfig.genealogy.progressFormat', {
+                      processed: genealogySyncStatus.processed,
+                      total: genealogySyncStatus.total,
+                      edges: genealogySyncStatus.edges,
+                    })
                   }
                 />
               </div>
@@ -65,7 +75,10 @@ const GenealogyPanel: React.FC<GenealogyPanelProps> = ({
             <Alert
               type="success"
               showIcon
-              message={`族谱计算完成！处理 ${genealogySyncStatus.processed} 篇论文，推断 ${genealogySyncStatus.edges} 条关系`}
+              message={t('collectConfig.genealogy.completed', {
+                processed: genealogySyncStatus.processed,
+                edges: genealogySyncStatus.edges,
+              })}
             />
           </div>
         )}
@@ -73,7 +86,13 @@ const GenealogyPanel: React.FC<GenealogyPanelProps> = ({
           typeof genealogySyncStatus.status === 'string' &&
           genealogySyncStatus.status.startsWith('error') && (
             <div style={{ marginBottom: 16 }}>
-              <Alert type="error" showIcon message={`计算失败: ${genealogySyncStatus.status}`} />
+              <Alert
+                type="error"
+                showIcon
+                message={t('collectConfig.genealogy.failed', {
+                  status: genealogySyncStatus.status,
+                })}
+              />
             </div>
           )}
         <Space>
@@ -84,10 +103,12 @@ const GenealogyPanel: React.FC<GenealogyPanelProps> = ({
             loading={genealogySyncStatus?.status === 'running'}
             disabled={genealogySyncStatus?.status === 'running'}
           >
-            {genealogySyncStatus?.status === 'running' ? '计算中...' : '启动族谱计算'}
+            {genealogySyncStatus?.status === 'running'
+              ? t('collectConfig.genealogy.computing')
+              : t('collectConfig.genealogy.start')}
           </Button>
           <Button icon={<ReloadOutlined />} onClick={onRefresh} loading={genealogySyncLoading}>
-            刷新状态
+            {t('actions.refreshStatus')}
           </Button>
         </Space>
       </Spin>

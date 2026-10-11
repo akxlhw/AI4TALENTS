@@ -1,0 +1,360 @@
+{
+  "actions": {
+    "refresh": "Refresh"
+  },
+  "users": {
+    "table": {
+      "title": "User Management",
+      "tabAll": "All Users",
+      "tabPending": "Pending Approval",
+      "create": "Create User",
+      "colUsername": "Username",
+      "colEmail": "Email",
+      "colEmployeeId": "Employee ID",
+      "colRole": "Role",
+      "colStatus": "Status",
+      "colDefaultView": "Default View",
+      "colLastLogin": "Last Login",
+      "colActions": "Actions",
+      "approve": "Approve",
+      "reject": "Reject",
+      "detail": "Detail",
+      "scopes": "Scopes",
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "rejectConfirmTitle": "Reject this user's registration request?",
+      "rejectConfirmDescription": "The account will no longer be able to sign in after rejection",
+      "rejectConfirmOk": "Confirm Rejection",
+      "confirm": "OK",
+      "cancel": "Cancel",
+      "deactivateConfirm": "Deactivate this user?",
+      "activateConfirm": "Activate this user?",
+      "total": "{{n}} users in total"
+    },
+    "filters": {
+      "role": "Role",
+      "status": "Status",
+      "registerStart": "Registered from",
+      "registerEnd": "Registered to",
+      "sortByCreatedAt": "Registration Time",
+      "sortByLastLogin": "Last Login",
+      "sortByUsername": "Username",
+      "orderDesc": "Descending",
+      "orderAsc": "Ascending"
+    },
+    "roles": {
+      "user": "User",
+      "admin": "Administrator",
+      "super_admin": "Super Administrator"
+    },
+    "statuses": {
+      "active": "Active",
+      "inactive": "Deactivated",
+      "pending_approval": "Pending Approval"
+    },
+    "views": {
+      "tech_domain": "Tech Domain",
+      "country_school": "Country & School"
+    },
+    "messages": {
+      "loadFailed": "Failed to load user list",
+      "approved": "User approved",
+      "rejected": "User rejected",
+      "updateSuccess": "User updated successfully",
+      "createSuccess": "User created successfully",
+      "deactivated": "User deactivated",
+      "activated": "User activated",
+      "activitiesLoadFailed": "Failed to load activity records"
+    },
+    "form": {
+      "createTitle": "Create User",
+      "editTitle": "Edit User",
+      "username": "Username",
+      "email": "Email",
+      "password": "Password",
+      "displayName": "Display Name",
+      "department": "Department",
+      "role": "Role",
+      "defaultView": "Default View",
+      "usernameRequired": "Please enter a username",
+      "emailRequired": "Please enter an email",
+      "emailInvalid": "Please enter a valid email address",
+      "passwordRequired": "Please enter a password",
+      "passwordMin": "Password must be at least 8 characters"
+    },
+    "detail": {
+      "title": "User Details",
+      "tabProfile": "Profile",
+      "tabActivities": "Activities",
+      "tabScopes": "Access Scopes",
+      "username": "Username: ",
+      "email": "Email: ",
+      "displayName": "Display Name: ",
+      "department": "Department: ",
+      "employeeId": "Employee ID: ",
+      "role": "Role: ",
+      "status": "Status: ",
+      "createdAt": "Registered At: ",
+      "lastLogin": "Last Login: ",
+      "editInfo": "Edit Profile",
+      "manageScopes": "Manage Scopes",
+      "system": "System",
+      "colTime": "Time",
+      "colType": "Type",
+      "colDescription": "Description",
+      "colActor": "Operator",
+      "colIp": "IP",
+      "scopeTypes": {
+        "school": "School",
+        "country": "Country",
+        "tech_domain": "Tech Domain",
+        "all": "All"
+      },
+      "grantedAt": "Granted at {{time}}",
+      "expiresAt": "Expires: {{time}}",
+      "noScopes": "No scopes"
+    }
+  },
+  "scopes": {
+    "title": "Scope Management",
+    "tabCurrent": "Current Scopes",
+    "tabAdd": "Add Scope",
+    "removeConfirm": "Remove this scope?",
+    "confirm": "OK",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "types": {
+      "school": "School",
+      "country": "Country",
+      "tech_domain": "Tech Domain",
+      "all": "All"
+    },
+    "noScopes": "No scopes",
+    "grantedAt": "Granted at {{time}}",
+    "expiresAt": "Expires: {{time}}",
+    "form": {
+      "type": "Scope Type",
+      "value": "Scope Value",
+      "valueExtra": "School ID, country code (e.g. US, CN), tech domain ID or * (all)",
+      "valuePlaceholder": "e.g. 1, US, 1, *",
+      "notes": "Notes",
+      "submit": "Add Scope"
+    },
+    "messages": {
+      "loadFailed": "Failed to load scopes",
+      "addSuccess": "Scope added successfully",
+      "addFailed": "Failed to add scope",
+      "removeSuccess": "Scope removed",
+      "removeFailed": "Failed to remove scope"
+    }
+  },
+  "audit": {
+    "title": "Audit Logs",
+    "columns": {
+      "time": "Time",
+      "operator": "Operator",
+      "event": "Event",
+      "status": "Status",
+      "ip": "IP",
+      "detail": "Details"
+    },
+    "filter": {
+      "eventType": "Event Type"
+    },
+    "eventTypes": {
+      "authentication": "Auth",
+      "authorization": "Access",
+      "data_operation": "Data"
+    },
+    "operations": {
+      "login": "Sign In",
+      "logout": "Sign Out",
+      "register": "Registration",
+      "change_password": "Password Change",
+      "create": "Create User",
+      "update": "Update User",
+      "deactivate": "Deactivate User",
+      "approve": "Approved",
+      "reject": "Rejected",
+      "grant_scope": "Scope Granted",
+      "revoke_scope": "Scope Revoked",
+      "export": "Export"
+    },
+    "statuses": {
+      "success": "Success",
+      "failure": "Failure",
+      "partial": "Partial"
+    },
+    "resources": {
+      "talent": "talent",
+      "os_developer": "open-source talent"
+    },
+    "eventPlain": "{{type}} · {{operation}}{{resource}}",
+    "exportCountPlain": "({{count}} items)",
+    "exportCountFormat": "({{count}} items, {{format}})",
+    "exportDetail": "Exported {{count}} items",
+    "exportDetailFormat": "Exported {{count}} items ({{format}})",
+    "system": "System",
+    "userNo": "User #{{id}}",
+    "errorMessage": "Error message: ",
+    "totalRecords": "{{n}} records in total"
+  },
+  "dataVersion": {
+    "title": "Data Version Management",
+    "currentVersion": "Current Version",
+    "qualityOverview": "Data Quality Overview",
+    "noActiveVersion": "No active version",
+    "noQualityData": "No quality data",
+    "tabs": {
+      "versions": "Data Versions",
+      "corrections": "Corrections"
+    },
+    "createVersion": "Create Version",
+    "actions": {
+      "publish": "Publish"
+    },
+    "versionColumns": {
+      "code": "Version Code",
+      "name": "Version Name",
+      "type": "Type",
+      "stats": "Data Statistics",
+      "status": "Status",
+      "createdAt": "Created At",
+      "actions": "Actions"
+    },
+    "versionType": {
+      "snapshot": "Snapshot",
+      "release": "Release"
+    },
+    "stats": {
+      "talents": "{{n}} talents",
+      "schools": "{{n}} schools",
+      "talentTooltip": "Talents",
+      "schoolTooltip": "Schools"
+    },
+    "badges": {
+      "active": "Active",
+      "published": "Published",
+      "unpublished": "Unpublished"
+    },
+    "labels": {
+      "version": "Version",
+      "code": "Code",
+      "talentCount": "Talents",
+      "schoolCount": "Schools",
+      "publishedAt": "Published At"
+    },
+    "quality": {
+      "talent": "Talent Data",
+      "school": "School Data",
+      "works": "Publication Data",
+      "pendingTags": "Pending Tags",
+      "completeness": "Completeness {{value}}%"
+    },
+    "totalVersions": "{{n}} versions in total",
+    "totalRecords": "{{n}} records in total",
+    "modal": {
+      "title": "Create Data Version"
+    },
+    "form": {
+      "code": "Version Code",
+      "name": "Version Name",
+      "type": "Version Type",
+      "description": "Description",
+      "codePlaceholder": "e.g. V20240101",
+      "namePlaceholder": "e.g. January 2024 data snapshot"
+    },
+    "correctionColumns": {
+      "targetType": "Target Type",
+      "targetId": "Target ID",
+      "field": "Field",
+      "correctionType": "Correction Type",
+      "status": "Status",
+      "correctedAt": "Corrected At"
+    },
+    "targets": {
+      "talent": "Talent",
+      "school": "School",
+      "tech_tag": "Tech Tag"
+    },
+    "correctionTypes": {
+      "manual": "Manual",
+      "system": "System",
+      "import": "Import"
+    },
+    "correctionStatus": {
+      "applied": "Applied",
+      "pending": "Pending",
+      "reverted": "Reverted"
+    },
+    "messages": {
+      "loadVersionsFailed": "Failed to load version list",
+      "loadCorrectionsFailed": "Failed to load correction records",
+      "createSuccess": "Version created successfully",
+      "createFailed": "Failed to create version",
+      "publishSuccess": "Version published successfully",
+      "publishFailed": "Failed to publish version"
+    }
+  },
+  "suggestions": {
+    "title": "Suggestion Management",
+    "listTitle": "Suggestion List",
+    "categories": {
+      "feature": "Feature Request",
+      "bug": "Bug Report",
+      "data_issue": "Data Correction",
+      "experience": "Experience Feedback",
+      "other": "Other"
+    },
+    "status": {
+      "all": "All Statuses",
+      "open": "Pending",
+      "in_progress": "In Progress",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "columns": {
+      "id": "ID",
+      "user": "User",
+      "category": "Category",
+      "subject": "Subject",
+      "content": "Content",
+      "status": "Status",
+      "adminReply": "Admin Reply",
+      "createdAt": "Submitted At",
+      "actions": "Actions"
+    },
+    "actions": {
+      "detail": "Detail",
+      "reply": "Reply"
+    },
+    "replied": "Replied",
+    "filters": {
+      "status": "Filter by status",
+      "category": "Filter by category",
+      "allCategories": "All Categories"
+    },
+    "detailModal": {
+      "title": "Suggestion Details",
+      "category": "Category: ",
+      "subject": "Subject: ",
+      "content": "Content: ",
+      "adminReply": "Admin Reply: ",
+      "attachments": "Attachments: ",
+      "meta": "User: {{username}} · Submitted at {{time}}"
+    },
+    "replyModal": {
+      "title": "Reply to Suggestion",
+      "changeStatus": "Change Status: ",
+      "contentLabel": "Reply: ",
+      "placeholder": "Enter your reply..."
+    },
+    "messages": {
+      "replyRequired": "Please enter the reply content",
+      "replySuccess": "Reply sent successfully",
+      "replyFailed": "Failed to send reply",
+      "loadFailed": "Failed to load"
+    }
+  }
+}

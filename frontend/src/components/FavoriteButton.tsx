@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Button, Modal, Input, Tooltip } from 'antd'
 import { StarOutlined, StarFilled } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { useFavorites } from '../contexts/FavoritesContext'
 
 interface FavoriteButtonProps {
@@ -16,6 +17,7 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   showText = false,
   onFavoriteChange,
 }) => {
+  const { t } = useTranslation('common')
   const { isFavorited, addFavorite, removeFavorite } = useFavorites()
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
@@ -27,10 +29,10 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
     if (favorited) {
       // Show confirmation before removing
       Modal.confirm({
-        title: '取消收藏',
-        content: '确定要取消收藏该候选人吗？',
-        okText: '确定',
-        cancelText: '取消',
+        title: t('favorite.removeTitle'),
+        content: t('favorite.removeConfirm'),
+        okText: t('actions.confirm'),
+        cancelText: t('actions.cancel'),
         onOk: handleRemove,
       })
     } else {
@@ -70,7 +72,7 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
 
   if (favorited) {
     return (
-      <Tooltip title="已收藏，点击取消">
+      <Tooltip title={t('favorite.addedTooltip')}>
         <Button
           type="primary"
           ghost
@@ -79,7 +81,7 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
           loading={loading}
           onClick={handleClick}
         >
-          {showText && '已收藏'}
+          {showText && t('favorite.addedLabel')}
         </Button>
       </Tooltip>
     )
@@ -87,33 +89,33 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
 
   return (
     <>
-      <Tooltip title="添加收藏">
+      <Tooltip title={t('favorite.addTooltip')}>
         <Button
           icon={<StarOutlined />}
           size={size}
           loading={loading}
           onClick={handleClick}
         >
-          {showText && '收藏'}
+          {showText && t('favorite.addLabel')}
         </Button>
       </Tooltip>
 
       <Modal
-        title="添加收藏"
+        title={t('favorite.addTitle')}
         open={modalVisible}
         onOk={handleAdd}
         onCancel={handleModalCancel}
         confirmLoading={loading}
-        okText="确定"
-        cancelText="取消"
+        okText={t('actions.confirm')}
+        cancelText={t('actions.cancel')}
       >
         <div style={{ marginBottom: 16 }}>
           <p style={{ marginBottom: 8, color: '#666' }}>
-            可以添加备注记录关注该候选人的原因（可选）
+            {t('favorite.notesHint')}
           </p>
           <Input.TextArea
             rows={4}
-            placeholder="例如：研究方向匹配、学术背景优秀等..."
+            placeholder={t('favorite.notesPlaceholder')}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             maxLength={500}

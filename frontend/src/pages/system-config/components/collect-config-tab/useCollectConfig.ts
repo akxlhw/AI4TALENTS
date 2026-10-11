@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { message } from 'antd'
 import { api } from '../../../../services/api'
 import { queryClient, queryKeys } from '../../../../hooks/queryClient'
@@ -6,8 +7,11 @@ import { TIME_RANGE_CONFIG } from '../../../../constants'
 import type { VenueItem, VenueBinding, TechDomainCollect, CollectTask } from '../../../../types'
 import { getErrorMessage } from '../utils'
 import { usePolling } from '../../../../hooks/usePolling'
+import '../../../../i18n/namespaces/system-config'
 
 export const useCollectConfig = (initialSubTab?: string) => {
+  const { t } = useTranslation(['systemConfig', 'common'])
+
   // ========== State ==========
   const [techDomains, setTechDomains] = useState<TechDomainCollect[]>([])
   const [venueModalVisible, setVenueModalVisible] = useState(false)
@@ -103,11 +107,11 @@ export const useCollectConfig = (initialSubTab?: string) => {
       }
       runningTaskIdsRef.current = currentRunningIds
     } catch {
-      message.error('加载任务列表失败')
+      message.error(t('collectConfig.messages.loadTasksFailed'))
     } finally {
       setLoading(false)
     }
-  }, [taskPage])
+  }, [taskPage, t])
 
   const loadTechDomains = async () => {
     setLoading(true)
@@ -115,7 +119,7 @@ export const useCollectConfig = (initialSubTab?: string) => {
       const response = await api.collect.listTechDomains()
       setTechDomains(response.data.items || [])
     } catch {
-      message.error('加载技术领域失败')
+      message.error(t('collectConfig.messages.loadTechDomainsFailed'))
     } finally {
       setLoading(false)
     }
@@ -143,7 +147,7 @@ export const useCollectConfig = (initialSubTab?: string) => {
         .map((b: VenueBinding) => String(b.venue_id))
       setSelectedVenueIds(enabledIds)
     } catch {
-      message.error('加载顶会顶刊列表失败')
+      message.error(t('collectConfig.messages.loadVenuesFailed'))
       setAllVenues([])
       setSelectedVenueIds([])
     } finally {
@@ -164,13 +168,13 @@ export const useCollectConfig = (initialSubTab?: string) => {
     try {
       await api.venues.batchCreateBindings(
         selectedDomain.tech_domain_id,
-        selectedVenueIds.map((id) => parseInt(id, 10))
+        selectedVenueIds.map(id => parseInt(id, 10))
       )
-      message.success('配置更新成功')
+      message.success(t('collectConfig.messages.venueConfigSaved'))
       setVenueModalVisible(false)
       loadTechDomains()
     } catch (error) {
-      message.error(getErrorMessage(error, '更新失败'))
+      message.error(getErrorMessage(error, t('collectConfig.messages.updateFailed')))
     }
   }
 
@@ -189,22 +193,22 @@ export const useCollectConfig = (initialSubTab?: string) => {
         start_year: startYear,
         end_year: endYear,
       })
-      message.success('采集任务已启动')
+      message.success(t('collectConfig.messages.collectStarted'))
       setCollectModalVisible(false)
       setCollectSubTab('tasks')
       loadTasks()
     } catch (error) {
-      message.error(getErrorMessage(error, '启动失败'))
+      message.error(getErrorMessage(error, t('collectConfig.messages.startFailed')))
     }
   }
 
   const handleCancelTask = async (taskId: number) => {
     try {
       await api.collect.cancelTask(taskId)
-      message.success('任务已取消')
+      message.success(t('collectConfig.messages.taskCancelled'))
       loadTasks()
     } catch (error) {
-      message.error(getErrorMessage(error, '取消失败'))
+      message.error(getErrorMessage(error, t('collectConfig.messages.cancelFailed')))
     }
   }
 
@@ -216,11 +220,11 @@ export const useCollectConfig = (initialSubTab?: string) => {
   const handleDeleteTask = async (taskId: number) => {
     try {
       await api.collect.deleteTask(taskId)
-      message.success('任务已删除')
+      message.success(t('collectConfig.messages.taskDeleted'))
       setTaskDetailVisible(false)
       loadTasks()
     } catch (error) {
-      message.error(getErrorMessage(error, '删除失败'))
+      message.error(getErrorMessage(error, t('collectConfig.messages.deleteFailed')))
     }
   }
 
@@ -241,7 +245,7 @@ export const useCollectConfig = (initialSubTab?: string) => {
       setCollabSyncStatus(response.data.sync_progress)
       setCollabDataStatus(response.data.data_status)
     } catch {
-      message.error('加载同步状态失败')
+      message.error(t('collectConfig.messages.loadSyncStatusFailed'))
     } finally {
       setCollabSyncLoading(false)
     }
@@ -250,14 +254,14 @@ export const useCollectConfig = (initialSubTab?: string) => {
   const handleSyncAllCollaborations = async () => {
     try {
       setCollabSyncStatus({ status: 'pending', processed: 0, total: 0, collaborations: 0 })
-      message.info('正在启动同步任务...')
+      message.info(t('collectConfig.messages.syncStarting'))
       // Await so startup failures surface instead of a fire-and-forget call
       await api.talents.syncCollaborations()
-      message.success('同步任务已启动')
+      message.success(t('collectConfig.messages.syncStarted'))
       // Status flips to 'running' → usePolling below picks it up until terminal
       setCollabSyncStatus({ status: 'running', processed: 0, total: 0, collaborations: 0 })
     } catch (error) {
-      message.error(getErrorMessage(error, '启动同步失败'))
+      message.error(getErrorMessage(error, t('collectConfig.messages.syncStartFailed')))
       setCollabSyncStatus(null)
     }
   }
@@ -268,7 +272,7 @@ export const useCollectConfig = (initialSubTab?: string) => {
       const response = await api.talents.getGenealogySyncStatus()
       setGenealogySyncStatus(response.data)
     } catch {
-      message.error('加载族谱计算状态失败')
+      message.error(t('collectConfig.messages.loadGenealogyStatusFailed'))
     } finally {
       setGenealogySyncLoading(false)
     }
@@ -277,13 +281,13 @@ export const useCollectConfig = (initialSubTab?: string) => {
   const handleSyncGenealogy = async () => {
     try {
       setGenealogySyncStatus({ status: 'pending', processed: 0, total: 0, edges: 0 })
-      message.info('正在启动族谱计算任务...')
+      message.info(t('collectConfig.messages.genealogyStarting'))
       await api.talents.syncGenealogy()
-      message.success('族谱计算任务已启动')
+      message.success(t('collectConfig.messages.genealogyStarted'))
       // Status flips to 'running' → usePolling below picks it up until terminal
       setGenealogySyncStatus({ status: 'running', processed: 0, total: 0, edges: 0 })
     } catch (error) {
-      message.error(getErrorMessage(error, '启动族谱计算失败'))
+      message.error(getErrorMessage(error, t('collectConfig.messages.genealogyStartFailed')))
       setGenealogySyncStatus(null)
     }
   }
@@ -296,7 +300,7 @@ export const useCollectConfig = (initialSubTab?: string) => {
       const progressResponse = await api.embeddings.getProgress()
       setEmbeddingProgress(progressResponse.data)
     } catch {
-      message.error('加载嵌入状态失败')
+      message.error(t('collectConfig.messages.loadEmbeddingStatusFailed'))
     } finally {
       setEmbeddingLoading(false)
     }
@@ -305,9 +309,11 @@ export const useCollectConfig = (initialSubTab?: string) => {
   const handleGenerateEmbeddings = async (force: boolean = false) => {
     try {
       setEmbeddingProgress({ status: 'pending', processed: 0, total: 0, failed: 0 })
-      message.info('正在启动向量生成任务...')
+      message.info(t('collectConfig.messages.embeddingStarting'))
       const response = await api.embeddings.generate(force, 100)
-      message.success(`向量生成任务已启动，共 ${response.data.total_talents} 位人才`)
+      message.success(
+        t('collectConfig.messages.embeddingStarted', { n: response.data.total_talents })
+      )
       // Status flips to 'running' → usePolling below picks it up until terminal
       setEmbeddingProgress({
         status: 'running',
@@ -316,7 +322,7 @@ export const useCollectConfig = (initialSubTab?: string) => {
         failed: 0,
       })
     } catch (error) {
-      message.error(getErrorMessage(error, '启动向量生成失败'))
+      message.error(getErrorMessage(error, t('collectConfig.messages.embeddingStartFailed')))
       setEmbeddingProgress(null)
     }
   }
@@ -324,11 +330,11 @@ export const useCollectConfig = (initialSubTab?: string) => {
   const handleCancelEmbeddingGeneration = async () => {
     try {
       await api.embeddings.cancel()
-      message.success('已取消向量生成任务')
+      message.success(t('collectConfig.messages.embeddingCancelled'))
       setEmbeddingProgress(null)
       loadEmbeddingStatus()
     } catch (error) {
-      message.error(getErrorMessage(error, '取消失败'))
+      message.error(getErrorMessage(error, t('collectConfig.messages.cancelFailed')))
     }
   }
 
@@ -340,7 +346,7 @@ export const useCollectConfig = (initialSubTab?: string) => {
       const progressResponse = await api.openSource.getEmbeddingProgress()
       setOsEmbeddingProgress(progressResponse.data)
     } catch {
-      message.error('加载开源嵌入状态失败')
+      message.error(t('collectConfig.messages.loadOsEmbeddingStatusFailed'))
     } finally {
       setOsEmbeddingLoading(false)
     }
@@ -349,13 +355,13 @@ export const useCollectConfig = (initialSubTab?: string) => {
   const handleGenerateOsEmbeddings = async (force: boolean = false) => {
     try {
       setOsEmbeddingProgress({ status: 'pending', processed: 0, total: 0, failed: 0 })
-      message.info('正在启动开源向量生成任务...')
+      message.info(t('collectConfig.messages.osEmbeddingStarting'))
       const response = await api.openSource.generateEmbeddings(50, force)
       message.success(response.data.message)
       // Status flips to 'running' → usePolling below picks it up until terminal
       setOsEmbeddingProgress({ status: 'running', processed: 0, total: 0, failed: 0 })
     } catch (error) {
-      message.error(getErrorMessage(error, '启动开源向量生成失败'))
+      message.error(getErrorMessage(error, t('collectConfig.messages.osEmbeddingStartFailed')))
       setOsEmbeddingProgress(null)
     }
   }
@@ -363,17 +369,17 @@ export const useCollectConfig = (initialSubTab?: string) => {
   const handleCancelOsEmbeddingGeneration = async () => {
     try {
       await api.openSource.cancelEmbeddingGeneration()
-      message.success('已取消开源向量生成任务')
+      message.success(t('collectConfig.messages.osEmbeddingCancelled'))
       setOsEmbeddingProgress(null)
       loadOsEmbeddingStatus()
     } catch (error) {
-      message.error(getErrorMessage(error, '取消失败'))
+      message.error(getErrorMessage(error, t('collectConfig.messages.cancelFailed')))
     }
   }
 
   // Auto-refresh for running tasks
   useEffect(() => {
-    if (collectSubTab === 'tasks' && tasks.some((t) => t.status === 'running')) {
+    if (collectSubTab === 'tasks' && tasks.some(t => t.status === 'running')) {
       const interval = setInterval(() => {
         loadTasks()
       }, 5000)
@@ -411,7 +417,10 @@ export const useCollectConfig = (initialSubTab?: string) => {
         setCollabDataStatus(res.data.data_status)
         if (progress.status === 'completed') {
           message.success(
-            `同步完成！处理 ${progress.processed} 篇论文，创建 ${progress.collaborations} 条合作关系`
+            t('collectConfig.messages.syncCompleted', {
+              processed: progress.processed,
+              collaborations: progress.collaborations,
+            })
           )
         }
       } catch {
@@ -430,7 +439,10 @@ export const useCollectConfig = (initialSubTab?: string) => {
         setGenealogySyncStatus(progress)
         if (progress.status === 'completed') {
           message.success(
-            `族谱计算完成！处理 ${progress.processed} 篇论文，推断 ${progress.edges} 条关系`
+            t('collectConfig.messages.genealogyCompleted', {
+              processed: progress.processed,
+              edges: progress.edges,
+            })
           )
         }
       } catch {
@@ -449,7 +461,9 @@ export const useCollectConfig = (initialSubTab?: string) => {
         if (res.data.status === 'completed' || res.data.status === 'error') {
           loadEmbeddingStatus()
           if (res.data.status === 'completed') {
-            message.success(`向量生成完成！处理 ${res.data.processed} 位人才`)
+            message.success(
+              t('collectConfig.messages.embeddingCompleted', { n: res.data.processed })
+            )
           }
         }
       } catch {
@@ -468,7 +482,9 @@ export const useCollectConfig = (initialSubTab?: string) => {
         if (['completed', 'error', 'cancelled'].includes(res.data.status)) {
           loadOsEmbeddingStatus()
           if (res.data.status === 'completed') {
-            message.success(`开源向量生成完成！处理 ${res.data.processed} 位开发者`)
+            message.success(
+              t('collectConfig.messages.osEmbeddingCompleted', { n: res.data.processed })
+            )
           }
         }
       } catch {

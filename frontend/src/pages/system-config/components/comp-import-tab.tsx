@@ -11,10 +11,12 @@ import {
   message,
 } from 'antd'
 import type { UploadProps } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { InboxOutlined, TrophyOutlined, UploadOutlined } from '@ant-design/icons'
 import { api } from '../../../services/api'
 import type { CompImportReport } from '../../../services/api/competition'
 import { getErrorMessage } from '../../../utils'
+import '../../../i18n/namespaces/system-config'
 
 const { Dragger } = Upload
 const { Text, Title } = Typography
@@ -25,13 +27,14 @@ const { Text, Title } = Typography
  * contest are fully replaced in a single transaction on the backend.
  */
 const CompImportTab: React.FC = () => {
+  const { t } = useTranslation(['systemConfig', 'common'])
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [report, setReport] = useState<CompImportReport | null>(null)
 
   const beforeUpload: UploadProps['beforeUpload'] = (file) => {
     if (!file.name.endsWith('.jsonl')) {
-      message.error('请上传 .jsonl 文件')
+      message.error(t('common.invalidJsonl'))
       return Upload.LIST_IGNORE
     }
     setSelectedFile(file)
@@ -45,7 +48,7 @@ const CompImportTab: React.FC = () => {
 
   const handleImport = async () => {
     if (!selectedFile) {
-      message.warning('请先选择 JSONL 文件')
+      message.warning(t('common.noFileSelected'))
       return
     }
     setUploading(true)
@@ -55,11 +58,14 @@ const CompImportTab: React.FC = () => {
       setReport(res.data)
       setSelectedFile(null)
       message.success(
-        `导入完成：选手 ${res.data.persons_upserted} 人、成绩 ${res.data.results_inserted} 条入库，` +
-          `${res.data.skipped} 行跳过`
+        t('compImport.importDone', {
+          persons: res.data.persons_upserted,
+          results: res.data.results_inserted,
+          skipped: res.data.skipped,
+        })
       )
     } catch (e) {
-      message.error(getErrorMessage(e, '导入失败'))
+      message.error(getErrorMessage(e, t('common.importFailed')))
     } finally {
       setUploading(false)
     }
@@ -70,11 +76,10 @@ const CompImportTab: React.FC = () => {
       <Card>
         <Title level={5}>
           <TrophyOutlined style={{ marginRight: 8, color: 'var(--domain-secondary, #DD6B20)' }} />
-          竞赛人才导入
+          {t('compImport.heading')}
         </Title>
         <Text type="secondary">
-          上传 comp-talent-crawler 产出的单场赛事 JSONL 文件（schema v1.0：
-          meta → series → contest → team* → person*），该场赛事成绩将全量替换。
+          {t('compImport.description')}
         </Text>
 
         <div style={{ marginTop: 16 }}>
@@ -88,8 +93,8 @@ const CompImportTab: React.FC = () => {
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>
-            <p className="ant-upload-text">点击或拖拽 JSONL 文件到此区域上传</p>
-            <p className="ant-upload-hint">仅支持单个 .jsonl 文件（crawler 输出格式，≤ 20MB）</p>
+            <p className="ant-upload-text">{t('common.uploadDragText')}</p>
+            <p className="ant-upload-hint">{t('compImport.uploadHint')}</p>
           </Dragger>
         </div>
 
@@ -101,35 +106,35 @@ const CompImportTab: React.FC = () => {
             onClick={handleImport}
             disabled={!selectedFile}
           >
-            开始导入
+            {t('common.startImport')}
           </Button>
         </div>
       </Card>
 
       {report && (
-        <Card title="导入报告">
+        <Card title={t('compImport.report.title')}>
           <Descriptions column={2} bordered size="small">
-            <Descriptions.Item label="数据源">{report.source_code}</Descriptions.Item>
-            <Descriptions.Item label="赛事">
+            <Descriptions.Item label={t('compImport.report.source')}>{report.source_code}</Descriptions.Item>
+            <Descriptions.Item label={t('compImport.report.contest')}>
               {report.contest_name}（{report.contest_external_id}）
             </Descriptions.Item>
-            <Descriptions.Item label="总行数">{report.total_lines}</Descriptions.Item>
-            <Descriptions.Item label="选手入库">
+            <Descriptions.Item label={t('compImport.report.totalLines')}>{report.total_lines}</Descriptions.Item>
+            <Descriptions.Item label={t('compImport.report.persons')}>
               <Tag color="blue">{report.persons_upserted}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="队伍入库">
+            <Descriptions.Item label={t('compImport.report.teams')}>
               <Tag color="blue">{report.teams_upserted}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="成绩新增">
+            <Descriptions.Item label={t('compImport.report.resultsInserted')}>
               <Tag color="green">{report.results_inserted}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="成绩替换（删旧）">
+            <Descriptions.Item label={t('compImport.report.resultsReplaced')}>
               <Tag color="orange">{report.results_deleted}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="跳过">
+            <Descriptions.Item label={t('compImport.report.skipped')}>
               <Tag color={report.skipped > 0 ? 'warning' : 'default'}>{report.skipped}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="耗时">{report.duration_ms} ms</Descriptions.Item>
+            <Descriptions.Item label={t('compImport.report.duration')}>{report.duration_ms} ms</Descriptions.Item>
           </Descriptions>
 
           {report.skipped === 0 && report.results_inserted === 0 && (
@@ -137,8 +142,8 @@ const CompImportTab: React.FC = () => {
               style={{ marginTop: 16 }}
               type="warning"
               showIcon
-              message="未写入任何数据"
-              description="文件中没有可导入的有效记录（空文件或全部行无效）。为保护既有数据，本次未做任何删除或写入。"
+              message={t('compImport.report.noDataTitle')}
+              description={t('compImport.report.noDataDescription')}
             />
           )}
 
@@ -146,12 +151,12 @@ const CompImportTab: React.FC = () => {
             <Alert
               style={{ marginTop: 16 }}
               type="warning"
-              message={`${report.skip_reasons.length} 行被跳过（前 50 条）`}
+              message={t('common.skipSummary', { count: report.skip_reasons.length })}
               description={
                 <div style={{ maxHeight: 200, overflow: 'auto' }}>
                   {report.skip_reasons.slice(0, 50).map((r, i) => (
                     <div key={i} style={{ fontSize: 12 }}>
-                      <Text type="secondary">行 {r.line}：</Text>
+                      <Text type="secondary">{t('common.lineLabel', { line: r.line })}</Text>
                       <Text>{r.reason}</Text>
                     </div>
                   ))}

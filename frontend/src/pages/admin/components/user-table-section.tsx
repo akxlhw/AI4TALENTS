@@ -8,8 +8,10 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import { useTranslation } from 'react-i18next'
 import { semanticColors } from '../../../theme'
 import { formatUTCToLocal } from '../../../utils/datetime'
+import '../../../i18n/namespaces/admin'
 import { roleColorMap, roleTextMap, statusColorMap, statusTextMap } from './types'
 import type { User } from './types'
 
@@ -76,9 +78,10 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
   onDeactivateUser,
   onActivateUser,
 }) => {
+  const { t } = useTranslation(['admin', 'common'])
   const columns = [
     {
-      title: '用户名',
+      title: t('users.table.colUsername'),
       dataIndex: 'username',
       key: 'username',
       render: (name: string, record: User) => (
@@ -90,18 +93,18 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
       ),
     },
     {
-      title: '邮箱',
+      title: t('users.table.colEmail'),
       dataIndex: 'email',
       key: 'email',
     },
     {
-      title: '工号',
+      title: t('users.table.colEmployeeId'),
       dataIndex: 'employee_id',
       key: 'employee_id',
       render: (id: string | null) => id || '-',
     },
     {
-      title: '角色',
+      title: t('users.table.colRole'),
       dataIndex: 'role',
       key: 'role',
       render: (role: string) => (
@@ -109,7 +112,7 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
       ),
     },
     {
-      title: '状态',
+      title: t('users.table.colStatus'),
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
@@ -117,23 +120,23 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
       ),
     },
     {
-      title: '默认视角',
+      title: t('users.table.colDefaultView'),
       dataIndex: 'default_view',
       key: 'default_view',
       render: (view: string) => (
         <Tag color={view === 'tech_domain' ? 'blue' : 'green'}>
-          {view === 'tech_domain' ? '技术领域' : '国家院校'}
+          {view === 'tech_domain' ? t('users.views.tech_domain') : t('users.views.country_school')}
         </Tag>
       ),
     },
     {
-      title: '最后登录',
+      title: t('users.table.colLastLogin'),
       dataIndex: 'last_login_at',
       key: 'last_login_at',
       render: (date: string | null) => formatUTCToLocal(date),
     },
     {
-      title: '操作',
+      title: t('users.table.colActions'),
       key: 'actions',
       render: (_: unknown, record: User) => (
         <Space>
@@ -145,18 +148,18 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
                 style={{ color: semanticColors.green }}
                 onClick={() => onApproveUser(record.user_id)}
               >
-                通过
+                {t('users.table.approve')}
               </Button>
               <Popconfirm
-                title="确认拒绝该用户的注册申请？"
-                description="拒绝后该账号将无法登录"
-                okText="确认拒绝"
-                cancelText="取消"
+                title={t('users.table.rejectConfirmTitle')}
+                description={t('users.table.rejectConfirmDescription')}
+                okText={t('users.table.rejectConfirmOk')}
+                cancelText={t('users.table.cancel')}
                 okButtonProps={{ danger: true }}
                 onConfirm={() => onRejectUser(record.user_id)}
               >
                 <Button type="link" size="small" danger>
-                  拒绝
+                  {t('users.table.reject')}
                 </Button>
               </Popconfirm>
             </>
@@ -168,7 +171,7 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
                 icon={<EyeOutlined />}
                 onClick={() => onViewDetail(record)}
               >
-                详情
+                {t('users.table.detail')}
               </Button>
               <Button
                 type="link"
@@ -176,7 +179,7 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
                 icon={<SafetyOutlined />}
                 onClick={() => onManageScopes(record.user_id)}
               >
-                权限
+                {t('users.table.scopes')}
               </Button>
               <Button
                 type="link"
@@ -184,27 +187,27 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
                 icon={<EditOutlined />}
                 onClick={() => onEditUser(record)}
               >
-                编辑
+                {t('users.table.edit')}
               </Button>
               <Popconfirm
-                title="确定要禁用该用户吗？"
+                title={t('users.table.deactivateConfirm')}
                 onConfirm={() => onDeactivateUser(record.user_id)}
-                okText="确定"
-                cancelText="取消"
+                okText={t('users.table.confirm')}
+                cancelText={t('users.table.cancel')}
               >
                 <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-                  禁用
+                  {t('users.table.deactivate')}
                 </Button>
               </Popconfirm>
               {record.is_active === false && (
                 <Popconfirm
-                  title="确定要启用该用户吗？"
+                  title={t('users.table.activateConfirm')}
                   onConfirm={() => onActivateUser(record.user_id)}
-                  okText="确定"
-                  cancelText="取消"
+                  okText={t('users.table.confirm')}
+                  cancelText={t('users.table.cancel')}
                 >
                   <Button type="link" size="small" style={{ color: '#52c41a' }}>
-                    启用
+                    {t('users.table.activate')}
                   </Button>
                 </Popconfirm>
               )}
@@ -222,31 +225,31 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
         <Card style={{ marginBottom: 16 }}>
           <Space wrap>
             <Select
-              placeholder="角色"
+              placeholder={t('users.filters.role')}
               allowClear
               style={{ width: 120 }}
               value={roleFilter}
               onChange={v => onRoleFilterChange(v)}
               options={[
-                { value: 'user', label: '普通用户' },
-                { value: 'admin', label: '管理员' },
-                { value: 'super_admin', label: '超级管理员' },
+                { value: 'user', label: t('users.roles.user') },
+                { value: 'admin', label: t('users.roles.admin') },
+                { value: 'super_admin', label: t('users.roles.super_admin') },
               ]}
             />
             <Select
-              placeholder="状态"
+              placeholder={t('users.filters.status')}
               allowClear
               style={{ width: 120 }}
               value={statusFilter}
               onChange={v => onStatusFilterChange(v)}
               options={[
-                { value: 'active', label: '正常' },
-                { value: 'inactive', label: '已禁用' },
-                { value: 'pending_approval', label: '待审核' },
+                { value: 'active', label: t('users.statuses.active') },
+                { value: 'inactive', label: t('users.statuses.inactive') },
+                { value: 'pending_approval', label: t('users.statuses.pending_approval') },
               ]}
             />
             <DatePicker.RangePicker
-              placeholder={['注册开始', '注册结束']}
+              placeholder={[t('users.filters.registerStart'), t('users.filters.registerEnd')]}
               value={dateRange as [dayjs.Dayjs, dayjs.Dayjs] | null}
               onChange={dates =>
                 onDateRangeChange(
@@ -259,9 +262,9 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
               onChange={v => onSortByChange(v)}
               style={{ width: 140 }}
               options={[
-                { value: 'created_at', label: '注册时间' },
-                { value: 'last_login_at', label: '最后登录' },
-                { value: 'username', label: '用户名' },
+                { value: 'created_at', label: t('users.filters.sortByCreatedAt') },
+                { value: 'last_login_at', label: t('users.filters.sortByLastLogin') },
+                { value: 'username', label: t('users.filters.sortByUsername') },
               ]}
             />
             <Select
@@ -269,8 +272,8 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
               onChange={v => onSortOrderChange(v)}
               style={{ width: 100 }}
               options={[
-                { value: 'desc', label: '降序' },
-                { value: 'asc', label: '升序' },
+                { value: 'desc', label: t('users.filters.orderDesc') },
+                { value: 'asc', label: t('users.filters.orderAsc') },
               ]}
             />
           </Space>
@@ -281,19 +284,19 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
         title={
           <Space>
             <UserOutlined />
-            <span>用户管理</span>
+            <span>{t('users.table.title')}</span>
           </Space>
         }
         extra={
           activeTab === 'all' && (
             <Button type="primary" icon={<PlusOutlined />} onClick={onCreateUser}>
-              新建用户
+              {t('users.table.create')}
             </Button>
           )
         }
         tabList={[
-          { key: 'all', tab: '全部用户' },
-          { key: 'pending', tab: '待审核' },
+          { key: 'all', tab: t('users.table.tabAll') },
+          { key: 'pending', tab: t('users.table.tabPending') },
         ]}
         activeTabKey={activeTab}
         onTabChange={key => onTabChange(key as 'all' | 'pending')}
@@ -308,7 +311,7 @@ const UserTableSection: React.FC<UserTableSectionProps> = ({
             pageSize,
             total,
             showSizeChanger: false,
-            showTotal: t => `共 ${t} 个用户`,
+            showTotal: count => t('users.table.total', { n: count }),
           }}
           onChange={pagination => onPageChange(pagination.current || 1)}
         />

@@ -1,0 +1,360 @@
+{
+  "actions": {
+    "refresh": "刷新"
+  },
+  "users": {
+    "table": {
+      "title": "用户管理",
+      "tabAll": "全部用户",
+      "tabPending": "待审核",
+      "create": "新建用户",
+      "colUsername": "用户名",
+      "colEmail": "邮箱",
+      "colEmployeeId": "工号",
+      "colRole": "角色",
+      "colStatus": "状态",
+      "colDefaultView": "默认视角",
+      "colLastLogin": "最后登录",
+      "colActions": "操作",
+      "approve": "通过",
+      "reject": "拒绝",
+      "detail": "详情",
+      "scopes": "权限",
+      "edit": "编辑",
+      "deactivate": "禁用",
+      "activate": "启用",
+      "rejectConfirmTitle": "确认拒绝该用户的注册申请？",
+      "rejectConfirmDescription": "拒绝后该账号将无法登录",
+      "rejectConfirmOk": "确认拒绝",
+      "confirm": "确定",
+      "cancel": "取消",
+      "deactivateConfirm": "确定要禁用该用户吗？",
+      "activateConfirm": "确定要启用该用户吗？",
+      "total": "共 {{n}} 个用户"
+    },
+    "filters": {
+      "role": "角色",
+      "status": "状态",
+      "registerStart": "注册开始",
+      "registerEnd": "注册结束",
+      "sortByCreatedAt": "注册时间",
+      "sortByLastLogin": "最后登录",
+      "sortByUsername": "用户名",
+      "orderDesc": "降序",
+      "orderAsc": "升序"
+    },
+    "roles": {
+      "user": "普通用户",
+      "admin": "管理员",
+      "super_admin": "超级管理员"
+    },
+    "statuses": {
+      "active": "正常",
+      "inactive": "已禁用",
+      "pending_approval": "待审核"
+    },
+    "views": {
+      "tech_domain": "技术领域",
+      "country_school": "国家院校"
+    },
+    "messages": {
+      "loadFailed": "加载用户列表失败",
+      "approved": "用户已通过",
+      "rejected": "用户已拒绝",
+      "updateSuccess": "用户更新成功",
+      "createSuccess": "用户创建成功",
+      "deactivated": "用户已禁用",
+      "activated": "用户已启用",
+      "activitiesLoadFailed": "加载活动记录失败"
+    },
+    "form": {
+      "createTitle": "新建用户",
+      "editTitle": "编辑用户",
+      "username": "用户名",
+      "email": "邮箱",
+      "password": "密码",
+      "displayName": "显示名称",
+      "department": "部门",
+      "role": "角色",
+      "defaultView": "默认视角",
+      "usernameRequired": "请输入用户名",
+      "emailRequired": "请输入邮箱",
+      "emailInvalid": "请输入有效的邮箱地址",
+      "passwordRequired": "请输入密码",
+      "passwordMin": "密码至少8位"
+    },
+    "detail": {
+      "title": "用户详情",
+      "tabProfile": "基本信息",
+      "tabActivities": "活动记录",
+      "tabScopes": "权限范围",
+      "username": "用户名：",
+      "email": "邮箱：",
+      "displayName": "显示名称：",
+      "department": "部门：",
+      "employeeId": "工号：",
+      "role": "角色：",
+      "status": "状态：",
+      "createdAt": "注册时间：",
+      "lastLogin": "最后登录：",
+      "editInfo": "编辑信息",
+      "manageScopes": "管理权限",
+      "system": "系统",
+      "colTime": "时间",
+      "colType": "类型",
+      "colDescription": "描述",
+      "colActor": "操作人",
+      "colIp": "IP",
+      "scopeTypes": {
+        "school": "学校",
+        "country": "国家",
+        "tech_domain": "技术领域",
+        "all": "全部"
+      },
+      "grantedAt": "授予于 {{time}}",
+      "expiresAt": "过期: {{time}}",
+      "noScopes": "暂无权限"
+    }
+  },
+  "scopes": {
+    "title": "权限管理",
+    "tabCurrent": "当前权限",
+    "tabAdd": "添加权限",
+    "removeConfirm": "确定移除此权限？",
+    "confirm": "确定",
+    "cancel": "取消",
+    "remove": "移除",
+    "types": {
+      "school": "学校",
+      "country": "国家",
+      "tech_domain": "技术领域",
+      "all": "全部"
+    },
+    "noScopes": "暂无权限",
+    "grantedAt": "授予于 {{time}}",
+    "expiresAt": "过期: {{time}}",
+    "form": {
+      "type": "权限类型",
+      "value": "权限值",
+      "valueExtra": "学校ID、国家代码(如US、CN)、技术领域ID 或 * (全部)",
+      "valuePlaceholder": "如: 1, US, 1, *",
+      "notes": "备注",
+      "submit": "添加权限"
+    },
+    "messages": {
+      "loadFailed": "加载权限失败",
+      "addSuccess": "权限添加成功",
+      "addFailed": "添加失败",
+      "removeSuccess": "权限已移除",
+      "removeFailed": "移除失败"
+    }
+  },
+  "audit": {
+    "title": "审计日志",
+    "columns": {
+      "time": "时间",
+      "operator": "操作人",
+      "event": "事件",
+      "status": "状态",
+      "ip": "IP",
+      "detail": "详情"
+    },
+    "filter": {
+      "eventType": "事件类型"
+    },
+    "eventTypes": {
+      "authentication": "认证",
+      "authorization": "权限",
+      "data_operation": "数据"
+    },
+    "operations": {
+      "login": "登录",
+      "logout": "登出",
+      "register": "注册",
+      "change_password": "修改密码",
+      "create": "创建用户",
+      "update": "更新用户",
+      "deactivate": "禁用用户",
+      "approve": "审批通过",
+      "reject": "审批拒绝",
+      "grant_scope": "授予权限",
+      "revoke_scope": "移除权限",
+      "export": "导出"
+    },
+    "statuses": {
+      "success": "成功",
+      "failure": "失败",
+      "partial": "部分"
+    },
+    "resources": {
+      "talent": "人才",
+      "os_developer": "开源人才"
+    },
+    "eventPlain": "{{type}} · {{operation}}{{resource}}",
+    "exportCountPlain": "({{count}}条)",
+    "exportCountFormat": "({{count}}条 {{format}})",
+    "exportDetail": "导出 {{count}} 条",
+    "exportDetailFormat": "导出 {{count}} 条 ({{format}})",
+    "system": "系统",
+    "userNo": "用户#{{id}}",
+    "errorMessage": "错误信息：",
+    "totalRecords": "共 {{n}} 条记录"
+  },
+  "dataVersion": {
+    "title": "数据版本管理",
+    "currentVersion": "当前版本",
+    "qualityOverview": "数据质量概览",
+    "noActiveVersion": "暂无生效版本",
+    "noQualityData": "暂无质量数据",
+    "tabs": {
+      "versions": "数据版本",
+      "corrections": "纠偏记录"
+    },
+    "createVersion": "创建版本",
+    "actions": {
+      "publish": "发布"
+    },
+    "versionColumns": {
+      "code": "版本编码",
+      "name": "版本名称",
+      "type": "类型",
+      "stats": "数据统计",
+      "status": "状态",
+      "createdAt": "创建时间",
+      "actions": "操作"
+    },
+    "versionType": {
+      "snapshot": "快照",
+      "release": "发布版"
+    },
+    "stats": {
+      "talents": "{{n}} 人才",
+      "schools": "{{n}} 学校",
+      "talentTooltip": "人才",
+      "schoolTooltip": "学校"
+    },
+    "badges": {
+      "active": "当前生效",
+      "published": "已发布",
+      "unpublished": "未发布"
+    },
+    "labels": {
+      "version": "版本",
+      "code": "编码",
+      "talentCount": "人才数",
+      "schoolCount": "学校数",
+      "publishedAt": "发布时间"
+    },
+    "quality": {
+      "talent": "人才数据",
+      "school": "学校数据",
+      "works": "论文数据",
+      "pendingTags": "待确认标签",
+      "completeness": "完整度 {{value}}%"
+    },
+    "totalVersions": "共 {{n}} 个版本",
+    "totalRecords": "共 {{n}} 条记录",
+    "modal": {
+      "title": "创建数据版本"
+    },
+    "form": {
+      "code": "版本编码",
+      "name": "版本名称",
+      "type": "版本类型",
+      "description": "描述",
+      "codePlaceholder": "如: V20240101",
+      "namePlaceholder": "如: 2024年1月数据快照"
+    },
+    "correctionColumns": {
+      "targetType": "目标类型",
+      "targetId": "目标ID",
+      "field": "字段",
+      "correctionType": "修正类型",
+      "status": "状态",
+      "correctedAt": "修正时间"
+    },
+    "targets": {
+      "talent": "人才",
+      "school": "学校",
+      "tech_tag": "技术标签"
+    },
+    "correctionTypes": {
+      "manual": "手动",
+      "system": "系统",
+      "import": "导入"
+    },
+    "correctionStatus": {
+      "applied": "已应用",
+      "pending": "待处理",
+      "reverted": "已撤销"
+    },
+    "messages": {
+      "loadVersionsFailed": "加载版本列表失败",
+      "loadCorrectionsFailed": "加载纠偏记录失败",
+      "createSuccess": "版本创建成功",
+      "createFailed": "创建失败",
+      "publishSuccess": "版本发布成功",
+      "publishFailed": "发布失败"
+    }
+  },
+  "suggestions": {
+    "title": "建议管理",
+    "listTitle": "建议列表",
+    "categories": {
+      "feature": "功能建议",
+      "bug": "Bug 反馈",
+      "data_issue": "数据纠错",
+      "experience": "体验反馈",
+      "other": "其他"
+    },
+    "status": {
+      "all": "全部状态",
+      "open": "待处理",
+      "in_progress": "处理中",
+      "resolved": "已解决",
+      "closed": "已关闭"
+    },
+    "columns": {
+      "id": "ID",
+      "user": "用户",
+      "category": "分类",
+      "subject": "主题",
+      "content": "内容",
+      "status": "状态",
+      "adminReply": "管理员回复",
+      "createdAt": "提交时间",
+      "actions": "操作"
+    },
+    "actions": {
+      "detail": "详情",
+      "reply": "回复"
+    },
+    "replied": "已回复",
+    "filters": {
+      "status": "状态筛选",
+      "category": "分类筛选",
+      "allCategories": "全部分类"
+    },
+    "detailModal": {
+      "title": "建议详情",
+      "category": "分类：",
+      "subject": "主题：",
+      "content": "内容：",
+      "adminReply": "管理员回复：",
+      "attachments": "附件：",
+      "meta": "用户：{{username}} · 提交时间：{{time}}"
+    },
+    "replyModal": {
+      "title": "回复建议",
+      "changeStatus": "变更状态：",
+      "contentLabel": "回复内容：",
+      "placeholder": "请输入回复内容..."
+    },
+    "messages": {
+      "replyRequired": "请输入回复内容",
+      "replySuccess": "回复成功",
+      "replyFailed": "回复失败",
+      "loadFailed": "加载失败"
+    }
+  }
+}

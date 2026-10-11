@@ -14,7 +14,9 @@ import {
   Statistic,
 } from 'antd'
 import { semanticColors } from '../../../../theme'
+import { useTranslation } from 'react-i18next'
 import { getTaskStatusConfig } from '../../../../constants'
+import '../../../../i18n/namespaces/system-config'
 import type { CollectTask } from '../../../../types'
 import { formatUTCToLocal } from '../../../../utils/datetime'
 
@@ -27,30 +29,46 @@ interface TaskDetailModalProps {
 }
 
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ open, task, onClose }) => {
+  const { t } = useTranslation(['systemConfig', 'common'])
+
+  const yearLabel = (year: number | null | undefined) =>
+    year == null
+      ? t('collectConfig.taskDetail.present')
+      : t('collectConfig.taskDetail.year', { year })
+
   return (
     <Modal
-      title="任务详情"
+      title={t('collectConfig.taskDetail.title')}
       open={open}
       onCancel={onClose}
-      footer={<Button onClick={onClose}>关闭</Button>}
+      footer={<Button onClick={onClose}>{t('common:actions.close')}</Button>}
       width={800}
     >
       {task && (
         <>
           <Descriptions bordered column={2} size="small">
-            <Descriptions.Item label="任务编码">{task.task_code}</Descriptions.Item>
-            <Descriptions.Item label="状态">
+            <Descriptions.Item label={t('collectConfig.taskDetail.taskCode')}>
+              {task.task_code}
+            </Descriptions.Item>
+            <Descriptions.Item label={t('collectConfig.taskDetail.status')}>
               <Badge
                 status={getTaskStatusConfig(task.status).status}
-                text={getTaskStatusConfig(task.status).label}
+                text={t(`collectConfig.status.${task.status}`, { defaultValue: task.status })}
               />
             </Descriptions.Item>
-            <Descriptions.Item label="技术领域">{task.tech_domain_name}</Descriptions.Item>
-            <Descriptions.Item label="时间范围">
-              {task.start_year}年 ~ {task.end_year ? `${task.end_year}年` : '至今'}
+            <Descriptions.Item label={t('collectConfig.taskDetail.techDomain')}>
+              {task.tech_domain_name}
             </Descriptions.Item>
-            <Descriptions.Item label="当前阶段">{task.current_step || '-'}</Descriptions.Item>
-            <Descriptions.Item label="进度">
+            <Descriptions.Item label={t('collectConfig.taskDetail.timeRange')}>
+              {t('collectConfig.taskDetail.timeRangeValue', {
+                start: yearLabel(task.start_year),
+                end: yearLabel(task.end_year),
+              })}
+            </Descriptions.Item>
+            <Descriptions.Item label={t('collectConfig.taskDetail.currentStep')}>
+              {task.current_step || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label={t('collectConfig.taskDetail.progress')}>
               <Progress
                 percent={task.progress_percent}
                 status={
@@ -65,46 +83,62 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ open, task, onClose }
             </Descriptions.Item>
           </Descriptions>
 
-          <Card title="采集统计" size="small" style={{ marginTop: 16 }}>
+          <Card
+            title={t('collectConfig.taskDetail.statsTitle')}
+            size="small"
+            style={{ marginTop: 16 }}
+          >
             <Row gutter={16}>
               <Col span={4}>
-                <Statistic title="采集论文" value={task.total_records || 0} />
+                <Statistic
+                  title={t('collectConfig.taskDetail.papersCollected')}
+                  value={task.total_records || 0}
+                />
               </Col>
               <Col span={4}>
                 <Statistic
-                  title="获取作者"
+                  title={t('collectConfig.taskDetail.authorsFetched')}
                   value={task.result_summary?.total_authors || task.processed_records || 0}
                 />
               </Col>
               <Col span={4}>
-                <Statistic title="标准化作者" value={task.processed_records || 0} />
-              </Col>
-              <Col span={4}>
-                <Statistic title="标准化院校" value={task.skipped_records || 0} />
+                <Statistic
+                  title={t('collectConfig.taskDetail.authorsStandardized')}
+                  value={task.processed_records || 0}
+                />
               </Col>
               <Col span={4}>
                 <Statistic
-                  title="入库人才"
+                  title={t('collectConfig.taskDetail.schoolsStandardized')}
+                  value={task.skipped_records || 0}
+                />
+              </Col>
+              <Col span={4}>
+                <Statistic
+                  title={t('collectConfig.taskDetail.talentsSaved')}
                   value={task.success_records || 0}
                   valueStyle={{ color: semanticColors.green }}
                 />
               </Col>
               <Col span={4}>
-                <Statistic title="更新人才" value={task.result_summary?.updated_talents || 0} />
+                <Statistic
+                  title={t('collectConfig.taskDetail.talentsUpdated')}
+                  value={task.result_summary?.updated_talents || 0}
+                />
               </Col>
             </Row>
             {task.result_summary && (
               <Row gutter={16} style={{ marginTop: 16 }}>
                 <Col span={4}>
                   <Statistic
-                    title="新建人才"
+                    title={t('collectConfig.taskDetail.talentsCreated')}
                     value={task.result_summary.created_talents || 0}
                     valueStyle={{ color: semanticColors.blue }}
                   />
                 </Col>
                 <Col span={4}>
                   <Statistic
-                    title="技术标签"
+                    title={t('collectConfig.taskDetail.techTags')}
                     value={task.result_summary.created_tech_tags || 0}
                   />
                 </Col>
@@ -112,25 +146,33 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ open, task, onClose }
             )}
           </Card>
 
-          <Card title="时间信息" size="small" style={{ marginTop: 16 }}>
+          <Card
+            title={t('collectConfig.taskDetail.timeInfoTitle')}
+            size="small"
+            style={{ marginTop: 16 }}
+          >
             <Descriptions column={2} size="small">
-              <Descriptions.Item label="触发时间">
+              <Descriptions.Item label={t('collectConfig.taskDetail.triggeredAt')}>
                 {formatUTCToLocal(task.triggered_at)}
               </Descriptions.Item>
-              <Descriptions.Item label="开始时间">
+              <Descriptions.Item label={t('collectConfig.taskDetail.startedAt')}>
                 {formatUTCToLocal(task.started_at)}
               </Descriptions.Item>
-              <Descriptions.Item label="完成时间">
+              <Descriptions.Item label={t('collectConfig.taskDetail.completedAt')}>
                 {formatUTCToLocal(task.completed_at)}
               </Descriptions.Item>
-              <Descriptions.Item label="耗时">
+              <Descriptions.Item label={t('collectConfig.taskDetail.duration')}>
                 {task.result_summary?.total_duration || '-'}
               </Descriptions.Item>
             </Descriptions>
           </Card>
 
           {task.result_summary?.venue_details && task.result_summary.venue_details.length > 0 && (
-            <Card title="采集源详情" size="small" style={{ marginTop: 16 }}>
+            <Card
+              title={t('collectConfig.taskDetail.venueDetailsTitle')}
+              size="small"
+              style={{ marginTop: 16 }}
+            >
               <Table
                 dataSource={task.result_summary.venue_details}
                 rowKey="venue_id"
@@ -138,7 +180,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ open, task, onClose }
                 pagination={false}
                 columns={[
                   {
-                    title: '采集源',
+                    title: t('collectConfig.taskDetail.colVenue'),
                     key: 'venue_id',
                     width: 120,
                     render: (_: unknown, record: { venue_id: number; venue_name: string }) => (
@@ -147,12 +189,34 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ open, task, onClose }
                       </Tooltip>
                     ),
                   },
-                  { title: '状态', dataIndex: 'status', key: 'status', width: 80 },
-                  { title: '获取', dataIndex: 'fetched', key: 'fetched', width: 60, align: 'center' },
-                  { title: '入库', dataIndex: 'saved', key: 'saved', width: 60, align: 'center' },
-                  { title: '耗时', dataIndex: 'duration', key: 'duration', width: 80 },
                   {
-                    title: '错误',
+                    title: t('collectConfig.taskDetail.colStatus'),
+                    dataIndex: 'status',
+                    key: 'status',
+                    width: 80,
+                  },
+                  {
+                    title: t('collectConfig.taskDetail.colFetched'),
+                    dataIndex: 'fetched',
+                    key: 'fetched',
+                    width: 60,
+                    align: 'center',
+                  },
+                  {
+                    title: t('collectConfig.taskDetail.colSaved'),
+                    dataIndex: 'saved',
+                    key: 'saved',
+                    width: 60,
+                    align: 'center',
+                  },
+                  {
+                    title: t('collectConfig.taskDetail.colDuration'),
+                    dataIndex: 'duration',
+                    key: 'duration',
+                    width: 80,
+                  },
+                  {
+                    title: t('collectConfig.taskDetail.colError'),
                     dataIndex: 'error',
                     key: 'error',
                     ellipsis: true,
@@ -166,7 +230,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ open, task, onClose }
           {task.error_message && (
             <Alert
               type="error"
-              message="错误信息"
+              message={t('collectConfig.taskDetail.errorMessage')}
               description={task.error_message}
               style={{ marginTop: 16 }}
               showIcon

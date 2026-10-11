@@ -1,5 +1,6 @@
 import { Modal, Checkbox, Button, Space, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { ColumnConfig } from '../hooks/useColumnConfig'
 
 const { Text } = Typography
@@ -19,20 +20,21 @@ const ColumnSettings: React.FC<ColumnSettingsProps> = ({
   onReset,
   onClose,
 }) => {
+  const { t } = useTranslation('common')
   const visibleCount = columns.filter(col => col.visible).length
 
   return (
     <Modal
-      title="列显示设置"
+      title={t('columnSettings.title')}
       open={visible}
       onCancel={onClose}
       footer={
         <Space style={{ width: '100%', justifyContent: 'space-between' }}>
           <Button icon={<ReloadOutlined />} onClick={onReset}>
-            恢复默认
+            {t('columnSettings.reset')}
           </Button>
           <Button type="primary" onClick={onClose}>
-            确定
+            {t('actions.confirm')}
           </Button>
         </Space>
       }
@@ -40,7 +42,7 @@ const ColumnSettings: React.FC<ColumnSettingsProps> = ({
     >
       <div style={{ marginBottom: 16 }}>
         <Text type="secondary">
-          选择要显示的列（已选择 {visibleCount} 列）
+          {t('columnSettings.hint', { count: visibleCount })}
         </Text>
       </div>
 
@@ -53,8 +55,12 @@ const ColumnSettings: React.FC<ColumnSettingsProps> = ({
             onChange={() => onToggle(col.key)}
           >
             <Space>
-              <span>{col.label}</span>
-              {col.required && <Text type="secondary" style={{ fontSize: 12 }}>(固定)</Text>}
+              <span>{col.label.startsWith('common:') ? t(col.label) : col.label}</span>
+              {col.required && (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {t('columnSettings.required')}
+                </Text>
+              )}
             </Space>
           </Checkbox>
         ))}

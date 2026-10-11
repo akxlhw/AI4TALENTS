@@ -1,7 +1,8 @@
 {
-  "actions": { "search": "Search", "export": "Export", "cancel": "Cancel", "confirm": "OK", "close": "Close", "retry": "Retry", "viewAll": "View All", "detail": "Detail", "delete": "Delete" },
+  "actions": { "search": "Search", "export": "Export", "cancel": "Cancel", "confirm": "OK", "close": "Close", "retry": "Retry", "viewAll": "View All", "detail": "Detail", "delete": "Delete", "back": "Back" },
   "status": { "loading": "Loading…", "empty": "No data", "error": "Failed to load" },
   "pagination": { "total": "{{n}} items" },
+  "brand": { "tagline": "Talent Platform" },
   "footer": { "privacy": "Privacy Policy", "terms": "Terms of Use", "cookie": "Cookie Settings", "copyright": "© {{year}} AI4TALENT Talent Platform" },
   "compare": {
     "title": "Compare Candidates",
@@ -21,5 +22,209 @@
   },
   "messages": {
     "operationFailed": "Operation failed"
+  },
+  "aiLoading": {
+    "title": "Analyzing with AI",
+    "tagline": "AI Talent Discovery Platform",
+    "steps": {
+      "connect": "Connecting to AI service",
+      "parseJD": "Parsing job description",
+      "extractSkills": "Extracting skill requirements",
+      "match": "Matching candidates",
+      "generate": "Generating recommendations"
+    }
+  },
+  "changelog": {
+    "title": "Changelog",
+    "currentVersion": "Current version v{{version}}",
+    "empty": "No updates yet",
+    "orderingHint": "Versions are listed from newest to oldest. Expand any version to see the full change details.",
+    "latest": "Latest"
+  },
+  "collaboration": {
+    "currentScholar": "Current Scholar",
+    "coauthor": "Co-author",
+    "count": "Collaborations: {{count}}",
+    "papers": "Co-authored papers: {{count}}",
+    "emptyTitle": "No collaboration network data",
+    "emptyHint": "Sync paper collaboration data to display the network"
+  },
+  "columnSettings": {
+    "title": "Column Settings",
+    "reset": "Reset to Default",
+    "hint": "Select columns to display ({{count}} selected)",
+    "required": "(Fixed)"
+  },
+  "columns": {
+    "favorite": "Favorite",
+    "name": "Name",
+    "role_type": "Role",
+    "school_name": "School",
+    "works_count": "Papers",
+    "cited_by_count": "Citations",
+    "h_index": "H-index",
+    "topic_tags": "Research Topics"
+  },
+  "demo": {
+    "featurePreview": "Feature Preview",
+    "comingSoon": "Full features are under development — stay tuned"
+  },
+  "favorite": {
+    "addTitle": "Add to Favorites",
+    "removeTitle": "Remove from Favorites",
+    "removeConfirm": "Are you sure you want to remove this candidate from favorites?",
+    "addedLabel": "Favorited",
+    "addLabel": "Favorite",
+    "addedTooltip": "Favorited — click to remove",
+    "addTooltip": "Add to favorites",
+    "notesHint": "You can add a note describing why you are following this candidate (optional)",
+    "notesPlaceholder": "e.g. matching research interests, strong academic background..."
+  },
+  "consent": {
+    "title": "We use local storage to improve your experience",
+    "description": "You can choose which types of data storage to allow. Necessary storage keeps you signed in; functional storage remembers your preferences.",
+    "necessary": "Necessary only",
+    "functional": "Functional",
+    "analytics": "Analytics",
+    "privacyModalBody": "Please visit the \"Privacy Policy\" page for the full content.",
+    "viewFullPolicy": "View Full Policy",
+    "viewPrivacyPolicy": "View Privacy Policy",
+    "accept": "Accept Selected"
+  },
+  "genealogy": {
+    "tiers": {
+      "tier1": "Academic Leader",
+      "tier2": "Established Scholar",
+      "tier3": "Rising Star",
+      "tier4": "Emerging Researcher"
+    },
+    "relations": {
+      "advisor_student": "Advisor-Student",
+      "mentor_mentee": "Mentor-Mentee",
+      "senior_junior": "Senior-Junior"
+    },
+    "aggNode": "+{{count}} more",
+    "tooltip": {
+      "aggHidden": "{{count}} more scholars hidden in this tier<br/>Click the node to expand",
+      "institution": "Institution: {{value}}",
+      "score": "Overall score: {{value}}",
+      "tier": "Tier: {{value}}",
+      "citations": "Citations: {{value}}",
+      "confidence": "Confidence: {{value}}",
+      "evidence": "Evidence: {{value}} papers"
+    },
+    "relationType": "Relation Type",
+    "allRelations": "All relations",
+    "minConfidence": "Min confidence: {{value}}",
+    "tierFilter": "Tier Filter",
+    "allTiers": "All tiers",
+    "displayCount": "Showing {{nodes}} nodes / {{links}} relations",
+    "filteredHint": "({{total}} total, {{shown}} after filtering)",
+    "noRelationsAfterFilter": "No genealogy relations of scholar \"{{name}}\" pass the confidence threshold ≥ {{value}}. Try lowering the minimum confidence, or wait for an admin to re-run the genealogy computation.",
+    "noNodesAfterFilter": "No nodes match the current filters"
+  },
+  "upload": {
+    "maxCountExceeded": "You can upload up to {{count}} images",
+    "unsupportedFormat": "Only PNG, JPEG, GIF and WEBP images are supported",
+    "fileTooLarge": "Each image must be no larger than {{size}}MB",
+    "clickOrPaste": "Click or paste",
+    "pasteHint": "Paste screenshots with Ctrl+V — up to {{count}} images, max {{size}}MB each"
+  },
+  "labImport": {
+    "title": "AI Lab Talent Import",
+    "subtitle": "Upload a JSONL file produced by ai-lab-talent-crawler. Each lab is fully replaced on import.",
+    "labName": "Lab Name (parent_lab)",
+    "labNamePlaceholder": "e.g. Nanjing University LAMDA Lab; leave empty if the first JSONL line contains lab metadata",
+    "labNameHint": "Optional. Read automatically when the first JSONL line contains type=lab metadata; the value here takes precedence when provided",
+    "dragText": "Click or drag a JSONL file here to upload",
+    "hint": "Only a single .jsonl file is supported (crawler output format)",
+    "start": "Start Import",
+    "report": "Import Report",
+    "fields": {
+      "lab": "Lab",
+      "totalLines": "Total Lines",
+      "parsed": "Parsed",
+      "inserted": "Inserted",
+      "skipped": "Skipped"
+    },
+    "jsonlOnly": "Please upload a .jsonl file",
+    "selectFirst": "Please select a JSONL file first",
+    "importDone": "Import complete: {{inserted}} added, {{skipped}} lines skipped",
+    "importFailed": "Import failed",
+    "skipReasonsTitle": "{{count}} lines skipped (first 50 shown)",
+    "line": "Line {{line}}:",
+    "prefetchTitle": "Homepage Prefetch",
+    "prefetchRunning": "Fetching and caching homepages... ({{processed}}/{{total}})",
+    "prefetchStale": " (heartbeat timed out, re-trigger available)",
+    "prefetchCurrent": "Current: {{current}}",
+    "prefetchDone": "Prefetch complete: {{total}} people in total",
+    "prefetchDoneErrors": ", {{count}} failed",
+    "prefetchDoneDesc": "Homepages are cached — \"Load Preview\" on detail pages will open instantly.",
+    "prefetchFailed": "Prefetch failed, please try again later",
+    "prefetchCancelled": "Prefetch cancelled",
+    "starting": "Starting..."
+  },
+  "taskStatus": {
+    "pending": "Pending",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "venueType": {
+    "conference": "Conference",
+    "journal": "Journal",
+    "workshop": "Workshop"
+  },
+  "yearOptions": {
+    "year": "{{year}}",
+    "endYear": "Present"
+  },
+  "followupStatus": {
+    "new_found": "New Found",
+    "reviewed": "Reviewed",
+    "followed": "Followed Up",
+    "pending_evaluation": "Pending Evaluation",
+    "recommend_contact": "Recommend Contact",
+    "no_followup": "No Follow-up"
+  },
+  "roleType": {
+    "professor": "Professor / Researcher",
+    "student": "Student",
+    "graduate": "Graduate",
+    "unknown": "Unknown"
+  },
+  "collectNotify": {
+    "nameFallback": "Task #{{id}}",
+    "doneTitle": "Collect task completed",
+    "doneDesc": "\"{{name}}\" has completed",
+    "failedTitle": "Collect task failed",
+    "failedDesc": "\"{{name}}\" failed — check the collection config for details",
+    "cancelledTitle": "Collect task cancelled",
+    "cancelledDesc": "\"{{name}}\" has been cancelled"
+  },
+  "exportMenu": {
+    "csv": "Export CSV",
+    "xlsx": "Export Excel"
+  },
+  "auth": {
+    "welcomeBack": "Welcome back, {{name}}!",
+    "loggedOut": "Logged out"
+  },
+  "favorites": {
+    "loadFailed": "Failed to load favorite status; markers may be inaccurate",
+    "added": "Added to favorites",
+    "addFailed": "Failed to add to favorites",
+    "removed": "Removed from favorites",
+    "removeFailed": "Failed to remove from favorites",
+    "notesUpdated": "Notes updated",
+    "updateFailed": "Failed to update notes"
+  },
+  "domainThemes": {
+    "academic": { "label": "Academic Talent", "short": "Academic" },
+    "opensource": { "label": "Open Source", "short": "Open Source" },
+    "lab": { "label": "AI Native", "short": "AI Native" },
+    "competition": { "label": "Competition Talent", "short": "Competition" },
+    "industry": { "label": "Industry Talent", "short": "Industry" }
   }
 }

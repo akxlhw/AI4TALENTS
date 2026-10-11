@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { message, type MenuProps } from 'antd'
+import { useTranslation } from 'react-i18next'
 
 export type ExportFormat = 'csv' | 'xlsx'
 
@@ -30,6 +31,7 @@ export function useExportDownload({
   successMessage,
   formatError,
 }: UseExportDownloadOptions) {
+  const { t } = useTranslation('common')
   const [exporting, setExporting] = useState(false)
   const [exportConfirmVisible, setExportConfirmVisible] = useState(false)
   const [pendingExportFormat, setPendingExportFormat] = useState<ExportFormat | null>(null)
@@ -45,8 +47,8 @@ export function useExportDownload({
 
   const exportMenu: MenuProps = {
     items: [
-      { key: 'csv', label: '导出 CSV' },
-      { key: 'xlsx', label: '导出 Excel' },
+      { key: 'csv', label: t('exportMenu.csv') },
+      { key: 'xlsx', label: t('exportMenu.xlsx') },
     ],
     onClick: e => requestExport(e.key as ExportFormat),
   }

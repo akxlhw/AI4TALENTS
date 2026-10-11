@@ -16,39 +16,22 @@ import {
   Row,
   Col,
 } from 'antd'
-import {
-  EyeOutlined,
-  MessageOutlined,
-  ReloadOutlined,
-  MessageFilled,
-} from '@ant-design/icons'
+import { EyeOutlined, MessageOutlined, ReloadOutlined, MessageFilled } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../services/api'
 import { getErrorMessage } from '../../utils'
+import '../../i18n/namespaces/admin'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
 
-const CATEGORY_OPTIONS = [
-  { value: 'feature', label: '功能建议' },
-  { value: 'bug', label: 'Bug 反馈' },
-  { value: 'data_issue', label: '数据纠错' },
-  { value: 'experience', label: '体验反馈' },
-  { value: 'other', label: '其他' },
-]
+const CATEGORIES = ['feature', 'bug', 'data_issue', 'experience', 'other'] as const
 
-const STATUS_OPTIONS = [
-  { value: '', label: '全部状态' },
-  { value: 'open', label: '待处理' },
-  { value: 'in_progress', label: '处理中' },
-  { value: 'resolved', label: '已解决' },
-  { value: 'closed', label: '已关闭' },
-]
-
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  open: { label: '待处理', color: 'orange' },
-  in_progress: { label: '处理中', color: 'blue' },
-  resolved: { label: '已解决', color: 'green' },
-  closed: { label: '已关闭', color: 'default' },
+const STATUS_COLOR_MAP: Record<string, string> = {
+  open: 'orange',
+  in_progress: 'blue',
+  resolved: 'green',
+  closed: 'default',
 }
 
 interface SuggestionItem {
@@ -66,6 +49,7 @@ interface SuggestionItem {
 }
 
 const SuggestionAdminPage: React.FC = () => {
+  const { t } = useTranslation(['admin', 'common'])
   const [data, setData] = useState<SuggestionItem[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -81,6 +65,19 @@ const SuggestionAdminPage: React.FC = () => {
   const [replyStatus, setReplyStatus] = useState<string>('resolved')
   const [replying, setReplying] = useState(false)
 
+  const categoryOptions = CATEGORIES.map(value => ({
+    value,
+    label: t(`suggestions.categories.${value}`),
+  }))
+  const statusOptions = [
+    { value: '', label: t('suggestions.status.all') },
+    { value: 'open', label: t('suggestions.status.open') },
+    { value: 'in_progress', label: t('suggestions.status.in_progress') },
+    { value: 'resolved', label: t('suggestions.status.resolved') },
+    { value: 'closed', label: t('suggestions.status.closed') },
+  ]
+  const statusLabel = (v: string) => t(`suggestions.status.${v}`, { defaultValue: v })
+
   const fetchData = async (p = 1, status?: string, category?: string) => {
     setLoading(true)
     try {
@@ -91,7 +88,7 @@ const SuggestionAdminPage: React.FC = () => {
       setData(res.data.items || [])
       setTotal(res.data.total || 0)
     } catch (e) {
-      message.error(getErrorMessage(e, '加载失败'))
+      message.error(getErrorMessage(e, t('suggestions.messages.loadFailed')))
     } finally {
       setLoading(false)
     }
@@ -129,7 +126,7 @@ const SuggestionAdminPage: React.FC = () => {
   const handleReply = async () => {
     if (!detail) return
     if (!replyContent.trim()) {
-      message.error('请输入回复内容')
+      message.error(t('suggestions.messages.replyRequired'))
       return
     }
     setReplying(true)
@@ -138,11 +135,11 @@ const SuggestionAdminPage: React.FC = () => {
         admin_reply: replyContent.trim(),
         status: replyStatus,
       })
-      message.success('回复成功')
+      message.success(t('suggestions.messages.replySuccess'))
       setReplyVisible(false)
       fetchData(page, statusFilter, categoryFilter)
     } catch (e) {
-      message.error(getErrorMessage(e, '回复失败'))
+      message.error(getErrorMessage(e, t('suggestions.messages.replyFailed')))
     } finally {
       setReplying(false)
     }
@@ -159,70 +156,69 @@ const SuggestionAdminPage: React.FC = () => {
 
   const columns = [
     {
-      title: 'ID',
+      title: t('suggestions.columns.id'),
       dataIndex: 'suggestion_id',
       width: 70,
       align: 'center' as const,
     },
     {
-      title: '用户',
+      title: t('suggestions.columns.user'),
       dataIndex: 'username',
       width: 120,
       ellipsis: true,
     },
     {
-      title: '分类',
+      title: t('suggestions.columns.category'),
       dataIndex: 'category',
       width: 100,
       align: 'center' as const,
-      render: (v: string) => (
-        <Tag>{CATEGORY_OPTIONS.find((c) => c.value === v)?.label || v}</Tag>
-      ),
+      render: (v: string) => <Tag>{categoryOptions.find(c => c.value === v)?.label || v}</Tag>,
     },
     {
-      title: '主题',
+      title: t('suggestions.columns.subject'),
       dataIndex: 'subject',
       width: 220,
       ellipsis: true,
     },
     {
-      title: '内容',
+      title: t('suggestions.columns.content'),
       dataIndex: 'content',
       minWidth: 200,
       ellipsis: true,
     },
     {
-      title: '状态',
+      title: t('suggestions.columns.status'),
       dataIndex: 'status',
       width: 100,
       align: 'center' as const,
-      render: (v: string) => {
-        const s = STATUS_MAP[v] || { label: v, color: 'default' }
-        return <Tag color={s.color}>{s.label}</Tag>
-      },
+      render: (v: string) => <Tag color={STATUS_COLOR_MAP[v] || 'default'}>{statusLabel(v)}</Tag>,
     },
     {
-      title: '管理员回复',
+      title: t('suggestions.columns.adminReply'),
       dataIndex: 'admin_reply',
       width: 140,
       ellipsis: true,
       render: (v: string | null) =>
         v ? (
           <Badge dot color="green">
-            <Text type="secondary" style={{ fontSize: 12 }}>已回复</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {t('suggestions.replied')}
+            </Text>
           </Badge>
         ) : (
-          <Text type="secondary" style={{ fontSize: 12 }}>-</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            -
+          </Text>
         ),
     },
     {
-      title: '提交时间',
+      title: t('suggestions.columns.createdAt'),
       dataIndex: 'created_at',
       width: 170,
       render: (v: string) => new Date(v).toLocaleString('zh-CN'),
     },
     {
-      title: '操作',
+      title: t('suggestions.columns.actions'),
       key: 'action',
       width: 150,
       align: 'center' as const,
@@ -235,7 +231,7 @@ const SuggestionAdminPage: React.FC = () => {
             icon={<EyeOutlined />}
             onClick={() => showDetail(record)}
           >
-            详情
+            {t('suggestions.actions.detail')}
           </Button>
           <Button
             type="link"
@@ -243,7 +239,7 @@ const SuggestionAdminPage: React.FC = () => {
             icon={<MessageOutlined />}
             onClick={() => showReply(record)}
           >
-            回复
+            {t('suggestions.actions.reply')}
           </Button>
         </Space>
       ),
@@ -254,62 +250,68 @@ const SuggestionAdminPage: React.FC = () => {
     <div style={{ padding: '88px 32px 80px' }}>
       <Title level={4} style={{ marginBottom: 16 }}>
         <MessageFilled style={{ marginRight: 8, color: '#1677ff' }} />
-        建议管理
+        {t('suggestions.title')}
       </Title>
 
       {/* 统计概览 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        {STATUS_OPTIONS.filter((s) => s.value).map((s) => (
-          <Col key={s.value}>
-            <Card
-              size="small"
-              style={{
-                minWidth: 120,
-                textAlign: 'center',
-                borderTop: `3px solid ${STATUS_MAP[s.value]?.color || '#d9d9d9'}`,
-              }}
-              bodyStyle={{ padding: '12px 24px' }}
-            >
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#262626' }}>
-                {statusCounts[s.value] || 0}
-              </div>
-              <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
-                {s.label}
-              </div>
-            </Card>
-          </Col>
-        ))}
+        {statusOptions
+          .filter(s => s.value)
+          .map(s => (
+            <Col key={s.value}>
+              <Card
+                size="small"
+                style={{
+                  minWidth: 120,
+                  textAlign: 'center',
+                  borderTop: `3px solid ${STATUS_COLOR_MAP[s.value || ''] || '#d9d9d9'}`,
+                }}
+                bodyStyle={{ padding: '12px 24px' }}
+              >
+                <div style={{ fontSize: 24, fontWeight: 700, color: '#262626' }}>
+                  {statusCounts[s.value || ''] || 0}
+                </div>
+                <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>{s.label}</div>
+              </Card>
+            </Col>
+          ))}
       </Row>
 
       <Card
         title={
           <Space>
-            <span>建议列表</span>
+            <span>{t('suggestions.listTitle')}</span>
             <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>
-              共 {total} 条
+              {t('common:pagination.total', { n: total })}
             </Text>
           </Space>
         }
       >
         <Space style={{ marginBottom: 16 }} wrap>
           <Select
-            placeholder="状态筛选"
+            placeholder={t('suggestions.filters.status')}
             value={statusFilter || undefined}
-            onChange={(val) => setStatusFilter(val || '')}
-            options={STATUS_OPTIONS}
+            onChange={val => setStatusFilter(val || '')}
+            options={statusOptions}
             style={{ width: 140 }}
             allowClear
           />
           <Select
-            placeholder="分类筛选"
+            placeholder={t('suggestions.filters.category')}
             value={categoryFilter || undefined}
-            onChange={(val) => setCategoryFilter(val || '')}
-            options={[{ value: '', label: '全部分类' }, ...CATEGORY_OPTIONS]}
+            onChange={val => setCategoryFilter(val || '')}
+            options={[
+              { value: '', label: t('suggestions.filters.allCategories') },
+              ...categoryOptions,
+            ]}
             style={{ width: 140 }}
             allowClear
           />
-          <Button icon={<ReloadOutlined />} onClick={() => fetchData(page, statusFilter, categoryFilter)}>
-            刷新
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => fetchData(page, statusFilter, categoryFilter)}
+          >
+            {t('actions.refresh')}
           </Button>
         </Space>
 
@@ -323,10 +325,10 @@ const SuggestionAdminPage: React.FC = () => {
             pageSize: 10,
             total,
             showSizeChanger: false,
-            showTotal: (t) => `共 ${t} 条`,
+            showTotal: count => t('common:pagination.total', { n: count }),
           }}
-          onChange={(pagination) => setPage(pagination.current || 1)}
-          locale={{ emptyText: <Empty description="暂无数据" /> }}
+          onChange={pagination => setPage(pagination.current || 1)}
+          locale={{ emptyText: <Empty description={t('common:status.empty')} /> }}
           scroll={{ x: 1200 }}
           size="middle"
         />
@@ -334,12 +336,12 @@ const SuggestionAdminPage: React.FC = () => {
 
       {/* 详情弹窗 */}
       <Modal
-        title="建议详情"
+        title={t('suggestions.detailModal.title')}
         open={detailVisible}
         onCancel={() => setDetailVisible(false)}
         footer={[
           <Button key="close" onClick={() => setDetailVisible(false)}>
-            关闭
+            {t('common:actions.close')}
           </Button>,
         ]}
         width={720}
@@ -348,24 +350,23 @@ const SuggestionAdminPage: React.FC = () => {
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
             <Row gutter={16}>
               <Col span={12}>
-                <Text strong>分类：</Text>
+                <Text strong>{t('suggestions.detailModal.category')}</Text>
                 <Tag>
-                  {CATEGORY_OPTIONS.find((c) => c.value === detail.category)?.label ||
-                    detail.category}
+                  {categoryOptions.find(c => c.value === detail.category)?.label || detail.category}
                 </Tag>
               </Col>
               <Col span={12} style={{ textAlign: 'right' }}>
-                <Tag color={STATUS_MAP[detail.status]?.color || 'default'}>
-                  {STATUS_MAP[detail.status]?.label || detail.status}
+                <Tag color={STATUS_COLOR_MAP[detail.status] || 'default'}>
+                  {statusLabel(detail.status)}
                 </Tag>
               </Col>
             </Row>
             <div>
-              <Text strong>主题：</Text>
+              <Text strong>{t('suggestions.detailModal.subject')}</Text>
               <Text>{detail.subject}</Text>
             </div>
             <div>
-              <Text strong>内容：</Text>
+              <Text strong>{t('suggestions.detailModal.content')}</Text>
               <div
                 style={{
                   whiteSpace: 'pre-wrap',
@@ -381,7 +382,7 @@ const SuggestionAdminPage: React.FC = () => {
             </div>
             {detail.admin_reply && (
               <div>
-                <Text strong>管理员回复：</Text>
+                <Text strong>{t('suggestions.detailModal.adminReply')}</Text>
                 <div
                   style={{
                     whiteSpace: 'pre-wrap',
@@ -398,7 +399,7 @@ const SuggestionAdminPage: React.FC = () => {
             )}
             {detail.attachments?.length > 0 && (
               <div>
-                <Text strong>附件：</Text>
+                <Text strong>{t('suggestions.detailModal.attachments')}</Text>
                 <Space wrap>
                   {detail.attachments.map((url, idx) => (
                     <Image
@@ -415,8 +416,10 @@ const SuggestionAdminPage: React.FC = () => {
             )}
             <div>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                用户：{detail.username} · 提交时间：
-                {new Date(detail.created_at).toLocaleString('zh-CN')}
+                {t('suggestions.detailModal.meta', {
+                  username: detail.username,
+                  time: new Date(detail.created_at).toLocaleString('zh-CN'),
+                })}
               </Text>
             </div>
           </Space>
@@ -425,7 +428,7 @@ const SuggestionAdminPage: React.FC = () => {
 
       {/* 回复弹窗 */}
       <Modal
-        title="回复建议"
+        title={t('suggestions.replyModal.title')}
         open={replyVisible}
         onCancel={() => setReplyVisible(false)}
         onOk={handleReply}
@@ -435,11 +438,11 @@ const SuggestionAdminPage: React.FC = () => {
         {detail && (
           <Space direction="vertical" style={{ width: '100%' }}>
             <div>
-              <Text strong>主题：</Text>
+              <Text strong>{t('suggestions.detailModal.subject')}</Text>
               <Text>{detail.subject}</Text>
             </div>
             <div>
-              <Text strong>内容：</Text>
+              <Text strong>{t('suggestions.detailModal.content')}</Text>
               <div
                 style={{
                   whiteSpace: 'pre-wrap',
@@ -455,22 +458,22 @@ const SuggestionAdminPage: React.FC = () => {
             </div>
             <Row gutter={16}>
               <Col span={12}>
-                <Text strong>变更状态：</Text>
+                <Text strong>{t('suggestions.replyModal.changeStatus')}</Text>
                 <Select
                   value={replyStatus}
                   onChange={setReplyStatus}
-                  options={STATUS_OPTIONS.filter((s) => s.value)}
+                  options={statusOptions.filter(s => s.value)}
                   style={{ width: '100%', marginTop: 4 }}
                 />
               </Col>
             </Row>
             <div>
-              <Text strong>回复内容：</Text>
+              <Text strong>{t('suggestions.replyModal.contentLabel')}</Text>
               <TextArea
                 rows={4}
                 value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-                placeholder="请输入回复内容..."
+                onChange={e => setReplyContent(e.target.value)}
+                placeholder={t('suggestions.replyModal.placeholder')}
                 maxLength={2000}
                 showCount
               />

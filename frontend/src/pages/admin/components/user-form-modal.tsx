@@ -1,5 +1,7 @@
 import { Form, Input, Modal, Select } from 'antd'
 import type { FormInstance } from 'antd'
+import { useTranslation } from 'react-i18next'
+import '../../../i18n/namespaces/admin'
 import type { User } from './types'
 
 interface UserFormModalProps {
@@ -19,9 +21,10 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   onCancel,
   onSave,
 }) => {
+  const { t } = useTranslation(['admin', 'common'])
   return (
     <Modal
-      title={editingUser ? '编辑用户' : '新建用户'}
+      title={editingUser ? t('users.form.editTitle') : t('users.form.createTitle')}
       open={open}
       onCancel={onCancel}
       onOk={() => form.submit()}
@@ -31,55 +34,55 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           <>
             <Form.Item
               name="username"
-              label="用户名"
-              rules={[{ required: true, message: '请输入用户名' }]}
+              label={t('users.form.username')}
+              rules={[{ required: true, message: t('users.form.usernameRequired') }]}
             >
               <Input />
             </Form.Item>
             <Form.Item
               name="email"
-              label="邮箱"
+              label={t('users.form.email')}
               rules={[
-                { required: true, message: '请输入邮箱' },
-                { type: 'email', message: '请输入有效的邮箱地址' },
+                { required: true, message: t('users.form.emailRequired') },
+                { type: 'email', message: t('users.form.emailInvalid') },
               ]}
             >
               <Input />
             </Form.Item>
             <Form.Item
               name="password"
-              label="密码"
+              label={t('users.form.password')}
               rules={[
-                { required: true, message: '请输入密码' },
-                { min: 8, message: '密码至少8位' },
+                { required: true, message: t('users.form.passwordRequired') },
+                { min: 8, message: t('users.form.passwordMin') },
               ]}
             >
               <Input.Password />
             </Form.Item>
           </>
         )}
-        <Form.Item name="display_name" label="显示名称">
+        <Form.Item name="display_name" label={t('users.form.displayName')}>
           <Input />
         </Form.Item>
-        <Form.Item name="department" label="部门">
+        <Form.Item name="department" label={t('users.form.department')}>
           <Input />
         </Form.Item>
         {isSuperAdmin && (
-          <Form.Item name="role" label="角色">
+          <Form.Item name="role" label={t('users.form.role')}>
             <Select
               options={[
-                { value: 'user', label: '普通用户' },
-                { value: 'admin', label: '管理员' },
-                { value: 'super_admin', label: '超级管理员' },
+                { value: 'user', label: t('users.roles.user') },
+                { value: 'admin', label: t('users.roles.admin') },
+                { value: 'super_admin', label: t('users.roles.super_admin') },
               ]}
             />
           </Form.Item>
         )}
-        <Form.Item name="default_view" label="默认视角">
+        <Form.Item name="default_view" label={t('users.form.defaultView')}>
           <Select
             options={[
-              { value: 'tech_domain', label: '技术领域' },
-              { value: 'country_school', label: '国家院校' },
+              { value: 'tech_domain', label: t('users.views.tech_domain') },
+              { value: 'country_school', label: t('users.views.country_school') },
             ]}
           />
         </Form.Item>

@@ -5,23 +5,29 @@ import { initReactI18next } from 'react-i18next'
 // domain's self-registering module in src/i18n/namespaces/ (suspenders) so
 // either path alone is sufficient; addResourceBundle guards keep them idempotent.
 import academicEn from './locales/en/academic.json'
+import adminEn from './locales/en/admin.json'
 import authEn from './locales/en/auth.json'
 import commonEn from './locales/en/common.json'
 import competitionEn from './locales/en/competition.json'
 import industryEn from './locales/en/industry.json'
 import labEn from './locales/en/lab.json'
+import legalEn from './locales/en/legal.json'
 import navEn from './locales/en/nav.json'
 import openSourceEn from './locales/en/openSource.json'
+import systemConfigEn from './locales/en/systemConfig.json'
 import taxonomyEn from './locales/en/taxonomy.json'
 import userEn from './locales/en/user.json'
 import academicZh from './locales/zh/academic.json'
+import adminZh from './locales/zh/admin.json'
 import authZh from './locales/zh/auth.json'
 import commonZh from './locales/zh/common.json'
 import competitionZh from './locales/zh/competition.json'
 import industryZh from './locales/zh/industry.json'
 import labZh from './locales/zh/lab.json'
+import legalZh from './locales/zh/legal.json'
 import navZh from './locales/zh/nav.json'
 import openSourceZh from './locales/zh/openSource.json'
+import systemConfigZh from './locales/zh/systemConfig.json'
 import taxonomyZh from './locales/zh/taxonomy.json'
 import userZh from './locales/zh/user.json'
 
@@ -47,6 +53,9 @@ void i18n.use(initReactI18next).init({
       competition: competitionZh,
       industry: industryZh,
       user: userZh,
+      systemConfig: systemConfigZh,
+      admin: adminZh,
+      legal: legalZh,
     },
     en: {
       common: commonEn,
@@ -59,6 +68,9 @@ void i18n.use(initReactI18next).init({
       competition: competitionEn,
       industry: industryEn,
       user: userEn,
+      systemConfig: systemConfigEn,
+      admin: adminEn,
+      legal: legalEn,
     },
   },
   lng: initialLang,
@@ -75,6 +87,9 @@ void i18n.use(initReactI18next).init({
     'competition',
     'industry',
     'user',
+    'systemConfig',
+    'admin',
+    'legal',
   ],
   interpolation: { escapeValue: false },
 })
