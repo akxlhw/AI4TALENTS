@@ -177,7 +177,8 @@
     "noCollabHint": "请联系管理员在「采集配置 - 合作网络同步」中同步数据",
     "genealogyFailed": "族谱加载失败",
     "noGenealogy": "暂无学术族谱数据",
-    "noGenealogyHint": "该学者未推断出族谱关系，或需要管理员重新触发族谱计算"
+    "noGenealogyHint": "该学者未推断出族谱关系，或需要管理员重新触发族谱计算",
+    "linkedinSearchHint": "用姓名+机构在 Google 搜索该学者的 LinkedIn 主页（辅助发现，非已验证主页）"
   },
   "countrySchool": {
     "title": "院校机构",

@@ -29,6 +29,7 @@ import {
   FileTextOutlined,
   ArrowLeftOutlined,
   GlobalOutlined,
+  LinkedinOutlined,
   TrophyOutlined,
   TeamOutlined,
   ExclamationCircleOutlined,
@@ -51,6 +52,7 @@ interface TalentDetail {
   name: string
   name_en: string | null
   orcid: string | null
+  linkedin_search_url: string | null
   role_type: string
   role_confidence: number
   school_id: number | null
@@ -359,6 +361,15 @@ const TalentDetailPage: React.FC = () => {
                     ORCID: {talent.orcid.replace('https://orcid.org/', '').replace('http://orcid.org/', '')}
                   </Tag>
                 </a>
+              )}
+              {talent.linkedin_search_url && (
+                <Tooltip title={t('detail.linkedinSearchHint')}>
+                  <a href={talent.linkedin_search_url} target="_blank" rel="noopener noreferrer">
+                    <Tag icon={<LinkedinOutlined />} color="geekblue">
+                      LinkedIn
+                    </Tag>
+                  </a>
+                </Tooltip>
               )}
               {talent.role_reason && (
                 <Tooltip title={t('detail.roleBasis')}>

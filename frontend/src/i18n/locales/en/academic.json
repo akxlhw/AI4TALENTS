@@ -177,7 +177,8 @@
     "noCollabHint": "Ask an administrator to sync it under \"Collection Config - Collaboration Network Sync\"",
     "genealogyFailed": "Failed to load genealogy",
     "noGenealogy": "No genealogy data",
-    "noGenealogyHint": "No genealogy could be inferred for this scholar, or an administrator needs to re-run the calculation"
+    "noGenealogyHint": "No genealogy could be inferred for this scholar, or an administrator needs to re-run the calculation",
+    "linkedinSearchHint": "Search this scholar's LinkedIn on Google by name + affiliation (discovery aid, not a verified profile)"
   },
   "countrySchool": {
     "title": "Institutions",

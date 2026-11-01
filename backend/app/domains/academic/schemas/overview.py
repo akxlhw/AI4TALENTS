@@ -134,6 +134,11 @@ class TalentDetail(BaseModel):
     name: str = Field(description="Name")
     name_en: str | None = Field(default=None, description="English name")
     orcid: str | None = Field(default=None, description="ORCID identifier")
+    linkedin_search_url: str | None = Field(
+        default=None,
+        description="LinkedIn discovery fallback: Google search URL combining "
+        "name + affiliation (not a real profile URL)",
+    )
     role_type: str = Field(description="Role type")
     role_confidence: float = Field(default=0.0, description="Role detection confidence")
     school_id: int | None = Field(default=None, description="School ID")

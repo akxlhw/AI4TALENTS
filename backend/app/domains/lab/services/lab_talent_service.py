@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from urllib.parse import quote_plus
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
@@ -17,21 +15,16 @@ from app.domains.lab.schemas.lab_talent import (
     LabWithTalents,
     MentorshipResponse,
 )
+from app.domains.shared.services.common.linkedin_search import build_linkedin_search_url
 
 
 def _linkedin_search_url(name: str, affiliation: str) -> str:
-    """Build a Google search URL as a LinkedIn-discovery fallback link.
+    """LinkedIn-discovery fallback (delegates to the shared builder).
 
-    Combines the person's quoted name with their lab affiliation and the
-    "linkedin" keyword, e.g. "Joshua Aduol" Princeton CS / ML linkedin.
     Used only when the crawler found no real LinkedIn profile URL — a real
     link in social_links always takes precedence over this fallback.
     """
-    parts = [f'"{name.strip()}"']
-    if affiliation.strip():
-        parts.append(affiliation.strip())
-    parts.append("linkedin")
-    return "https://www.google.com/search?q=" + quote_plus(" ".join(parts))
+    return build_linkedin_search_url(name, affiliation)
 
 
 class LabTalentService:

@@ -21,6 +21,7 @@ from app.domains.academic.schemas.overview import (
 )
 from app.domains.academic.services.talent_service import TalentService
 from app.domains.shared.schemas.common import PaginatedResponse
+from app.domains.shared.services.common.linkedin_search import build_linkedin_search_url
 
 router = APIRouter(prefix="/talents", tags=["Talents"])
 
@@ -161,6 +162,12 @@ async def get_talent(
         name=talent.name,
         name_en=talent.name_en,
         orcid=talent.orcid,
+        # LinkedIn discovery fallback: prefer the English name (LinkedIn is
+        # English-first) + English school name; falls back to the Chinese name
+        linkedin_search_url=build_linkedin_search_url(
+            str(talent.name_en or talent.name or ""),
+            str(talent.primary_school_name or ""),
+        ),
         role_type=talent.role_type,
         role_confidence=talent.role_confidence,
         school_id=talent.primary_school_id,
