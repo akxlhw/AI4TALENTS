@@ -12,12 +12,12 @@ from app.domains.academic.models.talent import Talent
 
 
 async def _seed(session: AsyncSession, **overrides) -> Talent:
-    defaults = dict(
-        name="王伟",
-        name_en="Wei Wang",
-        role_type="professor",
-        is_visible=True,
-    )
+    defaults: dict = {
+        "name": "王伟",
+        "name_en": "Wei Wang",
+        "role_type": "professor",
+        "is_visible": True,
+    }
     defaults.update(overrides)
     talent = Talent(**defaults)
     session.add(talent)
