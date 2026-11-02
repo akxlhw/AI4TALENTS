@@ -331,6 +331,15 @@ const TalentDetailPage: React.FC = () => {
                   </Tag>
                 )}
                 {talent.current_title && <Text type="secondary">{talent.current_title}</Text>}
+                {talent.linkedin_search_url && (
+                  <Tooltip title={t('detail.linkedinSearchHint')}>
+                    <a href={talent.linkedin_search_url} target="_blank" rel="noopener noreferrer">
+                      <Tag icon={<LinkedinOutlined />} color="geekblue" style={{ cursor: 'pointer' }}>
+                        LinkedIn
+                      </Tag>
+                    </a>
+                  </Tooltip>
+                )}
               </Space>
               {talent.summary && (
                 <Paragraph type="secondary" style={{ margin: 0, maxWidth: 800 }}>
@@ -361,15 +370,6 @@ const TalentDetailPage: React.FC = () => {
                     ORCID: {talent.orcid.replace('https://orcid.org/', '').replace('http://orcid.org/', '')}
                   </Tag>
                 </a>
-              )}
-              {talent.linkedin_search_url && (
-                <Tooltip title={t('detail.linkedinSearchHint')}>
-                  <a href={talent.linkedin_search_url} target="_blank" rel="noopener noreferrer">
-                    <Tag icon={<LinkedinOutlined />} color="geekblue">
-                      LinkedIn
-                    </Tag>
-                  </a>
-                </Tooltip>
               )}
               {talent.role_reason && (
                 <Tooltip title={t('detail.roleBasis')}>
